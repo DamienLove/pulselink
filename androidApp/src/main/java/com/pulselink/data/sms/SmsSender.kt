@@ -17,14 +17,20 @@ class SmsSender @Inject constructor(
     fun sendAlert(message: String, contacts: List<Contact>): Int {
         var count = 0
         contacts.forEach { contact ->
-            runCatching {
-                smsManager.sendTextMessage(contact.phoneNumber, null, message, null, null)
+            if (sendSms(contact.phoneNumber, message)) {
                 count++
-            }.onFailure { error ->
-                Log.e(TAG, "Unable to send SMS to ${'$'}{contact.phoneNumber}", error)
             }
         }
         return count
+    }
+
+    @RequiresPermission(Manifest.permission.SEND_SMS)
+    fun sendSms(phoneNumber: String, message: String): Boolean {
+        return runCatching {
+            smsManager.sendTextMessage(phoneNumber, null, message, null, null)
+        }.onFailure { error ->
+            Log.e(TAG, "Unable to send SMS to $phoneNumber", error)
+        }.isSuccess
     }
 
     companion object {

@@ -24,7 +24,8 @@ data class PulseLinkSettings(
     ),
     val autoCallAfterAlert: Boolean = false,
     val proUnlocked: Boolean = true,
-    val onboardingComplete: Boolean = false
+    val onboardingComplete: Boolean = false,
+    val deviceId: String = ""
 ) {
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)
         .map { it.trim().lowercase() }

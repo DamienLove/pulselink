@@ -32,6 +32,13 @@
     <string name="channel_check_ins">PulseLink Check-ins</string>
     <string name="channel_listening">PulseLink Listening</string>
     <string name="channel_background">PulseLink Services</string>
+    <string name="link_notification_channel">PulseLink Linking</string>
+    <string name="link_request_title">Link request received</string>
+    <string name="link_request_body">%1$s wants to connect on PulseLink.</string>
+    <string name="link_success_title">Contact linked</string>
+    <string name="link_success_body">You are now linked with %1$s.</string>
+    <string name="ping_received_title">Ping from %1$s</string>
+    <string name="ping_received_body">They are checking in with you.</string>
     <string name="permission_microphone">PulseLink needs microphone access for hotword detection.</string>
     <string name="permission_sms">PulseLink needs SMS permission to contact your circle.</string>
     <string name="permission_location">PulseLink needs location access to share your position.</string>

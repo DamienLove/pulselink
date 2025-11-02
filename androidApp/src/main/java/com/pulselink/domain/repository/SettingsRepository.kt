@@ -9,4 +9,5 @@ interface SettingsRepository {
     suspend fun setListening(enabled: Boolean)
     suspend fun setProUnlocked(enabled: Boolean)
     suspend fun setOnboardingComplete()
+    suspend fun ensureDeviceId(): String
 }

@@ -16,7 +16,13 @@ data class Contact(
     val emergencySoundKey: String? = null,
     val checkInSoundKey: String? = null,
     val cameraEnabled: Boolean = false,
-    val contactOrder: Int = 0
+    val contactOrder: Int = 0,
+    val linkStatus: LinkStatus = LinkStatus.NONE,
+    val linkCode: String? = null,
+    val remoteDeviceId: String? = null,
+    val allowRemoteOverride: Boolean = false,
+    val allowRemoteSoundChange: Boolean = false,
+    val pendingApproval: Boolean = false
 )
 
 @Serializable

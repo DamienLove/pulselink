@@ -11,24 +11,25 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -37,6 +38,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -59,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import com.pulselink.R
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.EscalationTier
+import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.SoundOption
 import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.ads.NativeAdCard
@@ -87,35 +90,32 @@ fun HomeScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var searchValue by remember { mutableStateOf(TextFieldValue()) }
 
-    val backgroundGradient = Brush.verticalGradient(
-        colors = listOf(Color(0xFF11121B), Color(0xFF0B0C12))
+    val gradient = Brush.verticalGradient(
+        listOf(Color(0xFF10131F), Color(0xFF090B11))
     )
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backgroundGradient)
+                .background(gradient)
                 .padding(horizontal = 20.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            HeaderSection(isListening = state.isListening, onToggleListening = onToggleListening)
-        NavigationRow(
-            onEmergencyClick = onEmergencyClick,
-            onLocationClick = onLocationClick,
-            onAlertsClick = onAlertsClick,
-            onSettingsClick = onSettingsClick,
-            onUpgradeClick = onUpgradeClick
-        )
-        QuickActionsRow(
-            onSendCheckIn = onSendCheckIn,
-            onTriggerTest = onTriggerTest
-        )
-        SearchAndAddRow(
-            searchValue = searchValue,
-            onSearchChange = { searchValue = it },
-            onAddClick = { showAddDialog = true }
-        )
+            HeaderSection(state, onToggleListening)
+            NavigationRow(
+                onEmergencyClick = onEmergencyClick,
+                onLocationClick = onLocationClick,
+                onAlertsClick = onAlertsClick,
+                onSettingsClick = onSettingsClick,
+                onUpgradeClick = onUpgradeClick
+            )
+            QuickActionsRow(onSendCheckIn = onSendCheckIn, onTriggerTest = onTriggerTest)
+            SearchAndAddRow(
+                searchValue = searchValue,
+                onSearchChange = { searchValue = it },
+                onAddClick = { showAddDialog = true }
+            )
             ContactsList(
                 state = state,
                 searchQuery = searchValue.text,
@@ -154,25 +154,22 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HeaderSection(isListening: Boolean, onToggleListening: (Boolean) -> Unit) {
+private fun HeaderSection(state: PulseLinkUiState, onToggleListening: (Boolean) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-        Surface(
-            shape = CircleShape,
-            color = Color.White.copy(alpha = 0.1f)
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.ic_logo),
-                contentDescription = "PulseLink logo",
-                modifier = Modifier
-                    .size(56.dp)
-                    .padding(12.dp)
-            )
-        }
+            Surface(shape = CircleShape, color = Color.White.copy(alpha = 0.1f)) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_logo),
+                    contentDescription = "PulseLink logo",
+                    modifier = Modifier
+                        .size(56.dp)
+                        .padding(12.dp)
+                )
+            }
             Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(
@@ -182,18 +179,18 @@ private fun HeaderSection(isListening: Boolean, onToggleListening: (Boolean) -> 
                 )
                 Text(
                     text = "Your hands-free safety net",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFFAAAAAA)
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF9AA0B4)
                 )
             }
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(
-                text = if (isListening) "Listening On" else "Listening Off",
+                text = if (state.isListening) "Listening on" else "Listening off",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White
             )
-            Switch(checked = isListening, onCheckedChange = onToggleListening)
+            Switch(checked = state.isListening, onCheckedChange = onToggleListening)
         }
     }
 }
@@ -208,10 +205,11 @@ private fun NavigationRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         NavButton(icon = Icons.Filled.Warning, label = "Emergency", onClick = onEmergencyClick)
-        NavButton(icon = Icons.Filled.Place, label = "Location", onClick = onLocationClick)
+        NavButton(icon = Icons.Filled.LocationOn, label = "Location", onClick = onLocationClick)
         NavButton(icon = Icons.Filled.Notifications, label = "Alerts", onClick = onAlertsClick)
         NavButton(icon = Icons.Filled.Settings, label = "Settings", onClick = onSettingsClick)
         NavButton(icon = Icons.Filled.Star, label = "Pro", onClick = onUpgradeClick)
@@ -219,10 +217,19 @@ private fun NavigationRow(
 }
 
 @Composable
-private fun QuickActionsRow(
-    onSendCheckIn: () -> Unit,
-    onTriggerTest: () -> Unit
-) {
+private fun NavButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Surface(shape = CircleShape, color = Color.White.copy(alpha = 0.08f)) {
+            IconButton(onClick = onClick, modifier = Modifier.size(56.dp)) {
+                Icon(icon, contentDescription = label, tint = Color.White)
+            }
+        }
+        Text(text = label, style = MaterialTheme.typography.bodySmall, color = Color(0xFFBDC3D1))
+    }
+}
+
+@Composable
+private fun QuickActionsRow(onSendCheckIn: () -> Unit, onTriggerTest: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -232,28 +239,20 @@ private fun QuickActionsRow(
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Text(text = "Check-in Ping")
+            Icon(imageVector = Icons.Filled.Share, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Check-in ping")
         }
         Button(
             onClick = onTriggerTest,
             modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48))
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48)),
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Text(text = "Trigger Test")
+            Icon(imageVector = Icons.Filled.Send, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Trigger test")
         }
-    }
-}
-
-@Composable
-private fun NavButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Surface(shape = CircleShape, color = Color.White.copy(alpha = 0.1f)) {
-            IconButton(onClick = onClick, modifier = Modifier.size(52.dp)) {
-                Icon(imageVector = icon, contentDescription = label, tint = Color.White)
-            }
-        }
-        Text(text = label, style = MaterialTheme.typography.bodySmall, color = Color.White)
     }
 }
 
@@ -268,19 +267,17 @@ private fun SearchAndAddRow(
             value = searchValue,
             onValueChange = onSearchChange,
             modifier = Modifier.fillMaxWidth(),
-            leadingIcon = {
-                Icon(imageVector = Icons.Filled.Search, contentDescription = null)
-            },
+            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
             label = { Text("Search contacts") }
         )
-        Button(
+        OutlinedButton(
             onClick = onAddClick,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Icon(imageVector = Icons.Rounded.Add, contentDescription = "Add contact")
+            Icon(Icons.Filled.PersonAdd, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "Add Trusted Contact")
+            Text("Add trusted contact")
         }
     }
 }
@@ -294,30 +291,51 @@ private fun ContactsList(
     onMessageContact: (Contact) -> Unit,
     onContactSelected: (Long) -> Unit
 ) {
+    val filtered = state.contacts.filter {
+        it.displayName.contains(searchQuery, ignoreCase = true) ||
+            it.phoneNumber.contains(searchQuery, ignoreCase = true)
+    }
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(Color.White.copy(alpha = 0.06f))
+        colors = CardDefaults.cardColors(containerColor = Color(0x141C1C2A))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Safeword Contacts",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = Color.White
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                val filtered = state.contacts.filter {
-                    it.displayName.contains(searchQuery, ignoreCase = true) ||
-                        it.phoneNumber.contains(searchQuery, ignoreCase = true)
-                }
-                items(filtered, key = { it.id }) { contact ->
-                    ContactRow(
-                        contact = contact,
-                        onOpen = { onContactSelected(contact.id) },
-                        onDelete = { onDeleteContact(contact.id) },
-                        onCall = { onCallContact(contact) },
-                        onMessage = { onMessageContact(contact) }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Safeword contacts",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White
                     )
+                    Text(
+                        text = "Linked partners will appear here",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF9AA0B4)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            if (filtered.isEmpty()) {
+                Text(
+                    text = "No contacts yet. Add someone to get started.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF9AA0B4)
+                )
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(filtered, key = { it.id }) { contact ->
+                        ContactRow(
+                            contact = contact,
+                            onOpen = { onContactSelected(contact.id) },
+                            onDelete = { onDeleteContact(contact.id) },
+                            onCall = { onCallContact(contact) },
+                            onMessage = { onMessageContact(contact) }
+                        )
+                    }
                 }
             }
         }
@@ -332,33 +350,41 @@ private fun ContactRow(
     onCall: () -> Unit,
     onMessage: () -> Unit
 ) {
+    val statusLabel = when (contact.linkStatus) {
+        LinkStatus.NONE -> null
+        LinkStatus.OUTBOUND_PENDING -> "Awaiting approval"
+        LinkStatus.INBOUND_REQUEST -> "Approve request"
+        LinkStatus.LINKED -> "Linked"
+    }
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onOpen() },
-        colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.2f))
+        colors = CardDefaults.cardColors(containerColor = Color(0x0DFFFFFF))
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column {
-                Text(text = contact.displayName, color = Color.White, fontWeight = FontWeight.SemiBold)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = contact.phoneNumber, color = Color(0xFFBBBBBB), style = MaterialTheme.typography.bodySmall)
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(onClick = onCall) {
-                    Icon(imageVector = Icons.Filled.Phone, contentDescription = "Call", tint = Color(0xFF34D399))
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(text = contact.displayName, color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text(text = contact.phoneNumber, color = Color(0xFFB7BECF), style = MaterialTheme.typography.bodySmall)
+                    statusLabel?.let {
+                        Text(text = it, color = Color(0xFF7DD3FC), style = MaterialTheme.typography.bodySmall)
+                    }
                 }
-                IconButton(onClick = onMessage) {
-                    Icon(imageVector = Icons.Filled.Message, contentDescription = "Message", tint = Color(0xFF60A5FA))
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(imageVector = Icons.Filled.Delete, contentDescription = "Delete", tint = Color(0xFFF87171))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    IconButton(onClick = onCall) {
+                        Icon(Icons.Filled.Call, contentDescription = "Call", tint = Color(0xFF34D399))
+                    }
+                    IconButton(onClick = onMessage) {
+                        Icon(Icons.Filled.Send, contentDescription = "Message", tint = Color(0xFF60A5FA))
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Filled.Delete, contentDescription = "Remove", tint = Color(0xFFF87171))
+                    }
                 }
             }
         }
@@ -377,15 +403,25 @@ private fun DefaultAlertsCard(
     if (emergencyOptions.isEmpty() && checkInOptions.isEmpty()) return
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(Color.White.copy(alpha = 0.06f))
+        colors = CardDefaults.cardColors(containerColor = Color(0x131C1C2A))
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(text = "Default Alerts", color = Color.White, fontWeight = FontWeight.Bold)
+            Text(text = "Default alerts", color = Color.White, fontWeight = FontWeight.Bold)
             emergencyOptions.takeIf { it.isNotEmpty() }?.let {
-                SoundDropdown(label = "Emergency Alert", options = it, selectedKey = selectedEmergency, onSelect = onSelectEmergency)
+                SoundDropdown(
+                    label = "Emergency alert",
+                    options = it,
+                    selectedKey = selectedEmergency,
+                    onSelect = onSelectEmergency
+                )
             }
             checkInOptions.takeIf { it.isNotEmpty() }?.let {
-                SoundDropdown(label = "Check-in Alert", options = it, selectedKey = selectedCheckIn, onSelect = onSelectCheckIn)
+                SoundDropdown(
+                    label = "Check-in alert",
+                    options = it,
+                    selectedKey = selectedCheckIn,
+                    onSelect = onSelectCheckIn
+                )
             }
         }
     }
@@ -399,28 +435,28 @@ private fun SoundDropdown(
     onSelect: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val selectedOption = options.firstOrNull { it.key == selectedKey } ?: options.firstOrNull()
-    Column {
-        Text(text = label, color = Color(0xFFBFBFBF), style = MaterialTheme.typography.bodySmall)
+    val selected = options.firstOrNull { it.key == selectedKey } ?: options.firstOrNull()
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(text = label, color = Color(0xFFB7BECF), style = MaterialTheme.typography.bodySmall)
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 6.dp)
-                .background(Color.Transparent),
+            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            color = Color.Black.copy(alpha = 0.3f)
+            color = Color(0x1FFFFFFF)
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
-                    .background(Color.Transparent)
-                    .let { mod -> mod.clickable { expanded = true } },
+                    .clickable { expanded = true }
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = selectedOption?.label ?: "Select", color = Color.White)
-                Icon(imageVector = Icons.Filled.ArrowDropDown, contentDescription = null, tint = Color.White)
+                Text(
+                    text = selected?.label ?: "Default",
+                    modifier = Modifier.weight(1f),
+                    color = Color.White
+                )
+                Icon(imageVector = Icons.Filled.Shield, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
             }
         }
         androidx.compose.material3.DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -441,18 +477,22 @@ private fun SoundDropdown(
 private fun UpgradeCard(isPro: Boolean, onTogglePro: (Boolean) -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(Color(0xFF1F1F2E))
+        colors = CardDefaults.cardColors(containerColor = Color(0x1A9155FD))
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
                 Text(text = "PulseLink Pro", color = Color.White, fontWeight = FontWeight.Bold)
-                Text(text = "Unlock premium escalation controls", color = Color(0xFFBFBFBF), style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = if (isPro) "Pro active on this device" else "Unlock concierge escalation",
+                    color = Color(0xFFE3E8FF),
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
             Switch(checked = isPro, onCheckedChange = onTogglePro)
         }
@@ -506,13 +546,13 @@ private fun AddContactDialog(onDismiss: () -> Unit, onSave: (Contact) -> Unit) {
 
 @Composable
 private fun TierSelector(state: MutableState<EscalationTier>) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(text = "Escalation tier", style = MaterialTheme.typography.bodyMedium)
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(text = "Escalation tier", style = MaterialTheme.typography.bodyMedium, color = Color.White)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TierButton(label = "Emergency", selected = state.value == EscalationTier.EMERGENCY) {
+            TierButton("Emergency", state.value == EscalationTier.EMERGENCY) {
                 state.value = EscalationTier.EMERGENCY
             }
-            TierButton(label = "Check-in", selected = state.value == EscalationTier.CHECK_IN) {
+            TierButton("Check-in", state.value == EscalationTier.CHECK_IN) {
                 state.value = EscalationTier.CHECK_IN
             }
         }
@@ -521,12 +561,14 @@ private fun TierSelector(state: MutableState<EscalationTier>) {
 
 @Composable
 private fun TierButton(label: String, selected: Boolean, onClick: () -> Unit) {
-    val background = if (selected) Color(0xFF2563EB) else Color.Transparent
     Button(
         onClick = onClick,
-        colors = ButtonDefaults.buttonColors(containerColor = background),
-        shape = RoundedCornerShape(24.dp)
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (selected) Color(0xFF2563EB) else Color.Transparent,
+            contentColor = if (selected) Color.White else Color(0xFF2563EB)
+        ),
+        shape = RoundedCornerShape(20.dp)
     ) {
-        Text(text = label, color = if (selected) Color.White else Color(0xFF2563EB))
+        Text(text = label)
     }
 }

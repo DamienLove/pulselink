@@ -12,11 +12,13 @@ import com.pulselink.domain.model.PulseLinkSettings
 import com.pulselink.domain.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
+import java.util.UUID
 
 private const val DATA_STORE_NAME = "pulselink_settings"
 
@@ -29,6 +31,7 @@ private val CHECKIN_PROFILE = stringPreferencesKey("checkin_profile")
 private val AUTO_CALL = booleanPreferencesKey("auto_call")
 private val PRO_UNLOCKED = booleanPreferencesKey("pro_unlocked")
 private val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
+private val DEVICE_ID = stringPreferencesKey("device_id")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -50,7 +53,8 @@ class SettingsRepositoryImpl @Inject constructor(
                 ?: PulseLinkSettings().checkInProfile,
             autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,
             proUnlocked = prefs[PRO_UNLOCKED] ?: PulseLinkSettings().proUnlocked,
-            onboardingComplete = prefs[ONBOARDING_COMPLETE] ?: PulseLinkSettings().onboardingComplete
+            onboardingComplete = prefs[ONBOARDING_COMPLETE] ?: PulseLinkSettings().onboardingComplete,
+            deviceId = prefs[DEVICE_ID] ?: PulseLinkSettings().deviceId
         )
     }
 
@@ -67,6 +71,7 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[AUTO_CALL] = updated.autoCallAfterAlert
             prefs[PRO_UNLOCKED] = updated.proUnlocked
             prefs[ONBOARDING_COMPLETE] = updated.onboardingComplete
+            prefs[DEVICE_ID] = updated.deviceId
         }
     }
 
@@ -88,6 +93,16 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun ensureDeviceId(): String {
+        val existing = dataStore.data.map { it[DEVICE_ID] }.first()
+        if (!existing.isNullOrBlank()) return existing
+        val generated = UUID.randomUUID().toString()
+        dataStore.edit { prefs ->
+            prefs[DEVICE_ID] = generated
+        }
+        return generated
+    }
+
     private fun settingsValue(prefs: Preferences): PulseLinkSettings {
         return PulseLinkSettings(
             primaryPhrase = prefs[PRIMARY_PHRASE] ?: PulseLinkSettings().primaryPhrase,
@@ -100,7 +115,8 @@ class SettingsRepositoryImpl @Inject constructor(
                 ?: PulseLinkSettings().checkInProfile,
             autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,
             proUnlocked = prefs[PRO_UNLOCKED] ?: PulseLinkSettings().proUnlocked,
-            onboardingComplete = prefs[ONBOARDING_COMPLETE] ?: PulseLinkSettings().onboardingComplete
+            onboardingComplete = prefs[ONBOARDING_COMPLETE] ?: PulseLinkSettings().onboardingComplete,
+            deviceId = prefs[DEVICE_ID] ?: PulseLinkSettings().deviceId
         )
     }
 }

@@ -160,15 +160,14 @@ class MainActivity : ComponentActivity() {
                             onBack = { navController.popBackStack() },
                             onEditEmergencyAlert = { contactId?.let { navController.navigate("alerts/contact/$it") } },
                             onEditCheckInAlert = { contactId?.let { navController.navigate("alerts/contact/$it") } },
-                            onToggleLocation = { enabled ->
-                                contact?.let { viewModel.updateContact(it.copy(includeLocation = enabled)) }
-                            },
-                            onToggleCamera = { enabled ->
-                                contact?.let { viewModel.updateContact(it.copy(cameraEnabled = enabled)) }
-                            },
-                            onToggleAutoCall = { enabled ->
-                                contact?.let { viewModel.updateContact(it.copy(autoCall = enabled)) }
-                            },
+                            onToggleLocation = { enabled -> contact?.let { viewModel.updateContact(it.copy(includeLocation = enabled)) } },
+                            onToggleCamera = { enabled -> contact?.let { viewModel.updateContact(it.copy(cameraEnabled = enabled)) } },
+                            onToggleAutoCall = { enabled -> contact?.let { viewModel.updateContact(it.copy(autoCall = enabled)) } },
+                            onToggleRemoteOverride = { allow -> contactId?.let { viewModel.setRemoteOverridePermission(it, allow) } },
+                            onToggleRemoteSound = { allow -> contactId?.let { viewModel.setRemoteSoundPermission(it, allow) } },
+                            onSendLink = { contactId?.let { viewModel.sendLinkRequest(it) } },
+                            onApproveLink = { contactId?.let { viewModel.approveLink(it) } },
+                            onPing = { contactId?.let { viewModel.sendPing(it) } },
                             onDelete = {
                                 contactId?.let { viewModel.deleteContact(it) }
                                 navController.popBackStack()

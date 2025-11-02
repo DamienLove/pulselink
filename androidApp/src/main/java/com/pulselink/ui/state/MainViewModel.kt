@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pulselink.BuildConfig
 import com.pulselink.data.alert.SoundCatalog
+import com.pulselink.data.link.ContactLinkManager
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.EscalationTier
 import com.pulselink.domain.model.SoundCategory
@@ -25,7 +26,8 @@ class MainViewModel @Inject constructor(
     private val alertRepository: AlertRepository,
     private val settingsRepository: SettingsRepository,
     private val alertRouter: AlertRouter,
-    private val soundCatalog: SoundCatalog
+    private val soundCatalog: SoundCatalog,
+    private val linkManager: com.pulselink.data.link.ContactLinkManager
 ) : ViewModel() {
 
     private val dispatching = MutableStateFlow(false)
@@ -136,6 +138,26 @@ class MainViewModel @Inject constructor(
                 )
             )
         }
+    }
+
+    fun sendLinkRequest(contactId: Long) {
+        viewModelScope.launch { linkManager.sendLinkRequest(contactId) }
+    }
+
+    fun approveLink(contactId: Long) {
+        viewModelScope.launch { linkManager.approveLink(contactId) }
+    }
+
+    fun sendPing(contactId: Long) {
+        viewModelScope.launch { linkManager.sendPing(contactId) }
+    }
+
+    fun setRemoteSoundPermission(contactId: Long, allow: Boolean) {
+        viewModelScope.launch { linkManager.updateRemoteSoundPermission(contactId, allow) }
+    }
+
+    fun setRemoteOverridePermission(contactId: Long, allow: Boolean) {
+        viewModelScope.launch { linkManager.updateRemoteOverridePermission(contactId, allow) }
     }
 
     fun setProUnlocked(enabled: Boolean) {

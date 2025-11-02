@@ -19,6 +19,15 @@ interface ContactDao {
     @Query("SELECT * FROM contacts WHERE escalationTier = :tier ORDER BY displayName")
     suspend fun getByTier(tier: String): List<Contact>
 
+    @Query("SELECT * FROM contacts WHERE id = :contactId LIMIT 1")
+    suspend fun getById(contactId: Long): Contact?
+
+    @Query("SELECT * FROM contacts WHERE linkCode = :code LIMIT 1")
+    suspend fun getByLinkCode(code: String): Contact?
+
+    @Query("SELECT * FROM contacts WHERE phoneNumber = :phone LIMIT 1")
+    suspend fun getByPhone(phone: String): Contact?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(contact: Contact)
 

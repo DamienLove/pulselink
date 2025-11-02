@@ -20,6 +20,8 @@ class ContactRepositoryImpl @Inject constructor(
         contactDao.deleteById(contactId)
     }
 
+    override suspend fun getContact(contactId: Long): Contact? = contactDao.getById(contactId)
+
     override suspend fun getEmergencyContacts(): List<Contact> {
         return contactDao.getByTier("EMERGENCY")
     }
@@ -27,4 +29,8 @@ class ContactRepositoryImpl @Inject constructor(
     override suspend fun getCheckInContacts(): List<Contact> {
         return contactDao.getByTier("CHECK_IN")
     }
+
+    override suspend fun getByLinkCode(code: String): Contact? = contactDao.getByLinkCode(code)
+
+    override suspend fun getByPhone(phone: String): Contact? = contactDao.getByPhone(phone)
 }
