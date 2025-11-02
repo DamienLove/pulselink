@@ -2,9 +2,10 @@ package com.pulselink.ui.state
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pulselink.BuildConfig
+import com.pulselink.data.alert.SoundCatalog
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.EscalationTier
-import com.pulselink.data.alert.SoundCatalog
 import com.pulselink.domain.model.SoundCategory
 import com.pulselink.domain.repository.AlertRepository
 import com.pulselink.domain.repository.ContactRepository
@@ -48,6 +49,10 @@ class MainViewModel @Inject constructor(
                 val permissionHints = buildList {
                     if (!normalizedSettings.listeningEnabled) add("Listening is paused")
                 }
+                val adsAvailable = BuildConfig.ADS_ENABLED
+                val showAds = adsAvailable && !normalizedSettings.proUnlocked
+                val isProUser = normalizedSettings.proUnlocked || !adsAvailable
+
                 PulseLinkUiState(
                     settings = normalizedSettings,
                     contacts = contacts,
@@ -57,7 +62,11 @@ class MainViewModel @Inject constructor(
                     isDispatching = isDispatching,
                     lastMessagePreview = message,
                     emergencySoundOptions = emergencySounds,
-                    checkInSoundOptions = checkInSounds
+                    checkInSoundOptions = checkInSounds,
+                    showAds = showAds,
+                    isProUser = isProUser,
+                    adsAvailable = adsAvailable,
+                    onboardingComplete = normalizedSettings.onboardingComplete
                 )
             }.collect { state ->
                 _uiState.value = state
@@ -111,6 +120,36 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun updateContact(contact: Contact) {
+        viewModelScope.launch {
+            contactRepository.upsert(contact)
+        }
+    }
+
+    fun updateContactSounds(contactId: Long, emergencyKey: String?, checkInKey: String?) {
+        viewModelScope.launch {
+            val contact = uiState.value.contacts.firstOrNull { it.id == contactId } ?: return@launch
+            contactRepository.upsert(
+                contact.copy(
+                    emergencySoundKey = emergencyKey ?: contact.emergencySoundKey,
+                    checkInSoundKey = checkInKey ?: contact.checkInSoundKey
+                )
+            )
+        }
+    }
+
+    fun setProUnlocked(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setProUnlocked(enabled)
+        }
+    }
+
+    fun completeOnboarding() {
+        viewModelScope.launch {
+            settingsRepository.setOnboardingComplete()
+        }
+    }
+
     private fun dispatch(tier: EscalationTier, phrase: String) {
         viewModelScope.launch {
             dispatching.value = true
@@ -122,6 +161,10 @@ class MainViewModel @Inject constructor(
 
     fun ensureServiceRunning(context: android.content.Context) {
         PulseLinkForegroundService.enqueue(context)
+    }
+
+    fun stopService(context: android.content.Context) {
+        PulseLinkForegroundService.stop(context)
     }
 
     private fun ensureSoundDefaults(settings: com.pulselink.domain.model.PulseLinkSettings): com.pulselink.domain.model.PulseLinkSettings {

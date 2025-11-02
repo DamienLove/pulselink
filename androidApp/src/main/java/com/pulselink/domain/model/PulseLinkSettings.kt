@@ -15,14 +15,16 @@ data class AlertProfile(
 data class PulseLinkSettings(
     val primaryPhrase: String = "help me pulselink",
     val secondaryPhrase: String = "check in pulselink",
-    val listeningEnabled: Boolean = true,
+    val listeningEnabled: Boolean = false,
     val includeLocation: Boolean = true,
     val emergencyProfile: AlertProfile = AlertProfile(),
     val checkInProfile: AlertProfile = AlertProfile(
         breakThroughDnd = false,
         vibrate = true
     ),
-    val autoCallAfterAlert: Boolean = false
+    val autoCallAfterAlert: Boolean = false,
+    val proUnlocked: Boolean = true,
+    val onboardingComplete: Boolean = false
 ) {
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)
         .map { it.trim().lowercase() }

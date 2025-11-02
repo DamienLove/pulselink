@@ -27,6 +27,8 @@ private val INCLUDE_LOCATION = booleanPreferencesKey("include_location")
 private val EMERGENCY_PROFILE = stringPreferencesKey("emergency_profile")
 private val CHECKIN_PROFILE = stringPreferencesKey("checkin_profile")
 private val AUTO_CALL = booleanPreferencesKey("auto_call")
+private val PRO_UNLOCKED = booleanPreferencesKey("pro_unlocked")
+private val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -46,7 +48,9 @@ class SettingsRepositoryImpl @Inject constructor(
                 ?: PulseLinkSettings().emergencyProfile,
             checkInProfile = prefs[CHECKIN_PROFILE]?.let { json.decodeFromString(AlertProfile.serializer(), it) }
                 ?: PulseLinkSettings().checkInProfile,
-            autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert
+            autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,
+            proUnlocked = prefs[PRO_UNLOCKED] ?: PulseLinkSettings().proUnlocked,
+            onboardingComplete = prefs[ONBOARDING_COMPLETE] ?: PulseLinkSettings().onboardingComplete
         )
     }
 
@@ -61,12 +65,26 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[EMERGENCY_PROFILE] = json.encodeToString(AlertProfile.serializer(), updated.emergencyProfile)
             prefs[CHECKIN_PROFILE] = json.encodeToString(AlertProfile.serializer(), updated.checkInProfile)
             prefs[AUTO_CALL] = updated.autoCallAfterAlert
+            prefs[PRO_UNLOCKED] = updated.proUnlocked
+            prefs[ONBOARDING_COMPLETE] = updated.onboardingComplete
         }
     }
 
     override suspend fun setListening(enabled: Boolean) {
         dataStore.edit { prefs ->
             prefs[LISTENING_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setProUnlocked(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[PRO_UNLOCKED] = enabled
+        }
+    }
+
+    override suspend fun setOnboardingComplete() {
+        dataStore.edit { prefs ->
+            prefs[ONBOARDING_COMPLETE] = true
         }
     }
 
@@ -80,7 +98,9 @@ class SettingsRepositoryImpl @Inject constructor(
                 ?: PulseLinkSettings().emergencyProfile,
             checkInProfile = prefs[CHECKIN_PROFILE]?.let { json.decodeFromString(AlertProfile.serializer(), it) }
                 ?: PulseLinkSettings().checkInProfile,
-            autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert
+            autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,
+            proUnlocked = prefs[PRO_UNLOCKED] ?: PulseLinkSettings().proUnlocked,
+            onboardingComplete = prefs[ONBOARDING_COMPLETE] ?: PulseLinkSettings().onboardingComplete
         )
     }
 }

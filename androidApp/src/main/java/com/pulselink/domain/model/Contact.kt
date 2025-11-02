@@ -12,7 +12,11 @@ data class Contact(
     val phoneNumber: String,
     val escalationTier: EscalationTier = EscalationTier.EMERGENCY,
     val includeLocation: Boolean = true,
-    val autoCall: Boolean = false
+    val autoCall: Boolean = false,
+    val emergencySoundKey: String? = null,
+    val checkInSoundKey: String? = null,
+    val cameraEnabled: Boolean = false,
+    val contactOrder: Int = 0
 )
 
 @Serializable

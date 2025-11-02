@@ -15,6 +15,12 @@ PulseLink is a clean-room rebuild of the emergency phrase app. It includes conti
 - Added `PulseLink-ui-mockup/` sketches (1.png-6.png) to track UI direction.
 - Removed bundled Gradle distribution artifacts to stay under GitHub size limits.
 - Initial snapshot pushed to GitHub: `DamienLove/thepulselinkapp` (branch `main`).
+- Introduced `free` (ads) and `pro` (paid) flavors; debug APKs at `androidApp/build/outputs/apk/free/debug/androidApp-free-debug.apk` and `androidApp/build/outputs/apk/pro/debug/androidApp-pro-debug.apk`.
+- Free flavor now loads AdMob app-open, native card, and banner slots when the in-app “Pro mode” switch is turned off.
+- Home top bar now shows the branded icon beside the PulseLink title; flavor app names updated (“PulseLink” vs “PulseLink Pro”).
+- Foreground service start gated until microphone permission granted to satisfy Android 14 FGS requirements.
+- Dropped the unused `dataSync` foreground-service type and disabled auto-start listening so first launch lands on the new Home dashboard.
+- Implemented splash, onboarding, and redesigned home/dashboard with listening switch, navigation tiles, contact list with call/message shortcuts, and pro upgrade card.
 
 -- Modules --
 androidApp: Compose UI + Hilt + Room + DataStore + WorkManager integration for long-running foreground services.

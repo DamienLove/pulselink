@@ -14,5 +14,9 @@ data class PulseLinkUiState(
     val isDispatching: Boolean = false,
     val lastMessagePreview: String? = null,
     val emergencySoundOptions: List<SoundOption> = emptyList(),
-    val checkInSoundOptions: List<SoundOption> = emptyList()
+    val checkInSoundOptions: List<SoundOption> = emptyList(),
+    val showAds: Boolean = false,
+    val isProUser: Boolean = true,
+    val adsAvailable: Boolean = false,
+    val onboardingComplete: Boolean = false
 )

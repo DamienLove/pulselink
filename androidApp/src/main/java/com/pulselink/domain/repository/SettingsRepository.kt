@@ -7,4 +7,6 @@ interface SettingsRepository {
     val settings: Flow<PulseLinkSettings>
     suspend fun update(transform: (PulseLinkSettings) -> PulseLinkSettings)
     suspend fun setListening(enabled: Boolean)
+    suspend fun setProUnlocked(enabled: Boolean)
+    suspend fun setOnboardingComplete()
 }

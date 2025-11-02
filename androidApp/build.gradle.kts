@@ -10,6 +10,8 @@ android {
     namespace = "com.pulselink"
     compileSdk = 34
 
+    flavorDimensions += "tier"
+
     defaultConfig {
         applicationId = "com.pulselink"
         minSdk = 26
@@ -34,9 +36,45 @@ android {
         }
     }
 
+    productFlavors {
+        create("free") {
+            dimension = "tier"
+            applicationIdSuffix = ".free"
+            versionNameSuffix = "-free"
+            manifestPlaceholders += mapOf(
+                "admobAppId" to "ca-app-pub-5327057757821609~9533221188"
+            )
+            buildConfigField("boolean", "ADS_ENABLED", "true")
+            buildConfigField("String", "AD_APP_ID", "\"ca-app-pub-5327057757821609~9533221188\"")
+            buildConfigField("String", "AD_UNIT_BANNER", "\"ca-app-pub-5327057757821609/3955684775\"")
+            buildConfigField("String", "AD_UNIT_INTERSTITIAL", "\"ca-app-pub-5327057757821609/3170992810\"")
+            buildConfigField("String", "AD_UNIT_REWARDED_INTERSTITIAL", "\"ca-app-pub-5327057757821609/8428571815\"")
+            buildConfigField("String", "AD_UNIT_NATIVE_ADVANCED", "\"ca-app-pub-5327057757821609/2153424615\"")
+            buildConfigField("String", "AD_UNIT_APP_OPEN", "\"ca-app-pub-5327057757821609/4210125201\"")
+            resValue("string", "app_name", "PulseLink")
+        }
+        create("pro") {
+            dimension = "tier"
+            applicationIdSuffix = ".pro"
+            versionNameSuffix = "-pro"
+            manifestPlaceholders += mapOf(
+                "admobAppId" to ""
+            )
+            buildConfigField("boolean", "ADS_ENABLED", "false")
+            buildConfigField("String", "AD_APP_ID", "\"\"")
+            buildConfigField("String", "AD_UNIT_BANNER", "\"\"")
+            buildConfigField("String", "AD_UNIT_INTERSTITIAL", "\"\"")
+            buildConfigField("String", "AD_UNIT_REWARDED_INTERSTITIAL", "\"\"")
+            buildConfigField("String", "AD_UNIT_NATIVE_ADVANCED", "\"\"")
+            buildConfigField("String", "AD_UNIT_APP_OPEN", "\"\"")
+            resValue("string", "app_name", "PulseLink Pro")
+        }
+    }
+
     buildFeatures {
         compose = true
         viewBinding = true
+        buildConfig = true
     }
 
     composeOptions {
@@ -75,6 +113,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
@@ -102,6 +141,7 @@ dependencies {
 
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.google.android.gms:play-services-ads:22.6.0")
 
     implementation("com.google.dagger:hilt-android:2.51.1")
     kapt("com.google.dagger:hilt-compiler:2.51.1")

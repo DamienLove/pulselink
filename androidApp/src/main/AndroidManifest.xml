@@ -41,7 +41,7 @@
             android:name=".service.PulseLinkForegroundService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="microphone|dataSync|location" />
+            android:foregroundServiceType="microphone" />
 
         <service
             android:name=".service.PulseLinkVoiceService"

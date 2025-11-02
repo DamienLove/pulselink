@@ -79,5 +79,9 @@ class PulseLinkForegroundService : Service() {
             val intent = Intent(context, PulseLinkForegroundService::class.java)
             ContextCompat.startForegroundService(context, intent)
         }
+
+        fun stop(context: Context) {
+            context.stopService(Intent(context, PulseLinkForegroundService::class.java))
+        }
     }
 }
