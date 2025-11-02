@@ -23,7 +23,7 @@ PulseLink is a clean-room rebuild of the emergency phrase app. It includes conti
 - Implemented splash, onboarding, and redesigned home/dashboard with listening switch, navigation tiles, contact list with call/message shortcuts, and pro upgrade card.
 - Wired the SMS command pipeline: link requests/approvals, pings, and remote alert preparation now move through `ContactLinkManager` with DND overrides.
 - Added per-contact linking state, remote permission toggles, and the official PulseLink shield artwork (launcher + in-app logo).
-- Current focus (branch `feature/ui-polish`): tighten back-stack behavior, swap the emergency tier toggle for an outgoing ringer selector, and finalize inbound approval/ping UX.
+- Current focus (branch `feature/ui-polish`): tighten back-stack behavior, swap the emergency tier toggle for an outgoing ringer selector, finalize inbound approval/ping UX, request DND access up front, and restore ringer/DND state after alerts.
 
 -- Modules --
 androidApp: Compose UI + Hilt + Room + DataStore + WorkManager integration for long-running foreground services.
