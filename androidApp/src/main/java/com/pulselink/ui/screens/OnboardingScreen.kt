@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -31,58 +32,32 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pulselink.R
 
-private data class PermissionCard(
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+data class OnboardingPermissionState(
+    val icon: ImageVector,
     val title: String,
-    val description: String
+    val description: String,
+    val granted: Boolean,
+    val manualHelp: String? = null
 )
 
 @Composable
 fun OnboardingScreen(
     modifier: Modifier = Modifier,
-    onGrantPermissions: () -> Unit
+    permissions: List<OnboardingPermissionState>,
+    onGrantPermissions: () -> Unit,
+    onOpenAppSettings: () -> Unit
 ) {
-    val cards = listOf(
-        PermissionCard(
-            icon = Icons.Filled.Call,
-            title = "SMS & Call",
-            description = "To alert contacts and dial 911"
-        ),
-        PermissionCard(
-            icon = Icons.Filled.Lock,
-            title = "Override Silent / DND",
-            description = "To make sure your alerts get heard"
-        ),
-        PermissionCard(
-            icon = Icons.Filled.Mic,
-            title = "Microphone Access",
-            description = "To detect your safewords"
-        ),
-        PermissionCard(
-            icon = Icons.Filled.PowerSettingsNew,
-            title = "Unrestricted Battery",
-            description = "To protect you in the background"
-        ),
-        PermissionCard(
-            icon = Icons.Filled.LocationOn,
-            title = "Location Access",
-            description = "To add precise location to alerts"
-        ),
-        PermissionCard(
-            icon = Icons.Filled.Person,
-            title = "Contacts",
-            description = "To link trusted contacts in the app"
-        )
-    )
-
     val gradient = Brush.verticalGradient(
         colors = listOf(Color(0xFF1E1E2C), Color(0xFF111119))
     )
+    val hasMissing = permissions.any { !it.granted }
+    val smsHelp = permissions.firstOrNull { it.manualHelp != null && !it.granted }?.manualHelp
 
     Surface(modifier = modifier.fillMaxSize(), color = Color.Transparent) {
         Column(
@@ -105,17 +80,17 @@ fun OnboardingScreen(
         Text(
             text = "Your hands-free safety net",
             style = MaterialTheme.typography.bodyMedium
-        )
+            )
         Spacer(modifier = Modifier.height(24.dp))
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.weight(1f)
         ) {
-            items(cards.size) { index ->
-                val card = cards[index]
+            items(permissions.size) { index ->
+                val card = permissions[index]
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFF1E1E2C)
+                        containerColor = if (card.granted) Color(0xFF1E1E2C) else Color(0xFF2B2340)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -128,7 +103,7 @@ fun OnboardingScreen(
                         Icon(
                             imageVector = card.icon,
                             contentDescription = card.title,
-                            tint = Color.White
+                            tint = if (card.granted) Color(0xFF67DBA0) else Color.White
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
@@ -140,17 +115,42 @@ fun OnboardingScreen(
                                 text = card.description,
                                 style = MaterialTheme.typography.bodySmall
                             )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = if (card.granted) "Granted" else "Action required",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (card.granted) Color(0xFF67DBA0) else Color(0xFFFFB74D)
+                            )
                         }
                     }
                 }
             }
         }
+        if (!smsHelp.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = smsHelp,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFFFFB74D)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = onOpenAppSettings,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F2937))
+            ) {
+                Text(text = "Open App Settings")
+            }
+        }
         Spacer(modifier = Modifier.height(24.dp))
             Button(
                 onClick = onGrantPermissions,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (hasMissing) Color(0xFF2563EB) else Color(0xFF15803D)
+                )
             ) {
-                Text(text = "Grant Permissions & Continue")
+                Text(text = if (hasMissing) "Grant Permissions & Continue" else "Continue")
             }
         }
     }

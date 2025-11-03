@@ -35,8 +35,16 @@ import com.pulselink.ui.screens.OnboardingScreen
 import com.pulselink.ui.screens.SettingsScreen
 import com.pulselink.ui.screens.SplashScreen
 import com.pulselink.ui.screens.UpgradeProScreen
+import com.pulselink.ui.screens.OnboardingPermissionState
 import com.pulselink.ui.state.MainViewModel
 import com.pulselink.ui.theme.PulseLinkTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.LocationOn
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -53,12 +61,14 @@ class MainActivity : ComponentActivity() {
                 val context = LocalContext.current
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
                 val navController = rememberNavController()
+                val notificationManager = ContextCompat.getSystemService(context, NotificationManager::class.java)
 
                 val requiredPermissions = remember {
                     buildList {
                         add(Manifest.permission.RECORD_AUDIO)
                         add(Manifest.permission.SEND_SMS)
                         add(Manifest.permission.RECEIVE_SMS)
+                        add(Manifest.permission.READ_CONTACTS)
                         add(Manifest.permission.ACCESS_COARSE_LOCATION)
                         add(Manifest.permission.ACCESS_FINE_LOCATION)
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -120,18 +130,82 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     composable("onboarding") {
+                        val missingPermissions = requiredPermissions.filter { perm ->
+                            ContextCompat.checkSelfPermission(context, perm) != PackageManager.PERMISSION_GRANTED
+                        }
+
+                        LaunchedEffect(state.onboardingComplete, missingPermissions) {
+                            if (!state.onboardingComplete && missingPermissions.isEmpty()) {
+                                hasMicrophonePermission = hasMicrophone(context)
+                                viewModel.completeOnboarding()
+                            }
+                        }
+
+                        val smsGranted =
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED &&
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+                        val micGranted =
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                        val locationGranted =
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                        val contactsGranted =
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
+                        val hasDndAccess = notificationManager?.isNotificationPolicyAccessGranted == true
+
+                        val permissionCards = listOf(
+                            OnboardingPermissionState(
+                                icon = Icons.Filled.Call,
+                                title = "SMS & Call",
+                                description = "Allow PulseLink to send emergency messages and place calls.",
+                                granted = smsGranted,
+                                manualHelp = if (!smsGranted) {
+                                    "If SMS stays disabled, open App Settings \u2192 3-dot menu \u2192 \"Allow disallowed permissions\", unlock if prompted, then enable SMS manually."
+                                } else null
+                            ),
+                            OnboardingPermissionState(
+                                icon = Icons.Filled.Lock,
+                                title = "Override Silent / DND",
+                                description = "Needed so critical alerts ring even when the phone is muted.",
+                                granted = hasDndAccess
+                            ),
+                            OnboardingPermissionState(
+                                icon = Icons.Filled.Mic,
+                                title = "Microphone",
+                                description = "PulseLink listens for your safewords in the background.",
+                                granted = micGranted
+                            ),
+                            OnboardingPermissionState(
+                                icon = Icons.Filled.PowerSettingsNew,
+                                title = "Background activity",
+                                description = "Keep PulseLink active so alerts work whenever you need them.",
+                                granted = true
+                            ),
+                            OnboardingPermissionState(
+                                icon = Icons.Filled.LocationOn,
+                                title = "Location",
+                                description = "Include precise location when you trigger an alert.",
+                                granted = locationGranted
+                            ),
+                            OnboardingPermissionState(
+                                icon = Icons.Filled.Person,
+                                title = "Contacts",
+                                description = "Link trusted partners so they receive your alerts.",
+                                granted = contactsGranted
+                            )
+                        )
+
                         OnboardingScreen(
+                            permissions = permissionCards,
                             onGrantPermissions = {
-                                val missing = requiredPermissions.filter { perm ->
-                                    ContextCompat.checkSelfPermission(context, perm) != PackageManager.PERMISSION_GRANTED
-                                }
-                                if (missing.isEmpty()) {
+                                if (missingPermissions.isEmpty()) {
                                     hasMicrophonePermission = hasMicrophone(context)
                                     viewModel.completeOnboarding()
                                 } else {
-                                    permissionLauncher.launch(missing.toTypedArray())
+                                    permissionLauncher.launch(missingPermissions.toTypedArray())
                                 }
-                            }
+                            },
+                            onOpenAppSettings = { openAppSettings(context) }
                         )
                     }
                     composable("home") {
@@ -206,7 +280,6 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("settings") {
-                        val notificationManager = ContextCompat.getSystemService(context, NotificationManager::class.java)
                         val hasDndAccess = notificationManager?.isNotificationPolicyAccessGranted == true
                         SettingsScreen(
                             settings = state.settings,
@@ -249,5 +322,14 @@ private fun dialContact(context: android.content.Context, contact: Contact) {
 
 private fun messageContact(context: android.content.Context, contact: Contact) {
     val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${contact.phoneNumber}"))
+    context.startActivity(intent)
+}
+
+private fun openAppSettings(context: android.content.Context) {
+    val intent = Intent(
+        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+        Uri.fromParts("package", context.packageName, null)
+    )
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     context.startActivity(intent)
 }

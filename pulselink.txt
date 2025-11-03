@@ -48,3 +48,4 @@ App requests microphone, SMS (send/receive), notification, and location access. 
 - Next steps: finish UI cleanup (remove legacy widgets, relocate Alerts/Settings) and implement remote handshake + DND access prompts.
 - Streamlined Home UI: removed unused navigation buttons, moved alerts management into Alerts screen, and added Settings destination with location toggle.
 - Added remote alert handshake: devices now exchange prepare/ready SMS codes, enforce DND access before remote alerts or pings, and fall back gracefully if overrides fail.
+- Onboarding now detects external permission grants and provides app-settings guidance for stubborn SMS approvals.
