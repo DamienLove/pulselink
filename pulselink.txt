@@ -41,3 +41,8 @@ androidApp: Compose UI + Hilt + Room + DataStore + WorkManager integration for l
 
 -- Permissions --
 App requests microphone, SMS (send/receive), notification, and location access. Behaviors degrade gracefully when any permission is denied.
+-- 2025-11-03 Update --
+- Replaced static alert/check-in channels with per-tone notification channels that always reference the bundled raw assets and respect vibration/DND flags.
+- Added AudioOverrideManager to snapshot/restore ring volume, ringer mode, and interruption filter; removed the RestoreRingerReceiver broadcast.
+- RemoteActionHandler now funnels remote overrides through the AudioOverrideManager for consistent restore behavior.
+- Next steps: finish UI cleanup (remove legacy widgets, relocate Alerts/Settings) and implement remote handshake + DND access prompts.

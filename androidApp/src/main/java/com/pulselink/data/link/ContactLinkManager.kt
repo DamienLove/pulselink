@@ -3,7 +3,6 @@ package com.pulselink.data.link
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
-import android.media.AudioManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -16,6 +15,7 @@ import com.pulselink.domain.model.EscalationTier
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.repository.ContactRepository
 import com.pulselink.domain.repository.SettingsRepository
+import com.pulselink.util.AudioOverrideManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -224,23 +224,14 @@ class ContactLinkManager @Inject constructor(
 @Singleton
 class RemoteActionHandler @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val alertRouter: com.pulselink.service.AlertRouter
+    private val alertRouter: com.pulselink.service.AlertRouter,
+    private val audioOverrideManager: AudioOverrideManager
 ) {
-
-    private val audioManager: AudioManager by lazy {
-        context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    }
 
     suspend fun prepareForAlert(contact: Contact) {
         if (!contact.allowRemoteOverride) return
         withContext(Dispatchers.Main) {
-            val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_RING)
-            audioManager.setStreamVolume(AudioManager.STREAM_RING, maxVolume, 0)
-            audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
-            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            if (notificationManager.isNotificationPolicyAccessGranted) {
-                notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
-            }
+            audioOverrideManager.overrideForAlert(true)
         }
     }
 

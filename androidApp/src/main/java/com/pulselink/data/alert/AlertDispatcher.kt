@@ -1,7 +1,7 @@
 package com.pulselink.data.alert
 
 import android.Manifest
-import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -16,7 +16,9 @@ import com.pulselink.domain.model.AlertProfile
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.EscalationTier
 import com.pulselink.domain.model.SoundCategory
+import com.pulselink.domain.model.SoundOption
 import com.pulselink.domain.model.PulseLinkSettings
+import com.pulselink.util.AudioOverrideManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -32,7 +34,8 @@ class AlertDispatcher @Inject constructor(
     private val smsSender: SmsSender,
     private val locationProvider: LocationProvider,
     private val registrar: NotificationRegistrar,
-    private val soundCatalog: SoundCatalog
+    private val soundCatalog: SoundCatalog,
+    private val audioOverrideManager: AudioOverrideManager
 ) {
 
     suspend fun dispatch(
@@ -46,13 +49,18 @@ class AlertDispatcher @Inject constructor(
         val locationText = if (settings.includeLocation) buildLocationText() else null
         val message = buildMessage(phrase, tier, locationText)
 
-        val (profile, notificationChannel) = when (tier) {
-            EscalationTier.EMERGENCY -> settings.emergencyProfile to NotificationRegistrar.CHANNEL_ALERTS
-            EscalationTier.CHECK_IN -> settings.checkInProfile to NotificationRegistrar.CHANNEL_CHECK_INS
+        val (profile, soundCategory) = when (tier) {
+            EscalationTier.EMERGENCY -> settings.emergencyProfile to SoundCategory.SIREN
+            EscalationTier.CHECK_IN -> settings.checkInProfile to SoundCategory.CHIME
         }
-        val soundCategory = when (tier) {
-            EscalationTier.EMERGENCY -> SoundCategory.SIREN
-            EscalationTier.CHECK_IN -> SoundCategory.CHIME
+        val soundOption = soundCatalog.resolve(profile.soundKey, soundCategory)
+        val channelId = registrar.ensureAlertChannel(soundCategory, soundOption, profile)
+
+        val shouldOverrideAudio = profile.breakThroughDnd || tier == EscalationTier.EMERGENCY
+        val overrideApplied = if (shouldOverrideAudio) {
+            audioOverrideManager.overrideForAlert(profile.breakThroughDnd)
+        } else {
+            false
         }
 
         val smsCount = runCatching {
@@ -60,13 +68,17 @@ class AlertDispatcher @Inject constructor(
         }.getOrDefault(0)
 
         sendNotification(
-            channel = notificationChannel,
+            channel = channelId,
             tier = tier,
             message = message,
             profile = profile,
-            soundCategory = soundCategory,
+            soundOption = soundOption,
             primaryContact = contacts.firstOrNull()
         )
+
+        if (overrideApplied) {
+            audioOverrideManager.scheduleRestore()
+        }
 
         AlertResult(message = message, notifiedContacts = smsCount, sharedLocation = locationText != null)
     }
@@ -105,7 +117,7 @@ class AlertDispatcher @Inject constructor(
         tier: EscalationTier,
         message: String,
         profile: AlertProfile,
-        soundCategory: SoundCategory,
+        soundOption: SoundOption?,
         primaryContact: Contact?
     ) {
         val manager = NotificationManagerCompat.from(context)
@@ -123,7 +135,6 @@ class AlertDispatcher @Inject constructor(
         if (profile.vibrate) builder.setVibrate(longArrayOf(0, 250, 250, 250, 500, 250))
         if (profile.breakThroughDnd) builder.setCategory(NotificationCompat.CATEGORY_ALARM)
 
-        val soundOption = soundCatalog.resolve(profile.soundKey, soundCategory)
         val soundUri = soundOption?.let {
             Uri.parse("android.resource://${context.packageName}/${it.resId}")
         }
@@ -137,8 +148,8 @@ class AlertDispatcher @Inject constructor(
                 context,
                 it.id.toInt(),
                 dial,
-                0,
-                true
+                PendingIntent.FLAG_UPDATE_CURRENT,
+                false
             )
         }
         if (callIntent != null) {

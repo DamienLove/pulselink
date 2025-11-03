@@ -19,6 +19,7 @@ import com.pulselink.data.settings.provideSettingsDataStore
 import com.pulselink.domain.repository.AlertRepository
 import com.pulselink.domain.repository.ContactRepository
 import com.pulselink.domain.repository.SettingsRepository
+import com.pulselink.util.AudioOverrideManager
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -92,6 +93,14 @@ object DatabaseModule {
         smsSender: com.pulselink.data.sms.SmsSender,
         locationProvider: com.pulselink.data.location.LocationProvider,
         registrar: NotificationRegistrar,
-        soundCatalog: SoundCatalog
-    ): AlertDispatcher = AlertDispatcher(context, smsSender, locationProvider, registrar, soundCatalog)
+        soundCatalog: SoundCatalog,
+        audioOverrideManager: AudioOverrideManager
+    ): AlertDispatcher = AlertDispatcher(
+        context = context,
+        smsSender = smsSender,
+        locationProvider = locationProvider,
+        registrar = registrar,
+        soundCatalog = soundCatalog,
+        audioOverrideManager = audioOverrideManager
+    )
 }
