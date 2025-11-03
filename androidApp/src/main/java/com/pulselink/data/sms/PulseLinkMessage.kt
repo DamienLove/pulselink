@@ -28,6 +28,18 @@ sealed class PulseLinkMessage {
         val tier: EscalationTier
     ) : PulseLinkMessage()
 
+    data class AlertPrepare(
+        override val senderId: String,
+        override val code: String,
+        val tier: EscalationTier
+    ) : PulseLinkMessage()
+
+    data class AlertReady(
+        override val senderId: String,
+        override val code: String,
+        val ready: Boolean
+    ) : PulseLinkMessage()
+
     data class SoundOverride(
         override val senderId: String,
         override val code: String,

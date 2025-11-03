@@ -11,6 +11,8 @@ object SmsCodec {
         LINK_ACCEPT("LINK_ACCEPT"),
         PING("PING"),
         ALERT("ALERT"),
+        ALERT_PREPARE("ALERT_PREP"),
+        ALERT_READY("ALERT_READY"),
         SOUND_OVERRIDE("SOUND"),
         CONFIG("CONFIG")
     }
@@ -26,6 +28,12 @@ object SmsCodec {
 
     fun encodeRemoteAlert(senderId: String, code: String, tier: EscalationTier): String =
         build(Type.ALERT, senderId, code, tier.name)
+
+    fun encodeAlertPrepare(senderId: String, code: String, tier: EscalationTier): String =
+        build(Type.ALERT_PREPARE, senderId, code, tier.name)
+
+    fun encodeAlertReady(senderId: String, code: String, ready: Boolean): String =
+        build(Type.ALERT_READY, senderId, code, if (ready) "1" else "0")
 
     fun encodeSoundOverride(
         senderId: String,
@@ -58,6 +66,16 @@ object SmsCodec {
                 val tierToken = tokens.getOrNull(4) ?: return null
                 val tier = runCatching { EscalationTier.valueOf(tierToken) }.getOrNull() ?: return null
                 PulseLinkMessage.RemoteAlert(senderId, code, tier)
+            }
+            Type.ALERT_PREPARE.wire -> {
+                val tierToken = tokens.getOrNull(4) ?: return null
+                val tier = runCatching { EscalationTier.valueOf(tierToken) }.getOrNull() ?: return null
+                PulseLinkMessage.AlertPrepare(senderId, code, tier)
+            }
+            Type.ALERT_READY.wire -> {
+                val readyToken = tokens.getOrNull(4) ?: "0"
+                val ready = readyToken == "1"
+                PulseLinkMessage.AlertReady(senderId, code, ready)
             }
             Type.SOUND_OVERRIDE.wire -> {
                 val tierToken = tokens.getOrNull(4) ?: return null
