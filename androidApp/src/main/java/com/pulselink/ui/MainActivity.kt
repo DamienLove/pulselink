@@ -1,11 +1,13 @@
 package com.pulselink.ui
 
 import android.Manifest
+import android.app.NotificationManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -30,6 +32,7 @@ import com.pulselink.ui.screens.HomeScreen
 import com.pulselink.ui.screens.ContactDetailScreen
 import com.pulselink.ui.screens.NotificationSoundScreen
 import com.pulselink.ui.screens.OnboardingScreen
+import com.pulselink.ui.screens.SettingsScreen
 import com.pulselink.ui.screens.SplashScreen
 import com.pulselink.ui.screens.UpgradeProScreen
 import com.pulselink.ui.state.MainViewModel
@@ -139,13 +142,12 @@ class MainActivity : ComponentActivity() {
                             onTriggerTest = viewModel::triggerTest,
                             onAddContact = viewModel::saveContact,
                             onDeleteContact = viewModel::deleteContact,
-                            onSelectEmergencySound = viewModel::updateEmergencySound,
-                            onSelectCheckInSound = viewModel::updateCheckInSound,
                             onToggleProMode = viewModel::setProUnlocked,
                             onContactSelected = { contactId -> navController.navigate("contact/$contactId") },
                             onCallContact = { contact -> dialContact(context, contact) },
                             onMessageContact = { contact -> messageContact(context, contact) },
                             onAlertsClick = { navController.navigate("alerts/default") },
+                            onSettingsClick = { navController.navigate("settings") },
                             onUpgradeClick = { navController.navigate("upgrade") }
                         )
                     }
@@ -200,6 +202,21 @@ class MainActivity : ComponentActivity() {
                             selectedCheckIn = contact?.checkInSoundKey,
                             onSelectEmergency = { key -> viewModel.updateContactSounds(contactId, key, contact?.checkInSoundKey) },
                             onSelectCheckIn = { key -> viewModel.updateContactSounds(contactId, contact?.emergencySoundKey, key) },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable("settings") {
+                        val notificationManager = ContextCompat.getSystemService(context, NotificationManager::class.java)
+                        val hasDndAccess = notificationManager?.isNotificationPolicyAccessGranted == true
+                        SettingsScreen(
+                            settings = state.settings,
+                            hasDndAccess = hasDndAccess,
+                            onToggleIncludeLocation = viewModel::setIncludeLocation,
+                            onRequestDndAccess = {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                )
+                            },
                             onBack = { navController.popBackStack() }
                         )
                     }

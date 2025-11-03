@@ -19,15 +19,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
@@ -45,7 +43,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,9 +57,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.pulselink.R
 import com.pulselink.domain.model.Contact
-import com.pulselink.domain.model.EscalationTier
 import com.pulselink.domain.model.LinkStatus
-import com.pulselink.domain.model.SoundOption
 import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.ads.NativeAdCard
 import com.pulselink.ui.state.PulseLinkUiState
@@ -75,14 +70,11 @@ fun HomeScreen(
     onTriggerTest: () -> Unit,
     onAddContact: (Contact) -> Unit,
     onDeleteContact: (Long) -> Unit,
-    onSelectEmergencySound: (String) -> Unit,
-    onSelectCheckInSound: (String) -> Unit,
     onToggleProMode: (Boolean) -> Unit,
     onContactSelected: (Long) -> Unit,
     onCallContact: (Contact) -> Unit,
     onMessageContact: (Contact) -> Unit,
     onEmergencyClick: () -> Unit = {},
-    onLocationClick: () -> Unit = {},
     onAlertsClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onUpgradeClick: () -> Unit = {}
@@ -105,7 +97,6 @@ fun HomeScreen(
             HeaderSection(state, onToggleListening)
             NavigationRow(
                 onEmergencyClick = onEmergencyClick,
-                onLocationClick = onLocationClick,
                 onAlertsClick = onAlertsClick,
                 onSettingsClick = onSettingsClick,
                 onUpgradeClick = onUpgradeClick
@@ -123,14 +114,6 @@ fun HomeScreen(
                 onCallContact = onCallContact,
                 onMessageContact = onMessageContact,
                 onContactSelected = onContactSelected
-            )
-            DefaultAlertsCard(
-                emergencyOptions = state.emergencySoundOptions,
-                checkInOptions = state.checkInSoundOptions,
-                selectedEmergency = state.settings.emergencyProfile.soundKey,
-                selectedCheckIn = state.settings.checkInProfile.soundKey,
-                onSelectEmergency = onSelectEmergencySound,
-                onSelectCheckIn = onSelectCheckInSound
             )
             if (state.adsAvailable) {
                 UpgradeCard(isPro = state.isProUser, onTogglePro = onToggleProMode)
@@ -198,18 +181,16 @@ private fun HeaderSection(state: PulseLinkUiState, onToggleListening: (Boolean) 
 @Composable
 private fun NavigationRow(
     onEmergencyClick: () -> Unit,
-    onLocationClick: () -> Unit,
     onAlertsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onUpgradeClick: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
         NavButton(icon = Icons.Filled.Warning, label = "Emergency", onClick = onEmergencyClick)
-        NavButton(icon = Icons.Filled.LocationOn, label = "Location", onClick = onLocationClick)
         NavButton(icon = Icons.Filled.Notifications, label = "Alerts", onClick = onAlertsClick)
         NavButton(icon = Icons.Filled.Settings, label = "Settings", onClick = onSettingsClick)
         NavButton(icon = Icons.Filled.Star, label = "Pro", onClick = onUpgradeClick)
@@ -249,7 +230,7 @@ private fun QuickActionsRow(onSendCheckIn: () -> Unit, onTriggerTest: () -> Unit
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48)),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Icon(imageVector = Icons.Filled.Send, contentDescription = null)
+            Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
             Text("Trigger test")
         }
@@ -380,94 +361,12 @@ private fun ContactRow(
                         Icon(Icons.Filled.Call, contentDescription = "Call", tint = Color(0xFF34D399))
                     }
                     IconButton(onClick = onMessage) {
-                        Icon(Icons.Filled.Send, contentDescription = "Message", tint = Color(0xFF60A5FA))
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Message", tint = Color(0xFF60A5FA))
                     }
                     IconButton(onClick = onDelete) {
                         Icon(Icons.Filled.Delete, contentDescription = "Remove", tint = Color(0xFFF87171))
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DefaultAlertsCard(
-    emergencyOptions: List<SoundOption>,
-    checkInOptions: List<SoundOption>,
-    selectedEmergency: String?,
-    selectedCheckIn: String?,
-    onSelectEmergency: (String) -> Unit,
-    onSelectCheckIn: (String) -> Unit
-) {
-    if (emergencyOptions.isEmpty() && checkInOptions.isEmpty()) return
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0x131C1C2A))
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(text = "Default alerts", color = Color.White, fontWeight = FontWeight.Bold)
-            emergencyOptions.takeIf { it.isNotEmpty() }?.let {
-                SoundDropdown(
-                    label = "Emergency alert",
-                    options = it,
-                    selectedKey = selectedEmergency,
-                    onSelect = onSelectEmergency
-                )
-            }
-            checkInOptions.takeIf { it.isNotEmpty() }?.let {
-                SoundDropdown(
-                    label = "Check-in alert",
-                    options = it,
-                    selectedKey = selectedCheckIn,
-                    onSelect = onSelectCheckIn
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SoundDropdown(
-    label: String,
-    options: List<SoundOption>,
-    selectedKey: String?,
-    onSelect: (String) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val selected = options.firstOrNull { it.key == selectedKey } ?: options.firstOrNull()
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(text = label, color = Color(0xFFB7BECF), style = MaterialTheme.typography.bodySmall)
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            color = Color(0x1FFFFFFF)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expanded = true }
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = selected?.label ?: "Default",
-                    modifier = Modifier.weight(1f),
-                    color = Color.White
-                )
-                Icon(imageVector = Icons.Filled.Shield, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
-            }
-        }
-        androidx.compose.material3.DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { option ->
-                androidx.compose.material3.DropdownMenuItem(
-                    text = { Text(option.label) },
-                    onClick = {
-                        expanded = false
-                        onSelect(option.key)
-                    }
-                )
             }
         }
     }
@@ -503,7 +402,7 @@ private fun UpgradeCard(isPro: Boolean, onTogglePro: (Boolean) -> Unit) {
 private fun AddContactDialog(onDismiss: () -> Unit, onSave: (Contact) -> Unit) {
     val nameState = remember { mutableStateOf(TextFieldValue()) }
     val phoneState = remember { mutableStateOf(TextFieldValue()) }
-    val tierState = remember { mutableStateOf(EscalationTier.EMERGENCY) }
+    val allowRemoteSoundState = remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -520,7 +419,24 @@ private fun AddContactDialog(onDismiss: () -> Unit, onSave: (Contact) -> Unit) {
                     onValueChange = { phoneState.value = it },
                     label = { Text("Phone") }
                 )
-                TierSelector(tierState)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "Allow remote alert changes", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            text = "Let this contact update which sounds play on this device.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF9AA0B4)
+                        )
+                    }
+                    Switch(
+                        checked = allowRemoteSoundState.value,
+                        onCheckedChange = { allowRemoteSoundState.value = it }
+                    )
+                }
             }
         },
         confirmButton = {
@@ -530,7 +446,7 @@ private fun AddContactDialog(onDismiss: () -> Unit, onSave: (Contact) -> Unit) {
                         Contact(
                             displayName = nameState.value.text,
                             phoneNumber = phoneState.value.text,
-                            escalationTier = tierState.value
+                            allowRemoteSoundChange = allowRemoteSoundState.value
                         )
                     )
                 }
@@ -542,33 +458,4 @@ private fun AddContactDialog(onDismiss: () -> Unit, onSave: (Contact) -> Unit) {
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
-}
-
-@Composable
-private fun TierSelector(state: MutableState<EscalationTier>) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(text = "Escalation tier", style = MaterialTheme.typography.bodyMedium, color = Color.White)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TierButton("Emergency", state.value == EscalationTier.EMERGENCY) {
-                state.value = EscalationTier.EMERGENCY
-            }
-            TierButton("Check-in", state.value == EscalationTier.CHECK_IN) {
-                state.value = EscalationTier.CHECK_IN
-            }
-        }
-    }
-}
-
-@Composable
-private fun TierButton(label: String, selected: Boolean, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (selected) Color(0xFF2563EB) else Color.Transparent,
-            contentColor = if (selected) Color.White else Color(0xFF2563EB)
-        ),
-        shape = RoundedCornerShape(20.dp)
-    ) {
-        Text(text = label)
-    }
 }

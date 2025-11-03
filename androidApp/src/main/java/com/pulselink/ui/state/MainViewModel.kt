@@ -102,6 +102,14 @@ class MainViewModel @Inject constructor(
         dispatch(EscalationTier.CHECK_IN, "PulseLink check in")
     }
 
+    fun setIncludeLocation(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.update { settings ->
+                settings.copy(includeLocation = enabled)
+            }
+        }
+    }
+
     fun updateEmergencySound(key: String) {
         viewModelScope.launch {
             settingsRepository.update { settings ->
