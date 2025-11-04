@@ -11,8 +11,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -21,6 +24,7 @@ import android.widget.Toast
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,6 +53,7 @@ import kotlinx.coroutines.launch
 fun ContactDetailScreen(
     contact: Contact?,
     onBack: () -> Unit,
+    onCallContact: suspend (Contact) -> Unit,
     onEditEmergencyAlert: () -> Unit,
     onEditCheckInAlert: () -> Unit,
     onToggleLocation: (Boolean) -> Unit,
@@ -61,6 +66,9 @@ fun ContactDetailScreen(
     onPing: suspend () -> Boolean,
     onDelete: () -> Unit
 ) {
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -68,6 +76,17 @@ fun ContactDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    contact?.let { target ->
+                        IconButton(onClick = {
+                            coroutineScope.launch {
+                                onCallContact(target)
+                            }
+                        }) {
+                            Icon(Icons.Filled.Call, contentDescription = "Call contact")
+                        }
                     }
                 }
             )
@@ -87,15 +106,13 @@ fun ContactDetailScreen(
                 Button(onClick = onBack) { Text("Back") }
             }
         } else {
-            val coroutineScope = rememberCoroutineScope()
-            val context = LocalContext.current
             val launchPing: () -> Unit = {
                 coroutineScope.launch {
                     val result = runCatching { onPing() }
                     val toastText = when {
-                        result.isFailure -> "Ping failed to send"
-                        result.getOrDefault(false) -> "Ping sent"
-                        else -> "Ping sent (receiver may still be on silent)"
+                        result.isFailure -> "Check-in failed to send"
+                        result.getOrDefault(false) -> "Check-in sent"
+                        else -> "Check-in sent (receiver may still be on silent)"
                     }
                     Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
                 }
@@ -104,7 +121,8 @@ fun ContactDetailScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(24.dp),
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 Header(contact)
@@ -117,11 +135,9 @@ fun ContactDetailScreen(
                     onEditEmergencyAlert = onEditEmergencyAlert,
                     onEditCheckInAlert = onEditCheckInAlert,
                     onToggleRemoteOverride = onToggleRemoteOverride,
-                    onToggleRemoteSound = onToggleRemoteSound
+                    onToggleRemoteSound = onToggleRemoteSound,
+                    onDelete = onDelete
                 )
-                Button(onClick = onDelete, colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48)), modifier = Modifier.fillMaxWidth()) {
-                    Text("Remove contact")
-                }
             }
         }
     }
@@ -181,7 +197,7 @@ private fun LinkStatusSection(
                     OutlinedButton(onClick = onPing, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Filled.NotificationsActive, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Send ping")
+                        Text("Send check-in")
                     }
                 }
             }
@@ -198,7 +214,8 @@ private fun SettingsCard(
     onEditEmergencyAlert: () -> Unit,
     onEditCheckInAlert: () -> Unit,
     onToggleRemoteOverride: (Boolean) -> Unit,
-    onToggleRemoteSound: (Boolean) -> Unit
+    onToggleRemoteSound: (Boolean) -> Unit,
+    onDelete: () -> Unit
 ) {
     Card(colors = CardDefaults.cardColors(containerColor = Color(0x141E2030)), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -222,6 +239,14 @@ private fun SettingsCard(
                 enabled = contact.linkStatus == LinkStatus.LINKED,
                 onCheckedChange = onToggleRemoteSound
             )
+            Divider(color = Color(0x22FFFFFF))
+            Button(
+                onClick = onDelete,
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Delete contact")
+            }
         }
     }
 }
@@ -235,15 +260,22 @@ private fun ToggleRow(
     enabled: Boolean = true
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.Top
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(text = title, color = Color.White, fontWeight = FontWeight.SemiBold)
             Text(text = subtitle, color = Color(0xFF9AA0B4), style = MaterialTheme.typography.bodySmall)
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled,
+            modifier = Modifier.padding(top = 4.dp)
+        )
     }
 }
 

@@ -14,13 +14,18 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -67,6 +72,15 @@ class MainActivity : ComponentActivity() {
                 val notificationManager = ContextCompat.getSystemService(context, NotificationManager::class.java)
                 val ownerName = state.settings.ownerName
 
+                var onboardingName by rememberSaveable { mutableStateOf("") }
+                var onboardingNameDirty by rememberSaveable { mutableStateOf(false) }
+
+                LaunchedEffect(ownerName) {
+                    if (!onboardingNameDirty) {
+                        onboardingName = ownerName
+                    }
+                }
+
                 val requiredPermissions = remember {
                     buildList {
                         add(Manifest.permission.RECORD_AUDIO)
@@ -90,6 +104,19 @@ class MainActivity : ComponentActivity() {
                     pendingPermissionCheck = true
                 }
 
+                val lifecycleOwner = LocalLifecycleOwner.current
+                DisposableEffect(lifecycleOwner) {
+                    val observer = LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_RESUME) {
+                            pendingPermissionCheck = true
+                        }
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose {
+                        lifecycleOwner.lifecycle.removeObserver(observer)
+                    }
+                }
+
                 LaunchedEffect(pendingPermissionCheck) {
                     if (pendingPermissionCheck) {
                         pendingPermissionCheck = false
@@ -98,7 +125,12 @@ class MainActivity : ComponentActivity() {
                         }
                         hasMicrophonePermission = hasMicrophone(context)
                         val dndGranted = notificationManager?.isNotificationPolicyAccessGranted == true
-                        if (missing.isEmpty() && ownerName.isNotBlank() && dndGranted) {
+                        val sanitizedName = onboardingName.trim()
+                        if (missing.isEmpty() && sanitizedName.isNotBlank() && dndGranted) {
+                            onboardingNameDirty = false
+                            if (ownerName != sanitizedName) {
+                                viewModel.setOwnerName(sanitizedName)
+                            }
                             viewModel.completeOnboarding()
                         }
                     }
@@ -136,12 +168,19 @@ class MainActivity : ComponentActivity() {
                     }
                     composable("onboarding_intro") {
                         OnboardingIntroScreen(
-                            ownerName = ownerName,
-                            onOwnerNameChange = viewModel::setOwnerName,
+                            ownerName = onboardingName,
+                            onOwnerNameChange = { updated ->
+                                onboardingName = updated
+                                onboardingNameDirty = true
+                            },
                             onContinue = {
-                                if (ownerName.isBlank()) {
+                                val sanitized = onboardingName.trim()
+                                if (sanitized.isBlank()) {
                                     Toast.makeText(context, "Add your name to continue.", Toast.LENGTH_SHORT).show()
                                 } else {
+                                    onboardingName = sanitized
+                                    onboardingNameDirty = false
+                                    viewModel.setOwnerName(sanitized)
                                     navController.navigate("onboarding_permissions")
                                 }
                             }
@@ -154,8 +193,13 @@ class MainActivity : ComponentActivity() {
 
                         val hasDndAccess = notificationManager?.isNotificationPolicyAccessGranted == true
 
-                        LaunchedEffect(state.onboardingComplete, missingPermissions, ownerName, hasDndAccess) {
-                            if (!state.onboardingComplete && missingPermissions.isEmpty() && ownerName.isNotBlank() && hasDndAccess) {
+                        LaunchedEffect(state.onboardingComplete, missingPermissions, onboardingName, hasDndAccess) {
+                            val sanitized = onboardingName.trim()
+                            if (!state.onboardingComplete && missingPermissions.isEmpty() && sanitized.isNotBlank() && hasDndAccess) {
+                                if (ownerName != sanitized) {
+                                    viewModel.setOwnerName(sanitized)
+                                }
+                                onboardingNameDirty = false
                                 hasMicrophonePermission = hasMicrophone(context)
                                 viewModel.completeOnboarding()
                             }
@@ -216,18 +260,25 @@ class MainActivity : ComponentActivity() {
                             )
                         )
 
-                        val canContinue = missingPermissions.isEmpty() && ownerName.isNotBlank() && hasDndAccess
+                        val sanitizedOnboardingName = onboardingName.trim()
+                        val canContinue = missingPermissions.isEmpty() && sanitizedOnboardingName.isNotBlank() && hasDndAccess
 
                         OnboardingScreen(
                             permissions = permissionCards,
                             isReadyToFinish = canContinue,
                             onGrantPermissions = {
                                 if (missingPermissions.isEmpty()) {
+                                    val currentName = onboardingName.trim()
                                     if (!hasDndAccess) {
                                         openDndSettings(context)
-                                    } else if (ownerName.isBlank()) {
+                                    } else if (currentName.isBlank()) {
                                         Toast.makeText(context, "Add your name to finish setup.", Toast.LENGTH_SHORT).show()
                                     } else {
+                                        onboardingName = currentName
+                                        onboardingNameDirty = false
+                                        if (ownerName != currentName) {
+                                            viewModel.setOwnerName(currentName)
+                                        }
                                         hasMicrophonePermission = hasMicrophone(context)
                                         viewModel.completeOnboarding()
                                     }
@@ -277,6 +328,13 @@ class MainActivity : ComponentActivity() {
                             messages = messages,
                             onBack = { navController.popBackStack() },
                             onOpenSettings = { navController.navigate("contact/$contactId/settings") },
+                            onCallContact = { contactToCall ->
+                                val succeeded = viewModel.prepareRemoteCall(contactToCall.id)
+                                dialContact(context, contactToCall)
+                                if (!succeeded) {
+                                    Toast.makeText(context, "Call started (receiver may still be on silent)", Toast.LENGTH_SHORT).show()
+                                }
+                            },
                             onSendMessage = { body -> viewModel.sendManualMessage(contactId, body) },
                             onPing = { viewModel.sendPing(contactId) }
                         )
@@ -290,6 +348,13 @@ class MainActivity : ComponentActivity() {
                         ContactDetailScreen(
                             contact = contact,
                             onBack = { navController.popBackStack() },
+                            onCallContact = { target ->
+                                val succeeded = viewModel.prepareRemoteCall(target.id)
+                                dialContact(context, target)
+                                if (!succeeded) {
+                                    Toast.makeText(context, "Call started (receiver may still be on silent)", Toast.LENGTH_SHORT).show()
+                                }
+                            },
                             onEditEmergencyAlert = { navController.navigate("alerts/contact/$contactId") },
                             onEditCheckInAlert = { navController.navigate("alerts/contact/$contactId") },
                             onToggleLocation = { enabled -> contact?.let { viewModel.updateContact(it.copy(includeLocation = enabled)) } },

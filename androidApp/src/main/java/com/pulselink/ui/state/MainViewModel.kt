@@ -8,6 +8,7 @@ import com.pulselink.data.link.ContactLinkManager
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ContactMessage
 import com.pulselink.domain.model.EscalationTier
+import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.domain.model.SoundCategory
 import com.pulselink.domain.repository.AlertRepository
 import com.pulselink.domain.repository.ContactRepository
@@ -116,9 +117,8 @@ class MainViewModel @Inject constructor(
     }
 
     fun setOwnerName(name: String) {
-        val trimmed = name.trim()
         viewModelScope.launch {
-            settingsRepository.setOwnerName(trimmed)
+            settingsRepository.setOwnerName(name)
         }
     }
 
@@ -182,7 +182,7 @@ class MainViewModel @Inject constructor(
         return linkManager.prepareRemoteOverride(contactId, tier)
     }
 
-    suspend fun sendManualMessage(contactId: Long, message: String): Boolean =
+    suspend fun sendManualMessage(contactId: Long, message: String): ManualMessageResult =
         linkManager.sendManualMessage(contactId, message)
 
     fun messagesForContact(contactId: Long): Flow<List<ContactMessage>> =

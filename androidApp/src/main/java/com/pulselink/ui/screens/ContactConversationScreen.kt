@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -55,8 +56,10 @@ import com.pulselink.R
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ContactMessage
 import com.pulselink.domain.model.LinkStatus
+import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.domain.model.MessageDirection
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 @Composable
 fun ContactConversationScreen(
@@ -64,7 +67,8 @@ fun ContactConversationScreen(
     messages: List<ContactMessage>,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
-    onSendMessage: suspend (String) -> Boolean,
+    onCallContact: suspend (Contact) -> Unit,
+    onSendMessage: suspend (String) -> ManualMessageResult,
     onPing: suspend () -> Boolean
 ) {
     val gradient = Brush.verticalGradient(
@@ -83,6 +87,7 @@ fun ContactConversationScreen(
                 messages = messages,
                 onBack = onBack,
                 onOpenSettings = onOpenSettings,
+                onCallContact = onCallContact,
                 onSendMessage = onSendMessage,
                 onPing = onPing
             )
@@ -111,7 +116,8 @@ private fun ConversationBody(
     messages: List<ContactMessage>,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
-    onSendMessage: suspend (String) -> Boolean,
+    onCallContact: suspend (Contact) -> Unit,
+    onSendMessage: suspend (String) -> ManualMessageResult,
     onPing: suspend () -> Boolean
 ) {
     val context = LocalContext.current
@@ -136,12 +142,23 @@ private fun ConversationBody(
                     tint = Color.White
                 )
             }
-            IconButton(onClick = onOpenSettings) {
-                Icon(
-                    imageVector = Icons.Filled.Settings,
-                    contentDescription = "Contact settings",
-                    tint = Color.White
-                )
+            Row {
+                IconButton(onClick = {
+                    scope.launch { onCallContact(contact) }
+                }) {
+                    Icon(
+                        imageVector = Icons.Filled.Call,
+                        contentDescription = "Call contact",
+                        tint = Color(0xFF34D399)
+                    )
+                }
+                IconButton(onClick = onOpenSettings) {
+                    Icon(
+                        imageVector = Icons.Filled.Settings,
+                        contentDescription = "Contact settings",
+                        tint = Color.White
+                    )
+                }
             }
         }
 
@@ -172,14 +189,14 @@ private fun ConversationBody(
                     scope.launch {
                         val result = runCatching { onPing() }
                         val toastText = when {
-                            result.isFailure -> "Ping failed to send"
-                            result.getOrDefault(false) -> "Ping sent"
-                            else -> "Ping sent (receiver may still be on silent)"
+                            result.isFailure -> "Check-in failed to send"
+                            result.getOrDefault(false) -> "Check-in sent"
+                            else -> "Check-in sent (receiver may still be on silent)"
                         }
                         Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
                     }
                 }) {
-                    Text(text = "Send ping", color = Color(0xFF67DBA0))
+                    Text(text = "Send check-in", color = Color(0xFF67DBA0))
                 }
             }
         }
@@ -206,14 +223,34 @@ private fun ConversationBody(
                     return@ComposerRow
                 }
                 scope.launch {
-                    val result = runCatching { onSendMessage(body) }
-                    val toastText = when {
-                        result.isFailure -> "Message failed to send"
-                        result.getOrDefault(false) -> "Message sent"
-                        else -> "Message sent (receiver may still be on silent)"
+                    var outcome: ManualMessageResult? = null
+                    val toastText = try {
+                        val result = onSendMessage(body)
+                        outcome = result
+                        when (result) {
+                            is ManualMessageResult.Success -> {
+                                if (result.overrideApplied) {
+                                    "Message sent"
+                                } else {
+                                    "Message sent (receiver may still be on silent)"
+                                }
+                            }
+                            is ManualMessageResult.Failure -> {
+                                when (result.reason) {
+                                    ManualMessageResult.Failure.Reason.CONTACT_MISSING -> "Contact no longer available"
+                                    ManualMessageResult.Failure.Reason.NOT_LINKED -> "Link this contact before messaging"
+                                    ManualMessageResult.Failure.Reason.SMS_FAILED -> "Message failed to send"
+                                    ManualMessageResult.Failure.Reason.UNKNOWN -> "Message failed to send"
+                                }
+                            }
+                        }
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (error: Exception) {
+                        "Message failed to send"
                     }
                     Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
-                    if (result.isSuccess) {
+                    if (outcome is ManualMessageResult.Success) {
                         input = TextFieldValue("")
                     }
                 }

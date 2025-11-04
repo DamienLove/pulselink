@@ -69,7 +69,7 @@ class NotificationRegistrar @Inject constructor(
             )
         }
 
-        val channelLabel = soundOption?.label?.let { "$name • $it" } ?: name
+        val channelLabel = soundOption?.label?.let { "$name - $it" } ?: name
         val audioAttributes = AudioAttributes.Builder()
             .setUsage(usage)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)

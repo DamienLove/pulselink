@@ -17,6 +17,7 @@ import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ContactMessage
 import com.pulselink.domain.model.EscalationTier
 import com.pulselink.domain.model.LinkStatus
+import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.domain.model.MessageDirection
 import com.pulselink.domain.model.SoundCategory
 import com.pulselink.domain.repository.ContactRepository
@@ -101,30 +102,33 @@ class ContactLinkManager @Inject constructor(
             is PulseLinkMessage.AlertReady -> handleAlertReady(message)
             is PulseLinkMessage.RemoteAlert -> handleRemoteAlert(message)
             is PulseLinkMessage.SoundOverride -> handleSoundOverride(message)
-            is PulseLinkMessage.ManualMessage -> handleManualMessage(message)
+            is PulseLinkMessage.ManualMessage -> handleManualMessage(message, fromPhone)
             is PulseLinkMessage.ConfigUpdate -> handleConfigUpdate(message)
         }
     }
 
     private suspend fun handleLinkRequest(message: PulseLinkMessage.LinkRequest, fromPhone: String) {
-        val existingByCode = contactRepository.getByLinkCode(message.code)
-        val existingByPhone = contactRepository.getByPhone(fromPhone)
-        val base = existingByCode ?: existingByPhone
-        val updated = (base ?: Contact(
+        val existing = contactRepository.getByLinkCode(message.code)
+            ?: findContactByPhoneFlexible(fromPhone)
+        val base = existing ?: Contact(
             displayName = if (message.senderName.isNotBlank()) message.senderName else fromPhone,
             phoneNumber = fromPhone
-        )).copy(
+        )
+        val updated = base.copy(
             linkStatus = LinkStatus.INBOUND_REQUEST,
             linkCode = message.code,
             remoteDeviceId = message.senderId,
             pendingApproval = true
         )
         contactRepository.upsert(updated)
-        notifyLinkRequest(updated)
+        val persisted = contactRepository.getByLinkCode(message.code)
+            ?: findContactByPhoneFlexible(fromPhone)
+            ?: updated
+        notifyLinkRequest(persisted)
     }
 
     private suspend fun handleLinkAccept(message: PulseLinkMessage.LinkAccept, fromPhone: String) {
-        val base = contactRepository.getByLinkCode(message.code) ?: contactRepository.getByPhone(fromPhone)
+        val base = contactRepository.getByLinkCode(message.code) ?: findContactByPhoneFlexible(fromPhone)
         base?.let {
             val allowOverride = if (it.linkStatus == LinkStatus.LINKED) {
                 it.allowRemoteOverride
@@ -186,25 +190,63 @@ class ContactLinkManager @Inject constructor(
         contactRepository.upsert(updated)
     }
 
-    private suspend fun handleManualMessage(message: PulseLinkMessage.ManualMessage) {
-        val contact = contactRepository.getByLinkCode(message.code) ?: return
-        val title = context.getString(R.string.manual_message_title, contact.displayName)
-        val body = message.body.ifBlank { context.getString(R.string.ping_received_body) }
-        remoteActionHandler.playAttentionTone(
-            contact = contact,
-            tier = EscalationTier.CHECK_IN,
-            title = title,
-            body = body,
-            notificationId = (contact.id.hashCode() and 0xFFFF) + 3000
-        )
-        messageRepository.record(
-            ContactMessage(
-                contactId = contact.id,
+    private suspend fun handleManualMessage(message: PulseLinkMessage.ManualMessage, fromPhone: String) {
+        try {
+            val persisted = resolveContactForManualMessage(message, fromPhone) ?: return
+            val title = context.getString(R.string.manual_message_title, persisted.displayName)
+            val body = message.body.ifBlank { context.getString(R.string.ping_received_body) }
+            remoteActionHandler.playAttentionTone(
+                contact = persisted,
+                tier = EscalationTier.CHECK_IN,
+                title = title,
                 body = body,
-                direction = MessageDirection.INBOUND,
-                overrideSucceeded = true
+                notificationId = (persisted.id.hashCode() and 0xFFFF) + 3000
             )
-        )
+            withContext(Dispatchers.IO) {
+                messageRepository.record(
+                    ContactMessage(
+                        contactId = persisted.id,
+                        body = body,
+                        direction = MessageDirection.INBOUND,
+                        overrideSucceeded = true
+                    )
+                )
+            }
+        } catch (error: Exception) {
+            Log.e(TAG, "Failed to process manual message from $fromPhone", error)
+        }
+    }
+
+    private suspend fun resolveContactForManualMessage(
+        message: PulseLinkMessage.ManualMessage,
+        fromPhone: String
+    ): Contact? = withContext(Dispatchers.IO) {
+        val initial = contactRepository.getByLinkCode(message.code)
+            ?: findContactByPhoneFlexible(fromPhone)
+            ?: run {
+                if (fromPhone.isBlank() && message.code.isBlank()) return@withContext null
+                val placeholder = Contact(
+                    displayName = if (fromPhone.isNotBlank()) fromPhone else message.senderId,
+                    phoneNumber = fromPhone,
+                    linkCode = message.code.takeIf { it.isNotBlank() },
+                    remoteDeviceId = message.senderId,
+                    linkStatus = if (message.code.isNotBlank()) LinkStatus.INBOUND_REQUEST else LinkStatus.NONE,
+                    pendingApproval = message.code.isNotBlank()
+                )
+                contactRepository.upsert(placeholder)
+                val byCode = message.code.takeIf { it.isNotBlank() }?.let { code ->
+                    contactRepository.getByLinkCode(code)
+                }
+                byCode ?: findContactByPhoneFlexible(fromPhone)
+            }
+            ?: return@withContext null
+        val resolved = initial.resolveLinkState(message)
+        if (resolved !== initial) {
+            contactRepository.upsert(resolved)
+            contactRepository.getContact(resolved.id) ?: resolved
+        } else {
+            resolved
+        }
     }
 
     private suspend fun handleConfigUpdate(message: PulseLinkMessage.ConfigUpdate) {
@@ -283,22 +325,34 @@ class ContactLinkManager @Inject constructor(
         return requestRemotePrepare(contact, tier)
     }
 
-    suspend fun sendManualMessage(contactId: Long, message: String): Boolean {
-        val contact = contactRepository.getContact(contactId) ?: return false
-        if (contact.linkStatus != LinkStatus.LINKED || contact.linkCode.isNullOrBlank()) return false
-        val ready = requestRemotePrepare(contact, EscalationTier.CHECK_IN)
-        val deviceId = settingsRepository.ensureDeviceId()
-        val payload = SmsCodec.encodeManualMessage(deviceId, contact.linkCode, message)
-        smsSender.sendSms(contact.phoneNumber, payload)
-        messageRepository.record(
-            ContactMessage(
-                contactId = contact.id,
-                body = message,
-                direction = MessageDirection.OUTBOUND,
-                overrideSucceeded = ready
-            )
-        )
-        return ready
+    suspend fun sendManualMessage(contactId: Long, message: String): ManualMessageResult {
+        val contact = contactRepository.getContact(contactId)
+            ?: return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.CONTACT_MISSING)
+        if (contact.linkStatus != LinkStatus.LINKED || contact.linkCode.isNullOrBlank()) {
+            return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.NOT_LINKED)
+        }
+        return try {
+            val ready = requestRemotePrepare(contact, EscalationTier.CHECK_IN)
+            val deviceId = settingsRepository.ensureDeviceId()
+            val payload = SmsCodec.encodeManualMessage(deviceId, contact.linkCode, message)
+            val sent = smsSender.sendSms(contact.phoneNumber, payload)
+            if (!sent) {
+                ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.SMS_FAILED)
+            } else {
+                messageRepository.record(
+                    ContactMessage(
+                        contactId = contact.id,
+                        body = message,
+                        direction = MessageDirection.OUTBOUND,
+                        overrideSucceeded = ready
+                    )
+                )
+                ManualMessageResult.Success(overrideApplied = ready)
+            }
+        } catch (error: Exception) {
+            Log.e(TAG, "Unable to send manual message", error)
+            ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.UNKNOWN)
+        }
     }
 
     private suspend fun requestRemotePrepare(contact: Contact, tier: EscalationTier): Boolean {
@@ -318,6 +372,15 @@ class ContactLinkManager @Inject constructor(
         return ready
     }
 
+    private suspend fun findContactByPhoneFlexible(phone: String): Contact? {
+        contactRepository.getByPhone(phone)?.let { return it }
+        val normalizedIncoming = normalizePhone(phone)
+        if (normalizedIncoming.isEmpty()) return null
+        return contactRepository.observeContacts().first().firstOrNull { existing ->
+            normalizePhone(existing.phoneNumber) == normalizedIncoming
+        }
+    }
+
     companion object {
         private const val TAG = "ContactLinkManager"
         private const val CHANNEL_ID = "pulselink_link_channel"
@@ -325,6 +388,40 @@ class ContactLinkManager @Inject constructor(
         const val CONFIG_REMOTE_OVERRIDE = "ALLOW_OVERRIDE"
         private const val PREPARE_TIMEOUT_MS = 10_000L
     }
+}
+
+private fun Contact.resolveLinkState(message: PulseLinkMessage.ManualMessage): Contact {
+    var updated = this
+    var needsUpdate = false
+    if (message.code.isNotBlank() && message.code != updated.linkCode) {
+        updated = updated.copy(linkCode = message.code)
+        needsUpdate = true
+    }
+    if (updated.remoteDeviceId != message.senderId && message.senderId.isNotBlank()) {
+        updated = updated.copy(remoteDeviceId = message.senderId)
+        needsUpdate = true
+    }
+    if (updated.linkStatus != LinkStatus.LINKED) {
+        updated = updated.copy(
+            linkStatus = LinkStatus.LINKED,
+            pendingApproval = false
+        )
+        needsUpdate = true
+    }
+    return if (needsUpdate) updated else this
+}
+
+private fun normalizePhone(input: String): String {
+    if (input.isBlank()) return ""
+    val digits = buildString {
+        input.forEach { ch ->
+            if (ch.isDigit()) append(ch)
+        }
+    }
+    if (digits.length > 10 && digits.startsWith("1")) {
+        return digits.drop(1)
+    }
+    return digits
 }
 
 @Singleton

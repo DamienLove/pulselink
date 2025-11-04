@@ -66,10 +66,12 @@ import androidx.compose.ui.unit.dp
 import com.pulselink.R
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.LinkStatus
+import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.ads.NativeAdCard
 import com.pulselink.ui.state.PulseLinkUiState
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 @Composable
 fun HomeScreen(
@@ -83,7 +85,7 @@ fun HomeScreen(
     onContactSelected: (Long) -> Unit,
     onContactSettings: (Long) -> Unit,
     onCallContact: suspend (Contact) -> Unit,
-    onSendManualMessage: suspend (Contact, String) -> Boolean,
+    onSendManualMessage: suspend (Contact, String) -> ManualMessageResult,
     onAlertsClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onUpgradeClick: () -> Unit = {}
@@ -220,14 +222,32 @@ fun HomeScreen(
                         Toast.makeText(context, "Message cannot be empty", Toast.LENGTH_SHORT).show()
                     } else {
                         coroutineScope.launch {
-                            val result = runCatching { onSendManualMessage(contact, body) }
-                            val toastText = when {
-                                result.isFailure -> "Message failed to send"
-                                result.getOrDefault(false) -> "Message sent"
-                                else -> "Message sent (receiver may still be on silent)"
+                            var outcome: ManualMessageResult? = null
+                            val toastText = try {
+                                val result = onSendManualMessage(contact, body)
+                                outcome = result
+                                when (result) {
+                                    is ManualMessageResult.Success -> {
+                                        if (result.overrideApplied) {
+                                            "Message sent"
+                                        } else {
+                                            "Message sent (receiver may still be on silent)"
+                                        }
+                                    }
+                                    is ManualMessageResult.Failure -> when (result.reason) {
+                                        ManualMessageResult.Failure.Reason.CONTACT_MISSING -> "Contact no longer available"
+                                        ManualMessageResult.Failure.Reason.NOT_LINKED -> "Link this contact before messaging"
+                                        ManualMessageResult.Failure.Reason.SMS_FAILED -> "Message failed to send"
+                                        ManualMessageResult.Failure.Reason.UNKNOWN -> "Message failed to send"
+                                    }
+                                }
+                            } catch (cancelled: CancellationException) {
+                                throw cancelled
+                            } catch (error: Exception) {
+                                "Message failed to send"
                             }
                             Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
-                            if (result.isSuccess) {
+                            if (outcome is ManualMessageResult.Success) {
                                 messageContact = null
                             }
                         }
@@ -327,7 +347,7 @@ private fun QuickActionsRow(onSendCheckIn: () -> Unit, onTriggerTest: () -> Unit
         ) {
             Icon(imageVector = Icons.Filled.Share, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Check-in ping")
+            Text("Send check-in")
         }
         Button(
             onClick = onTriggerTest,
