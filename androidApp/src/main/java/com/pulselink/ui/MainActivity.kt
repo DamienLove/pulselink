@@ -220,7 +220,7 @@ class MainActivity : ComponentActivity() {
 
                         OnboardingScreen(
                             permissions = permissionCards,
-                            canContinue = canContinue,
+                            isReadyToFinish = canContinue,
                             onGrantPermissions = {
                                 if (missingPermissions.isEmpty()) {
                                     if (!hasDndAccess) {

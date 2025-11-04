@@ -67,3 +67,4 @@ App requests microphone, SMS (send/receive), notification, and location access. 
 - Added a gear icon beside each home contact to jump straight into that contact's settings, while tapping the card opens the conversation view.
 - Rebuilt the message composer with gradient styling, mic icon placeholder, and override feedback chips on outbound messages.
 - Confirmed fresh `androidApp:assembleProDebug` and `androidApp:assembleFreeDebug` builds on 2025-11-04 after the UI overhaul.
+- Restored the one-tap "Grant permissions" button on the onboarding permissions screen so users can launch the system dialogs without leaving the flow, while still blocking final completion until every grant (including DND) succeeds.

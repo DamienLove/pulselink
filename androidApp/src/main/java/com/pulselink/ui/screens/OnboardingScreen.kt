@@ -164,7 +164,7 @@ private fun IntroBullet(text: String) {
 fun OnboardingScreen(
     modifier: Modifier = Modifier,
     permissions: List<OnboardingPermissionState>,
-    canContinue: Boolean,
+    isReadyToFinish: Boolean,
     onGrantPermissions: () -> Unit,
     onOpenAppSettings: () -> Unit,
     onBack: () -> Unit
@@ -247,12 +247,11 @@ fun OnboardingScreen(
             Button(
                 onClick = onGrantPermissions,
                 modifier = Modifier.fillMaxWidth(),
-                enabled = canContinue,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (canContinue) Color(0xFF15803D) else Color(0xFF2563EB)
+                    containerColor = if (isReadyToFinish) Color(0xFF15803D) else Color(0xFF2563EB)
                 )
             ) {
-                Text(text = if (canContinue) "Finish setup" else "Grant remaining permissions")
+                Text(text = if (isReadyToFinish) "Finish setup" else "Grant permissions")
             }
         }
     }
