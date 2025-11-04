@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Send
+import android.widget.Toast
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -30,15 +31,18 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pulselink.R
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.LinkStatus
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,7 +58,7 @@ fun ContactDetailScreen(
     onToggleRemoteSound: (Boolean) -> Unit,
     onSendLink: () -> Unit,
     onApproveLink: () -> Unit,
-    onPing: () -> Unit,
+    onPing: suspend () -> Boolean,
     onDelete: () -> Unit
 ) {
     Scaffold(
@@ -83,6 +87,19 @@ fun ContactDetailScreen(
                 Button(onClick = onBack) { Text("Back") }
             }
         } else {
+            val coroutineScope = rememberCoroutineScope()
+            val context = LocalContext.current
+            val launchPing: () -> Unit = {
+                coroutineScope.launch {
+                    val result = runCatching { onPing() }
+                    val toastText = when {
+                        result.isFailure -> "Ping failed to send"
+                        result.getOrDefault(false) -> "Ping sent"
+                        else -> "Ping sent (receiver may still be on silent)"
+                    }
+                    Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
+                }
+            }
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -91,7 +108,7 @@ fun ContactDetailScreen(
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 Header(contact)
-                LinkStatusSection(contact, onSendLink, onApproveLink, onPing)
+                LinkStatusSection(contact, onSendLink, onApproveLink, launchPing)
                 SettingsCard(
                     contact = contact,
                     onToggleLocation = onToggleLocation,

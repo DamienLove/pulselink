@@ -1,5 +1,11 @@
 package com.pulselink.ui.screens
 
+import android.content.Context
+import android.net.Uri
+import android.provider.ContactsContract
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,8 +24,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PersonAdd
@@ -27,7 +33,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -43,14 +48,17 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
@@ -61,6 +69,7 @@ import com.pulselink.domain.model.LinkStatus
 import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.ads.NativeAdCard
 import com.pulselink.ui.state.PulseLinkUiState
+import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen(
@@ -72,18 +81,45 @@ fun HomeScreen(
     onDeleteContact: (Long) -> Unit,
     onToggleProMode: (Boolean) -> Unit,
     onContactSelected: (Long) -> Unit,
-    onCallContact: (Contact) -> Unit,
-    onMessageContact: (Contact) -> Unit,
-    onEmergencyClick: () -> Unit = {},
+    onCallContact: suspend (Contact) -> Unit,
+    onSendManualMessage: suspend (Contact, String) -> Boolean,
     onAlertsClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onUpgradeClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
     var showAddDialog by remember { mutableStateOf(false) }
+    var newContactName by remember { mutableStateOf(TextFieldValue()) }
+    var newContactPhone by remember { mutableStateOf(TextFieldValue()) }
+    var allowRemoteSound by remember { mutableStateOf(false) }
     var searchValue by remember { mutableStateOf(TextFieldValue()) }
 
+    var messageContact by remember { mutableStateOf<Contact?>(null) }
+    var messageBody by remember { mutableStateOf(TextFieldValue()) }
+
+    val contactPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickContact()) { uri ->
+        if (uri != null) {
+            resolveContact(context, uri)?.let { (name, number) ->
+                newContactName = TextFieldValue(name)
+                if (number.isNotBlank()) {
+                    newContactPhone = TextFieldValue(number)
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(showAddDialog) {
+        if (showAddDialog) {
+            newContactName = TextFieldValue()
+            newContactPhone = TextFieldValue()
+            allowRemoteSound = false
+        }
+    }
+
     val gradient = Brush.verticalGradient(
-        listOf(Color(0xFF10131F), Color(0xFF090B11))
+        colors = listOf(Color(0xFF10131F), Color(0xFF090B11))
     )
 
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -96,7 +132,6 @@ fun HomeScreen(
         ) {
             HeaderSection(state, onToggleListening)
             NavigationRow(
-                onEmergencyClick = onEmergencyClick,
                 onAlertsClick = onAlertsClick,
                 onSettingsClick = onSettingsClick,
                 onUpgradeClick = onUpgradeClick
@@ -111,8 +146,17 @@ fun HomeScreen(
                 state = state,
                 searchQuery = searchValue.text,
                 onDeleteContact = onDeleteContact,
-                onCallContact = onCallContact,
-                onMessageContact = onMessageContact,
+                onCallContact = { contact ->
+                    coroutineScope.launch { onCallContact(contact) }
+                },
+                onMessageContact = { contact ->
+                    if (contact.linkStatus != LinkStatus.LINKED || contact.linkCode.isNullOrBlank()) {
+                        Toast.makeText(context, "Contact must approve link before messaging", Toast.LENGTH_SHORT).show()
+                    } else {
+                        messageContact = contact
+                        messageBody = TextFieldValue()
+                    }
+                },
                 onContactSelected = onContactSelected
             )
             if (state.adsAvailable) {
@@ -127,10 +171,71 @@ fun HomeScreen(
 
     if (showAddDialog) {
         AddContactDialog(
+            name = newContactName,
+            onNameChange = { newContactName = it },
+            phone = newContactPhone,
+            onPhoneChange = { newContactPhone = it },
+            allowRemoteSound = allowRemoteSound,
+            onAllowRemoteSoundChange = { allowRemoteSound = it },
+            onImport = { contactPicker.launch(null) },
             onDismiss = { showAddDialog = false },
-            onSave = { contact ->
-                onAddContact(contact)
-                showAddDialog = false
+            onSave = {
+                val name = newContactName.text.trim()
+                val phone = newContactPhone.text.trim()
+                if (name.isNotEmpty() && phone.isNotEmpty()) {
+                    onAddContact(
+                        Contact(
+                            displayName = name,
+                            phoneNumber = phone,
+                            allowRemoteSoundChange = allowRemoteSound
+                        )
+                    )
+                    showAddDialog = false
+                } else {
+                    Toast.makeText(context, "Name and phone are required", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    }
+
+    messageContact?.let { contact ->
+        AlertDialog(
+            onDismissRequest = { messageContact = null },
+            title = { Text(text = "Message ${contact.displayName}") },
+            text = {
+                OutlinedTextField(
+                    value = messageBody,
+                    onValueChange = { messageBody = it },
+                    label = { Text("Message") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val body = messageBody.text.trim()
+                    if (body.isEmpty()) {
+                        Toast.makeText(context, "Message cannot be empty", Toast.LENGTH_SHORT).show()
+                    } else {
+                        coroutineScope.launch {
+                            val result = runCatching { onSendManualMessage(contact, body) }
+                            val toastText = when {
+                                result.isFailure -> "Message failed to send"
+                                result.getOrDefault(false) -> "Message sent"
+                                else -> "Message sent (receiver may still be on silent)"
+                            }
+                            Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
+                            if (result.isSuccess) {
+                                messageContact = null
+                            }
+                        }
+                    }
+                }) {
+                    Text("Send")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { messageContact = null }) { Text("Cancel") }
             }
         )
     }
@@ -180,7 +285,6 @@ private fun HeaderSection(state: PulseLinkUiState, onToggleListening: (Boolean) 
 
 @Composable
 private fun NavigationRow(
-    onEmergencyClick: () -> Unit,
     onAlertsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onUpgradeClick: () -> Unit
@@ -190,7 +294,6 @@ private fun NavigationRow(
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        NavButton(icon = Icons.Filled.Warning, label = "Emergency", onClick = onEmergencyClick)
         NavButton(icon = Icons.Filled.Notifications, label = "Alerts", onClick = onAlertsClick)
         NavButton(icon = Icons.Filled.Settings, label = "Settings", onClick = onSettingsClick)
         NavButton(icon = Icons.Filled.Star, label = "Pro", onClick = onUpgradeClick)
@@ -272,10 +375,6 @@ private fun ContactsList(
     onMessageContact: (Contact) -> Unit,
     onContactSelected: (Long) -> Unit
 ) {
-    val filtered = state.contacts.filter {
-        it.displayName.contains(searchQuery, ignoreCase = true) ||
-            it.phoneNumber.contains(searchQuery, ignoreCase = true)
-    }
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color(0x141C1C2A))
@@ -300,9 +399,21 @@ private fun ContactsList(
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            if (filtered.isEmpty()) {
+            val contacts = state.contacts
+            val filtered = contacts.filter {
+                searchQuery.isBlank() ||
+                    it.displayName.contains(searchQuery, ignoreCase = true) ||
+                    it.phoneNumber.contains(searchQuery, ignoreCase = true)
+            }
+            if (contacts.isEmpty()) {
                 Text(
                     text = "No contacts yet. Add someone to get started.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF9AA0B4)
+                )
+            } else if (filtered.isEmpty()) {
+                Text(
+                    text = "No contacts match your search.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFF9AA0B4)
                 )
@@ -357,13 +468,13 @@ private fun ContactRow(
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    IconButton(onClick = onCall) {
+                    IconButton(onCall) {
                         Icon(Icons.Filled.Call, contentDescription = "Call", tint = Color(0xFF34D399))
                     }
-                    IconButton(onClick = onMessage) {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Message", tint = Color(0xFF60A5FA))
+                    IconButton(onMessage) {
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Message", tint = Color(0xFF60A5FA))
                     }
-                    IconButton(onClick = onDelete) {
+                    IconButton(onDelete) {
                         Icon(Icons.Filled.Delete, contentDescription = "Remove", tint = Color(0xFFF87171))
                     }
                 }
@@ -376,48 +487,68 @@ private fun ContactRow(
 private fun UpgradeCard(isPro: Boolean, onTogglePro: (Boolean) -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0x1A9155FD))
+        colors = CardDefaults.cardColors(containerColor = Color(0x141C1C2A))
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column {
-                Text(text = "PulseLink Pro", color = Color.White, fontWeight = FontWeight.Bold)
-                Text(
-                    text = if (isPro) "Pro active on this device" else "Unlock concierge escalation",
-                    color = Color(0xFFE3E8FF),
-                    style = MaterialTheme.typography.bodySmall
-                )
+            Text(
+                text = "PulseLink Pro",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = Color.White
+            )
+            Text(
+                text = if (isPro) {
+                    "Pro mode is active on this device."
+                } else {
+                    "Unlock Pro to remove ads and enable premium automations."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF9AA0B4)
+            )
+            Button(
+                onClick = { onTogglePro(!isPro) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isPro) Color(0xFF2563EB) else Color(0xFF10B981)
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Text(text = if (isPro) "Disable Pro mode" else "Enable Pro mode")
             }
-            Switch(checked = isPro, onCheckedChange = onTogglePro)
         }
     }
 }
 
 @Composable
-private fun AddContactDialog(onDismiss: () -> Unit, onSave: (Contact) -> Unit) {
-    val nameState = remember { mutableStateOf(TextFieldValue()) }
-    val phoneState = remember { mutableStateOf(TextFieldValue()) }
-    val allowRemoteSoundState = remember { mutableStateOf(false) }
-
+private fun AddContactDialog(
+    name: TextFieldValue,
+    onNameChange: (TextFieldValue) -> Unit,
+    phone: TextFieldValue,
+    onPhoneChange: (TextFieldValue) -> Unit,
+    allowRemoteSound: Boolean,
+    onAllowRemoteSoundChange: (Boolean) -> Unit,
+    onImport: () -> Unit,
+    onDismiss: () -> Unit,
+    onSave: () -> Unit
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(text = "Add trusted contact") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
-                    value = nameState.value,
-                    onValueChange = { nameState.value = it },
-                    label = { Text("Name") }
+                    value = name,
+                    onValueChange = onNameChange,
+                    label = { Text("Name") },
+                    modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
-                    value = phoneState.value,
-                    onValueChange = { phoneState.value = it },
-                    label = { Text("Phone") }
+                    value = phone,
+                    onValueChange = onPhoneChange,
+                    label = { Text("Phone") },
+                    modifier = Modifier.fillMaxWidth()
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -432,25 +563,15 @@ private fun AddContactDialog(onDismiss: () -> Unit, onSave: (Contact) -> Unit) {
                             color = Color(0xFF9AA0B4)
                         )
                     }
-                    Switch(
-                        checked = allowRemoteSoundState.value,
-                        onCheckedChange = { allowRemoteSoundState.value = it }
-                    )
+                    Switch(checked = allowRemoteSound, onCheckedChange = onAllowRemoteSoundChange)
+                }
+                OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) {
+                    Text(text = "Import from contacts")
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                if (nameState.value.text.isNotBlank() && phoneState.value.text.isNotBlank()) {
-                    onSave(
-                        Contact(
-                            displayName = nameState.value.text,
-                            phoneNumber = phoneState.value.text,
-                            allowRemoteSoundChange = allowRemoteSoundState.value
-                        )
-                    )
-                }
-            }) {
+            TextButton(onClick = onSave) {
                 Text("Save")
             }
         },
@@ -458,4 +579,32 @@ private fun AddContactDialog(onDismiss: () -> Unit, onSave: (Contact) -> Unit) {
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
+}
+
+private fun resolveContact(context: Context, uri: Uri): Pair<String, String>? {
+    val resolver = context.contentResolver
+    resolver.query(uri, arrayOf(ContactsContract.Contacts._ID, ContactsContract.Contacts.DISPLAY_NAME), null, null, null)
+        ?.use { cursor ->
+            if (!cursor.moveToFirst()) return null
+            val idIndex = cursor.getColumnIndex(ContactsContract.Contacts._ID)
+            val nameIndex = cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
+            if (idIndex < 0) return null
+            val contactId = cursor.getString(idIndex)
+            val displayName = if (nameIndex >= 0) cursor.getString(nameIndex) ?: "" else ""
+            resolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
+                "${ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?",
+                arrayOf(contactId),
+                null
+            )?.use { phones ->
+                if (phones.moveToFirst()) {
+                    val numberIndex = phones.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                    val number = if (numberIndex >= 0) phones.getString(numberIndex) ?: "" else ""
+                    return displayName to number
+                }
+            }
+            return displayName to ""
+        }
+    return null
 }

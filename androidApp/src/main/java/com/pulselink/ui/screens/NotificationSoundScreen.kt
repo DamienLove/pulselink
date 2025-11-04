@@ -1,5 +1,6 @@
 package com.pulselink.ui.screens
 
+import android.media.MediaPlayer
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,9 +12,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,9 +26,15 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,6 +53,55 @@ fun NotificationSoundScreen(
     onSelectCheckIn: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    var playingKey by remember { mutableStateOf<String?>(null) }
+    var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            mediaPlayer?.release()
+            mediaPlayer = null
+        }
+    }
+
+    val stopPreview = {
+        mediaPlayer?.stop()
+        mediaPlayer?.release()
+        mediaPlayer = null
+        playingKey = null
+    }
+
+    val playPreview: (SoundOption) -> Unit = preview@{ option ->
+        if (playingKey == option.key) {
+            stopPreview()
+        } else {
+            mediaPlayer?.stop()
+            mediaPlayer?.release()
+            mediaPlayer = null
+            playingKey = null
+
+            val player = MediaPlayer.create(context, option.resId)
+            if (player == null) return@preview
+
+            mediaPlayer = player
+            playingKey = option.key
+            player.setOnCompletionListener {
+                it.release()
+                if (mediaPlayer === it) {
+                    mediaPlayer = null
+                }
+                playingKey = null
+            }
+            runCatching { player.start() }.onFailure {
+                player.release()
+                if (mediaPlayer === player) {
+                    mediaPlayer = null
+                }
+                playingKey = null
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -77,13 +135,23 @@ fun NotificationSoundScreen(
             SoundSection(
                 title = "Emergency Alert", options = emergencyOptions,
                 selectedKey = selectedEmergency,
-                onSelect = onSelectEmergency
+                onSelect = {
+                    stopPreview()
+                    onSelectEmergency(it)
+                },
+                playingKey = playingKey,
+                onPlayPreview = playPreview
             )
 
             SoundSection(
                 title = "Check-in Alert", options = checkInOptions,
                 selectedKey = selectedCheckIn,
-                onSelect = onSelectCheckIn
+                onSelect = {
+                    stopPreview()
+                    onSelectCheckIn(it)
+                },
+                playingKey = playingKey,
+                onPlayPreview = playPreview
             )
 
             Button(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
@@ -98,7 +166,9 @@ private fun SoundSection(
     title: String,
     options: List<SoundOption>,
     selectedKey: String?,
-    onSelect: (String) -> Unit
+    onSelect: (String) -> Unit,
+    playingKey: String?,
+    onPlayPreview: (SoundOption) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = title, style = MaterialTheme.typography.titleMedium)
@@ -111,7 +181,19 @@ private fun SoundSection(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     RadioButton(selected = option.key == selectedKey, onClick = { onSelect(option.key) })
-                    Text(text = option.label, modifier = Modifier.padding(start = 8.dp))
+                    Text(
+                        text = option.label,
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .weight(1f)
+                    )
+                    IconButton(onClick = { onPlayPreview(option) }) {
+                        val icon = if (playingKey == option.key) Icons.Filled.Stop else Icons.Filled.PlayArrow
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = if (playingKey == option.key) "Stop preview" else "Play preview"
+                        )
+                    }
                 }
             }
         }

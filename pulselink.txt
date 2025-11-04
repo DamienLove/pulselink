@@ -49,3 +49,12 @@ App requests microphone, SMS (send/receive), notification, and location access. 
 - Streamlined Home UI: removed unused navigation buttons, moved alerts management into Alerts screen, and added Settings destination with location toggle.
 - Added remote alert handshake: devices now exchange prepare/ready SMS codes, enforce DND access before remote alerts or pings, and fall back gracefully if overrides fail.
 - Onboarding now detects external permission grants and provides app-settings guidance for stubborn SMS approvals.
+
+-- 2025-11-04 Update --
+- Remote contact attention flow now plays the configured alert tone (respecting per-contact overrides) for pings, manual messages, and remote handshakes while forcing ring volume/DND overrides and scheduling automatic restore.
+- Manual message and ping senders receive immediate feedback if the remote device fails to acknowledge the override; manual composer blocks unlinked contacts and preserves guidance to try again if delivery raises an error.
+- Notification sound picker now manages preview playback via a single MediaPlayer instance that stops/cleans up when leaving the screen.
+- Onboarding permission help clarified the SMS unlock steps (Settings > Apps > PulseLink > Permissions > 3-dot menu) per Motorola fingerprint flows.
+- Contact detail and home actions now await handshake completion, show success/fallback toasts, and refuse remote messaging until the contact is fully linked.
+- Restored the Pro upsell card on Home so the existing navigation entry no longer references a missing composable.
+- Built fresh free/pro debug APKs on 2025-11-04 (`androidApp/build/outputs/apk/free/debug/androidApp-free-debug.apk`, `androidApp/build/outputs/apk/pro/debug/androidApp-pro-debug.apk`).

@@ -32,6 +32,7 @@ private val AUTO_CALL = booleanPreferencesKey("auto_call")
 private val PRO_UNLOCKED = booleanPreferencesKey("pro_unlocked")
 private val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
 private val DEVICE_ID = stringPreferencesKey("device_id")
+private val OWNER_NAME = stringPreferencesKey("owner_name")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -54,7 +55,8 @@ class SettingsRepositoryImpl @Inject constructor(
             autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,
             proUnlocked = prefs[PRO_UNLOCKED] ?: PulseLinkSettings().proUnlocked,
             onboardingComplete = prefs[ONBOARDING_COMPLETE] ?: PulseLinkSettings().onboardingComplete,
-            deviceId = prefs[DEVICE_ID] ?: PulseLinkSettings().deviceId
+            deviceId = prefs[DEVICE_ID] ?: PulseLinkSettings().deviceId,
+            ownerName = prefs[OWNER_NAME] ?: PulseLinkSettings().ownerName
         )
     }
 
@@ -72,6 +74,7 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[PRO_UNLOCKED] = updated.proUnlocked
             prefs[ONBOARDING_COMPLETE] = updated.onboardingComplete
             prefs[DEVICE_ID] = updated.deviceId
+            prefs[OWNER_NAME] = updated.ownerName
         }
     }
 
@@ -103,6 +106,12 @@ class SettingsRepositoryImpl @Inject constructor(
         return generated
     }
 
+    override suspend fun setOwnerName(name: String) {
+        dataStore.edit { prefs ->
+            prefs[OWNER_NAME] = name
+        }
+    }
+
     private fun settingsValue(prefs: Preferences): PulseLinkSettings {
         return PulseLinkSettings(
             primaryPhrase = prefs[PRIMARY_PHRASE] ?: PulseLinkSettings().primaryPhrase,
@@ -116,7 +125,8 @@ class SettingsRepositoryImpl @Inject constructor(
             autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,
             proUnlocked = prefs[PRO_UNLOCKED] ?: PulseLinkSettings().proUnlocked,
             onboardingComplete = prefs[ONBOARDING_COMPLETE] ?: PulseLinkSettings().onboardingComplete,
-            deviceId = prefs[DEVICE_ID] ?: PulseLinkSettings().deviceId
+            deviceId = prefs[DEVICE_ID] ?: PulseLinkSettings().deviceId,
+            ownerName = prefs[OWNER_NAME] ?: PulseLinkSettings().ownerName
         )
     }
 }

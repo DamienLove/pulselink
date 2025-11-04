@@ -23,10 +23,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,6 +38,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.pulselink.R
 
@@ -46,18 +51,24 @@ data class OnboardingPermissionState(
     val manualHelp: String? = null
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OnboardingScreen(
     modifier: Modifier = Modifier,
     permissions: List<OnboardingPermissionState>,
+    ownerName: String,
+    onOwnerNameChange: (String) -> Unit,
     onGrantPermissions: () -> Unit,
     onOpenAppSettings: () -> Unit
 ) {
     val gradient = Brush.verticalGradient(
         colors = listOf(Color(0xFF1E1E2C), Color(0xFF111119))
     )
+    val primaryTextColor = Color(0xFFF8F9FF)
+    val secondaryTextColor = Color(0xFFDEE2FF)
     val hasMissing = permissions.any { !it.granted }
     val smsHelp = permissions.firstOrNull { it.manualHelp != null && !it.granted }?.manualHelp
+    val canContinue = ownerName.isNotBlank() && !hasMissing
 
     Surface(modifier = modifier.fillMaxSize(), color = Color.Transparent) {
         Column(
@@ -74,13 +85,41 @@ fun OnboardingScreen(
         Spacer(modifier = Modifier.height(24.dp))
         Text(
             text = "PulseLink",
-            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
+            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+            color = primaryTextColor
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Your hands-free safety net",
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium,
+            color = secondaryTextColor
             )
+        Spacer(modifier = Modifier.height(16.dp))
+        OutlinedTextField(
+            value = ownerName,
+            onValueChange = onOwnerNameChange,
+            label = { Text("Your name", color = secondaryTextColor) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                focusedBorderColor = Color(0xFF94A3B8),
+                unfocusedBorderColor = Color(0xFF4B5563),
+                cursorColor = primaryTextColor,
+                focusedTextColor = primaryTextColor,
+                unfocusedTextColor = primaryTextColor,
+                focusedLabelColor = secondaryTextColor,
+                unfocusedLabelColor = secondaryTextColor
+            )
+        )
+        if (ownerName.isBlank()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "We include this name in link requests so your contacts recognize you.",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFFFFB74D)
+            )
+        }
         Spacer(modifier = Modifier.height(24.dp))
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -109,11 +148,13 @@ fun OnboardingScreen(
                         Column {
                             Text(
                                 text = card.title,
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = primaryTextColor
                             )
                             Text(
                                 text = card.description,
-                                style = MaterialTheme.typography.bodySmall
+                                style = MaterialTheme.typography.bodySmall,
+                                color = secondaryTextColor
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
@@ -146,11 +187,12 @@ fun OnboardingScreen(
             Button(
                 onClick = onGrantPermissions,
                 modifier = Modifier.fillMaxWidth(),
+                enabled = ownerName.isNotBlank() || hasMissing,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (hasMissing) Color(0xFF2563EB) else Color(0xFF15803D)
+                    containerColor = if (canContinue) Color(0xFF15803D) else Color(0xFF2563EB)
                 )
             ) {
-                Text(text = if (hasMissing) "Grant Permissions & Continue" else "Continue")
+                Text(text = if (canContinue) "Continue" else "Grant Permissions & Continue")
             }
         }
     }

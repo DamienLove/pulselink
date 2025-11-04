@@ -39,6 +39,8 @@
     <string name="link_success_body">You are now linked with %1$s.</string>
     <string name="ping_received_title">Ping from %1$s</string>
     <string name="ping_received_body">They are checking in with you.</string>
+    <string name="manual_message_title">%1$s sent a message</string>
+    <string name="channel_manual_messages">PulseLink Messages</string>
     <string name="permission_microphone">PulseLink needs microphone access for hotword detection.</string>
     <string name="permission_sms">PulseLink needs SMS permission to contact your circle.</string>
     <string name="permission_location">PulseLink needs location access to share your position.</string>

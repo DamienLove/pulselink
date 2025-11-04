@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -62,6 +63,7 @@ class MainActivity : ComponentActivity() {
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
                 val navController = rememberNavController()
                 val notificationManager = ContextCompat.getSystemService(context, NotificationManager::class.java)
+                val ownerName = state.settings.ownerName
 
                 val requiredPermissions = remember {
                     buildList {
@@ -93,7 +95,7 @@ class MainActivity : ComponentActivity() {
                             ContextCompat.checkSelfPermission(context, perm) != PackageManager.PERMISSION_GRANTED
                         }
                         hasMicrophonePermission = hasMicrophone(context)
-                        if (missing.isEmpty()) {
+                        if (missing.isEmpty() && ownerName.isNotBlank()) {
                             viewModel.completeOnboarding()
                         }
                     }
@@ -134,8 +136,8 @@ class MainActivity : ComponentActivity() {
                             ContextCompat.checkSelfPermission(context, perm) != PackageManager.PERMISSION_GRANTED
                         }
 
-                        LaunchedEffect(state.onboardingComplete, missingPermissions) {
-                            if (!state.onboardingComplete && missingPermissions.isEmpty()) {
+                        LaunchedEffect(state.onboardingComplete, missingPermissions, ownerName) {
+                            if (!state.onboardingComplete && missingPermissions.isEmpty() && ownerName.isNotBlank()) {
                                 hasMicrophonePermission = hasMicrophone(context)
                                 viewModel.completeOnboarding()
                             }
@@ -160,7 +162,7 @@ class MainActivity : ComponentActivity() {
                                 description = "Allow PulseLink to send emergency messages and place calls.",
                                 granted = smsGranted,
                                 manualHelp = if (!smsGranted) {
-                                    "If SMS stays disabled, open App Settings \u2192 3-dot menu \u2192 \"Allow disallowed permissions\", unlock if prompted, then enable SMS manually."
+                                    "If SMS stays disabled: open Settings -> Apps -> PulseLink -> Permissions, tap SMS, open the 3-dot menu, choose \"Allow disallowed permissions\", confirm with fingerprint or PIN, then switch SMS to Allow."
                                 } else null
                             ),
                             OnboardingPermissionState(
@@ -197,10 +199,16 @@ class MainActivity : ComponentActivity() {
 
                         OnboardingScreen(
                             permissions = permissionCards,
+                            ownerName = ownerName,
+                            onOwnerNameChange = viewModel::setOwnerName,
                             onGrantPermissions = {
                                 if (missingPermissions.isEmpty()) {
-                                    hasMicrophonePermission = hasMicrophone(context)
-                                    viewModel.completeOnboarding()
+                                    if (ownerName.isBlank()) {
+                                        Toast.makeText(context, "Add your name to finish setup.", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        hasMicrophonePermission = hasMicrophone(context)
+                                        viewModel.completeOnboarding()
+                                    }
                                 } else {
                                     permissionLauncher.launch(missingPermissions.toTypedArray())
                                 }
@@ -218,8 +226,16 @@ class MainActivity : ComponentActivity() {
                             onDeleteContact = viewModel::deleteContact,
                             onToggleProMode = viewModel::setProUnlocked,
                             onContactSelected = { contactId -> navController.navigate("contact/$contactId") },
-                            onCallContact = { contact -> dialContact(context, contact) },
-                            onMessageContact = { contact -> messageContact(context, contact) },
+                            onCallContact = { contact ->
+                                val succeeded = viewModel.prepareRemoteCall(contact.id)
+                                dialContact(context, contact)
+                                if (!succeeded) {
+                                    Toast.makeText(context, "Call started (receiver may still be on silent)", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            onSendManualMessage = { contact, body ->
+                                viewModel.sendManualMessage(contact.id, body)
+                            },
                             onAlertsClick = { navController.navigate("alerts/default") },
                             onSettingsClick = { navController.navigate("settings") },
                             onUpgradeClick = { navController.navigate("upgrade") }
@@ -243,7 +259,9 @@ class MainActivity : ComponentActivity() {
                             onToggleRemoteSound = { allow -> contactId?.let { viewModel.setRemoteSoundPermission(it, allow) } },
                             onSendLink = { contactId?.let { viewModel.sendLinkRequest(it) } },
                             onApproveLink = { contactId?.let { viewModel.approveLink(it) } },
-                            onPing = { contactId?.let { viewModel.sendPing(it) } },
+                            onPing = {
+                                contactId?.let { viewModel.sendPing(it) } ?: false
+                            },
                             onDelete = {
                                 contactId?.let { viewModel.deleteContact(it) }
                                 navController.popBackStack()

@@ -10,4 +10,5 @@ interface SettingsRepository {
     suspend fun setProUnlocked(enabled: Boolean)
     suspend fun setOnboardingComplete()
     suspend fun ensureDeviceId(): String
+    suspend fun setOwnerName(name: String)
 }

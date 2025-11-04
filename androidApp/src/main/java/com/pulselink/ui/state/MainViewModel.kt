@@ -110,6 +110,13 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setOwnerName(name: String) {
+        val trimmed = name.trim()
+        viewModelScope.launch {
+            settingsRepository.setOwnerName(trimmed)
+        }
+    }
+
     fun updateEmergencySound(key: String) {
         viewModelScope.launch {
             settingsRepository.update { settings ->
@@ -156,9 +163,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch { linkManager.approveLink(contactId) }
     }
 
-    fun sendPing(contactId: Long) {
-        viewModelScope.launch { linkManager.sendPing(contactId) }
-    }
+    suspend fun sendPing(contactId: Long): Boolean = linkManager.sendPing(contactId)
 
     fun setRemoteSoundPermission(contactId: Long, allow: Boolean) {
         viewModelScope.launch { linkManager.updateRemoteSoundPermission(contactId, allow) }
@@ -167,6 +172,13 @@ class MainViewModel @Inject constructor(
     fun setRemoteOverridePermission(contactId: Long, allow: Boolean) {
         viewModelScope.launch { linkManager.updateRemoteOverridePermission(contactId, allow) }
     }
+
+    suspend fun prepareRemoteCall(contactId: Long, tier: EscalationTier = EscalationTier.EMERGENCY): Boolean {
+        return linkManager.prepareRemoteOverride(contactId, tier)
+    }
+
+    suspend fun sendManualMessage(contactId: Long, message: String): Boolean =
+        linkManager.sendManualMessage(contactId, message)
 
     fun setProUnlocked(enabled: Boolean) {
         viewModelScope.launch {

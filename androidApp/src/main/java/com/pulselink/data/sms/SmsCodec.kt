@@ -13,6 +13,7 @@ object SmsCodec {
         ALERT("ALERT"),
         ALERT_PREPARE("ALERT_PREP"),
         ALERT_READY("ALERT_READY"),
+        MESSAGE("MSG"),
         SOUND_OVERRIDE("SOUND"),
         CONFIG("CONFIG")
     }
@@ -34,6 +35,9 @@ object SmsCodec {
 
     fun encodeAlertReady(senderId: String, code: String, ready: Boolean): String =
         build(Type.ALERT_READY, senderId, code, if (ready) "1" else "0")
+
+    fun encodeManualMessage(senderId: String, code: String, body: String): String =
+        build(Type.MESSAGE, senderId, code, Uri.encode(body))
 
     fun encodeSoundOverride(
         senderId: String,
@@ -76,6 +80,10 @@ object SmsCodec {
                 val readyToken = tokens.getOrNull(4) ?: "0"
                 val ready = readyToken == "1"
                 PulseLinkMessage.AlertReady(senderId, code, ready)
+            }
+            Type.MESSAGE.wire -> {
+                val body = tokens.getOrNull(4)?.let { Uri.decode(it) } ?: ""
+                PulseLinkMessage.ManualMessage(senderId, code, body)
             }
             Type.SOUND_OVERRIDE.wire -> {
                 val tierToken = tokens.getOrNull(4) ?: return null

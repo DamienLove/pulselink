@@ -47,6 +47,12 @@ sealed class PulseLinkMessage {
         val soundKey: String?
     ) : PulseLinkMessage()
 
+    data class ManualMessage(
+        override val senderId: String,
+        override val code: String,
+        val body: String
+    ) : PulseLinkMessage()
+
     data class ConfigUpdate(
         override val senderId: String,
         override val code: String,
