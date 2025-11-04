@@ -2,13 +2,14 @@ package com.pulselink.data.db
 
 import androidx.room.Dao
 import androidx.room.Database
-import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import com.pulselink.domain.model.AlertEvent
 import com.pulselink.domain.model.Contact
+import com.pulselink.domain.model.ContactMessage
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -47,12 +48,26 @@ interface AlertEventDao {
     suspend fun clear()
 }
 
+@Dao
+interface ContactMessageDao {
+    @Query("SELECT * FROM contact_messages WHERE contactId = :contactId ORDER BY timestamp ASC")
+    fun observeForContact(contactId: Long): Flow<List<ContactMessage>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(message: ContactMessage)
+
+    @Query("DELETE FROM contact_messages WHERE contactId = :contactId")
+    suspend fun clear(contactId: Long)
+}
+
 @Database(
-    entities = [Contact::class, AlertEvent::class],
-    version = 1,
+    entities = [Contact::class, AlertEvent::class, ContactMessage::class],
+    version = 2,
     exportSchema = true
 )
+@TypeConverters(Converters::class)
 abstract class PulseLinkDatabase : RoomDatabase() {
     abstract fun contactDao(): ContactDao
     abstract fun alertEventDao(): AlertEventDao
+    abstract fun contactMessageDao(): ContactMessageDao
 }

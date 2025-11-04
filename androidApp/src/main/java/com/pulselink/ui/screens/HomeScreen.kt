@@ -81,6 +81,7 @@ fun HomeScreen(
     onDeleteContact: (Long) -> Unit,
     onToggleProMode: (Boolean) -> Unit,
     onContactSelected: (Long) -> Unit,
+    onContactSettings: (Long) -> Unit,
     onCallContact: suspend (Contact) -> Unit,
     onSendManualMessage: suspend (Contact, String) -> Boolean,
     onAlertsClick: () -> Unit = {},
@@ -157,7 +158,8 @@ fun HomeScreen(
                         messageBody = TextFieldValue()
                     }
                 },
-                onContactSelected = onContactSelected
+                onContactSelected = onContactSelected,
+                onContactSettings = onContactSettings
             )
             if (state.adsAvailable) {
                 UpgradeCard(isPro = state.isProUser, onTogglePro = onToggleProMode)
@@ -373,7 +375,8 @@ private fun ContactsList(
     onDeleteContact: (Long) -> Unit,
     onCallContact: (Contact) -> Unit,
     onMessageContact: (Contact) -> Unit,
-    onContactSelected: (Long) -> Unit
+    onContactSelected: (Long) -> Unit,
+    onContactSettings: (Long) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -422,7 +425,8 @@ private fun ContactsList(
                     items(filtered, key = { it.id }) { contact ->
                         ContactRow(
                             contact = contact,
-                            onOpen = { onContactSelected(contact.id) },
+                            onOpenMessages = { onContactSelected(contact.id) },
+                            onOpenSettings = { onContactSettings(contact.id) },
                             onDelete = { onDeleteContact(contact.id) },
                             onCall = { onCallContact(contact) },
                             onMessage = { onMessageContact(contact) }
@@ -437,7 +441,8 @@ private fun ContactsList(
 @Composable
 private fun ContactRow(
     contact: Contact,
-    onOpen: () -> Unit,
+    onOpenMessages: () -> Unit,
+    onOpenSettings: () -> Unit,
     onDelete: () -> Unit,
     onCall: () -> Unit,
     onMessage: () -> Unit
@@ -451,7 +456,7 @@ private fun ContactRow(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onOpen() },
+            .clickable { onOpenMessages() },
         colors = CardDefaults.cardColors(containerColor = Color(0x0DFFFFFF))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -460,8 +465,29 @@ private fun ContactRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
-                    Text(text = contact.displayName, color = Color.White, fontWeight = FontWeight.SemiBold)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = contact.displayName,
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            onClick = onOpenSettings,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Settings,
+                                contentDescription = "Contact settings",
+                                tint = Color(0xFF9AA0B4)
+                            )
+                        }
+                    }
                     Text(text = contact.phoneNumber, color = Color(0xFFB7BECF), style = MaterialTheme.typography.bodySmall)
                     statusLabel?.let {
                         Text(text = it, color = Color(0xFF7DD3FC), style = MaterialTheme.typography.bodySmall)

@@ -58,3 +58,12 @@ App requests microphone, SMS (send/receive), notification, and location access. 
 - Contact detail and home actions now await handshake completion, show success/fallback toasts, and refuse remote messaging until the contact is fully linked.
 - Restored the Pro upsell card on Home so the existing navigation entry no longer references a missing composable.
 - Built fresh free/pro debug APKs on 2025-11-04 (`androidApp/build/outputs/apk/free/debug/androidApp-free-debug.apk`, `androidApp/build/outputs/apk/pro/debug/androidApp-pro-debug.apk`).
+
+-- 2025-11-04 Update (UI/Messaging) --
+- Split onboarding into a welcome overview + name capture screen followed by a dedicated permissions step that blocks completion until SMS, contacts, microphone, location, notifications, and DND access are all granted.
+- Added a persistent DND access action in Settings so users can re-enable overrides after onboarding.
+- Logged manual messages (inbound/outbound) via a new `contact_messages` table and repository; conversations now persist across app restarts.
+- Replaced the contact detail messaging dialog with a full-screen conversation surface inspired by the new design mock (`branding/PulseLink.png`) including gradient bubbles, logo header, status pills, and quick ping access.
+- Added a gear icon beside each home contact to jump straight into that contact's settings, while tapping the card opens the conversation view.
+- Rebuilt the message composer with gradient styling, mic icon placeholder, and override feedback chips on outbound messages.
+- Confirmed fresh `androidApp:assembleProDebug` and `androidApp:assembleFreeDebug` builds on 2025-11-04 after the UI overhaul.

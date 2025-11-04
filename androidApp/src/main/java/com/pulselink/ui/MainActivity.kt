@@ -32,7 +32,9 @@ import com.pulselink.domain.model.Contact
 import com.pulselink.ui.screens.HomeScreen
 import com.pulselink.ui.screens.ContactDetailScreen
 import com.pulselink.ui.screens.NotificationSoundScreen
+import com.pulselink.ui.screens.ContactConversationScreen
 import com.pulselink.ui.screens.OnboardingScreen
+import com.pulselink.ui.screens.OnboardingIntroScreen
 import com.pulselink.ui.screens.SettingsScreen
 import com.pulselink.ui.screens.SplashScreen
 import com.pulselink.ui.screens.UpgradeProScreen
@@ -95,7 +97,8 @@ class MainActivity : ComponentActivity() {
                             ContextCompat.checkSelfPermission(context, perm) != PackageManager.PERMISSION_GRANTED
                         }
                         hasMicrophonePermission = hasMicrophone(context)
-                        if (missing.isEmpty() && ownerName.isNotBlank()) {
+                        val dndGranted = notificationManager?.isNotificationPolicyAccessGranted == true
+                        if (missing.isEmpty() && ownerName.isNotBlank() && dndGranted) {
                             viewModel.completeOnboarding()
                         }
                     }
@@ -104,8 +107,8 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(state.onboardingComplete) {
                     if (state.onboardingComplete) {
                         navController.navigate("home") {
-                            popUpTo("onboarding") { inclusive = true }
                             popUpTo("splash") { inclusive = true }
+                            launchSingleTop = true
                         }
                     }
                 }
@@ -125,19 +128,34 @@ class MainActivity : ComponentActivity() {
                 NavHost(navController = navController, startDestination = "splash") {
                     composable("splash") {
                         SplashScreen {
-                            val destination = if (state.onboardingComplete) "home" else "onboarding"
+                            val destination = if (state.onboardingComplete) "home" else "onboarding_intro"
                             navController.navigate(destination) {
                                 popUpTo("splash") { inclusive = true }
                             }
                         }
                     }
-                    composable("onboarding") {
+                    composable("onboarding_intro") {
+                        OnboardingIntroScreen(
+                            ownerName = ownerName,
+                            onOwnerNameChange = viewModel::setOwnerName,
+                            onContinue = {
+                                if (ownerName.isBlank()) {
+                                    Toast.makeText(context, "Add your name to continue.", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    navController.navigate("onboarding_permissions")
+                                }
+                            }
+                        )
+                    }
+                    composable("onboarding_permissions") {
                         val missingPermissions = requiredPermissions.filter { perm ->
                             ContextCompat.checkSelfPermission(context, perm) != PackageManager.PERMISSION_GRANTED
                         }
 
-                        LaunchedEffect(state.onboardingComplete, missingPermissions, ownerName) {
-                            if (!state.onboardingComplete && missingPermissions.isEmpty() && ownerName.isNotBlank()) {
+                        val hasDndAccess = notificationManager?.isNotificationPolicyAccessGranted == true
+
+                        LaunchedEffect(state.onboardingComplete, missingPermissions, ownerName, hasDndAccess) {
+                            if (!state.onboardingComplete && missingPermissions.isEmpty() && ownerName.isNotBlank() && hasDndAccess) {
                                 hasMicrophonePermission = hasMicrophone(context)
                                 viewModel.completeOnboarding()
                             }
@@ -153,7 +171,6 @@ class MainActivity : ComponentActivity() {
                                     ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
                         val contactsGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
-                        val hasDndAccess = notificationManager?.isNotificationPolicyAccessGranted == true
 
                         val permissionCards = listOf(
                             OnboardingPermissionState(
@@ -169,7 +186,9 @@ class MainActivity : ComponentActivity() {
                                 icon = Icons.Filled.Lock,
                                 title = "Override Silent / DND",
                                 description = "Needed so critical alerts ring even when the phone is muted.",
-                                granted = hasDndAccess
+                                granted = hasDndAccess,
+                                actionLabel = if (hasDndAccess) "Manage" else "Allow",
+                                onAction = { openDndSettings(context) }
                             ),
                             OnboardingPermissionState(
                                 icon = Icons.Filled.Mic,
@@ -197,13 +216,16 @@ class MainActivity : ComponentActivity() {
                             )
                         )
 
+                        val canContinue = missingPermissions.isEmpty() && ownerName.isNotBlank() && hasDndAccess
+
                         OnboardingScreen(
                             permissions = permissionCards,
-                            ownerName = ownerName,
-                            onOwnerNameChange = viewModel::setOwnerName,
+                            canContinue = canContinue,
                             onGrantPermissions = {
                                 if (missingPermissions.isEmpty()) {
-                                    if (ownerName.isBlank()) {
+                                    if (!hasDndAccess) {
+                                        openDndSettings(context)
+                                    } else if (ownerName.isBlank()) {
                                         Toast.makeText(context, "Add your name to finish setup.", Toast.LENGTH_SHORT).show()
                                     } else {
                                         hasMicrophonePermission = hasMicrophone(context)
@@ -213,7 +235,8 @@ class MainActivity : ComponentActivity() {
                                     permissionLauncher.launch(missingPermissions.toTypedArray())
                                 }
                             },
-                            onOpenAppSettings = { openAppSettings(context) }
+                            onOpenAppSettings = { openAppSettings(context) },
+                            onBack = { navController.popBackStack() }
                         )
                     }
                     composable("home") {
@@ -226,6 +249,7 @@ class MainActivity : ComponentActivity() {
                             onDeleteContact = viewModel::deleteContact,
                             onToggleProMode = viewModel::setProUnlocked,
                             onContactSelected = { contactId -> navController.navigate("contact/$contactId") },
+                            onContactSettings = { contactId -> navController.navigate("contact/$contactId/settings") },
                             onCallContact = { contact ->
                                 val succeeded = viewModel.prepareRemoteCall(contact.id)
                                 dialContact(context, contact)
@@ -245,25 +269,39 @@ class MainActivity : ComponentActivity() {
                         route = "contact/{contactId}",
                         arguments = listOf(navArgument("contactId") { type = NavType.LongType })
                     ) { entry ->
-                        val contactId = entry.arguments?.getLong("contactId")
+                        val contactId = entry.arguments?.getLong("contactId") ?: return@composable
+                        val contact = state.contacts.firstOrNull { it.id == contactId }
+                        val messages by viewModel.messagesForContact(contactId).collectAsStateWithLifecycle(initialValue = emptyList())
+                        ContactConversationScreen(
+                            contact = contact,
+                            messages = messages,
+                            onBack = { navController.popBackStack() },
+                            onOpenSettings = { navController.navigate("contact/$contactId/settings") },
+                            onSendMessage = { body -> viewModel.sendManualMessage(contactId, body) },
+                            onPing = { viewModel.sendPing(contactId) }
+                        )
+                    }
+                    composable(
+                        route = "contact/{contactId}/settings",
+                        arguments = listOf(navArgument("contactId") { type = NavType.LongType })
+                    ) { entry ->
+                        val contactId = entry.arguments?.getLong("contactId") ?: return@composable
                         val contact = state.contacts.firstOrNull { it.id == contactId }
                         ContactDetailScreen(
                             contact = contact,
                             onBack = { navController.popBackStack() },
-                            onEditEmergencyAlert = { contactId?.let { navController.navigate("alerts/contact/$it") } },
-                            onEditCheckInAlert = { contactId?.let { navController.navigate("alerts/contact/$it") } },
+                            onEditEmergencyAlert = { navController.navigate("alerts/contact/$contactId") },
+                            onEditCheckInAlert = { navController.navigate("alerts/contact/$contactId") },
                             onToggleLocation = { enabled -> contact?.let { viewModel.updateContact(it.copy(includeLocation = enabled)) } },
                             onToggleCamera = { enabled -> contact?.let { viewModel.updateContact(it.copy(cameraEnabled = enabled)) } },
                             onToggleAutoCall = { enabled -> contact?.let { viewModel.updateContact(it.copy(autoCall = enabled)) } },
-                            onToggleRemoteOverride = { allow -> contactId?.let { viewModel.setRemoteOverridePermission(it, allow) } },
-                            onToggleRemoteSound = { allow -> contactId?.let { viewModel.setRemoteSoundPermission(it, allow) } },
-                            onSendLink = { contactId?.let { viewModel.sendLinkRequest(it) } },
-                            onApproveLink = { contactId?.let { viewModel.approveLink(it) } },
-                            onPing = {
-                                contactId?.let { viewModel.sendPing(it) } ?: false
-                            },
+                            onToggleRemoteOverride = { allow -> viewModel.setRemoteOverridePermission(contactId, allow) },
+                            onToggleRemoteSound = { allow -> viewModel.setRemoteSoundPermission(contactId, allow) },
+                            onSendLink = { viewModel.sendLinkRequest(contactId) },
+                            onApproveLink = { viewModel.approveLink(contactId) },
+                            onPing = { viewModel.sendPing(contactId) },
                             onDelete = {
-                                contactId?.let { viewModel.deleteContact(it) }
+                                viewModel.deleteContact(contactId)
                                 navController.popBackStack()
                             }
                         )
@@ -303,11 +341,7 @@ class MainActivity : ComponentActivity() {
                             settings = state.settings,
                             hasDndAccess = hasDndAccess,
                             onToggleIncludeLocation = viewModel::setIncludeLocation,
-                            onRequestDndAccess = {
-                                context.startActivity(
-                                    Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                )
-                            },
+                            onRequestDndAccess = { openDndSettings(context) },
                             onBack = { navController.popBackStack() }
                         )
                     }
@@ -338,11 +372,6 @@ private fun dialContact(context: android.content.Context, contact: Contact) {
     context.startActivity(intent)
 }
 
-private fun messageContact(context: android.content.Context, contact: Contact) {
-    val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${contact.phoneNumber}"))
-    context.startActivity(intent)
-}
-
 private fun openAppSettings(context: android.content.Context) {
     val intent = Intent(
         Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
@@ -350,4 +379,10 @@ private fun openAppSettings(context: android.content.Context) {
     )
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     context.startActivity(intent)
+}
+
+private fun openDndSettings(context: android.content.Context) {
+    context.startActivity(
+        Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    )
 }

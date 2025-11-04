@@ -14,10 +14,13 @@ import com.pulselink.data.sms.PulseLinkMessage
 import com.pulselink.data.sms.SmsCodec
 import com.pulselink.data.sms.SmsSender
 import com.pulselink.domain.model.Contact
+import com.pulselink.domain.model.ContactMessage
 import com.pulselink.domain.model.EscalationTier
 import com.pulselink.domain.model.LinkStatus
+import com.pulselink.domain.model.MessageDirection
 import com.pulselink.domain.model.SoundCategory
 import com.pulselink.domain.repository.ContactRepository
+import com.pulselink.domain.repository.MessageRepository
 import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.service.AlertRouter
 import com.pulselink.util.AudioOverrideManager
@@ -38,7 +41,8 @@ class ContactLinkManager @Inject constructor(
     private val smsSender: SmsSender,
     private val settingsRepository: SettingsRepository,
     private val contactRepository: ContactRepository,
-    private val remoteActionHandler: RemoteActionHandler
+    private val remoteActionHandler: RemoteActionHandler,
+    private val messageRepository: MessageRepository
 ) {
 
     private val notificationManager by lazy { NotificationManagerCompat.from(context) }
@@ -193,6 +197,14 @@ class ContactLinkManager @Inject constructor(
             body = body,
             notificationId = (contact.id.hashCode() and 0xFFFF) + 3000
         )
+        messageRepository.record(
+            ContactMessage(
+                contactId = contact.id,
+                body = body,
+                direction = MessageDirection.INBOUND,
+                overrideSucceeded = true
+            )
+        )
     }
 
     private suspend fun handleConfigUpdate(message: PulseLinkMessage.ConfigUpdate) {
@@ -278,6 +290,14 @@ class ContactLinkManager @Inject constructor(
         val deviceId = settingsRepository.ensureDeviceId()
         val payload = SmsCodec.encodeManualMessage(deviceId, contact.linkCode, message)
         smsSender.sendSms(contact.phoneNumber, payload)
+        messageRepository.record(
+            ContactMessage(
+                contactId = contact.id,
+                body = message,
+                direction = MessageDirection.OUTBOUND,
+                overrideSucceeded = ready
+            )
+        )
         return ready
     }
 

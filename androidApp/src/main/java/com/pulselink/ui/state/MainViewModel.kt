@@ -6,14 +6,17 @@ import com.pulselink.BuildConfig
 import com.pulselink.data.alert.SoundCatalog
 import com.pulselink.data.link.ContactLinkManager
 import com.pulselink.domain.model.Contact
+import com.pulselink.domain.model.ContactMessage
 import com.pulselink.domain.model.EscalationTier
 import com.pulselink.domain.model.SoundCategory
 import com.pulselink.domain.repository.AlertRepository
 import com.pulselink.domain.repository.ContactRepository
+import com.pulselink.domain.repository.MessageRepository
 import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.service.AlertRouter
 import com.pulselink.service.PulseLinkForegroundService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -27,7 +30,8 @@ class MainViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val alertRouter: AlertRouter,
     private val soundCatalog: SoundCatalog,
-    private val linkManager: com.pulselink.data.link.ContactLinkManager
+    private val linkManager: ContactLinkManager,
+    private val messageRepository: MessageRepository
 ) : ViewModel() {
 
     private val dispatching = MutableStateFlow(false)
@@ -91,6 +95,7 @@ class MainViewModel @Inject constructor(
     fun deleteContact(id: Long) {
         viewModelScope.launch {
             contactRepository.delete(id)
+            messageRepository.clear(id)
         }
     }
 
@@ -179,6 +184,9 @@ class MainViewModel @Inject constructor(
 
     suspend fun sendManualMessage(contactId: Long, message: String): Boolean =
         linkManager.sendManualMessage(contactId, message)
+
+    fun messagesForContact(contactId: Long): Flow<List<ContactMessage>> =
+        messageRepository.observeForContact(contactId)
 
     fun setProUnlocked(enabled: Boolean) {
         viewModelScope.launch {

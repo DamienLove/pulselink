@@ -13,11 +13,14 @@ import com.pulselink.data.db.AlertEventDao
 import com.pulselink.data.db.AlertRepositoryImpl
 import com.pulselink.data.db.ContactDao
 import com.pulselink.data.db.ContactRepositoryImpl
+import com.pulselink.data.db.ContactMessageDao
+import com.pulselink.data.db.MessageRepositoryImpl
 import com.pulselink.data.db.PulseLinkDatabase
 import com.pulselink.data.settings.SettingsRepositoryImpl
 import com.pulselink.data.settings.provideSettingsDataStore
 import com.pulselink.domain.repository.AlertRepository
 import com.pulselink.domain.repository.ContactRepository
+import com.pulselink.domain.repository.MessageRepository
 import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.util.AudioOverrideManager
 import dagger.Binds
@@ -42,6 +45,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindSettingsRepository(impl: SettingsRepositoryImpl): SettingsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindMessageRepository(impl: MessageRepositoryImpl): MessageRepository
 }
 
 @Module
@@ -60,6 +67,9 @@ object DatabaseModule {
 
     @Provides
     fun provideAlertDao(database: PulseLinkDatabase): AlertEventDao = database.alertEventDao()
+
+    @Provides
+    fun provideContactMessageDao(database: PulseLinkDatabase): ContactMessageDao = database.contactMessageDao()
 
     @Provides
     @Singleton
