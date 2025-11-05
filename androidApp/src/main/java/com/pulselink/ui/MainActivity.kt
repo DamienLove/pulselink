@@ -301,6 +301,8 @@ class MainActivity : ComponentActivity() {
                             onToggleProMode = viewModel::setProUnlocked,
                             onContactSelected = { contactId -> navController.navigate("contact/$contactId") },
                             onContactSettings = { contactId -> navController.navigate("contact/$contactId/settings") },
+                            onSendLink = viewModel::sendLinkRequest,
+                            onApproveLink = viewModel::approveLink,
                             onCallContact = { contact ->
                                 val succeeded = viewModel.prepareRemoteCall(contact.id)
                                 dialContact(context, contact)

@@ -328,13 +328,18 @@ class ContactLinkManager @Inject constructor(
     suspend fun sendManualMessage(contactId: Long, message: String): ManualMessageResult {
         val contact = contactRepository.getContact(contactId)
             ?: return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.CONTACT_MISSING)
-        if (contact.linkStatus != LinkStatus.LINKED || contact.linkCode.isNullOrBlank()) {
+        val code = contact.linkCode
+        if (code.isNullOrBlank()) {
             return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.NOT_LINKED)
         }
         return try {
-            val ready = requestRemotePrepare(contact, EscalationTier.CHECK_IN)
+            val ready = if (contact.linkStatus == LinkStatus.LINKED) {
+                requestRemotePrepare(contact, EscalationTier.CHECK_IN)
+            } else {
+                false
+            }
             val deviceId = settingsRepository.ensureDeviceId()
-            val payload = SmsCodec.encodeManualMessage(deviceId, contact.linkCode, message)
+            val payload = SmsCodec.encodeManualMessage(deviceId, code, message)
             val sent = smsSender.sendSms(contact.phoneNumber, payload)
             if (!sent) {
                 ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.SMS_FAILED)
