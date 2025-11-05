@@ -75,3 +75,18 @@ App requests microphone, SMS (send/receive), notification, and location access. 
 - Polished the onboarding, home, and settings composables with the latest gradients, toggle cards, and permission guidance; fixed the onboarding name field cursor jump reported by QA.
 - Gradle targets `testFreeDebugUnitTest`, `testProDebugUnitTest`, and `androidApp:assembleProDebug` now pass against the refreshed branch (see `androidApp/build/outputs/apk/pro/debug/` for the updated APK).
 - Reworked the contact call flow to wait for remote override confirmation, auto place the call via `ACTION_CALL`, monitor call completion, and push a `CallEnded` SMS so the receiver's audio settings restore immediately after hangup.
+
+Next Immediate actions:
+ ok so make sure the ringer volume is also turned up for when the phone is ringing after the alert tone occurs, quick actions on the home, has a blank button, that should say
+  EMERGENCY in RED BOLD and should make the siren alerts go off on all trusted contacts 1 at a time in order, have there be a way do drag multiple contacts up and down on the home
+  screen to change that order, then remove trigger test, lets just make that a quick action to check-in with all of the trusted contact, in order. remove "manage alert contacts
+  and stay in sync." words from the home page. also, when changing the emergency alert tones in any setting should bring the user to a different page than changing the check-in
+  alert tones, as currently its cutt off and it would just look better if they each have thier own setting screen. also, on those screens make sure to center the logo, its off to
+  the left and looks odd. There needs to be a way to enable "allow remote sound change" from the accepting link request because its kind of odd to have to go to settings and
+  change that when accepting, should be a switch ahead of the accept link button. also on some screens the app comes off light and the words are hard to see is it possibly to
+  ensure if the user had light or dark settings the contrast in test is adjusted as such so its always visable and bold. And in settings, are there other things that could be in
+  there? possibly default audio emergency siren and check-in and maybe auto-accept "allow remote sound change" when accepting link. also, the home screen NEEDS the logo centered
+  on the top, like settings will have, and listening, should be in the settings, then just a small mic that can be turned on or off by pushing that mic on the home screen, have a
+  red mic for off and green for on. lastly, the support circle spot on the home screen has a random circle after it, seems like it'd make sense as its a circle but it really
+  doesnt, please remove that circle icon or whatever that is. Oh one more thing, when importing contact, once clicking the contact it closes the app and doesnt import, please fix
+  that. first commit and push and commit and push once done with all of the above, then update pulselink.txt
