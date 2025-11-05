@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PersonAdd
@@ -60,6 +61,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -84,6 +86,8 @@ fun HomeScreen(
     onToggleProMode: (Boolean) -> Unit,
     onContactSelected: (Long) -> Unit,
     onContactSettings: (Long) -> Unit,
+    onSendLink: (Long) -> Unit,
+    onApproveLink: (Long) -> Unit,
     onCallContact: suspend (Contact) -> Unit,
     onSendManualMessage: suspend (Contact, String) -> ManualMessageResult,
     onAlertsClick: () -> Unit = {},
@@ -153,15 +157,28 @@ fun HomeScreen(
                     coroutineScope.launch { onCallContact(contact) }
                 },
                 onMessageContact = { contact ->
-                    if (contact.linkStatus != LinkStatus.LINKED || contact.linkCode.isNullOrBlank()) {
-                        Toast.makeText(context, "Contact must approve link before messaging", Toast.LENGTH_SHORT).show()
+                    if (contact.linkCode.isNullOrBlank()) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.contact_action_message_requires_link),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     } else {
+                        if (contact.linkStatus != LinkStatus.LINKED) {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.contact_action_message_pending_warning),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                         messageContact = contact
                         messageBody = TextFieldValue()
                     }
                 },
                 onContactSelected = onContactSelected,
-                onContactSettings = onContactSettings
+                onContactSettings = onContactSettings,
+                onSendLink = onSendLink,
+                onApproveLink = onApproveLink
             )
             if (state.adsAvailable) {
                 UpgradeCard(isPro = state.isProUser, onTogglePro = onToggleProMode)
@@ -396,7 +413,9 @@ private fun ContactsList(
     onCallContact: (Contact) -> Unit,
     onMessageContact: (Contact) -> Unit,
     onContactSelected: (Long) -> Unit,
-    onContactSettings: (Long) -> Unit
+    onContactSettings: (Long) -> Unit,
+    onSendLink: (Long) -> Unit,
+    onApproveLink: (Long) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -448,6 +467,8 @@ private fun ContactsList(
                             onOpenMessages = { onContactSelected(contact.id) },
                             onOpenSettings = { onContactSettings(contact.id) },
                             onDelete = { onDeleteContact(contact.id) },
+                            onSendLinkRequest = { onSendLink(contact.id) },
+                            onApproveLink = { onApproveLink(contact.id) },
                             onCall = { onCallContact(contact) },
                             onMessage = { onMessageContact(contact) }
                         )
@@ -464,14 +485,22 @@ private fun ContactRow(
     onOpenMessages: () -> Unit,
     onOpenSettings: () -> Unit,
     onDelete: () -> Unit,
+    onSendLinkRequest: () -> Unit,
+    onApproveLink: () -> Unit,
     onCall: () -> Unit,
     onMessage: () -> Unit
 ) {
     val statusLabel = when (contact.linkStatus) {
-        LinkStatus.NONE -> null
-        LinkStatus.OUTBOUND_PENDING -> "Awaiting approval"
-        LinkStatus.INBOUND_REQUEST -> "Approve request"
-        LinkStatus.LINKED -> "Linked"
+        LinkStatus.NONE -> stringResource(R.string.contact_status_not_linked)
+        LinkStatus.OUTBOUND_PENDING -> stringResource(R.string.contact_status_outbound_pending)
+        LinkStatus.INBOUND_REQUEST -> stringResource(R.string.contact_status_inbound_request)
+        LinkStatus.LINKED -> stringResource(R.string.contact_status_linked)
+    }
+    val statusColor = when (contact.linkStatus) {
+        LinkStatus.NONE -> Color(0xFFF87171)
+        LinkStatus.OUTBOUND_PENDING -> Color(0xFF60A5FA)
+        LinkStatus.INBOUND_REQUEST -> Color(0xFFFBBF24)
+        LinkStatus.LINKED -> Color(0xFF34D399)
     }
     Card(
         modifier = Modifier
@@ -508,10 +537,16 @@ private fun ContactRow(
                             )
                         }
                     }
-                    Text(text = contact.phoneNumber, color = Color(0xFFB7BECF), style = MaterialTheme.typography.bodySmall)
-                    statusLabel?.let {
-                        Text(text = it, color = Color(0xFF7DD3FC), style = MaterialTheme.typography.bodySmall)
-                    }
+                    Text(
+                        text = contact.phoneNumber,
+                        color = Color(0xFFB7BECF),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = statusLabel,
+                        color = statusColor,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     IconButton(onCall) {
@@ -525,7 +560,77 @@ private fun ContactRow(
                     }
                 }
             }
+            LinkActionButtons(
+                contact = contact,
+                onSendLinkRequest = onSendLinkRequest,
+                onApproveLink = onApproveLink
+            )
         }
+    }
+}
+
+@Composable
+private fun LinkActionButtons(
+    contact: Contact,
+    onSendLinkRequest: () -> Unit,
+    onApproveLink: () -> Unit
+) {
+    when (contact.linkStatus) {
+        LinkStatus.NONE -> {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = stringResource(R.string.contact_action_help_not_linked),
+                color = Color(0xFF9AA0B4),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = onSendLinkRequest,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Filled.PersonAdd, contentDescription = null, tint = Color.White)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = stringResource(R.string.contact_action_send_link))
+            }
+        }
+
+        LinkStatus.OUTBOUND_PENDING -> {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = stringResource(R.string.contact_action_help_outbound_pending),
+                color = Color(0xFF9AA0B4),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onSendLinkRequest,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Filled.PersonAdd, contentDescription = null, tint = Color(0xFF60A5FA))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = stringResource(R.string.contact_action_resend_link))
+            }
+        }
+
+        LinkStatus.INBOUND_REQUEST -> {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = stringResource(R.string.contact_action_help_inbound_request),
+                color = Color(0xFF9AA0B4),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = onApproveLink,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = Color.White)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = stringResource(R.string.contact_action_approve_link))
+            }
+        }
+
+        LinkStatus.LINKED -> Unit
     }
 }
 
