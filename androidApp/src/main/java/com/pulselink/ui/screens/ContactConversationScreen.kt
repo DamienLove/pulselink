@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -224,31 +225,31 @@ private fun ConversationBody(
                 }
                 scope.launch {
                     var outcome: ManualMessageResult? = null
-                    val toastText = try {
-                        val result = onSendMessage(body)
-                        outcome = result
-                        when (result) {
-                            is ManualMessageResult.Success -> {
-                                if (result.overrideApplied) {
-                                    "Message sent"
-                                } else {
-                                    "Message sent (receiver may still be on silent)"
+                        val toastText = try {
+                            val result = onSendMessage(body)
+                            outcome = result
+                            when (result) {
+                                is ManualMessageResult.Success -> {
+                                    when {
+                                        result.deliveryPending -> context.getString(R.string.manual_message_sent_pending)
+                                        result.overrideApplied -> context.getString(R.string.manual_message_sent)
+                                        else -> context.getString(R.string.manual_message_sent_muted)
+                                    }
+                                }
+                                is ManualMessageResult.Failure -> {
+                                    when (result.reason) {
+                                        ManualMessageResult.Failure.Reason.CONTACT_MISSING -> context.getString(R.string.manual_message_error_contact_missing)
+                                        ManualMessageResult.Failure.Reason.NOT_LINKED -> context.getString(R.string.manual_message_error_not_linked)
+                                        ManualMessageResult.Failure.Reason.SMS_FAILED -> context.getString(R.string.manual_message_error_failed)
+                                        ManualMessageResult.Failure.Reason.UNKNOWN -> context.getString(R.string.manual_message_error_failed)
+                                    }
                                 }
                             }
-                            is ManualMessageResult.Failure -> {
-                                when (result.reason) {
-                                    ManualMessageResult.Failure.Reason.CONTACT_MISSING -> "Contact no longer available"
-                                    ManualMessageResult.Failure.Reason.NOT_LINKED -> "Link this contact before messaging"
-                                    ManualMessageResult.Failure.Reason.SMS_FAILED -> "Message failed to send"
-                                    ManualMessageResult.Failure.Reason.UNKNOWN -> "Message failed to send"
-                                }
-                            }
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (error: Exception) {
+                            context.getString(R.string.manual_message_error_failed)
                         }
-                    } catch (cancelled: CancellationException) {
-                        throw cancelled
-                    } catch (error: Exception) {
-                        "Message failed to send"
-                    }
                     Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
                     if (outcome is ManualMessageResult.Success) {
                         input = TextFieldValue("")

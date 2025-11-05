@@ -342,18 +342,20 @@ class ContactLinkManager @Inject constructor(
             val payload = SmsCodec.encodeManualMessage(deviceId, code, message)
             val sent = smsSender.sendSms(contact.phoneNumber, payload)
             if (!sent) {
-                ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.SMS_FAILED)
-            } else {
-                messageRepository.record(
-                    ContactMessage(
-                        contactId = contact.id,
-                        body = message,
-                        direction = MessageDirection.OUTBOUND,
-                        overrideSucceeded = ready
-                    )
-                )
-                ManualMessageResult.Success(overrideApplied = ready)
+                Log.w(TAG, "SMS send reported failure for ${contact.displayName}; delivery pending")
             }
+            messageRepository.record(
+                ContactMessage(
+                    contactId = contact.id,
+                    body = message,
+                    direction = MessageDirection.OUTBOUND,
+                    overrideSucceeded = ready
+                )
+            )
+            ManualMessageResult.Success(
+                overrideApplied = ready,
+                deliveryPending = !sent
+            )
         } catch (error: Exception) {
             Log.e(TAG, "Unable to send manual message", error)
             ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.UNKNOWN)
