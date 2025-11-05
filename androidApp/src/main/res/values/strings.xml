@@ -65,6 +65,8 @@
     <string name="call_timeout">Calling (receiver may be on silent)</string>
     <string name="call_failed">Unable to prepare call</string>
     <string name="call_permission_required">Phone permission required to place calls</string>
+    <string name="call_incoming_title">PulseLink call from %1$s</string>
+    <string name="call_incoming_body">Answer the call to connect after overrides engage.</string>
     <string name="permission_microphone">PulseLink needs microphone access for hotword detection.</string>
     <string name="permission_sms">PulseLink needs SMS permission to contact your circle.</string>
     <string name="permission_location">PulseLink needs location access to share your position.</string>

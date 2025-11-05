@@ -28,10 +28,17 @@ sealed class PulseLinkMessage {
         val tier: EscalationTier
     ) : PulseLinkMessage()
 
+    enum class AlertPrepareReason {
+        ALERT,
+        MESSAGE,
+        CALL
+    }
+
     data class AlertPrepare(
         override val senderId: String,
         override val code: String,
-        val tier: EscalationTier
+        val tier: EscalationTier,
+        val reason: AlertPrepareReason = AlertPrepareReason.ALERT
     ) : PulseLinkMessage()
 
     data class AlertReady(

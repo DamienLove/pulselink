@@ -100,7 +100,11 @@ class ContactLinkManager @Inject constructor(
     suspend fun sendPing(contactId: Long): Boolean {
         val contact = contactRepository.getContact(contactId) ?: return false
         if (contact.linkStatus != LinkStatus.LINKED || contact.linkCode.isNullOrBlank()) return false
-        val outcome = requestRemotePrepare(contact, EscalationTier.CHECK_IN)
+        val outcome = requestRemotePrepare(
+            contact = contact,
+            tier = EscalationTier.CHECK_IN,
+            reason = PulseLinkMessage.AlertPrepareReason.MESSAGE
+        )
         val deviceId = settingsRepository.ensureDeviceId()
         val payload = SmsCodec.encodePing(deviceId, contact.linkCode)
         smsSender.sendSms(contact.phoneNumber, payload)
@@ -185,6 +189,17 @@ class ContactLinkManager @Inject constructor(
         val overrideApplied = remoteActionHandler.prepareForAlert(contact)
         if (!overrideApplied) {
             Log.w(TAG, "Unable to apply remote override for contact ${contact.displayName}")
+        }
+        if (message.reason == PulseLinkMessage.AlertPrepareReason.CALL) {
+            val title = context.getString(R.string.call_incoming_title, contact.displayName)
+            val body = context.getString(R.string.call_incoming_body)
+            remoteActionHandler.playAttentionTone(
+                contact = contact,
+                tier = EscalationTier.EMERGENCY,
+                title = title,
+                body = body,
+                notificationId = (contact.id.hashCode() and 0xFFFF) + 4000
+            )
         }
         val deviceId = settingsRepository.ensureDeviceId()
         val response = SmsCodec.encodeAlertReady(deviceId, message.code, overrideApplied)
@@ -376,7 +391,7 @@ class ContactLinkManager @Inject constructor(
     suspend fun prepareRemoteOverride(contactId: Long, tier: EscalationTier): Boolean {
         val contact = contactRepository.getContact(contactId) ?: return false
         if (contact.linkStatus != LinkStatus.LINKED || contact.linkCode.isNullOrBlank()) return false
-        return when (requestRemotePrepare(contact, tier)) {
+        return when (requestRemotePrepare(contact, tier, PulseLinkMessage.AlertPrepareReason.ALERT)) {
             RemotePrepareOutcome.READY,
             RemotePrepareOutcome.BYPASSED -> true
             RemotePrepareOutcome.TIMEOUT,
@@ -387,7 +402,11 @@ class ContactLinkManager @Inject constructor(
     suspend fun prepareRemoteCall(contactId: Long): CallPreparationResult {
         val contact = contactRepository.getContact(contactId) ?: return CallPreparationResult.FAILED
         if (contact.linkStatus != LinkStatus.LINKED || contact.linkCode.isNullOrBlank()) return CallPreparationResult.FAILED
-        return when (requestRemotePrepare(contact, EscalationTier.EMERGENCY)) {
+        return when (requestRemotePrepare(
+            contact,
+            EscalationTier.EMERGENCY,
+            PulseLinkMessage.AlertPrepareReason.CALL
+        )) {
             RemotePrepareOutcome.READY,
             RemotePrepareOutcome.BYPASSED -> CallPreparationResult.READY
             RemotePrepareOutcome.TIMEOUT -> CallPreparationResult.TIMEOUT
@@ -413,7 +432,11 @@ class ContactLinkManager @Inject constructor(
         }
         return try {
             val prepareOutcome = if (contact.linkStatus == LinkStatus.LINKED) {
-                requestRemotePrepare(contact, EscalationTier.CHECK_IN)
+                requestRemotePrepare(
+                    contact = contact,
+                    tier = EscalationTier.CHECK_IN,
+                    reason = PulseLinkMessage.AlertPrepareReason.MESSAGE
+                )
             } else {
                 RemotePrepareOutcome.DECLINED
             }
@@ -443,14 +466,18 @@ class ContactLinkManager @Inject constructor(
         }
     }
 
-    private suspend fun requestRemotePrepare(contact: Contact, tier: EscalationTier): RemotePrepareOutcome {
+    private suspend fun requestRemotePrepare(
+        contact: Contact,
+        tier: EscalationTier,
+        reason: PulseLinkMessage.AlertPrepareReason
+    ): RemotePrepareOutcome {
         if (!contact.allowRemoteOverride) return RemotePrepareOutcome.BYPASSED
         val code = contact.linkCode ?: return RemotePrepareOutcome.DECLINED
         alertHandshake.remove(code)?.cancel()
         val deviceId = settingsRepository.ensureDeviceId()
         val deferred = CompletableDeferred<Boolean>()
         alertHandshake[code] = deferred
-        val payload = SmsCodec.encodeAlertPrepare(deviceId, code, tier)
+        val payload = SmsCodec.encodeAlertPrepare(deviceId, code, tier, reason)
         val sent = smsSender.sendSms(contact.phoneNumber, payload)
         if (!sent) {
             alertHandshake.remove(code)

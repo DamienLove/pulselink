@@ -31,8 +31,13 @@ object SmsCodec {
     fun encodeRemoteAlert(senderId: String, code: String, tier: EscalationTier): String =
         build(Type.ALERT, senderId, code, tier.name)
 
-    fun encodeAlertPrepare(senderId: String, code: String, tier: EscalationTier): String =
-        build(Type.ALERT_PREPARE, senderId, code, tier.name)
+    fun encodeAlertPrepare(
+        senderId: String,
+        code: String,
+        tier: EscalationTier,
+        reason: PulseLinkMessage.AlertPrepareReason = PulseLinkMessage.AlertPrepareReason.ALERT
+    ): String =
+        build(Type.ALERT_PREPARE, senderId, code, tier.name, reason.name)
 
     fun encodeAlertReady(senderId: String, code: String, ready: Boolean): String =
         build(Type.ALERT_READY, senderId, code, if (ready) "1" else "0")
@@ -78,7 +83,11 @@ object SmsCodec {
             Type.ALERT_PREPARE.wire -> {
                 val tierToken = tokens.getOrNull(4) ?: return null
                 val tier = runCatching { EscalationTier.valueOf(tierToken) }.getOrNull() ?: return null
-                PulseLinkMessage.AlertPrepare(senderId, code, tier)
+                val reasonToken = tokens.getOrNull(5)
+                val reason = runCatching {
+                    PulseLinkMessage.AlertPrepareReason.valueOf(reasonToken.orEmpty())
+                }.getOrDefault(PulseLinkMessage.AlertPrepareReason.ALERT)
+                PulseLinkMessage.AlertPrepare(senderId, code, tier, reason)
             }
             Type.ALERT_READY.wire -> {
                 val readyToken = tokens.getOrNull(4) ?: "0"
