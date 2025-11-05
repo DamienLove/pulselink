@@ -1,4 +1,4 @@
-name: Publish PulseLink APK
+name: PulseLink APKs
 
 on:
   workflow_dispatch:
