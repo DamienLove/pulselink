@@ -198,7 +198,8 @@ class ContactLinkManager @Inject constructor(
                 tier = EscalationTier.EMERGENCY,
                 title = title,
                 body = body,
-                notificationId = (contact.id.hashCode() and 0xFFFF) + 4000
+                notificationId = (contact.id.hashCode() and 0xFFFF) + 4000,
+                persistSound = true
             )
         }
         val deviceId = settingsRepository.ensureDeviceId()
@@ -582,7 +583,8 @@ class RemoteActionHandler @Inject constructor(
         tier: EscalationTier,
         title: String,
         body: String,
-        notificationId: Int
+        notificationId: Int,
+        persistSound: Boolean = false
     ) {
         val settings = settingsRepository.settings.first()
         val (profile, category, soundKey) = when (tier) {
@@ -599,6 +601,9 @@ class RemoteActionHandler @Inject constructor(
         }
         notificationRegistrar.ensureChannels()
         val soundOption = soundCatalog.resolve(soundKey, category)
+        val soundUri = soundOption?.let {
+            android.net.Uri.parse("android.resource://${context.packageName}/${it.resId}")
+        }
         val channel = notificationRegistrar.ensureAlertChannel(category, soundOption, profile)
         val requestBypass = profile.breakThroughDnd || contact.allowRemoteOverride
         val overrideApplied = withContext(Dispatchers.Main) {
@@ -618,17 +623,29 @@ class RemoteActionHandler @Inject constructor(
                 if (requestBypass) {
                     setCategory(NotificationCompat.CATEGORY_ALARM)
                 }
+                if (persistSound) {
+                    setSound(null)
+                    setOngoing(true)
+                    setOnlyAlertOnce(true)
+                } else {
+                    if (soundUri != null) {
+                        setSound(soundUri)
+                    } else {
+                        setSound(null)
+                    }
+                }
             }
-        soundOption?.let {
-            val soundUri = android.net.Uri.parse("android.resource://${context.packageName}/${it.resId}")
-            notificationBuilder.setSound(soundUri)
-        }
         val notification = notificationBuilder.build()
 
         NotificationManagerCompat.from(context).notify(notificationId, notification)
 
         if (overrideApplied) {
             audioOverrideManager.scheduleRestore()
+        }
+        if (!persistSound) {
+            audioOverrideManager.stopTone()
+        } else if (soundUri != null) {
+            audioOverrideManager.playTone(soundUri)
         }
     }
 

@@ -2,7 +2,11 @@ package com.pulselink.util
 
 import android.app.NotificationManager
 import android.content.Context
+import android.media.AudioAttributes
 import android.media.AudioManager
+import android.media.MediaPlayer
+import android.net.Uri
+import android.util.Log
 import androidx.core.content.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -26,6 +30,8 @@ class AudioOverrideManager @Inject constructor(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     @Volatile private var pendingRestoreJob: Job? = null
+    @Volatile private var mediaPlayer: MediaPlayer? = null
+    private val mediaLock = Any()
 
     fun overrideForAlert(requestDndBypass: Boolean): Boolean {
         val audio = audioManager ?: return false
@@ -68,6 +74,7 @@ class AudioOverrideManager @Inject constructor(
     fun cancelScheduledRestore() {
         pendingRestoreJob?.cancel()
         pendingRestoreJob = null
+        stopTone()
         restoreIfNeeded()
     }
 
@@ -103,15 +110,69 @@ class AudioOverrideManager @Inject constructor(
         prefs.edit { clear() }
         pendingRestoreJob?.cancel()
         pendingRestoreJob = null
+        stopTone()
     }
 
     fun clear() {
         prefs.edit { clear() }
         pendingRestoreJob?.cancel()
         pendingRestoreJob = null
+        stopTone()
+    }
+
+    fun playTone(soundUri: Uri?, looping: Boolean = false) {
+        if (soundUri == null) return
+        synchronized(mediaLock) {
+            stopToneLocked()
+            try {
+                val player = MediaPlayer().apply {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ALARM)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
+                    )
+                    setDataSource(context, soundUri)
+                    isLooping = looping
+                    setOnCompletionListener {
+                        synchronized(mediaLock) {
+                            if (mediaPlayer === it) {
+                                mediaPlayer = null
+                            }
+                        }
+                        runCatching { it.release() }
+                    }
+                    prepare()
+                    start()
+                }
+                mediaPlayer = player
+            } catch (error: Exception) {
+                Log.e(TAG, "Unable to play override tone", error)
+                stopToneLocked()
+            }
+        }
+    }
+
+    fun stopTone() {
+        synchronized(mediaLock) {
+            stopToneLocked()
+        }
+    }
+
+    private fun stopToneLocked() {
+        mediaPlayer?.let {
+            runCatching {
+                if (it.isPlaying) {
+                    it.stop()
+                }
+            }
+            runCatching { it.release() }
+        }
+        mediaPlayer = null
     }
 
     companion object {
+        private const val TAG = "AudioOverrideManager"
         private const val PREF_NAME = "pulselink_audio_override"
         private const val KEY_ACTIVE = "active"
         private const val KEY_RING_VOLUME = "ring_volume"
