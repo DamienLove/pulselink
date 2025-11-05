@@ -29,6 +29,8 @@ class SmsSendReceiver : BroadcastReceiver() {
                 else -> "Unknown error code $resultCode"
             }
             Log.w(TAG, "SMS action $action failed ($reason) for request $requestId")
+        } else {
+            Log.d(TAG, "SMS action $action succeeded for request $requestId")
         }
 
         if (action == SmsSender.ACTION_SMS_SENT) {

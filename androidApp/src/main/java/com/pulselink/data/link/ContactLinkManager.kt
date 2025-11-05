@@ -563,6 +563,7 @@ class RemoteActionHandler @Inject constructor(
                 contact.checkInSoundKey ?: settings.checkInProfile.soundKey
             )
         }
+        notificationRegistrar.ensureChannels()
         val soundOption = soundCatalog.resolve(soundKey, category)
         val channel = notificationRegistrar.ensureAlertChannel(category, soundOption, profile)
         val requestBypass = profile.breakThroughDnd || contact.allowRemoteOverride

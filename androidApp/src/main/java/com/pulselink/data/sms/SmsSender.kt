@@ -8,6 +8,7 @@ import android.telephony.SmsManager
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.pulselink.domain.model.Contact
+import com.pulselink.receiver.SmsSendReceiver
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -45,8 +46,12 @@ class SmsSender @Inject constructor(
         val deferred = CompletableDeferred<Boolean>()
         pendingRequests[requestId] = deferred
 
-        val sentIntent = Intent(ACTION_SMS_SENT).putExtra(EXTRA_REQUEST_ID, requestId)
-        val deliveredIntent = Intent(ACTION_SMS_DELIVERED).putExtra(EXTRA_REQUEST_ID, requestId)
+        val sentIntent = Intent(context, SmsSendReceiver::class.java)
+            .setAction(ACTION_SMS_SENT)
+            .putExtra(EXTRA_REQUEST_ID, requestId)
+        val deliveredIntent = Intent(context, SmsSendReceiver::class.java)
+            .setAction(ACTION_SMS_DELIVERED)
+            .putExtra(EXTRA_REQUEST_ID, requestId)
 
         val sentPendingIntent = PendingIntent.getBroadcast(
             context,
