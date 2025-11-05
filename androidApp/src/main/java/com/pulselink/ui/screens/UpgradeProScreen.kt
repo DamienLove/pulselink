@@ -42,10 +42,10 @@ fun UpgradeProScreen(
     onBack: () -> Unit
 ) {
     val features = listOf(
-        "Immediate 911 escalation with live location",
-        "Automatic video capture and cloud backup",
-        "Priority SMS delivery and retry logic",
-        "Global roaming support for alerts"
+        "No advertising or promotional banners anywhere in the app",
+        "One-tap concierge routing with your custom escalation tiers",
+        "Priority SMS delivery with aggressive retry + delivery tracking",
+        "Offline fallback: keeps emergency phrases available without data"
     )
 
     Scaffold(
@@ -74,9 +74,9 @@ fun UpgradeProScreen(
                     modifier = Modifier.height(72.dp)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(text = "Upgrade", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
+                Text(text = "Go Pro", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
                 Text(
-                    text = "Unlock premium emergency automation and concierge support.",
+                    text = "Unlock the full emergency toolkit, silence every ad, and keep your loved ones reachable anywhere.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFF9AA0B4)
                 )
@@ -106,13 +106,13 @@ fun UpgradeProScreen(
             ) {
                 Column {
                     Text(text = "PulseLink Pro", fontWeight = FontWeight.Bold)
-                    Text(text = "$4.99 / month", color = Color(0xFF9AA0B4))
+                    Text(text = "$5 one-time unlock • lifetime access", color = Color(0xFF9AA0B4))
                 }
                 Switch(checked = isPro, onCheckedChange = onTogglePro)
             }
 
             Button(onClick = { onTogglePro(true) }, modifier = Modifier.fillMaxWidth()) {
-                Text(text = if (isPro) "Manage subscription" else "Upgrade now")
+                Text(text = if (isPro) "Thank you for upgrading" else "Unlock Pro for $5")
             }
         }
     }
