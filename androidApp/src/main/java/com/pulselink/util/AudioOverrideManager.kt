@@ -31,12 +31,14 @@ class AudioOverrideManager @Inject constructor(
         val audio = audioManager ?: return false
         if (!prefs.getBoolean(KEY_ACTIVE, false)) {
             val currentVolume = audio.getStreamVolume(AudioManager.STREAM_RING)
+            val currentNotificationVolume = audio.getStreamVolume(AudioManager.STREAM_NOTIFICATION)
             val currentMode = audio.ringerMode
             val currentFilter = notificationManager?.currentInterruptionFilter
                 ?: NotificationManager.INTERRUPTION_FILTER_ALL
             prefs.edit {
                 putBoolean(KEY_ACTIVE, true)
                 putInt(KEY_RING_VOLUME, currentVolume)
+                putInt(KEY_NOTIFICATION_VOLUME, currentNotificationVolume)
                 putInt(KEY_RING_MODE, currentMode)
                 putInt(KEY_INTERRUPTION_FILTER, currentFilter)
                 putLong(KEY_TIMESTAMP, System.currentTimeMillis())
@@ -45,6 +47,8 @@ class AudioOverrideManager @Inject constructor(
 
         val maxVolume = audio.getStreamMaxVolume(AudioManager.STREAM_RING)
         audio.setStreamVolume(AudioManager.STREAM_RING, maxVolume, 0)
+        val maxNotificationVolume = audio.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION)
+        audio.setStreamVolume(AudioManager.STREAM_NOTIFICATION, maxNotificationVolume, 0)
         audio.ringerMode = AudioManager.RINGER_MODE_NORMAL
 
         if (requestDndBypass && notificationManager?.isNotificationPolicyAccessGranted == true) {
@@ -73,11 +77,21 @@ class AudioOverrideManager @Inject constructor(
         if (!wasActive) return
 
         val storedVolume = prefs.getInt(KEY_RING_VOLUME, audio.getStreamVolume(AudioManager.STREAM_RING))
+        val storedNotificationVolume = prefs.getInt(
+            KEY_NOTIFICATION_VOLUME,
+            audio.getStreamVolume(AudioManager.STREAM_NOTIFICATION)
+        )
         val storedMode = prefs.getInt(KEY_RING_MODE, audio.ringerMode)
         val storedFilter = prefs.getInt(KEY_INTERRUPTION_FILTER, NotificationManager.INTERRUPTION_FILTER_ALL)
 
         val maxVolume = audio.getStreamMaxVolume(AudioManager.STREAM_RING)
         audio.setStreamVolume(AudioManager.STREAM_RING, storedVolume.coerceIn(0, maxVolume), 0)
+        val maxNotificationVolume = audio.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION)
+        audio.setStreamVolume(
+            AudioManager.STREAM_NOTIFICATION,
+            storedNotificationVolume.coerceIn(0, maxNotificationVolume),
+            0
+        )
         audio.ringerMode = storedMode
 
         notificationManager?.let { nm ->
@@ -101,6 +115,7 @@ class AudioOverrideManager @Inject constructor(
         private const val PREF_NAME = "pulselink_audio_override"
         private const val KEY_ACTIVE = "active"
         private const val KEY_RING_VOLUME = "ring_volume"
+        private const val KEY_NOTIFICATION_VOLUME = "notification_volume"
         private const val KEY_RING_MODE = "ring_mode"
         private const val KEY_INTERRUPTION_FILTER = "interruption_filter"
         private const val KEY_TIMESTAMP = "timestamp"
