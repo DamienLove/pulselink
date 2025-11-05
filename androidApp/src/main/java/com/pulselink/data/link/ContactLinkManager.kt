@@ -188,7 +188,14 @@ class ContactLinkManager @Inject constructor(
         }
         val deviceId = settingsRepository.ensureDeviceId()
         val response = SmsCodec.encodeAlertReady(deviceId, message.code, overrideApplied)
-        smsSender.sendSms(contact.phoneNumber, response)
+        val dispatched = smsSender.sendSms(
+            phoneNumber = contact.phoneNumber,
+            message = response,
+            awaitResult = false
+        )
+        if (!dispatched) {
+            Log.e(TAG, "Failed to enqueue alert ready response for contact ${contact.displayName}")
+        }
     }
 
     private fun handleAlertReady(message: PulseLinkMessage.AlertReady) {

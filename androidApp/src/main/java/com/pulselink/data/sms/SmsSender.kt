@@ -40,11 +40,15 @@ class SmsSender @Inject constructor(
     suspend fun sendSms(
         phoneNumber: String,
         message: String,
-        timeoutMillis: Long = DEFAULT_TIMEOUT_MS
+        timeoutMillis: Long = DEFAULT_TIMEOUT_MS,
+        awaitResult: Boolean = true
     ): Boolean {
         val requestId = UUID.randomUUID().toString()
-        val deferred = CompletableDeferred<Boolean>()
-        pendingRequests[requestId] = deferred
+        var deferred: CompletableDeferred<Boolean>? = null
+        if (awaitResult) {
+            deferred = CompletableDeferred()
+            pendingRequests[requestId] = deferred
+        }
 
         val sentIntent = Intent(context, SmsSendReceiver::class.java)
             .setAction(ACTION_SMS_SENT)
@@ -66,14 +70,22 @@ class SmsSender @Inject constructor(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        runCatching {
+        val sendResult = runCatching {
             smsManager.sendTextMessage(phoneNumber, null, message, sentPendingIntent, deliveredPendingIntent)
         }.onFailure { error ->
             Log.e(TAG, "Unable to send SMS to $phoneNumber", error)
             pendingRequests.remove(requestId)?.complete(false)
         }
 
-        val result = withTimeoutOrNull(timeoutMillis) { deferred.await() } ?: false
+        if (!awaitResult) {
+            if (sendResult.isFailure) {
+                pendingRequests.remove(requestId)
+                return false
+            }
+            return true
+        }
+
+        val result = withTimeoutOrNull(timeoutMillis) { deferred?.await() } ?: false
         pendingRequests.remove(requestId)
         return result
     }
