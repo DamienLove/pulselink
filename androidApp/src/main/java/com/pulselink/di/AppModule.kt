@@ -3,6 +3,7 @@ package com.pulselink.di
 import android.content.Context
 import android.os.Build
 import android.telephony.SmsManager
+import android.telephony.TelephonyManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.room.Room
@@ -113,4 +114,9 @@ object DatabaseModule {
         soundCatalog = soundCatalog,
         audioOverrideManager = audioOverrideManager
     )
+
+    @Provides
+    @Singleton
+    fun provideTelephonyManager(@ApplicationContext context: Context): TelephonyManager =
+        context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
 }

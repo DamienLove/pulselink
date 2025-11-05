@@ -3,7 +3,9 @@ package com.pulselink.ui.screens
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,28 +13,28 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.pulselink.R
@@ -64,37 +67,56 @@ fun OnboardingIntroScreen(
     onContinue: () -> Unit
 ) {
     val gradient = Brush.verticalGradient(
-        colors = listOf(Color(0xFF1E1E2C), Color(0xFF111119))
+        colors = listOf(Color(0xFF10131F), Color(0xFF0B0D16))
     )
-    val primaryTextColor = Color(0xFFF8F9FF)
-    val secondaryTextColor = Color(0xFFDEE2FF)
+    val scrollState = rememberScrollState()
 
-    Surface(modifier = modifier.fillMaxSize(), color = Color.Transparent) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(gradient)
+            .padding(horizontal = 24.dp, vertical = 32.dp)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(28.dp))
+                .background(Color.Transparent)
+        ) {}
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(gradient)
+                .clip(RoundedCornerShape(28.dp))
+                .background(Color.White.copy(alpha = 0.04f))
                 .padding(horizontal = 24.dp, vertical = 32.dp)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             Image(
                 painter = painterResource(id = R.drawable.ic_logo),
-                contentDescription = "PulseLink logo"
+                contentDescription = "PulseLink logo",
+                modifier = Modifier.size(72.dp)
             )
-            Text(
-                text = "Welcome to PulseLink",
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                color = primaryTextColor
-            )
-            Text(
-                text = "Your phone listens for safewords, alerts trusted contacts, and pushes through Do Not Disturb when it matters most.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = secondaryTextColor
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Welcome to PulseLink",
+                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                    color = Color.White
+                )
+                Text(
+                    text = "PulseLink listens for safewords, alerts trusted contacts, and pushes through Do Not Disturb when it matters most.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFFCBD5F5)
+                )
+            }
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color.White.copy(alpha = 0.05f))
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 IntroBullet(text = "Hands-free safewords trigger emergency or check-in alerts.")
@@ -104,34 +126,27 @@ fun OnboardingIntroScreen(
             OutlinedTextField(
                 value = ownerName,
                 onValueChange = onOwnerNameChange,
-                label = { Text("Your name", color = secondaryTextColor) },
+                label = { Text("Your name") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF94A3B8),
-                unfocusedBorderColor = Color(0xFF4B5563),
-                cursorColor = primaryTextColor,
-                focusedTextColor = primaryTextColor,
-                unfocusedTextColor = primaryTextColor,
-                focusedLabelColor = secondaryTextColor,
-                unfocusedLabelColor = secondaryTextColor
-            )
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    cursorColor = MaterialTheme.colorScheme.primary
+                )
             )
             Text(
                 text = "We include this name when contacting your trusted partners so they know it's you.",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFFFFB74D)
+                color = Color(0xFFFCD34D)
             )
-            Button(
+            androidx.compose.material3.Button(
                 onClick = onContinue,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                enabled = ownerName.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (ownerName.isNotBlank()) Color(0xFF15803D) else Color(0xFF2563EB)
-                )
+                    .fillMaxWidth(),
+                enabled = ownerName.isNotBlank()
             ) {
                 Text(text = "Continue to permissions")
             }
@@ -170,61 +185,69 @@ fun OnboardingScreen(
     onBack: () -> Unit
 ) {
     val gradient = Brush.verticalGradient(
-        colors = listOf(Color(0xFF1E1E2C), Color(0xFF111119))
+        colors = listOf(Color(0xFF10131F), Color(0xFF0B0D16))
     )
-    val primaryTextColor = Color(0xFFF8F9FF)
-    val secondaryTextColor = Color(0xFFDEE2FF)
     val manualHelp = permissions.firstOrNull { it.manualHelp != null && !it.granted }?.manualHelp
 
-    Surface(modifier = modifier.fillMaxSize(), color = Color.Transparent) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(gradient)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp, vertical = 32.dp)
+                .clip(RoundedCornerShape(28.dp)),
+            color = Color.White.copy(alpha = 0.04f)
+        ) {}
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(gradient)
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.align(Alignment.Start)
             ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = primaryTextColor
-                    )
-                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color.White
+                )
             }
             Image(
                 painter = painterResource(id = R.drawable.ic_logo),
-                contentDescription = "PulseLink logo"
+                contentDescription = "PulseLink logo",
+                modifier = Modifier
+                    .padding(top = 12.dp)
+                    .size(64.dp)
             )
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Enable critical permissions",
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                color = primaryTextColor
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                color = Color.White
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Grant these permissions so PulseLink can protect you even when your phone is silenced.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = secondaryTextColor
+                color = Color(0xFFCBD5F5),
+                modifier = Modifier.align(Alignment.Start)
             )
             Spacer(modifier = Modifier.height(24.dp))
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth()
+                    .fillMaxWidth(),
+                contentPadding = PaddingValues(bottom = 16.dp)
             ) {
                 items(permissions) { card ->
-                    PermissionCard(
-                        state = card,
-                        primaryTextColor = primaryTextColor,
-                        secondaryTextColor = secondaryTextColor
-                    )
+                    PermissionCard(state = card)
                 }
             }
             if (!manualHelp.isNullOrBlank()) {
@@ -232,24 +255,20 @@ fun OnboardingScreen(
                 Text(
                     text = manualHelp,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFFFFB74D)
+                    color = Color(0xFFFCD34D)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Button(
+                OutlinedButton(
                     onClick = onOpenAppSettings,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F2937))
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Open App Settings")
+                    Text("Open app settings")
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
-            Button(
+            Spacer(modifier = Modifier.height(16.dp))
+            androidx.compose.material3.Button(
                 onClick = onGrantPermissions,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isReadyToFinish) Color(0xFF15803D) else Color(0xFF2563EB)
-                )
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(text = if (isReadyToFinish) "Finish setup" else "Grant permissions")
             }
@@ -258,16 +277,13 @@ fun OnboardingScreen(
 }
 
 @Composable
-private fun PermissionCard(
-    state: OnboardingPermissionState,
-    primaryTextColor: Color,
-    secondaryTextColor: Color
-) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = if (state.granted) Color(0xFF1E1E2C) else Color(0xFF2B2340)
-        ),
-        modifier = Modifier.fillMaxWidth()
+private fun PermissionCard(state: OnboardingPermissionState) {
+    val statusColor = if (state.granted) MaterialTheme.colorScheme.primary else Color(0xFFF59E0B)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        tonalElevation = 2.dp,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.2f)
     ) {
         Column(
             modifier = Modifier
@@ -277,38 +293,53 @@ private fun PermissionCard(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Icon(
-                    imageVector = state.icon,
-                    contentDescription = state.title,
-                    tint = if (state.granted) Color(0xFF67DBA0) else Color.White
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
+                Surface(
+                    shape = CircleShape,
+                    color = statusColor.copy(alpha = 0.18f),
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Icon(
+                        imageVector = state.icon,
+                        contentDescription = state.title,
+                        tint = statusColor,
+                        modifier = Modifier.padding(10.dp)
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = state.title,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = primaryTextColor
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
                     )
                     Text(
                         text = state.description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = secondaryTextColor
+                        color = Color(0xFFCBD5F5)
                     )
                 }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
                 Text(
-                    text = if (state.granted) "Granted" else "Action required",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (state.granted) Color(0xFF67DBA0) else Color(0xFFFFB74D)
+                    text = if (state.granted) "Granted" else "Pending",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = statusColor
                 )
-                if (!state.granted && state.actionLabel != null && state.onAction != null) {
+            }
+            if (!state.granted && state.actionLabel != null && state.onAction != null) {
+                Divider(color = Color.White.copy(alpha = 0.08f))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = state.manualHelp ?: "Tap to grant",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFFCD34D),
+                        modifier = Modifier.weight(1f)
+                    )
                     TextButton(onClick = state.onAction) {
                         Text(text = state.actionLabel)
                     }
