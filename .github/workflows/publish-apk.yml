@@ -1,0 +1,95 @@
+name: Publish PulseLink APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "Where should the APK go?"
+        required: true
+        default: alpha
+        type: choice
+        options:
+          - alpha
+          - beta
+          - release
+      version:
+        description: "Release tag (required when channel = release)"
+        required: false
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  CHANNEL: ${{ github.event.inputs.channel }}
+  APK_PATH: androidApp/build/outputs/apk/free/debug/androidApp-free-debug.apk
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Build free debug APK
+        run: ./gradlew clean androidApp:assembleFreeDebug
+
+      - name: Determine artifact name
+        id: names
+        run: |
+          case "${CHANNEL}" in
+            alpha) apk_name="PulseLink_Alpha.apk" ;;
+            beta) apk_name="PulseLink_Beta.apk" ;;
+            release) apk_name="PulseLink.apk" ;;
+            *) echo "Unsupported channel: ${CHANNEL}" >&2; exit 1 ;;
+          esac
+          echo "apk_name=${apk_name}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate release inputs
+        if: env.CHANNEL == 'release'
+        run: |
+          if [ -z "${{ github.event.inputs.version }}" ]; then
+            echo "::error::Release channel requires the 'version' input."
+            exit 1
+          fi
+
+      - name: Prepare artifact
+        run: |
+          mkdir -p dist
+          cp "${APK_PATH}" "dist/${{ steps.names.outputs.apk_name }}"
+
+      - name: Upload to GitHub Packages
+        if: env.CHANNEL != 'release'
+        env:
+          PACKAGE_NAME: pulselink-${{ env.CHANNEL }}
+          FILE_NAME: ${{ steps.names.outputs.apk_name }}
+        run: |
+          VERSION="${GITHUB_RUN_NUMBER}"
+          URL="https://uploads.github.com/repos/${GITHUB_REPOSITORY}/packages/generic/${PACKAGE_NAME}/${VERSION}/${FILE_NAME}"
+          echo "Uploading ${FILE_NAME} to ${URL}"
+          curl -L \
+            -X PUT \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary @"dist/${FILE_NAME}" \
+            "${URL}"
+
+      - name: Upload to GitHub Releases
+        if: env.CHANNEL == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          name: ${{ github.event.inputs.version }}
+          draft: false
+          prerelease: false
+          files: dist/${{ steps.names.outputs.apk_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
