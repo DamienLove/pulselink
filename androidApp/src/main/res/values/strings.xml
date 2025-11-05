@@ -41,6 +41,16 @@
     <string name="ping_received_body">They are checking in with you.</string>
     <string name="manual_message_title">%1$s sent a message</string>
     <string name="channel_manual_messages">PulseLink Messages</string>
+    <string name="contact_status_not_linked">Not linked</string>
+    <string name="contact_status_outbound_pending">Awaiting approval</string>
+    <string name="contact_status_inbound_request">Approve request</string>
+    <string name="contact_status_linked">Linked</string>
+    <string name="contact_action_help_not_linked">Link this contact so remote alerts and messaging work instantly.</string>
+    <string name="contact_action_help_outbound_pending">Waiting for them to accept. Send another request if they missed it.</string>
+    <string name="contact_action_help_inbound_request">This contact wants to connect. Approve to enable remote overrides.</string>
+    <string name="contact_action_send_link">Send link request</string>
+    <string name="contact_action_resend_link">Resend link request</string>
+    <string name="contact_action_approve_link">Approve link request</string>
     <string name="permission_microphone">PulseLink needs microphone access for hotword detection.</string>
     <string name="permission_sms">PulseLink needs SMS permission to contact your circle.</string>
     <string name="permission_location">PulseLink needs location access to share your position.</string>
