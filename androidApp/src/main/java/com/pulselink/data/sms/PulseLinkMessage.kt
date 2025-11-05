@@ -59,4 +59,10 @@ sealed class PulseLinkMessage {
         val key: String,
         val value: String
     ) : PulseLinkMessage()
+
+    data class CallEnded(
+        override val senderId: String,
+        override val code: String,
+        val callDuration: Long
+    ) : PulseLinkMessage()
 }

@@ -178,10 +178,6 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch { linkManager.updateRemoteOverridePermission(contactId, allow) }
     }
 
-    suspend fun prepareRemoteCall(contactId: Long, tier: EscalationTier = EscalationTier.EMERGENCY): Boolean {
-        return linkManager.prepareRemoteOverride(contactId, tier)
-    }
-
     suspend fun sendManualMessage(contactId: Long, message: String): ManualMessageResult =
         linkManager.sendManualMessage(contactId, message)
 
@@ -197,6 +193,21 @@ class MainViewModel @Inject constructor(
     fun completeOnboarding() {
         viewModelScope.launch {
             settingsRepository.setOnboardingComplete()
+        }
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    suspend fun initiateCall(contactId: Long, phoneNumber: String): CallInitiationResult {
+        return when (linkManager.prepareRemoteCall(contactId)) {
+            ContactLinkManager.CallPreparationResult.READY -> CallInitiationResult.Ready
+            ContactLinkManager.CallPreparationResult.TIMEOUT -> CallInitiationResult.Timeout
+            ContactLinkManager.CallPreparationResult.FAILED -> CallInitiationResult.Failure
+        }
+    }
+
+    fun notifyCallEnded(contactId: Long, callDuration: Long) {
+        viewModelScope.launch {
+            linkManager.sendCallEndedNotification(contactId, callDuration)
         }
     }
 
@@ -248,5 +259,11 @@ class MainViewModel @Inject constructor(
             }
         }
         return updatedSettings
+    }
+
+    sealed class CallInitiationResult {
+        object Ready : CallInitiationResult()
+        object Timeout : CallInitiationResult()
+        object Failure : CallInitiationResult()
     }
 }

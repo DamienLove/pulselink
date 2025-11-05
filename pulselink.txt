@@ -68,3 +68,10 @@ App requests microphone, SMS (send/receive), notification, and location access. 
 - Rebuilt the message composer with gradient styling, mic icon placeholder, and override feedback chips on outbound messages.
 - Confirmed fresh `androidApp:assembleProDebug` and `androidApp:assembleFreeDebug` builds on 2025-11-04 after the UI overhaul.
 - Restored the one-tap "Grant permissions" button on the onboarding permissions screen so users can launch the system dialogs without leaving the flow, while still blocking final completion until every grant (including DND) succeeds.
+
+-- 2025-11-05 Update --
+- Implemented end-to-end SMS delivery tracking with a new `SmsSendReceiver`, PendingIntent callbacks, and deferred completion so manual message send states reflect real modem results.
+- Hardened inbound manual message handling by retrying contact resolution, guarding against ID 0 saves, and flagging outbound results as pending when the remote contact has not approved linking.
+- Polished the onboarding, home, and settings composables with the latest gradients, toggle cards, and permission guidance; fixed the onboarding name field cursor jump reported by QA.
+- Gradle targets `testFreeDebugUnitTest`, `testProDebugUnitTest`, and `androidApp:assembleProDebug` now pass against the refreshed branch (see `androidApp/build/outputs/apk/pro/debug/` for the updated APK).
+- Reworked the contact call flow to wait for remote override confirmation, auto place the call via `ACTION_CALL`, monitor call completion, and push a `CallEnded` SMS so the receiver's audio settings restore immediately after hangup.

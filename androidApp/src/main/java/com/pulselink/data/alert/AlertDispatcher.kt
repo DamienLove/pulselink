@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -63,9 +64,12 @@ class AlertDispatcher @Inject constructor(
             false
         }
 
-        val smsCount = runCatching {
+        val smsCount = try {
             sendSms(message, contacts)
-        }.getOrDefault(0)
+        } catch (error: Exception) {
+            Log.e(TAG, "Unable to send alert SMS", error)
+            0
+        }
 
         sendNotification(
             channel = channelId,
@@ -91,7 +95,7 @@ class AlertDispatcher @Inject constructor(
     }
 
     @RequiresPermission(Manifest.permission.SEND_SMS)
-    private fun sendSms(message: String, contacts: List<Contact>): Int {
+    private suspend fun sendSms(message: String, contacts: List<Contact>): Int {
         return smsSender.sendAlert(message, contacts)
     }
 
@@ -168,4 +172,8 @@ class AlertDispatcher @Inject constructor(
         val notifiedContacts: Int,
         val sharedLocation: Boolean
     )
+
+    companion object {
+        private const val TAG = "AlertDispatcher"
+    }
 }

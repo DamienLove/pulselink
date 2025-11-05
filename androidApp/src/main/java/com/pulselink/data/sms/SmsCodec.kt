@@ -15,7 +15,8 @@ object SmsCodec {
         ALERT_READY("ALERT_READY"),
         MESSAGE("MSG"),
         SOUND_OVERRIDE("SOUND"),
-        CONFIG("CONFIG")
+        CONFIG("CONFIG"),
+        CALL_ENDED("CALL_END")
     }
 
     fun encodeLinkRequest(senderId: String, code: String, senderName: String): String =
@@ -48,6 +49,9 @@ object SmsCodec {
 
     fun encodeConfig(senderId: String, code: String, key: String, value: String): String =
         build(Type.CONFIG, senderId, code, key, value)
+
+    fun encodeCallEnded(senderId: String, code: String, callDuration: Long): String =
+        build(Type.CALL_ENDED, senderId, code, callDuration.toString())
 
     private fun build(type: Type, vararg parts: String): String =
         listOf(PREFIX, type.wire, *parts).joinToString("|")
@@ -95,6 +99,11 @@ object SmsCodec {
                 val key = tokens.getOrNull(4) ?: return null
                 val value = tokens.getOrNull(5) ?: ""
                 PulseLinkMessage.ConfigUpdate(senderId, code, key, value)
+            }
+            Type.CALL_ENDED.wire -> {
+                val durationToken = tokens.getOrNull(4)
+                val duration = durationToken?.toLongOrNull() ?: 0L
+                PulseLinkMessage.CallEnded(senderId, code, duration)
             }
             else -> null
         }

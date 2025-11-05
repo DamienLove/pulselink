@@ -61,6 +61,12 @@ class AudioOverrideManager @Inject constructor(
         }
     }
 
+    fun cancelScheduledRestore() {
+        pendingRestoreJob?.cancel()
+        pendingRestoreJob = null
+        restoreIfNeeded()
+    }
+
     fun restoreIfNeeded() {
         val audio = audioManager ?: return
         val wasActive = prefs.getBoolean(KEY_ACTIVE, false)

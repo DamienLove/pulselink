@@ -229,25 +229,25 @@ private fun ConversationBody(
                         outcome = result
                         when (result) {
                             is ManualMessageResult.Success -> {
-                                if (result.overrideApplied) {
-                                    "Message sent"
-                                } else {
-                                    "Message sent (receiver may still be on silent)"
+                                when {
+                                    result.deliveryPending -> context.getString(R.string.manual_message_sent_pending)
+                                    result.overrideApplied -> context.getString(R.string.manual_message_sent)
+                                    else -> context.getString(R.string.manual_message_sent_muted)
                                 }
                             }
                             is ManualMessageResult.Failure -> {
                                 when (result.reason) {
-                                    ManualMessageResult.Failure.Reason.CONTACT_MISSING -> "Contact no longer available"
-                                    ManualMessageResult.Failure.Reason.NOT_LINKED -> "Link this contact before messaging"
-                                    ManualMessageResult.Failure.Reason.SMS_FAILED -> "Message failed to send"
-                                    ManualMessageResult.Failure.Reason.UNKNOWN -> "Message failed to send"
+                                    ManualMessageResult.Failure.Reason.CONTACT_MISSING -> context.getString(R.string.manual_message_error_contact_missing)
+                                    ManualMessageResult.Failure.Reason.NOT_LINKED -> context.getString(R.string.manual_message_error_not_linked)
+                                    ManualMessageResult.Failure.Reason.SMS_FAILED -> context.getString(R.string.manual_message_error_failed)
+                                    ManualMessageResult.Failure.Reason.UNKNOWN -> context.getString(R.string.manual_message_error_failed)
                                 }
                             }
                         }
                     } catch (cancelled: CancellationException) {
                         throw cancelled
                     } catch (error: Exception) {
-                        "Message failed to send"
+                        context.getString(R.string.manual_message_error_failed)
                     }
                     Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
                     if (outcome is ManualMessageResult.Success) {
