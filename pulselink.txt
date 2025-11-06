@@ -85,17 +85,16 @@ App requests microphone, SMS (send/receive), notification, and location access. 
 - Updated theme palettes and component styling to improve contrast in light/dark modes across settings, contact detail, and dialog surfaces.
 - Contact import pipeline now guards permission failures and returns a user-facing toast instead of crashing.
 
+-- 2025-11-06 Update (Release signing & Play requirements) --
+- Migrated the app to API Level 35: `compileSdk = 35`, `targetSdk = 35`, `buildToolsVersion = 35.0.0`, `versionCode = 3`, `versionName = 1.0.2` to satisfy Play’s November 2025 policy.
+- Introduced a release signing config that resolves credentials from Gradle `-P` flags, environment variables, or a local `keystore.properties`, defaulting to `pulselink-upload-2025.jks` when present.
+- Generated a new upload key (`pulselink-upload-2025.jks`, alias `pulselink_upload`, passwords `PulseLink!Upload2025`) and exported the matching certificate (`pulselink-upload-2025.pem`) for Play App Signing enrollment.
+- Added `keystore.properties.template`, kept secrets out of VCS via `.gitignore`, and committed the template so other devs can drop in their own credentials.
+- Reworked `.github/workflows/release-aab.yml` so CI decodes the keystore secret, supplies signing info via env vars, and builds both `bundleFreeRelease` and `bundleProRelease` before calling `r0adkll/upload-google-play@v1`.
+- Local build verification (2025-11-06 10:45 MST): `./gradlew clean bundleFreeRelease bundleProRelease assembleFreeRelease assembleProRelease`; resulting artifacts live under `androidApp/build/outputs/{bundle,apk}/**/release/` and verify with `jarsigner -verify`.
+- Google Play upload still returns “The caller does not have permission”; remaining work is to link the Cloud project in Play Console, grant the service account Release Manager access to `com.pulselink.free`, and confirm the Google Play Android Developer API is enabled.
+
 Next Immediate actions:
- ok so make sure the ringer volume is also turned up for when the phone is ringing after the alert tone occurs, quick actions on the home, has a blank button, that should say
-  EMERGENCY in RED BOLD and should make the siren alerts go off on all trusted contacts 1 at a time in order, have there be a way do drag multiple contacts up and down on the home
-  screen to change that order, then remove trigger test, lets just make that a quick action to check-in with all of the trusted contact, in order. remove "manage alert contacts
-  and stay in sync." words from the home page. also, when changing the emergency alert tones in any setting should bring the user to a different page than changing the check-in
-  alert tones, as currently its cutt off and it would just look better if they each have thier own setting screen. also, on those screens make sure to center the logo, its off to
-  the left and looks odd. There needs to be a way to enable "allow remote sound change" from the accepting link request because its kind of odd to have to go to settings and
-  change that when accepting, should be a switch ahead of the accept link button. also on some screens the app comes off light and the words are hard to see is it possibly to
-  ensure if the user had light or dark settings the contrast in test is adjusted as such so its always visable and bold. And in settings, are there other things that could be in
-  there? possibly default audio emergency siren and check-in and maybe auto-accept "allow remote sound change" when accepting link. also, the home screen NEEDS the logo centered
-  on the top, like settings will have, and listening, should be in the settings, then just a small mic that can be turned on or off by pushing that mic on the home screen, have a
-  red mic for off and green for on. lastly, the support circle spot on the home screen has a random circle after it, seems like it'd make sense as its a circle but it really
-  doesnt, please remove that circle icon or whatever that is. Oh one more thing, when importing contact, once clicking the contact it closes the app and doesnt import, please fix
-  that. first commit and push and commit and push once done with all of the above, then update pulselink.txt
+- Finish Play Console configuration so the new upload key/service account can create edits (link Cloud project, grant Release Manager role, enable Google Play Android Developer API).
+- Address the outstanding UX polish from 2025-11-05: emergency quick action button, contact reorder drag support, tone picker separation with centered branding, link-approval toggle for “allow remote sound change”, contrast fixes, centered logo + mic toggle on Home, removal of the stray “support circle” icon, and the contact import crash.
+- Re-run end-to-end smoke tests (alerts, SMS flows, contact linking) once the UI changes land, then cut the next internal track build via the refreshed GitHub workflow.

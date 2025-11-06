@@ -1,3 +1,6 @@
+import java.util.Properties
+import org.gradle.api.Project
+
 plugins {
     id("com.android.application")
     kotlin("android")
@@ -6,12 +9,64 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+fun Project.optionalProperty(name: String): String? =
+    if (hasProperty(name)) property(name)?.toString()?.takeIf { it.isNotBlank() } else null
+
+fun Properties.optional(key: String): String? =
+    getProperty(key)?.takeIf { it.isNotBlank() }
+
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        load(keystorePropertiesFile.inputStream())
+    }
+}
+
+val defaultKeystoreFile = rootProject.file("pulselink-upload-2025.jks")
+
+val signingStoreFilePath = project.optionalProperty("android.injected.signing.store.file")
+    ?: keystoreProperties.optional("storeFile")
+    ?: System.getenv("UPLOAD_KEYSTORE_PATH")
+    ?: defaultKeystoreFile.takeIf { it.exists() }?.absolutePath
+
+val signingStorePassword = project.optionalProperty("android.injected.signing.store.password")
+    ?: keystoreProperties.optional("storePassword")
+    ?: System.getenv("UPLOAD_KEYSTORE_PASSWORD")
+
+val signingKeyAlias = project.optionalProperty("android.injected.signing.key.alias")
+    ?: keystoreProperties.optional("keyAlias")
+    ?: System.getenv("UPLOAD_KEY_ALIAS")
+
+val signingKeyPassword = project.optionalProperty("android.injected.signing.key.password")
+    ?: keystoreProperties.optional("keyPassword")
+    ?: System.getenv("UPLOAD_KEY_PASSWORD")
+
+val isSigningConfigured = listOf(
+    signingStoreFilePath,
+    signingStorePassword,
+    signingKeyAlias,
+    signingKeyPassword
+).all { !it.isNullOrBlank() }
+
 android {
     namespace = "com.pulselink"
     compileSdk = 35
     buildToolsVersion = "35.0.0"
 
     flavorDimensions += "tier"
+
+    signingConfigs {
+        create("release") {
+            if (isSigningConfigured) {
+                storeFile = rootProject.file(signingStoreFilePath!!)
+                storePassword = signingStorePassword!!
+                keyAlias = signingKeyAlias!!
+                keyPassword = signingKeyPassword!!
+            } else {
+                logger.warn("Release signing configuration is incomplete; provide keystore credentials via keystore.properties, environment variables, or -P android.injected.signing.*")
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "com.pulselink"
@@ -34,6 +89,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (isSigningConfigured) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
@@ -155,4 +213,3 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 }
-

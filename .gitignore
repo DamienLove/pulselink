@@ -12,3 +12,4 @@ pulselink-*.json
 *.jks
 keys*.enc
 deployment_cert.*
+keystore.properties
