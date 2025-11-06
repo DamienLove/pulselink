@@ -1,8 +1,7 @@
 # PulseLink
 
 Working PulseLink app.
-
-[http://github.com/damienlove/pulselink/androidApp/build/outputs/apk/free/debug/androidApp-free-debug.apk](https://github.com/DamienLove/pulselink/blob/main/androidApp/build/outputs/apk/free/debug/androidApp-free-debug.apk)
+<a href="https://github.com/DamienLove/pulselink/blob/main/androidApp/build/outputs/apk/free/debug/androidApp-free-debug.apk download>PulseLink Alpha</a>
 
 
 [![PulseLink APKs](https://github.com/DamienLove/pulselink/actions/workflows/publish-apk.yml/badge.svg)](https://github.com/DamienLove/pulselink/actions/workflows/publish-apk.yml)
