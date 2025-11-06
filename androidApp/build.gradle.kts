@@ -8,14 +8,14 @@ plugins {
 
 android {
     namespace = "com.pulselink"
-    compileSdk = 34
+    compileSdk = 35
 
     flavorDimensions += "tier"
 
     defaultConfig {
         applicationId = "com.pulselink"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 2
         versionName = "1.0.1"
 
