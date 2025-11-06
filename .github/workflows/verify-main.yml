@@ -1,4 +1,4 @@
-  name: Verify PulseLink Mainline
+  name: Latest APK
 
   on:
     workflow_dispatch:
