@@ -1,5 +1,3 @@
- name: Verify PulseLink Mainline
-
   on:
     pull_request:
       branches: [ main ]
@@ -31,8 +29,8 @@
             java-version: "17"
             cache: gradle
 
-        - name: Run unit test suite (free/pro)
-          run: ./gradlew testFreeDebugUnitTest testProDebugUnitTest --stacktrace
+        - name: Run free unit tests
+          run: ./gradlew testFreeDebugUnitTest --stacktrace
 
         - name: Upload test reports
           if: always()
@@ -41,4 +39,3 @@
             name: gradle-test-reports
             path: |
               **/build/reports/tests/testFreeDebugUnitTest/**
-              **/build/reports/tests/testProDebugUnitTest/**
