@@ -6,7 +6,7 @@ Alpha APK is:
 
 Working PulseLink app.
 
-[![Publish PulseLink APK](https://github.com/DamienLove/pulselink/actions/workflows/publish-apk.yml/badge.svg?branch=main)](https://github.com/DamienLove/pulselink/actions/workflows/publish-apk.yml)
+[![Publish PulseLink APK](https://github.com/DamienLove/pulselink/actions/workflows/publish-apk.yml/badge.svg)](https://github.com/DamienLove/pulselink/actions/workflows/publish-apk.yml)
 
 ## [Download PulseLink Alpha](https://github.com/DamienLove/pulselink/releases/download/Alpha/google_Play_signed-free.apk)
 
