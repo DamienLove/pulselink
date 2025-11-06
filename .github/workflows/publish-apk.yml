@@ -1,4 +1,4 @@
-name: Publish PulseLink APK
+name: PulseLink APKs
 
 on:
   workflow_dispatch:
@@ -38,6 +38,9 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: gradle
+
+      - name: Grant execute permission to Gradle wrapper
+        run: chmod +x ./gradlew
 
       - name: Build free debug APK
         run: ./gradlew clean androidApp:assembleFreeDebug

@@ -33,4 +33,10 @@ class ContactRepositoryImpl @Inject constructor(
     override suspend fun getByLinkCode(code: String): Contact? = contactDao.getByLinkCode(code)
 
     override suspend fun getByPhone(phone: String): Contact? = contactDao.getByPhone(phone)
+
+    override suspend fun updateOrder(contactIds: List<Long>) {
+        contactIds.forEachIndexed { index, id ->
+            contactDao.updateOrder(id, index)
+        }
+    }
 }

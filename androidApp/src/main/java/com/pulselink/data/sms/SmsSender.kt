@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 
 @Singleton
@@ -26,11 +27,18 @@ class SmsSender @Inject constructor(
     private val pendingRequests = ConcurrentHashMap<String, CompletableDeferred<Boolean>>()
 
     @RequiresPermission(allOf = [Manifest.permission.SEND_SMS])
-    suspend fun sendAlert(message: String, contacts: List<Contact>): Int {
+    suspend fun sendAlert(
+        message: String,
+        contacts: List<Contact>,
+        delayBetweenMillis: Long = 0L
+    ): Int {
         var count = 0
-        for (contact in contacts) {
+        contacts.forEachIndexed { index, contact ->
             if (sendSms(contact.phoneNumber, message)) {
                 count++
+            }
+            if (delayBetweenMillis > 0 && index < contacts.lastIndex) {
+                delay(delayBetweenMillis)
             }
         }
         return count
