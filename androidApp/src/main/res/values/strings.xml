@@ -48,4 +48,22 @@
     <string name="shortcut_start_listening_long">Start PulseLink listening</string>
     <string name="shortcut_check_in_short">Send check-in</string>
     <string name="shortcut_check_in_long">Send PulseLink check-in</string>
+    <string name="pulselink_contact_import_failed">PulseLink couldn\'t load that contact. Check contact permissions and try again.</string>
+    <string name="call_preparing">Preparing call...</string>
+    <string name="call_ready">Call ready</string>
+    <string name="call_failed">Call failed</string>
+    <string name="call_timeout">Call timed out</string>
+    <string name="call_permission_required">Phone permissions are required to place calls.</string>
+    <string name="contact_action_message_requires_link">Link this contact before sending messages.</string>
+    <string name="contact_action_message_pending_warning">Approval is pending. Messages may be delayed.</string>
+    <string name="contact_status_not_linked">Not linked</string>
+    <string name="contact_status_outbound_pending">Awaiting approval</string>
+    <string name="contact_status_inbound_request">Approve request</string>
+    <string name="contact_status_linked">Linked</string>
+    <string name="contact_action_help_not_linked">Send a link request so this contact can receive alerts.</string>
+    <string name="contact_action_send_link">Send link request</string>
+    <string name="contact_action_help_outbound_pending">Waiting for their response. You can resend the invite.</string>
+    <string name="contact_action_resend_link">Resend link</string>
+    <string name="contact_action_help_inbound_request">Approve to enable alerts and remote support.</string>
+    <string name="contact_action_approve_link">Approve link</string>
 </resources>

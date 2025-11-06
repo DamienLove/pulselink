@@ -1,0 +1,44 @@
+name: Verify PulseLink Mainline
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Gradle wrapper
+        uses: gradle/wrapper-validation-action@v2
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Run unit tests and assemble debug APKs
+        run: ./gradlew testFreeDebugUnitTest testProDebugUnitTest androidApp:assembleFreeDebug androidApp:assembleProDebug --stacktrace
+
+      - name: Upload build reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-reports
+          path: |
+            **/build/reports/tests/testFreeDebugUnitTest/**
+            **/build/reports/tests/testProDebugUnitTest/**
