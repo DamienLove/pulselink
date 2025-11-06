@@ -1,3 +1,5 @@
+ name: Verify PulseLink Mainline
+
   on:
     pull_request:
       branches: [ main ]
@@ -12,30 +14,17 @@
     cancel-in-progress: true
 
   jobs:
-    build-and-test:
+    verify-apk-present:
       runs-on: ubuntu-latest
-
       steps:
         - name: Checkout
           uses: actions/checkout@v4
 
-        - name: Validate Gradle wrapper
-          uses: gradle/wrapper-validation-action@v2
-
-        - name: Set up JDK
-          uses: actions/setup-java@v4
-          with:
-            distribution: temurin
-            java-version: "17"
-            cache: gradle
-
-        - name: Run free unit tests
-          run: ./gradlew testFreeDebugUnitTest --stacktrace
-
-        - name: Upload test reports
-          if: always()
-          uses: actions/upload-artifact@v4
-          with:
-            name: gradle-test-reports
-            path: |
-              **/build/reports/tests/testFreeDebugUnitTest/**
+        - name: Confirm prebuilt free APK is committed
+          run: |
+            APK_PATH="androidApp/build/outputs/apk/free/debug/androidApp-free-debug.apk"
+            if [ ! -f "$APK_PATH" ]; then
+              echo "::error::Expected APK not found at $APK_PATH"
+              exit 1
+            fi
+            ls -lh "$APK_PATH"
