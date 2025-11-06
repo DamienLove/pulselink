@@ -2,6 +2,9 @@
 
 Working PulseLink app.
 
+androidApp/build/outputs/apk/free/debug/androidApp-free-debug.apk
+
+
 [![PulseLink APKs](https://github.com/DamienLove/pulselink/actions/workflows/publish-apk.yml/badge.svg)](https://github.com/DamienLove/pulselink/actions/workflows/publish-apk.yml)
 
 
