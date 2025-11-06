@@ -9,6 +9,7 @@ plugins {
 android {
     namespace = "com.pulselink"
     compileSdk = 35
+    buildToolsVersion = "35.0.0"
 
     flavorDimensions += "tier"
 
@@ -16,8 +17,8 @@ android {
         applicationId = "com.pulselink"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -154,3 +155,4 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 }
+
