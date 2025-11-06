@@ -25,7 +25,6 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pulselink.domain.model.PulseLinkSettings
@@ -35,8 +34,12 @@ import com.pulselink.domain.model.PulseLinkSettings
 fun SettingsScreen(
     settings: PulseLinkSettings,
     hasDndAccess: Boolean,
+    onToggleListening: (Boolean) -> Unit,
     onToggleIncludeLocation: (Boolean) -> Unit,
     onRequestDndAccess: () -> Unit,
+    onToggleAutoAllowRemoteSoundChange: (Boolean) -> Unit,
+    onEditEmergencyTone: () -> Unit,
+    onEditCheckInTone: () -> Unit,
     onBack: () -> Unit
 ) {
     Scaffold(
@@ -60,6 +63,12 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             SettingsToggleCard(
+                title = "Hands-free listening",
+                subtitle = "Control PulseLink's always-listening mic from here or the home mic button.",
+                checked = settings.listeningEnabled,
+                onCheckedChange = onToggleListening
+            )
+            SettingsToggleCard(
                 title = "Share location in alerts",
                 subtitle = "Include your latest location when PulseLink sends emergency or check-in notifications.",
                 checked = settings.includeLocation,
@@ -74,6 +83,24 @@ fun SettingsScreen(
                 },
                 actionLabel = if (hasDndAccess) "Manage" else "Allow",
                 onAction = onRequestDndAccess
+            )
+            SettingsToggleCard(
+                title = "Auto-allow remote sound change",
+                subtitle = "Automatically let newly linked contacts update alert tones on this device.",
+                checked = settings.autoAllowRemoteSoundChange,
+                onCheckedChange = onToggleAutoAllowRemoteSoundChange
+            )
+            SettingsActionCard(
+                title = "Emergency alert tone",
+                subtitle = "Choose the default siren that plays during emergency alerts.",
+                actionLabel = "Edit tone",
+                onAction = onEditEmergencyTone
+            )
+            SettingsActionCard(
+                title = "Check-in alert tone",
+                subtitle = "Set the chime that plays when you send a check-in.",
+                actionLabel = "Edit tone",
+                onAction = onEditCheckInTone
             )
         }
     }
@@ -90,7 +117,7 @@ private fun SettingsToggleCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         tonalElevation = 2.dp,
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.25f)
+        color = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Row(
             modifier = Modifier
@@ -103,8 +130,17 @@ private fun SettingsToggleCard(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = Color.White)
-                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = Color(0xFFCBD5F5))
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             Switch(checked = checked, onCheckedChange = onCheckedChange)
         }
@@ -122,7 +158,7 @@ private fun SettingsActionCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         tonalElevation = 2.dp,
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.25f)
+        color = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Column(
             modifier = Modifier
@@ -130,11 +166,28 @@ private fun SettingsActionCard(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = Color.White)
-            Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = Color(0xFFCBD5F5))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             TextButton(onClick = onAction) {
-                Icon(imageVector = Icons.Filled.NotificationsActive, contentDescription = null)
-                Text(text = actionLabel, modifier = Modifier.padding(start = 8.dp))
+                Icon(
+                    imageVector = Icons.Filled.NotificationsActive,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = actionLabel,
+                    modifier = Modifier.padding(start = 8.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }

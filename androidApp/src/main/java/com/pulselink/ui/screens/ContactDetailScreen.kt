@@ -38,7 +38,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -126,7 +125,13 @@ fun ContactDetailScreen(
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 Header(contact)
-                LinkStatusSection(contact, onSendLink, onApproveLink, launchPing)
+                LinkStatusSection(
+                    contact = contact,
+                    onSendLink = onSendLink,
+                    onApproveLink = onApproveLink,
+                    onToggleRemoteSound = onToggleRemoteSound,
+                    onPing = launchPing
+                )
                 SettingsCard(
                     contact = contact,
                     onToggleLocation = onToggleLocation,
@@ -153,7 +158,7 @@ private fun Header(contact: Contact) {
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(text = contact.displayName, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
-        Text(text = contact.phoneNumber, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF9AA0B4))
+        Text(text = contact.phoneNumber, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -162,14 +167,15 @@ private fun LinkStatusSection(
     contact: Contact,
     onSendLink: () -> Unit,
     onApproveLink: () -> Unit,
+    onToggleRemoteSound: (Boolean) -> Unit,
     onPing: () -> Unit
 ) {
-    Card(colors = CardDefaults.cardColors(containerColor = Color(0x161E2030)), modifier = Modifier.fillMaxWidth()) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(text = "Link status", style = MaterialTheme.typography.titleMedium, color = Color.White)
+            Text(text = "Link status", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
             when (contact.linkStatus) {
                 LinkStatus.NONE -> {
-                    Text(text = "This contact is not linked yet.", color = Color(0xFFB7BECF))
+                    Text(text = "This contact is not linked yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Button(onClick = onSendLink, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Filled.Link, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -177,7 +183,7 @@ private fun LinkStatusSection(
                     }
                 }
                 LinkStatus.OUTBOUND_PENDING -> {
-                    Text(text = "Awaiting their approval.", color = Color(0xFFB7BECF))
+                    Text(text = "Awaiting their approval.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Button(onClick = onSendLink, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Filled.Send, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -185,7 +191,32 @@ private fun LinkStatusSection(
                     }
                 }
                 LinkStatus.INBOUND_REQUEST -> {
-                    Text(text = "This contact wants to connect.", color = Color(0xFFB7BECF))
+                    Text(text = "This contact wants to connect.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Allow remote sound change",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Let this contact update the alert tones on this device right away.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = contact.allowRemoteSoundChange,
+                            onCheckedChange = onToggleRemoteSound
+                        )
+                    }
                     Button(onClick = onApproveLink, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Filled.CheckCircle, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -193,7 +224,7 @@ private fun LinkStatusSection(
                     }
                 }
                 LinkStatus.LINKED -> {
-                    Text(text = "Linked", color = Color(0xFF4ADE80))
+                    Text(text = "Linked", color = MaterialTheme.colorScheme.tertiary)
                     OutlinedButton(onClick = onPing, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Filled.NotificationsActive, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -217,9 +248,9 @@ private fun SettingsCard(
     onToggleRemoteSound: (Boolean) -> Unit,
     onDelete: () -> Unit
 ) {
-    Card(colors = CardDefaults.cardColors(containerColor = Color(0x141E2030)), modifier = Modifier.fillMaxWidth()) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(text = "Contact settings", style = MaterialTheme.typography.titleMedium, color = Color.White)
+            Text(text = "Contact settings", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
             ToggleRow(title = "Location share", subtitle = "Include GPS when alerting", checked = contact.includeLocation, onCheckedChange = onToggleLocation)
             ActionRow(title = "Emergency alert tone", subtitle = contact.emergencySoundKey ?: "Default", onClick = onEditEmergencyAlert)
             ActionRow(title = "Check-in alert tone", subtitle = contact.checkInSoundKey ?: "Default", onClick = onEditCheckInAlert)
@@ -239,10 +270,10 @@ private fun SettingsCard(
                 enabled = contact.linkStatus == LinkStatus.LINKED,
                 onCheckedChange = onToggleRemoteSound
             )
-            Divider(color = Color(0x22FFFFFF))
+            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
             Button(
                 onClick = onDelete,
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48)),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Delete contact")
@@ -267,8 +298,8 @@ private fun ToggleRow(
         verticalAlignment = Alignment.Top
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, color = Color.White, fontWeight = FontWeight.SemiBold)
-            Text(text = subtitle, color = Color(0xFF9AA0B4), style = MaterialTheme.typography.bodySmall)
+            Text(text = title, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
+            Text(text = subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
         }
         Switch(
             checked = checked,
@@ -286,7 +317,7 @@ private fun ActionRow(title: String, subtitle: String, onClick: () -> Unit) {
         .clickable { onClick() }
         .padding(vertical = 8.dp)
     ) {
-        Text(text = title, color = Color.White, fontWeight = FontWeight.SemiBold)
-        Text(text = subtitle, color = Color(0xFF9AA0B4), style = MaterialTheme.typography.bodySmall)
+        Text(text = title, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
+        Text(text = subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
     }
 }

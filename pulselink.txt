@@ -76,6 +76,15 @@ App requests microphone, SMS (send/receive), notification, and location access. 
 - Gradle targets `testFreeDebugUnitTest`, `testProDebugUnitTest`, and `androidApp:assembleProDebug` now pass against the refreshed branch (see `androidApp/build/outputs/apk/pro/debug/` for the updated APK).
 - Reworked the contact call flow to wait for remote override confirmation, auto place the call via `ACTION_CALL`, monitor call completion, and push a `CallEnded` SMS so the receiver's audio settings restore immediately after hangup.
 
+-- 2025-11-05 Update (Alert polish & UI) --
+- Emergency quick action now dispatches alerts to ordered contacts sequentially and keeps remote ringers elevated through the follow-up call handshake.
+- Contact call flow waits on the new AlertPrepare(CALL) handshake, sends CallEnded acknowledgements, and auto-restores remote audio overrides after hangup.
+- Link approval screen surfaces an "Allow remote sound change" switch and respects the auto-allow setting during approval.
+- Home header/logo alignment, mic toggle copy, quick actions, and reorder affordances refreshed; Settings gained a listening toggle and clearer tone entries.
+- Tone pickers open as dedicated routes for emergency vs. check-in sounds with cleaned layouts and centered branding.
+- Updated theme palettes and component styling to improve contrast in light/dark modes across settings, contact detail, and dialog surfaces.
+- Contact import pipeline now guards permission failures and returns a user-facing toast instead of crashing.
+
 Next Immediate actions:
  ok so make sure the ringer volume is also turned up for when the phone is ringing after the alert tone occurs, quick actions on the home, has a blank button, that should say
   EMERGENCY in RED BOLD and should make the siren alerts go off on all trusted contacts 1 at a time in order, have there be a way do drag multiple contacts up and down on the home

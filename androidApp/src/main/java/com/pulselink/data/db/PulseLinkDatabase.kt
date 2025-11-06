@@ -14,10 +14,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ContactDao {
-    @Query("SELECT * FROM contacts ORDER BY displayName")
+    @Query("SELECT * FROM contacts ORDER BY contactOrder ASC, displayName COLLATE NOCASE")
     fun observeContacts(): Flow<List<Contact>>
 
-    @Query("SELECT * FROM contacts WHERE escalationTier = :tier ORDER BY displayName")
+    @Query("SELECT * FROM contacts WHERE escalationTier = :tier ORDER BY contactOrder ASC, displayName COLLATE NOCASE")
     suspend fun getByTier(tier: String): List<Contact>
 
     @Query("SELECT * FROM contacts WHERE id = :contactId LIMIT 1")
@@ -34,6 +34,9 @@ interface ContactDao {
 
     @Query("DELETE FROM contacts WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("UPDATE contacts SET contactOrder = :order WHERE id = :contactId")
+    suspend fun updateOrder(contactId: Long, order: Int)
 }
 
 @Dao

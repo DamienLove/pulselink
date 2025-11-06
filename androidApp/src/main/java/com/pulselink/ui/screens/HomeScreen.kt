@@ -3,13 +3,16 @@ package com.pulselink.ui.screens
 import android.content.Context
 import android.net.Uri
 import android.provider.ContactsContract
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,7 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -28,12 +31,15 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DragIndicator
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -57,13 +63,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
+
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.pulselink.R
 import com.pulselink.domain.model.Contact
@@ -74,13 +81,17 @@ import com.pulselink.ui.ads.NativeAdCard
 import com.pulselink.ui.state.PulseLinkUiState
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
+import org.burnoutcrew.reorderable.ReorderableItem
+import org.burnoutcrew.reorderable.detectReorderAfterLongPress
+import org.burnoutcrew.reorderable.rememberReorderableLazyListState
+import org.burnoutcrew.reorderable.reorderable
 
 @Composable
 fun HomeScreen(
     state: PulseLinkUiState,
     onToggleListening: (Boolean) -> Unit,
+    onTriggerEmergency: () -> Unit,
     onSendCheckIn: () -> Unit,
-    onTriggerTest: () -> Unit,
     onAddContact: (Contact) -> Unit,
     onDeleteContact: (Long) -> Unit,
     onToggleProMode: (Boolean) -> Unit,
@@ -90,6 +101,7 @@ fun HomeScreen(
     onApproveLink: (Long) -> Unit,
     onCallContact: suspend (Contact) -> Unit,
     onSendManualMessage: suspend (Contact, String) -> ManualMessageResult,
+    onReorderContacts: (List<Long>) -> Unit,
     onAlertsClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onUpgradeClick: () -> Unit = {}
@@ -125,25 +137,26 @@ fun HomeScreen(
         }
     }
 
-    val gradient = Brush.verticalGradient(
-        colors = listOf(Color(0xFF10131F), Color(0xFF090B11))
-    )
-
-    Surface(modifier = Modifier.fillMaxSize()) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(gradient)
                 .padding(horizontal = 20.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            HeaderSection(state, onToggleListening)
+            HeaderSection(state, onToggleListening = { onToggleListening(!state.isListening) })
             NavigationRow(
                 onAlertsClick = onAlertsClick,
                 onSettingsClick = onSettingsClick,
                 onUpgradeClick = onUpgradeClick
             )
-            QuickActionsRow(onSendCheckIn = onSendCheckIn, onTriggerTest = onTriggerTest)
+            QuickActionsRow(
+                onTriggerEmergency = onTriggerEmergency,
+                onSendCheckInAll = onSendCheckIn
+            )
             SearchAndAddRow(
                 searchValue = searchValue,
                 onSearchChange = { searchValue = it },
@@ -178,7 +191,8 @@ fun HomeScreen(
                 onContactSelected = onContactSelected,
                 onContactSettings = onContactSettings,
                 onSendLink = onSendLink,
-                onApproveLink = onApproveLink
+                onApproveLink = onApproveLink,
+                onReorderContacts = onReorderContacts
             )
             if (state.adsAvailable) {
                 UpgradeCard(isPro = state.isProUser, onTogglePro = onToggleProMode)
@@ -281,44 +295,57 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HeaderSection(state: PulseLinkUiState, onToggleListening: (Boolean) -> Unit) {
-    Row(
+private fun HeaderSection(state: PulseLinkUiState, onToggleListening: () -> Unit) {
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = CircleShape, color = Color.White.copy(alpha = 0.1f)) {
-                Image(
-                    painter = painterResource(id = R.drawable.ic_logo),
-                    contentDescription = "PulseLink logo",
-                    modifier = Modifier
-                        .size(56.dp)
-                        .padding(12.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(
-                    text = "PulseLink",
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    color = Color.White
-                )
-                Text(
-                    text = "Your hands-free safety net",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF9AA0B4)
-                )
-            }
-        }
-        Column(horizontalAlignment = Alignment.End) {
-            Text(
-                text = if (state.isListening) "Listening on" else "Listening off",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White
+        Image(
+            painter = painterResource(id = R.drawable.ic_logo),
+            contentDescription = "PulseLink logo",
+            modifier = Modifier.size(80.dp)
+        )
+        Text(
+            text = "PulseLink",
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = "Use the mic button below or the Settings toggle to control listening.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center
+        )
+        MicToggle(isListening = state.isListening, onToggle = onToggleListening)
+    }
+}
+
+@Composable
+private fun MicToggle(isListening: Boolean, onToggle: () -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        val background = if (isListening) Color(0xFF059669) else Color(0xFFDC2626)
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .background(background, CircleShape)
+                .clickable(onClick = onToggle),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Mic,
+                contentDescription = if (isListening) "Turn listening off" else "Turn listening on",
+                tint = Color.White
             )
-            Switch(checked = state.isListening, onCheckedChange = onToggleListening)
         }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = if (isListening) "Listening on" else "Listening off",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -341,40 +368,52 @@ private fun NavigationRow(
 
 @Composable
 private fun NavButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Surface(shape = CircleShape, color = Color.White.copy(alpha = 0.08f)) {
-            IconButton(onClick = onClick, modifier = Modifier.size(56.dp)) {
-                Icon(icon, contentDescription = label, tint = Color.White)
-            }
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        IconButton(onClick = onClick) {
+            Icon(icon, contentDescription = label, tint = MaterialTheme.colorScheme.primary)
         }
-        Text(text = label, style = MaterialTheme.typography.bodySmall, color = Color(0xFFBDC3D1))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+        )
     }
 }
 
 @Composable
-private fun QuickActionsRow(onSendCheckIn: () -> Unit, onTriggerTest: () -> Unit) {
+private fun QuickActionsRow(onTriggerEmergency: () -> Unit, onSendCheckInAll: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Button(
-            onClick = onSendCheckIn,
+            onClick = onTriggerEmergency,
             modifier = Modifier.weight(1f),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFB91C1C),
+                contentColor = Color.White
+            ),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Icon(imageVector = Icons.Filled.Share, contentDescription = null)
+            Icon(imageVector = Icons.Filled.Warning, contentDescription = "Trigger emergency alert")
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Send check-in")
+            Text(text = "EMERGENCY", fontWeight = FontWeight.Black)
         }
         Button(
-            onClick = onTriggerTest,
+            onClick = onSendCheckInAll,
             modifier = Modifier.weight(1f),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48)),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = null)
+            Icon(imageVector = Icons.Filled.NotificationsActive, contentDescription = "Send check-in to all contacts")
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Trigger test")
+            Text("Check-in all")
         }
     }
 }
@@ -405,6 +444,7 @@ private fun SearchAndAddRow(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ContactsList(
     state: PulseLinkUiState,
@@ -415,63 +455,130 @@ private fun ContactsList(
     onContactSelected: (Long) -> Unit,
     onContactSettings: (Long) -> Unit,
     onSendLink: (Long) -> Unit,
-    onApproveLink: (Long) -> Unit
+    onApproveLink: (Long) -> Unit,
+    onReorderContacts: (List<Long>) -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+    val secondaryText = colorScheme.onBackground.copy(alpha = 0.7f)
+
+    val sortedContacts = remember(state.contacts) {
+        state.contacts.sortedWith(
+            compareBy<Contact> { it.contactOrder }
+                .thenBy { it.displayName.lowercase() }
+        )
+    }
+    var contactItems by remember { mutableStateOf(sortedContacts) }
+    var isReordering by remember { mutableStateOf(false) }
+
+    val reorderState = rememberReorderableLazyListState(
+        onMove = { from, to ->
+            if (!isReordering) isReordering = true
+            contactItems = contactItems.toMutableList().apply {
+                add(to.index, removeAt(from.index))
+            }
+        },
+        onDragEnd = { startIndex, endIndex ->
+            if (isReordering && startIndex != endIndex && startIndex >= 0 && endIndex >= 0) {
+                onReorderContacts(contactItems.map { it.id })
+            }
+            isReordering = false
+        }
+    )
+
+    LaunchedEffect(sortedContacts, isReordering) {
+        if (!isReordering) {
+            contactItems = sortedContacts
+        }
+    }
+
+    val isSearching = searchQuery.isNotBlank()
+    val displayedContacts = remember(contactItems, searchQuery) {
+        if (isSearching) {
+            val queryLower = searchQuery.lowercase()
+            contactItems.filter {
+                it.displayName.lowercase().contains(queryLower) ||
+                    it.phoneNumber.lowercase().contains(queryLower)
+            }
+        } else {
+            contactItems
+        }
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0x141C1C2A))
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Column {
+                Text(
+                    text = "Trusted contacts",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = colorScheme.onSurface
+                )
+                Text(
+                    text = if (contactItems.size > 1) {
+                        "Drag contacts to set the order used for emergency alerts."
+                    } else {
+                        "Add contacts to build your PulseLink support circle."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = secondaryText
+                )
+            }
+            when {
+                contactItems.isEmpty() -> {
                     Text(
-                        text = "Safeword contacts",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White
-                    )
-                    Text(
-                        text = "Linked partners will appear here",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF9AA0B4)
+                        text = "No contacts yet. Add someone to get started.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = secondaryText
                     )
                 }
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            val contacts = state.contacts
-            val filtered = contacts.filter {
-                searchQuery.isBlank() ||
-                    it.displayName.contains(searchQuery, ignoreCase = true) ||
-                    it.phoneNumber.contains(searchQuery, ignoreCase = true)
-            }
-            if (contacts.isEmpty()) {
-                Text(
-                    text = "No contacts yet. Add someone to get started.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF9AA0B4)
-                )
-            } else if (filtered.isEmpty()) {
-                Text(
-                    text = "No contacts match your search.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF9AA0B4)
-                )
-            } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(filtered, key = { it.id }) { contact ->
-                        ContactRow(
-                            contact = contact,
-                            onOpenMessages = { onContactSelected(contact.id) },
-                            onOpenSettings = { onContactSettings(contact.id) },
-                            onDelete = { onDeleteContact(contact.id) },
-                            onSendLinkRequest = { onSendLink(contact.id) },
-                            onApproveLink = { onApproveLink(contact.id) },
-                            onCall = { onCallContact(contact) },
-                            onMessage = { onMessageContact(contact) }
-                        )
+                displayedContacts.isEmpty() -> {
+                    Text(
+                        text = "No contacts match your search.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = secondaryText
+                    )
+                }
+                else -> {
+                    val canReorder = !isSearching && contactItems.size > 1
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .let { base ->
+                                if (canReorder) {
+                                    base
+                                        .reorderable(reorderState)
+                                        .detectReorderAfterLongPress(reorderState)
+                                } else {
+                                    base
+                                }
+                            },
+                        state = reorderState.listState,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        itemsIndexed(displayedContacts, key = { _, contact -> contact.id }) { _, contact ->
+                            ReorderableItem(
+                                reorderableState = reorderState,
+                                key = contact.id
+                            ) { isDragging ->
+                                ContactRow(
+                                    contact = contact,
+                                    onOpenMessages = { onContactSelected(contact.id) },
+                                    onOpenSettings = { onContactSettings(contact.id) },
+                                    onDelete = { onDeleteContact(contact.id) },
+                                    onSendLinkRequest = { onSendLink(contact.id) },
+                                    onApproveLink = { onApproveLink(contact.id) },
+                                    onCall = { onCallContact(contact) },
+                                    onMessage = { onMessageContact(contact) },
+                                    reorderEnabled = canReorder,
+                                    isDragging = isDragging
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -488,7 +595,9 @@ private fun ContactRow(
     onSendLinkRequest: () -> Unit,
     onApproveLink: () -> Unit,
     onCall: () -> Unit,
-    onMessage: () -> Unit
+    onMessage: () -> Unit,
+    reorderEnabled: Boolean,
+    isDragging: Boolean
 ) {
     val statusLabel = when (contact.linkStatus) {
         LinkStatus.NONE -> stringResource(R.string.contact_status_not_linked)
@@ -497,16 +606,17 @@ private fun ContactRow(
         LinkStatus.LINKED -> stringResource(R.string.contact_status_linked)
     }
     val statusColor = when (contact.linkStatus) {
-        LinkStatus.NONE -> Color(0xFFF87171)
-        LinkStatus.OUTBOUND_PENDING -> Color(0xFF60A5FA)
-        LinkStatus.INBOUND_REQUEST -> Color(0xFFFBBF24)
-        LinkStatus.LINKED -> Color(0xFF34D399)
+        LinkStatus.NONE -> MaterialTheme.colorScheme.error
+        LinkStatus.OUTBOUND_PENDING -> MaterialTheme.colorScheme.primary
+        LinkStatus.INBOUND_REQUEST -> MaterialTheme.colorScheme.tertiary
+        LinkStatus.LINKED -> MaterialTheme.colorScheme.secondary
     }
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onOpenMessages() },
-        colors = CardDefaults.cardColors(containerColor = Color(0x0DFFFFFF))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isDragging) 8.dp else 0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -514,7 +624,10 @@ private fun ContactRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -522,7 +635,7 @@ private fun ContactRow(
                     ) {
                         Text(
                             text = contact.displayName,
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.weight(1f)
                         )
@@ -533,13 +646,13 @@ private fun ContactRow(
                             Icon(
                                 imageVector = Icons.Filled.Settings,
                                 contentDescription = "Contact settings",
-                                tint = Color(0xFF9AA0B4)
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                     Text(
                         text = contact.phoneNumber,
-                        color = Color(0xFFB7BECF),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(
@@ -550,13 +663,23 @@ private fun ContactRow(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     IconButton(onCall) {
-                        Icon(Icons.Filled.Call, contentDescription = "Call", tint = Color(0xFF34D399))
+                        Icon(Icons.Filled.Call, contentDescription = "Call", tint = MaterialTheme.colorScheme.secondary)
                     }
                     IconButton(onMessage) {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Message", tint = Color(0xFF60A5FA))
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Message", tint = MaterialTheme.colorScheme.primary)
                     }
                     IconButton(onDelete) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Remove", tint = Color(0xFFF87171))
+                        Icon(Icons.Filled.Delete, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error)
+                    }
+                    if (reorderEnabled) {
+                        Icon(
+                            imageVector = Icons.Filled.DragIndicator,
+                            contentDescription = "Reorder contact",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .padding(start = 4.dp)
+                                .size(24.dp)
+                        )
                     }
                 }
             }
@@ -575,12 +698,13 @@ private fun LinkActionButtons(
     onSendLinkRequest: () -> Unit,
     onApproveLink: () -> Unit
 ) {
+    val secondaryText = MaterialTheme.colorScheme.onSurfaceVariant
     when (contact.linkStatus) {
         LinkStatus.NONE -> {
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = stringResource(R.string.contact_action_help_not_linked),
-                color = Color(0xFF9AA0B4),
+                color = secondaryText,
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -588,7 +712,7 @@ private fun LinkActionButtons(
                 onClick = onSendLinkRequest,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Filled.PersonAdd, contentDescription = null, tint = Color.White)
+                Icon(Icons.Filled.PersonAdd, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = stringResource(R.string.contact_action_send_link))
             }
@@ -598,7 +722,7 @@ private fun LinkActionButtons(
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = stringResource(R.string.contact_action_help_outbound_pending),
-                color = Color(0xFF9AA0B4),
+                color = secondaryText,
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -606,7 +730,11 @@ private fun LinkActionButtons(
                 onClick = onSendLinkRequest,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Filled.PersonAdd, contentDescription = null, tint = Color(0xFF60A5FA))
+                Icon(
+                    Icons.Filled.PersonAdd,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = stringResource(R.string.contact_action_resend_link))
             }
@@ -616,7 +744,7 @@ private fun LinkActionButtons(
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = stringResource(R.string.contact_action_help_inbound_request),
-                color = Color(0xFF9AA0B4),
+                color = secondaryText,
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -624,7 +752,7 @@ private fun LinkActionButtons(
                 onClick = onApproveLink,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = Color.White)
+                Icon(Icons.Filled.CheckCircle, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = stringResource(R.string.contact_action_approve_link))
             }
@@ -638,7 +766,7 @@ private fun LinkActionButtons(
 private fun UpgradeCard(isPro: Boolean, onTogglePro: (Boolean) -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0x141C1C2A))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -647,7 +775,7 @@ private fun UpgradeCard(isPro: Boolean, onTogglePro: (Boolean) -> Unit) {
             Text(
                 text = "PulseLink Pro",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = Color.White
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = if (isPro) {
@@ -656,13 +784,14 @@ private fun UpgradeCard(isPro: Boolean, onTogglePro: (Boolean) -> Unit) {
                     "Unlock Pro to remove ads and enable premium automations."
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF9AA0B4)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Button(
                 onClick = { onTogglePro(!isPro) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isPro) Color(0xFF2563EB) else Color(0xFF10B981)
+                    containerColor = if (isPro) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                    contentColor = if (isPro) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onPrimary
                 ),
                 shape = RoundedCornerShape(16.dp)
             ) {
@@ -707,11 +836,11 @@ private fun AddContactDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "Allow remote alert changes", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        Text(text = "Allow remote alert changes", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
                         Text(
                             text = "Let this contact update which sounds play on this device.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF9AA0B4)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Switch(checked = allowRemoteSound, onCheckedChange = onAllowRemoteSoundChange)
@@ -734,12 +863,18 @@ private fun AddContactDialog(
 
 private fun resolveContact(context: Context, uri: Uri): Pair<String, String>? {
     val resolver = context.contentResolver
-    resolver.query(uri, arrayOf(ContactsContract.Contacts._ID, ContactsContract.Contacts.DISPLAY_NAME), null, null, null)
-        ?.use { cursor ->
-            if (!cursor.moveToFirst()) return null
+    return runCatching {
+        resolver.query(
+            uri,
+            arrayOf(ContactsContract.Contacts._ID, ContactsContract.Contacts.DISPLAY_NAME),
+            null,
+            null,
+            null
+        )?.use { cursor ->
+            if (!cursor.moveToFirst()) return@use null
             val idIndex = cursor.getColumnIndex(ContactsContract.Contacts._ID)
             val nameIndex = cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
-            if (idIndex < 0) return null
+            if (idIndex < 0) return@use null
             val contactId = cursor.getString(idIndex)
             val displayName = if (nameIndex >= 0) cursor.getString(nameIndex) ?: "" else ""
             resolver.query(
@@ -752,10 +887,18 @@ private fun resolveContact(context: Context, uri: Uri): Pair<String, String>? {
                 if (phones.moveToFirst()) {
                     val numberIndex = phones.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
                     val number = if (numberIndex >= 0) phones.getString(numberIndex) ?: "" else ""
-                    return displayName to number
+                    return@runCatching displayName to number
                 }
             }
-            return displayName to ""
+            displayName to ""
         }
-    return null
+    }.getOrElse { error ->
+        Log.w("HomeScreen", "Unable to import contact", error)
+        Toast.makeText(
+            context,
+            context.getString(R.string.pulselink_contact_import_failed),
+            Toast.LENGTH_SHORT
+        ).show()
+        null
+    }
 }

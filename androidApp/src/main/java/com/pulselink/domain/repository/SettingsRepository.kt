@@ -11,4 +11,5 @@ interface SettingsRepository {
     suspend fun setOnboardingComplete()
     suspend fun ensureDeviceId(): String
     suspend fun setOwnerName(name: String)
+    suspend fun setAutoAllowRemoteSoundChange(enabled: Boolean)
 }

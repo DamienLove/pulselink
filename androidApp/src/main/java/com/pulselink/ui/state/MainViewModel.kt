@@ -89,7 +89,14 @@ class MainViewModel @Inject constructor(
 
     fun saveContact(contact: Contact) {
         viewModelScope.launch {
-            contactRepository.upsert(contact)
+            val nextOrder = if (contact.id == 0L) {
+                (_uiState.value.contacts.maxOfOrNull { it.contactOrder } ?: -1) + 1
+            } else {
+                contact.contactOrder
+            }
+            contactRepository.upsert(
+                if (contact.id == 0L) contact.copy(contactOrder = nextOrder) else contact
+            )
         }
     }
 
@@ -100,12 +107,18 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun triggerTest() {
-        dispatch(EscalationTier.EMERGENCY, "PulseLink test")
+    fun triggerEmergency() {
+        dispatch(EscalationTier.EMERGENCY, "PulseLink emergency alert")
     }
 
     fun sendCheckIn() {
-        dispatch(EscalationTier.CHECK_IN, "PulseLink check in")
+        dispatch(EscalationTier.CHECK_IN, "PulseLink check-in")
+    }
+
+    fun reorderContacts(contactIds: List<Long>) {
+        viewModelScope.launch {
+            contactRepository.updateOrder(contactIds)
+        }
     }
 
     fun setIncludeLocation(enabled: Boolean) {
@@ -119,6 +132,12 @@ class MainViewModel @Inject constructor(
     fun setOwnerName(name: String) {
         viewModelScope.launch {
             settingsRepository.setOwnerName(name)
+        }
+    }
+
+    fun setAutoAllowRemoteSoundChange(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setAutoAllowRemoteSoundChange(enabled)
         }
     }
 
