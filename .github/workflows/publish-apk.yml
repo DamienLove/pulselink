@@ -18,7 +18,7 @@
         apk-path:
           description: "Path to the prebuilt APK in the repo"
           required: false
-          default: \androidApp\build\outputs\bundle\freeRelease\google_Play_signed-free.apk
+          default: androidApp/build/outputs/bundle/freeRelease/google_Play_signed-free.apk
         skip-build:
           description: "Upload existing APK without running Gradle"
           required: false
