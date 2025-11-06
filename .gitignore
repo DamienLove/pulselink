@@ -6,3 +6,9 @@ local.properties
 /androidApp/build/
 gradle-8.6/
 gradle-8.6-bin.zip
+pulselink-*.json
+*.pem
+*.p12
+*.jks
+keys*.enc
+deployment_cert.*
