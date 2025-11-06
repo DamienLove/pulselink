@@ -1,0 +1,44 @@
+name: Publish Existing PulseLink AAB
+
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "Google Play track to upload to"
+        required: true
+        type: choice
+        default: internal
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+      aab-path:
+        description: "Relative path to the prebuilt .aab in the repo"
+        required: true
+        default: androidApp/build/outputs/bundle/freeRelease/androidApp-free-release.aab
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ensure AAB exists
+        run: |
+          if [ ! -f "${{ github.event.inputs.aab-path }}" ]; then
+            echo "::error::AAB not found at ${{ github.event.inputs.aab-path }}. Did you commit it?"
+            exit 1
+          fi
+          ls -lh "${{ github.event.inputs.aab-path }}"
+
+      - name: Upload bundle to Google Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.pulselink.free
+          releaseFiles: ${{ github.event.inputs.aab-path }}
+          track: ${{ github.event.inputs.track }}
+          status: completed
