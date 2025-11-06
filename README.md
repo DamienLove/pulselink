@@ -2,7 +2,7 @@
 
 Alpha APK is:
 
-[![Verify PulseLink Mainline](https://github.com/DamienLove/pulselink/actions/workflows/verify-main.yml/badge.svg)](https://github.com/DamienLove/pulselink/actions/workflows/verify-main.yml)
+[![Alpha](https://github.com/DamienLove/pulselink/actions/workflows/verify-main.yml/badge.svg)](https://github.com/DamienLove/pulselink/actions/workflows/verify-main.yml)
 
 Working PulseLink app.
 
