@@ -4,7 +4,7 @@ Working PulseLink app.
 
 [![Publish PulseLink APK](https://github.com/DamienLove/pulselink/actions/workflows/publish-apk.yml/badge.svg?branch=main)](https://github.com/DamienLove/pulselink/actions/workflows/publish-apk.yml)
 
-[PulseLink Alpha
+## [Download PulseLink Alpha
 ](https://github.com/DamienLove/pulselink/releases/download/Alpha/androidApp-free-debug.apk)
 
 PulseLink is a personal safety app that listens for discreet trigger phrases and instantly escalates alerts to trusted contacts with location context.
