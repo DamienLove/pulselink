@@ -1,0 +1,60 @@
+name: Release PulseLink AAB
+
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "Google Play track to upload to"
+        required: true
+        type: choice
+        default: internal
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+
+env:
+  JAVA_VERSION: "17"
+  AAB_PATH: androidApp/build/outputs/bundle/freeRelease/androidApp-free-release.aab
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Decode signing keystore
+        run: |
+          echo "${{ secrets.UPLOAD_KEYSTORE_BASE64 }}" | base64 -d > signing-keystore.jks
+
+      - name: Build signed release bundle
+        run: |
+          ./gradlew clean androidApp:bundleFreeRelease \
+            -Pandroid.injected.signing.store.file="$GITHUB_WORKSPACE/signing-keystore.jks" \
+            -Pandroid.injected.signing.store.password="${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}" \
+            -Pandroid.injected.signing.key.alias="${{ secrets.UPLOAD_KEY_ALIAS }}" \
+            -Pandroid.injected.signing.key.password="${{ secrets.UPLOAD_KEY_PASSWORD }}"
+
+      - name: Upload bundle to Google Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.pulselink.free
+          releaseFiles: ${{ env.AAB_PATH }}
+          track: ${{ github.event.inputs.track }}
+          status: completed
+
+      - name: Clean up signing materials
+        if: always()
+        run: |
+          rm -f signing-keystore.jks
