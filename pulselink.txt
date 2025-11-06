@@ -86,15 +86,15 @@ App requests microphone, SMS (send/receive), notification, and location access. 
 - Contact import pipeline now guards permission failures and returns a user-facing toast instead of crashing.
 
 -- 2025-11-06 Update (Release signing & Play requirements) --
-- Migrated the app to API Level 35: `compileSdk = 35`, `targetSdk = 35`, `buildToolsVersion = 35.0.0`, `versionCode = 3`, `versionName = 1.0.2` to satisfy Play’s November 2025 policy.
-- Introduced a release signing config that resolves credentials from Gradle `-P` flags, environment variables, or a local `keystore.properties`, defaulting to `pulselink-upload-2025.jks` when present.
-- Generated a new upload key (`pulselink-upload-2025.jks`, alias `pulselink_upload`, passwords `PulseLink!Upload2025`) and exported the matching certificate (`pulselink-upload-2025.pem`) for Play App Signing enrollment.
-- Added `keystore.properties.template`, kept secrets out of VCS via `.gitignore`, and committed the template so other devs can drop in their own credentials.
-- Reworked `.github/workflows/release-aab.yml` so CI decodes the keystore secret, supplies signing info via env vars, and builds both `bundleFreeRelease` and `bundleProRelease` before calling `r0adkll/upload-google-play@v1`.
-- Local build verification (2025-11-06 10:45 MST): `./gradlew clean bundleFreeRelease bundleProRelease assembleFreeRelease assembleProRelease`; resulting artifacts live under `androidApp/build/outputs/{bundle,apk}/**/release/` and verify with `jarsigner -verify`.
-- Google Play upload still returns “The caller does not have permission”; remaining work is to link the Cloud project in Play Console, grant the service account Release Manager access to `com.pulselink.free`, and confirm the Google Play Android Developer API is enabled.
+- Migrated the app to API Level 35: `compileSdk = 35`, `targetSdk = 35`, `buildToolsVersion = 35.0.0`, `versionCode = 3`, `versionName = 1.0.2` to satisfy Play's November 2025 policy.
+- Added a configurable release signing block in Gradle that resolves credentials from `keystore.properties`, environment variables, or `-P android.injected.signing.*`. Defaults now point to the legacy `upload-keystore.jks` so we continue matching the Play upload certificate (SHA1 `38:48:65:74:6B:F3:20:26:47:81:7A:76:63:03:C3:33:6D:9A:45:D3`).
+- Committed `keystore.properties.template` documenting the required fields; the real `keystore.properties` remains git-ignored and must contain the legacy keystore path, alias, and passwords.
+- Updated `.github/workflows/release-aab.yml` to pass signing credentials via env vars and build both free/pro release bundles before calling `r0adkll/upload-google-play@v1`.
+- Local verification (2025-11-06 11:27 MST): `./gradlew clean bundleFreeRelease bundleProRelease assembleFreeRelease assembleProRelease`; outputs land in `androidApp/build/outputs/{bundle,apk}/**/release/`. Note: builds must be re-signed with the legacy key prior to Play upload.
+- Play Console rejected the latest bundle because it was signed with a new key. Resign with the original upload keystore (fingerprint above) or initiate a managed key reset via Play support before the next submission.
 
 Next Immediate actions:
-- Finish Play Console configuration so the new upload key/service account can create edits (link Cloud project, grant Release Manager role, enable Google Play Android Developer API).
-- Address the outstanding UX polish from 2025-11-05: emergency quick action button, contact reorder drag support, tone picker separation with centered branding, link-approval toggle for “allow remote sound change”, contrast fixes, centered logo + mic toggle on Home, removal of the stray “support circle” icon, and the contact import crash.
+- Restore the original upload keystore credentials in `keystore.properties` (or CI secrets) so CI and local builds sign with the expected certificate before retrying the Play upload.
+- Coordinate with Play Console admins to confirm the service account still has Release Manager access and that the Google Play Android Developer API is enabled, then rerun the internal track release once the signature matches.
+- Address the outstanding UX polish from 2025-11-05: emergency quick action button, contact reorder drag support, tone picker separation with centered branding, link-approval toggle for "allow remote sound change", contrast fixes, centered logo + mic toggle on Home, removal of the stray "support circle" icon, and the contact import crash.
 - Re-run end-to-end smoke tests (alerts, SMS flows, contact linking) once the UI changes land, then cut the next internal track build via the refreshed GitHub workflow.

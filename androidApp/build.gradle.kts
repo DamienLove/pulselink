@@ -22,7 +22,7 @@ val keystoreProperties = Properties().apply {
     }
 }
 
-val defaultKeystoreFile = rootProject.file("pulselink-upload-2025.jks")
+val defaultKeystoreFile = rootProject.file("upload-keystore.jks")
 
 val signingStoreFilePath = project.optionalProperty("android.injected.signing.store.file")
     ?: keystoreProperties.optional("storeFile")
