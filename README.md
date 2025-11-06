@@ -1,5 +1,9 @@
 # PulseLink
 
+Alpha APK is:
+
+[![Verify PulseLink Mainline](https://github.com/DamienLove/pulselink/actions/workflows/verify-main.yml/badge.svg)](https://github.com/DamienLove/pulselink/actions/workflows/verify-main.yml)
+
 Working PulseLink app.
 
 [![Publish PulseLink APK](https://github.com/DamienLove/pulselink/actions/workflows/publish-apk.yml/badge.svg?branch=main)](https://github.com/DamienLove/pulselink/actions/workflows/publish-apk.yml)
