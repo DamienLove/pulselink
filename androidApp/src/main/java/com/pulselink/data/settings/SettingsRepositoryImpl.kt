@@ -26,6 +26,7 @@ private val PRIMARY_PHRASE = stringPreferencesKey("primary_phrase")
 private val SECONDARY_PHRASE = stringPreferencesKey("secondary_phrase")
 private val LISTENING_ENABLED = booleanPreferencesKey("listening_enabled")
 private val INCLUDE_LOCATION = booleanPreferencesKey("include_location")
+private val AUTO_ALLOW_REMOTE_SOUND = booleanPreferencesKey("auto_allow_remote_sound")
 private val EMERGENCY_PROFILE = stringPreferencesKey("emergency_profile")
 private val CHECKIN_PROFILE = stringPreferencesKey("checkin_profile")
 private val AUTO_CALL = booleanPreferencesKey("auto_call")
@@ -48,6 +49,8 @@ class SettingsRepositoryImpl @Inject constructor(
             secondaryPhrase = prefs[SECONDARY_PHRASE] ?: PulseLinkSettings().secondaryPhrase,
             listeningEnabled = prefs[LISTENING_ENABLED] ?: PulseLinkSettings().listeningEnabled,
             includeLocation = prefs[INCLUDE_LOCATION] ?: PulseLinkSettings().includeLocation,
+            autoAllowRemoteSoundChange = prefs[AUTO_ALLOW_REMOTE_SOUND]
+                ?: PulseLinkSettings().autoAllowRemoteSoundChange,
             emergencyProfile = prefs[EMERGENCY_PROFILE]?.let { json.decodeFromString(AlertProfile.serializer(), it) }
                 ?: PulseLinkSettings().emergencyProfile,
             checkInProfile = prefs[CHECKIN_PROFILE]?.let { json.decodeFromString(AlertProfile.serializer(), it) }
@@ -68,6 +71,7 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[SECONDARY_PHRASE] = updated.secondaryPhrase
             prefs[LISTENING_ENABLED] = updated.listeningEnabled
             prefs[INCLUDE_LOCATION] = updated.includeLocation
+            prefs[AUTO_ALLOW_REMOTE_SOUND] = updated.autoAllowRemoteSoundChange
             prefs[EMERGENCY_PROFILE] = json.encodeToString(AlertProfile.serializer(), updated.emergencyProfile)
             prefs[CHECKIN_PROFILE] = json.encodeToString(AlertProfile.serializer(), updated.checkInProfile)
             prefs[AUTO_CALL] = updated.autoCallAfterAlert
@@ -112,12 +116,20 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun setAutoAllowRemoteSoundChange(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[AUTO_ALLOW_REMOTE_SOUND] = enabled
+        }
+    }
+
     private fun settingsValue(prefs: Preferences): PulseLinkSettings {
         return PulseLinkSettings(
             primaryPhrase = prefs[PRIMARY_PHRASE] ?: PulseLinkSettings().primaryPhrase,
             secondaryPhrase = prefs[SECONDARY_PHRASE] ?: PulseLinkSettings().secondaryPhrase,
             listeningEnabled = prefs[LISTENING_ENABLED] ?: PulseLinkSettings().listeningEnabled,
             includeLocation = prefs[INCLUDE_LOCATION] ?: PulseLinkSettings().includeLocation,
+            autoAllowRemoteSoundChange = prefs[AUTO_ALLOW_REMOTE_SOUND]
+                ?: PulseLinkSettings().autoAllowRemoteSoundChange,
             emergencyProfile = prefs[EMERGENCY_PROFILE]?.let { json.decodeFromString(AlertProfile.serializer(), it) }
                 ?: PulseLinkSettings().emergencyProfile,
             checkInProfile = prefs[CHECKIN_PROFILE]?.let { json.decodeFromString(AlertProfile.serializer(), it) }

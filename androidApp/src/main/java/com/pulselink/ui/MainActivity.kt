@@ -43,7 +43,7 @@ import com.pulselink.domain.model.Contact
 import com.pulselink.R
 import com.pulselink.ui.screens.HomeScreen
 import com.pulselink.ui.screens.ContactDetailScreen
-import com.pulselink.ui.screens.NotificationSoundScreen
+import com.pulselink.ui.screens.AlertTonePickerScreen
 import com.pulselink.ui.screens.ContactConversationScreen
 import com.pulselink.ui.screens.OnboardingScreen
 import com.pulselink.ui.screens.OnboardingIntroScreen
@@ -342,8 +342,8 @@ class MainActivity : ComponentActivity() {
                         HomeScreen(
                             state = state,
                             onToggleListening = viewModel::toggleListening,
+                            onTriggerEmergency = viewModel::triggerEmergency,
                             onSendCheckIn = viewModel::sendCheckIn,
-                            onTriggerTest = viewModel::triggerTest,
                             onAddContact = viewModel::saveContact,
                             onDeleteContact = viewModel::deleteContact,
                             onToggleProMode = viewModel::setProUnlocked,
@@ -355,7 +355,8 @@ class MainActivity : ComponentActivity() {
                             onSendManualMessage = { contact, body ->
                                 viewModel.sendManualMessage(contact.id, body)
                             },
-                            onAlertsClick = { navController.navigate("alerts/default") },
+                            onReorderContacts = viewModel::reorderContacts,
+                            onAlertsClick = { navController.navigate("alerts/default/emergency") },
                             onSettingsClick = { navController.navigate("settings") },
                             onUpgradeClick = { navController.navigate("upgrade") }
                         )
@@ -387,8 +388,8 @@ class MainActivity : ComponentActivity() {
                             contact = contact,
                             onBack = { navController.popBackStack() },
                             onCallContact = callContactHandler,
-                            onEditEmergencyAlert = { navController.navigate("alerts/contact/$contactId") },
-                            onEditCheckInAlert = { navController.navigate("alerts/contact/$contactId") },
+                            onEditEmergencyAlert = { navController.navigate("alerts/contact/$contactId/emergency") },
+                            onEditCheckInAlert = { navController.navigate("alerts/contact/$contactId/checkin") },
                             onToggleLocation = { enabled -> contact?.let { viewModel.updateContact(it.copy(includeLocation = enabled)) } },
                             onToggleCamera = { enabled -> contact?.let { viewModel.updateContact(it.copy(cameraEnabled = enabled)) } },
                             onToggleAutoCall = { enabled -> contact?.let { viewModel.updateContact(it.copy(autoCall = enabled)) } },
@@ -403,32 +404,55 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
-                    composable("alerts/default") {
-                        NotificationSoundScreen(
-                            title = "Default Alerts",
-                            emergencyOptions = state.emergencySoundOptions,
-                            checkInOptions = state.checkInSoundOptions,
-                            selectedEmergency = state.settings.emergencyProfile.soundKey,
-                            selectedCheckIn = state.settings.checkInProfile.soundKey,
-                            onSelectEmergency = viewModel::updateEmergencySound,
-                            onSelectCheckIn = viewModel::updateCheckInSound,
+                    composable("alerts/default/emergency") {
+                        AlertTonePickerScreen(
+                            title = "Emergency alert tone",
+                            subtitle = "Choose the default siren that plays during emergency alerts.",
+                            options = state.emergencySoundOptions,
+                            selectedKey = state.settings.emergencyProfile.soundKey,
+                            onSelect = viewModel::updateEmergencySound,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable("alerts/default/checkin") {
+                        AlertTonePickerScreen(
+                            title = "Check-in alert tone",
+                            subtitle = "Pick the chime used when you send a check-in.",
+                            options = state.checkInSoundOptions,
+                            selectedKey = state.settings.checkInProfile.soundKey,
+                            onSelect = viewModel::updateCheckInSound,
                             onBack = { navController.popBackStack() }
                         )
                     }
                     composable(
-                        route = "alerts/contact/{contactId}",
+                        route = "alerts/contact/{contactId}/emergency",
                         arguments = listOf(navArgument("contactId") { type = NavType.LongType })
                     ) { entry ->
                         val contactId = entry.arguments?.getLong("contactId") ?: return@composable
                         val contact = state.contacts.firstOrNull { it.id == contactId }
-                        NotificationSoundScreen(
-                            title = "${contact?.displayName ?: "Contact"} Alerts",
-                            emergencyOptions = state.emergencySoundOptions,
-                            checkInOptions = state.checkInSoundOptions,
-                            selectedEmergency = contact?.emergencySoundKey,
-                            selectedCheckIn = contact?.checkInSoundKey,
-                            onSelectEmergency = { key -> viewModel.updateContactSounds(contactId, key, contact?.checkInSoundKey) },
-                            onSelectCheckIn = { key -> viewModel.updateContactSounds(contactId, contact?.emergencySoundKey, key) },
+                        AlertTonePickerScreen(
+                            title = "Emergency tone",
+                            subtitle = contact?.displayName?.let { "Overrides the default tone when alerting ${it}." }
+                                ?: "Overrides the default emergency tone for this contact.",
+                            options = state.emergencySoundOptions,
+                            selectedKey = contact?.emergencySoundKey ?: state.settings.emergencyProfile.soundKey,
+                            onSelect = { key -> viewModel.updateContactSounds(contactId, key, null) },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable(
+                        route = "alerts/contact/{contactId}/checkin",
+                        arguments = listOf(navArgument("contactId") { type = NavType.LongType })
+                    ) { entry ->
+                        val contactId = entry.arguments?.getLong("contactId") ?: return@composable
+                        val contact = state.contacts.firstOrNull { it.id == contactId }
+                        AlertTonePickerScreen(
+                            title = "Check-in tone",
+                            subtitle = contact?.displayName?.let { "Choose the chime used for ${it} check-ins." }
+                                ?: "Choose the check-in chime for this contact.",
+                            options = state.checkInSoundOptions,
+                            selectedKey = contact?.checkInSoundKey ?: state.settings.checkInProfile.soundKey,
+                            onSelect = { key -> viewModel.updateContactSounds(contactId, null, key) },
                             onBack = { navController.popBackStack() }
                         )
                     }
@@ -437,8 +461,12 @@ class MainActivity : ComponentActivity() {
                         SettingsScreen(
                             settings = state.settings,
                             hasDndAccess = hasDndAccess,
+                            onToggleListening = viewModel::toggleListening,
                             onToggleIncludeLocation = viewModel::setIncludeLocation,
                             onRequestDndAccess = { openDndSettings(context) },
+                            onToggleAutoAllowRemoteSoundChange = viewModel::setAutoAllowRemoteSoundChange,
+                            onEditEmergencyTone = { navController.navigate("alerts/default/emergency") },
+                            onEditCheckInTone = { navController.navigate("alerts/default/checkin") },
                             onBack = { navController.popBackStack() }
                         )
                     }

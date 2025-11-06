@@ -56,6 +56,9 @@ class AlertDispatcher @Inject constructor(
         }
         val soundOption = soundCatalog.resolve(profile.soundKey, soundCategory)
         val channelId = registrar.ensureAlertChannel(soundCategory, soundOption, profile)
+        val orderedContacts = contacts.sortedWith(
+            compareBy<Contact> { it.contactOrder }.thenBy { it.displayName.lowercase(Locale.US) }
+        )
 
         val shouldOverrideAudio = profile.breakThroughDnd || tier == EscalationTier.EMERGENCY
         val overrideApplied = if (shouldOverrideAudio) {
@@ -65,7 +68,7 @@ class AlertDispatcher @Inject constructor(
         }
 
         val smsCount = try {
-            sendSms(message, contacts)
+            sendSms(tier, message, orderedContacts)
         } catch (error: Exception) {
             Log.e(TAG, "Unable to send alert SMS", error)
             0
@@ -77,7 +80,7 @@ class AlertDispatcher @Inject constructor(
             message = message,
             profile = profile,
             soundOption = soundOption,
-            primaryContact = contacts.firstOrNull()
+            primaryContact = orderedContacts.firstOrNull()
         )
 
         if (overrideApplied) {
@@ -95,8 +98,13 @@ class AlertDispatcher @Inject constructor(
     }
 
     @RequiresPermission(Manifest.permission.SEND_SMS)
-    private suspend fun sendSms(message: String, contacts: List<Contact>): Int {
-        return smsSender.sendAlert(message, contacts)
+    private suspend fun sendSms(
+        tier: EscalationTier,
+        message: String,
+        contacts: List<Contact>
+    ): Int {
+        val delay = if (tier == EscalationTier.EMERGENCY) SEQUENTIAL_CONTACT_DELAY_MS else 0L
+        return smsSender.sendAlert(message, contacts, delay)
     }
 
     private fun buildMessage(phrase: String, tier: EscalationTier, locationText: String?): String {
@@ -175,5 +183,6 @@ class AlertDispatcher @Inject constructor(
 
     companion object {
         private const val TAG = "AlertDispatcher"
+        private const val SEQUENTIAL_CONTACT_DELAY_MS = 1_500L
     }
 }
