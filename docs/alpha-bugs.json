@@ -1,0 +1,18 @@
+[
+  {
+    "title": "ChromeOS builds fail without optional telephony feature flag",
+    "labels": [
+      "bug",
+      "alpha-baseline"
+    ],
+    "body": "### Impact\nChromebooks reject the Alpha build because the manifest requests SMS/phone permissions without declaring \\\"<uses-feature android:name=\\\"android.hardware.telephony\\\" android:required=\\\"false\\\" />\\\", so Play Store flags the app as requiring telephony hardware and blocks install on ChromeOS.\n\n### Reproduction\n1. Install the current APK on a Chromebook or run `./gradlew androidApp:lint`.\n2. Observe lint error `PermissionImpliesUnsupportedChromeOsHardware` and the install refusal.\n\n### Fix\nDeclare the telephony feature as optional alongside the microphone feature in `androidApp/src/main/AndroidManifest.xml`."
+  },
+  {
+    "title": "Native ad card collapses because layout inflated without parent",
+    "labels": [
+      "bug",
+      "alpha-baseline"
+    ],
+    "body": "### Impact\nNative ads render with incorrect width and clipped rounded corners because `NativeAdCard` inflates `R.layout.native_ad_view` with a null parent, so the layout params on the root container are ignored by Compose's `Card`.\n\n### Reproduction\n1. Enable ad loading (Free flavor with ads enabled) and open the Upgrade to Pro screen.\n2. The native ad view floats with minimal width or loses its padding.\n\n### Fix\nInflate the layout into a concrete `NativeAdView` instance before binding so the composed card can honor its layout params (`androidApp/src/main/java/com/pulselink/ui/ads/NativeAdCard.kt`)."
+  }
+]
