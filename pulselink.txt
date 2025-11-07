@@ -98,3 +98,10 @@ Next Immediate actions:
 - Coordinate with Play Console admins to confirm the service account still has Release Manager access and that the Google Play Android Developer API is enabled, then rerun the internal track release once the signature matches.
 - Address the outstanding UX polish from 2025-11-05: emergency quick action button, contact reorder drag support, tone picker separation with centered branding, link-approval toggle for "allow remote sound change", contrast fixes, centered logo + mic toggle on Home, removal of the stray "support circle" icon, and the contact import crash.
 - Re-run end-to-end smoke tests (alerts, SMS flows, contact linking) once the UI changes land, then cut the next internal track build via the refreshed GitHub workflow.
+
+-- 2025-11-07 Update (Alpha baseline + signing assets) --
+- Declared `<uses-feature android.hardware.telephony android:required="false" />` so ChromeOS devices (and lint) treat SMS/phone capabilities as optional—resolves the Play Console install block encountered on Chromebooks.
+- Fixed `NativeAdCard` to inflate `native_ad_view` into a `NativeAdView` container before binding, restoring padding/rounded corners on the Upgrade-to-Pro placement.
+- Added `docs/alpha-bugs.json` plus the `Publish Alpha Bug Baseline` workflow that turns each JSON entry into a GitHub issue. First run (workflow #2) created Issues #15 and #16 for the ChromeOS telephony flag + native ad layout regressions.
+- Granted the workflow `issues: write` scope via workflow-level `permissions` so it can open tickets using the default `GITHUB_TOKEN`—no PAT required. Trigger it from GitHub Actions (supports a `dry_run` boolean).
+- Dropped the new Play upload certificate (`upload_certificate.pem`) into the repo root. Use this PEM when Play requests proof of the active upload key while keeping the actual signing keystore (`upload-keystore.jks`) and passwords outside the repo. Always sign release artifacts with the legacy upload key before submitting the next build.
