@@ -84,7 +84,8 @@ fun NativeAdCard(
         AndroidView(
             modifier = Modifier.fillMaxWidth(),
             factory = { ctx ->
-                (LayoutInflater.from(ctx).inflate(R.layout.native_ad_view, null) as NativeAdView).apply {
+                NativeAdView(ctx).apply {
+                    LayoutInflater.from(ctx).inflate(R.layout.native_ad_view, this, true)
                     bindNativeAd(this, ad)
                 }
             },
