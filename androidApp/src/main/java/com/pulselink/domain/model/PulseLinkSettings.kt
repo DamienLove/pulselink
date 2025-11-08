@@ -27,6 +27,7 @@ data class PulseLinkSettings(
     val proUnlocked: Boolean = true,
     val onboardingComplete: Boolean = false,
     val deviceId: String = "",
+    val isBetaTester: Boolean = false,
     val ownerName: String = ""
 ) {
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)

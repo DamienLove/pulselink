@@ -2,6 +2,7 @@ package com.pulselink.ui
 
 import android.Manifest
 import android.app.NotificationManager
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -42,6 +43,10 @@ import androidx.navigation.navArgument
 import com.pulselink.data.ads.AppOpenAdController
 import com.pulselink.domain.model.Contact
 import com.pulselink.R
+import com.pulselink.ui.screens.BetaTesterListScreen
+import com.pulselink.ui.screens.BugReportData
+import com.pulselink.ui.screens.BugReportDataSaver
+import com.pulselink.ui.screens.BugReportScreen
 import com.pulselink.ui.screens.HomeScreen
 import com.pulselink.ui.screens.ContactDetailScreen
 import com.pulselink.ui.screens.AlertTonePickerScreen
@@ -91,6 +96,9 @@ class MainActivity : ComponentActivity() {
 
                 var onboardingName by rememberSaveable { mutableStateOf("") }
                 var onboardingNameDirty by rememberSaveable { mutableStateOf(false) }
+                var bugReportDraft by rememberSaveable(stateSaver = BugReportDataSaver) {
+                    mutableStateOf(BugReportData())
+                }
 
                 LaunchedEffect(ownerName) {
                     if (!onboardingNameDirty) {
@@ -469,6 +477,58 @@ class MainActivity : ComponentActivity() {
                             onToggleAutoAllowRemoteSoundChange = viewModel::setAutoAllowRemoteSoundChange,
                             onEditEmergencyTone = { navController.navigate("alerts/default/emergency") },
                             onEditCheckInTone = { navController.navigate("alerts/default/checkin") },
+                            onReportBug = { navController.navigate("bug_report") },
+                            onBetaTesters = { navController.navigate("beta_testers") },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable("bug_report") {
+                        BugReportScreen(
+                            data = bugReportDraft,
+                            onDataChange = { bugReportDraft = it },
+                            onBack = {
+                                bugReportDraft = BugReportData()
+                                navController.popBackStack()
+                            },
+                            onSubmit = { report ->
+                                val intent = viewModel.createBugReportIntent(context, report)
+                                val resolved = intent.resolveActivity(context.packageManager)
+                                if (resolved != null) {
+                                    try {
+                                        startActivity(
+                                            Intent.createChooser(
+                                                intent,
+                                                activity.getString(R.string.bug_report_title)
+                                            )
+                                        )
+                                        Toast.makeText(
+                                            context,
+                                            activity.getString(R.string.bug_report_success),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                        bugReportDraft = BugReportData()
+                                        navController.popBackStack()
+                                    } catch (error: ActivityNotFoundException) {
+                                        Toast.makeText(
+                                            context,
+                                            activity.getString(R.string.bug_report_no_email_app),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        activity.getString(R.string.bug_report_no_email_app),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        )
+                    }
+                    composable("beta_testers") {
+                        BetaTesterListScreen(
+                            isBetaTester = state.settings.isBetaTester,
+                            onToggleBetaTester = { enabled -> viewModel.setBetaTesterStatus(enabled) },
                             onBack = { navController.popBackStack() }
                         )
                     }

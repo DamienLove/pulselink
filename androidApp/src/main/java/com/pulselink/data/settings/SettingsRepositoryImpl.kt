@@ -34,6 +34,7 @@ private val PRO_UNLOCKED = booleanPreferencesKey("pro_unlocked")
 private val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
 private val DEVICE_ID = stringPreferencesKey("device_id")
 private val OWNER_NAME = stringPreferencesKey("owner_name")
+private val IS_BETA_TESTER = booleanPreferencesKey("is_beta_tester")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -59,7 +60,8 @@ class SettingsRepositoryImpl @Inject constructor(
             proUnlocked = prefs[PRO_UNLOCKED] ?: PulseLinkSettings().proUnlocked,
             onboardingComplete = prefs[ONBOARDING_COMPLETE] ?: PulseLinkSettings().onboardingComplete,
             deviceId = prefs[DEVICE_ID] ?: PulseLinkSettings().deviceId,
-            ownerName = prefs[OWNER_NAME] ?: PulseLinkSettings().ownerName
+            ownerName = prefs[OWNER_NAME] ?: PulseLinkSettings().ownerName,
+            isBetaTester = prefs[IS_BETA_TESTER] ?: PulseLinkSettings().isBetaTester
         )
     }
 
@@ -79,6 +81,7 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[ONBOARDING_COMPLETE] = updated.onboardingComplete
             prefs[DEVICE_ID] = updated.deviceId
             prefs[OWNER_NAME] = updated.ownerName
+            prefs[IS_BETA_TESTER] = updated.isBetaTester
         }
     }
 
@@ -122,6 +125,12 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun setBetaTesterStatus(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[IS_BETA_TESTER] = enabled
+        }
+    }
+
     private fun settingsValue(prefs: Preferences): PulseLinkSettings {
         return PulseLinkSettings(
             primaryPhrase = prefs[PRIMARY_PHRASE] ?: PulseLinkSettings().primaryPhrase,
@@ -138,7 +147,8 @@ class SettingsRepositoryImpl @Inject constructor(
             proUnlocked = prefs[PRO_UNLOCKED] ?: PulseLinkSettings().proUnlocked,
             onboardingComplete = prefs[ONBOARDING_COMPLETE] ?: PulseLinkSettings().onboardingComplete,
             deviceId = prefs[DEVICE_ID] ?: PulseLinkSettings().deviceId,
-            ownerName = prefs[OWNER_NAME] ?: PulseLinkSettings().ownerName
+            ownerName = prefs[OWNER_NAME] ?: PulseLinkSettings().ownerName,
+            isBetaTester = prefs[IS_BETA_TESTER] ?: PulseLinkSettings().isBetaTester
         )
     }
 }

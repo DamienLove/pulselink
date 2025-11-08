@@ -1,5 +1,10 @@
 package com.pulselink.ui.state
 
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pulselink.BuildConfig
@@ -16,6 +21,7 @@ import com.pulselink.domain.repository.MessageRepository
 import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.service.AlertRouter
 import com.pulselink.service.PulseLinkForegroundService
+import com.pulselink.ui.screens.BugReportData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -209,6 +215,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setBetaTesterStatus(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setBetaTesterStatus(enabled)
+        }
+    }
+
     fun completeOnboarding() {
         viewModelScope.launch {
             settingsRepository.setOnboardingComplete()
@@ -245,6 +257,59 @@ class MainViewModel @Inject constructor(
 
     fun stopService(context: android.content.Context) {
         PulseLinkForegroundService.stop(context)
+    }
+
+    fun createBugReportIntent(context: Context, bugReportData: BugReportData): Intent {
+        val packageManager = context.packageManager
+        val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0))
+        } else {
+            @Suppress("DEPRECATION")
+            packageManager.getPackageInfo(context.packageName, 0)
+        }
+        val versionName = packageInfo.versionName ?: "unknown"
+        val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            packageInfo.longVersionCode
+        } else {
+            @Suppress("DEPRECATION")
+            packageInfo.versionCode.toLong()
+        }
+        val manufacturer = Build.MANUFACTURER.orEmpty()
+        val model = Build.MODEL.orEmpty()
+        val osVersion = Build.VERSION.RELEASE ?: "unknown"
+        val apiLevel = Build.VERSION.SDK_INT
+
+        val formattedBody = buildString {
+            appendLine("Summary: ${bugReportData.summary}")
+            appendLine()
+            appendLine("Steps to Reproduce:")
+            appendLine(bugReportData.stepsToReproduce.ifBlank { "N/A" })
+            appendLine()
+            appendLine("Expected Behavior:")
+            appendLine(bugReportData.expectedBehavior.ifBlank { "N/A" })
+            appendLine()
+            appendLine("Actual Behavior:")
+            appendLine(bugReportData.actualBehavior)
+            appendLine()
+            appendLine("Frequency: ${bugReportData.frequency}")
+            appendLine("Severity: ${bugReportData.severity}")
+            if (bugReportData.userEmail.isNotBlank()) {
+                appendLine("Reporter Email: ${bugReportData.userEmail}")
+            }
+            appendLine()
+            appendLine("App Version: $versionName ($versionCode)")
+            appendLine("Device: $manufacturer $model")
+            appendLine("OS: Android $osVersion (API $apiLevel)")
+        }
+
+        val subjectSuffix = bugReportData.summary.ifBlank { "General issue" }
+
+        return Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("mailto:")
+            putExtra(Intent.EXTRA_EMAIL, arrayOf("support@pulselink.app"))
+            putExtra(Intent.EXTRA_SUBJECT, "PulseLink Bug Report: $subjectSuffix")
+            putExtra(Intent.EXTRA_TEXT, formattedBody)
+        }
     }
 
     private fun ensureSoundDefaults(settings: com.pulselink.domain.model.PulseLinkSettings): com.pulselink.domain.model.PulseLinkSettings {

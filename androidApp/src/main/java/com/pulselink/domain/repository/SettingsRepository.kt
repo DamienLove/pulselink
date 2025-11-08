@@ -12,4 +12,5 @@ interface SettingsRepository {
     suspend fun ensureDeviceId(): String
     suspend fun setOwnerName(name: String)
     suspend fun setAutoAllowRemoteSoundChange(enabled: Boolean)
+    suspend fun setBetaTesterStatus(enabled: Boolean)
 }

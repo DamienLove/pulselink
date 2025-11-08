@@ -13,7 +13,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,10 +28,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.pulselink.R
 import com.pulselink.domain.model.PulseLinkSettings
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,6 +48,8 @@ fun SettingsScreen(
     onToggleAutoAllowRemoteSoundChange: (Boolean) -> Unit,
     onEditEmergencyTone: () -> Unit,
     onEditCheckInTone: () -> Unit,
+    onReportBug: () -> Unit,
+    onBetaTesters: () -> Unit,
     onBack: () -> Unit
 ) {
     Scaffold(
@@ -105,6 +113,20 @@ fun SettingsScreen(
                 actionLabel = "Edit tone",
                 onAction = onEditCheckInTone
             )
+            SettingsActionCard(
+                title = stringResource(id = R.string.settings_report_bug),
+                subtitle = "Help us improve PulseLink by reporting issues you encounter.",
+                actionLabel = "Report",
+                onAction = onReportBug,
+                leadingIcon = Icons.Filled.BugReport
+            )
+            SettingsActionCard(
+                title = stringResource(id = R.string.settings_beta_testers),
+                subtitle = "Manage beta testing status and view tester information.",
+                actionLabel = "Manage",
+                onAction = onBetaTesters,
+                leadingIcon = Icons.Filled.Science
+            )
         }
     }
 }
@@ -155,7 +177,8 @@ private fun SettingsActionCard(
     title: String,
     subtitle: String,
     actionLabel: String,
-    onAction: () -> Unit
+    onAction: () -> Unit,
+    leadingIcon: ImageVector = Icons.Filled.NotificationsActive
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -182,7 +205,7 @@ private fun SettingsActionCard(
             )
             TextButton(onClick = onAction) {
                 Icon(
-                    imageVector = Icons.Filled.NotificationsActive,
+                    imageVector = leadingIcon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary
                 )

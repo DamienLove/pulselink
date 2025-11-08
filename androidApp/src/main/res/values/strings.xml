@@ -68,4 +68,27 @@
     <string name="contact_action_resend_link">Resend link</string>
     <string name="contact_action_help_inbound_request">Approve to enable alerts and remote support.</string>
     <string name="contact_action_approve_link">Approve link</string>
+    <string name="bug_report_title">Report a Bug</string>
+    <string name="bug_report_summary_label">Summary</string>
+    <string name="bug_report_summary_hint">Brief description of the issue</string>
+    <string name="bug_report_steps_label">Steps to Reproduce</string>
+    <string name="bug_report_steps_hint">1. First step\n2. Second step\n3. ...</string>
+    <string name="bug_report_expected_label">Expected Behavior</string>
+    <string name="bug_report_expected_hint">What should happen</string>
+    <string name="bug_report_actual_label">Actual Behavior</string>
+    <string name="bug_report_actual_hint">What actually happens</string>
+    <string name="bug_report_frequency_label">Frequency</string>
+    <string name="bug_report_severity_label">Severity</string>
+    <string name="bug_report_contact_label">Your Email (Optional)</string>
+    <string name="bug_report_contact_hint">For follow-up questions</string>
+    <string name="bug_report_submit">Send Bug Report</string>
+    <string name="bug_report_success">Bug report sent successfully</string>
+    <string name="bug_report_no_email_app">No email app found. Please install an email app.</string>
+    <string name="bug_report_fields_required">Please fill in the summary and description fields</string>
+    <string name="beta_tester_list_title">Beta Testers</string>
+    <string name="beta_tester_status">Beta Tester Status</string>
+    <string name="beta_tester_enabled">You are a beta tester</string>
+    <string name="beta_tester_disabled">Beta testing is disabled</string>
+    <string name="settings_report_bug">Report a Bug</string>
+    <string name="settings_beta_testers">Beta Testers</string>
 </resources>
