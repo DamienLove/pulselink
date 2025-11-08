@@ -6,9 +6,18 @@ local.properties
 gradle-8.6/
 gradle-8.6-bin.zip
 pulselink-*.json
+
+# Sensitive signing material (must never be deleted manually)
 *.pem
 *.p12
 *.jks
 keys*.enc
 deployment_cert.*
+upload-keystore.jks
+upload-keystore-new.jks
+upload-keystore.p12
+upload_cert.pem
+upload_certificate.pem
+private.pem
+public.pem
 keystore.properties
