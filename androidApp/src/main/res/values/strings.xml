@@ -94,4 +94,6 @@
     <string name="beta_tester_disabled">Beta testing is disabled</string>
     <string name="settings_report_bug">Report a Bug</string>
     <string name="settings_beta_testers">Beta Testers</string>
+    <string name="emergency_alert_title">%1$s triggered an emergency</string>
+    <string name="emergency_alert_body">PulseLink is overriding Do Not Disturb and playing the emergency tone so you can respond immediately.</string>
 </resources>

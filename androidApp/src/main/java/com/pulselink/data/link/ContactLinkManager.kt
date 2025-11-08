@@ -200,6 +200,18 @@ class ContactLinkManager @Inject constructor(
         val contact = contactRepository.getByLinkCode(message.code) ?: return
         remoteActionHandler.prepareForAlert(contact)
         remoteActionHandler.routeRemoteAlert(contact, message.tier)
+        if (message.tier == EscalationTier.EMERGENCY) {
+            val title = context.getString(R.string.emergency_alert_title, contact.displayName)
+            val body = context.getString(R.string.emergency_alert_body)
+            remoteActionHandler.playAttentionTone(
+                contact = contact,
+                tier = EscalationTier.EMERGENCY,
+                title = title,
+                body = body,
+                notificationId = (contact.id.hashCode() and 0xFFFF) + 5000,
+                forceBypass = true
+            )
+        }
     }
 
     private suspend fun handleAlertPrepare(message: PulseLinkMessage.AlertPrepare) {
@@ -608,6 +620,7 @@ class RemoteActionHandler @Inject constructor(
         soundOption?.let {
             val soundUri = android.net.Uri.parse("android.resource://${context.packageName}/${it.resId}")
             notificationBuilder.setSound(soundUri)
+            audioOverrideManager.playTone(soundUri, looping = false)
         }
         val notification = notificationBuilder.build()
 

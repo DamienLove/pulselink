@@ -13,6 +13,7 @@ pulselink-*.json
 *.jks
 keys*.enc
 deployment_cert.*
+secure-assets/
 upload-keystore.jks
 upload-keystore-new.jks
 upload-keystore.p12
