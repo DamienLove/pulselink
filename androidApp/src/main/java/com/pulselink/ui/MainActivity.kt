@@ -112,6 +112,7 @@ class MainActivity : ComponentActivity() {
                         add(Manifest.permission.SEND_SMS)
                         add(Manifest.permission.RECEIVE_SMS)
                         add(Manifest.permission.READ_CONTACTS)
+                        add(Manifest.permission.READ_CALL_LOG)
                         add(Manifest.permission.ACCESS_COARSE_LOCATION)
                         add(Manifest.permission.ACCESS_FINE_LOCATION)
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -273,6 +274,8 @@ class MainActivity : ComponentActivity() {
                                     ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
                         val contactsGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
+                        val callLogGranted =
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
 
                         val permissionCards = listOf(
                             OnboardingPermissionState(
@@ -291,6 +294,15 @@ class MainActivity : ComponentActivity() {
                                 granted = hasDndAccess,
                                 actionLabel = if (hasDndAccess) "Manage" else "Allow",
                                 onAction = { openDndSettings(context) }
+                            ),
+                            OnboardingPermissionState(
+                                icon = Icons.Filled.Person,
+                                title = stringResource(R.string.permission_call_log_title),
+                                description = stringResource(R.string.permission_call_log_description),
+                                granted = callLogGranted,
+                                manualHelp = if (!callLogGranted) {
+                                    "Open Settings -> Apps -> PulseLink -> Permissions and allow Call logs so linked contacts can ring through."
+                                } else null
                             ),
                             OnboardingPermissionState(
                                 icon = Icons.Filled.Mic,

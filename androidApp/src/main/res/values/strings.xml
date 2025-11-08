@@ -42,10 +42,13 @@
     <string name="manual_message_title">%1$s sent a message</string>
     <string name="incoming_call_alert_title">%1$s is trying to reach you</string>
     <string name="incoming_call_alert_body">PulseLink is overriding Do Not Disturb so you don\'t miss their call.</string>
+    <string name="incoming_call_detected">Emergency call from %1$s</string>
     <string name="channel_manual_messages">PulseLink Messages</string>
     <string name="permission_microphone">PulseLink needs microphone access for hotword detection.</string>
     <string name="permission_sms">PulseLink needs SMS permission to contact your circle.</string>
     <string name="permission_location">PulseLink needs location access to share your position.</string>
+    <string name="permission_call_log_title">Allow access to call log</string>
+    <string name="permission_call_log_description">PulseLink needs this to detect incoming calls from your linked contacts and play emergency tones.</string>
     <string name="shortcut_start_listening_short">Start listening</string>
     <string name="shortcut_start_listening_long">Start PulseLink listening</string>
     <string name="shortcut_check_in_short">Send check-in</string>

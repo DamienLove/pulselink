@@ -4,11 +4,13 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
+import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import com.pulselink.data.link.ContactLinkManager
 import com.pulselink.data.sms.SmsCodec
@@ -30,14 +32,19 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             try {
-                val parsed = SmsCodec.parse(body)
-                if (parsed != null) {
-                    contactLinkManager.handleInbound(parsed, origin)
-                } else {
-                    alertRouter.onInboundMessage(body)
+                val completed = withTimeoutOrNull(8_000L) {
+                    val parsed = SmsCodec.parse(body)
+                    if (parsed != null) {
+                        contactLinkManager.handleInbound(parsed, origin)
+                    } else {
+                        alertRouter.onInboundMessage(body)
+                    }
+                }
+                if (completed == null) {
+                    Log.w(TAG, "SMS processing timed out for sender: $origin")
                 }
             } catch (error: Exception) {
-                android.util.Log.e(TAG, "Failed to handle inbound SMS from $origin", error)
+                Log.e(TAG, "Failed to handle inbound SMS from $origin", error)
             } finally {
                 pendingResult.finish()
             }

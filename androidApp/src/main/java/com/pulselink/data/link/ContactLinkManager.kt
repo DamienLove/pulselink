@@ -3,7 +3,9 @@ package com.pulselink.data.link
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.net.Uri
 import android.os.Build
+import android.provider.CallLog
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -25,9 +27,14 @@ import com.pulselink.domain.repository.MessageRepository
 import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.service.AlertRouter
 import com.pulselink.util.AudioOverrideManager
+import com.pulselink.util.CallStateMonitor
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.first
@@ -43,11 +50,14 @@ class ContactLinkManager @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val contactRepository: ContactRepository,
     private val remoteActionHandler: RemoteActionHandler,
-    private val messageRepository: MessageRepository
+    private val messageRepository: MessageRepository,
+    private val callStateMonitor: CallStateMonitor
 ) {
 
     private val notificationManager by lazy { NotificationManagerCompat.from(context) }
     private val alertHandshake = ConcurrentHashMap<String, CompletableDeferred<Boolean>>()
+    @Volatile private var incomingMonitorActive = false
+    private val monitorScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     enum class CallPreparationResult { READY, TIMEOUT, FAILED }
 
     suspend fun sendLinkRequest(contactId: Long) {
@@ -416,6 +426,58 @@ class ContactLinkManager @Inject constructor(
         return ready
     }
 
+    fun startIncomingMonitoring() {
+        if (incomingMonitorActive) return
+        runCatching {
+            callStateMonitor.monitorIncomingCalls(
+                onRinging = { phone ->
+                    monitorScope.launch { handleIncomingRinging(phone) }
+                },
+                onCallFinished = {
+                    monitorScope.launch { remoteActionHandler.stopIncomingCallTone() }
+                }
+            )
+            incomingMonitorActive = true
+        }.onFailure { error ->
+            incomingMonitorActive = false
+            Log.w(TAG, "Unable to monitor incoming calls", error)
+        }
+    }
+
+    fun stopIncomingMonitoring() {
+        if (!incomingMonitorActive) return
+        incomingMonitorActive = false
+        callStateMonitor.stopIncomingMonitoring()
+        monitorScope.coroutineContext.cancelChildren()
+        remoteActionHandler.stopIncomingCallTone()
+    }
+
+    private suspend fun handleIncomingRinging(phone: String?) {
+        val resolvedNumber = phone?.takeIf { it.isNotBlank() } ?: latestIncomingNumber()
+        if (resolvedNumber.isNullOrBlank()) return
+        val contact = findContactByPhoneFlexible(resolvedNumber) ?: return
+        if (contact.linkStatus != LinkStatus.LINKED) return
+        try {
+            remoteActionHandler.handleIncomingCall(contact)
+        } catch (error: Exception) {
+            Log.e(TAG, "Failed to process incoming call for ${contact.displayName}", error)
+        }
+    }
+
+    private fun latestIncomingNumber(): String? {
+        return runCatching {
+            context.contentResolver.query(
+                CallLog.Calls.CONTENT_URI,
+                arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.TYPE),
+                "${CallLog.Calls.TYPE} = ?",
+                arrayOf(CallLog.Calls.INCOMING_TYPE.toString()),
+                "${CallLog.Calls.DATE} DESC"
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+        }.getOrNull()
+    }
+
     private suspend fun findContactByPhoneFlexible(phone: String): Contact? {
         contactRepository.getByPhone(phone)?.let { return it }
         val normalizedIncoming = normalizePhone(phone)
@@ -527,9 +589,7 @@ class RemoteActionHandler @Inject constructor(
         val soundOption = soundCatalog.resolve(soundKey, category)
         val channel = notificationRegistrar.ensureAlertChannel(category, soundOption, profile)
         val requestBypass = forceBypass || profile.breakThroughDnd || contact.allowRemoteOverride
-        val overrideApplied = withContext(Dispatchers.Main) {
-            audioOverrideManager.overrideForAlert(requestBypass)
-        }
+        val overrideApplied = audioOverrideManager.overrideForAlert(requestBypass)
         val notificationBuilder = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_logo)
             .setContentTitle(title)
@@ -556,6 +616,46 @@ class RemoteActionHandler @Inject constructor(
         if (overrideApplied) {
             audioOverrideManager.scheduleRestore(overrideHoldMs)
         }
+    }
+
+    suspend fun handleIncomingCall(contact: Contact) {
+        val settings = settingsRepository.settings.first()
+        val profile = settings.emergencyProfile
+        val soundKey = contact.emergencySoundKey ?: profile.soundKey
+        val soundOption = soundCatalog.resolve(soundKey, SoundCategory.SIREN)
+        val channel = notificationRegistrar.ensureAlertChannel(SoundCategory.SIREN, soundOption, profile)
+        val overrideApplied = audioOverrideManager.overrideForAlert(true)
+        val soundUri = soundOption?.let {
+            Uri.parse("android.resource://${context.packageName}/${it.resId}")
+        }
+        if (soundUri != null) {
+            audioOverrideManager.playTone(soundUri, looping = true)
+        }
+        val title = context.getString(R.string.incoming_call_alert_title, contact.displayName)
+        val body = context.getString(R.string.incoming_call_detected, contact.displayName)
+        val notification = NotificationCompat.Builder(context, channel)
+            .setSmallIcon(R.drawable.ic_logo)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setAutoCancel(true)
+            .setCategory(NotificationCompat.CATEGORY_CALL)
+            .apply {
+                if (profile.vibrate) {
+                    setVibrate(longArrayOf(0, 250, 250, 250, 500, 250))
+                }
+            }
+            .build()
+        NotificationManagerCompat.from(context)
+            .notify((contact.id.hashCode() and 0xFFFF) + 6000, notification)
+        if (overrideApplied) {
+            audioOverrideManager.scheduleRestore(CALL_OVERRIDE_HOLD_MS)
+        }
+    }
+
+    fun stopIncomingCallTone() {
+        audioOverrideManager.cancelScheduledRestore()
     }
 
     suspend fun notifyIncomingCall(contact: Contact, tier: EscalationTier) {

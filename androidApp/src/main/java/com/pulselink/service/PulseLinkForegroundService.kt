@@ -1,14 +1,18 @@
 package com.pulselink.service
 
+import android.Manifest
 import android.app.Notification
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.pulselink.R
 import com.pulselink.data.alert.NotificationRegistrar
+import com.pulselink.data.link.ContactLinkManager
 import com.pulselink.domain.repository.SettingsRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -24,6 +28,7 @@ class PulseLinkForegroundService : Service() {
 
     @Inject lateinit var notificationRegistrar: NotificationRegistrar
     @Inject lateinit var settingsRepository: SettingsRepository
+    @Inject lateinit var contactLinkManager: ContactLinkManager
 
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.Main.immediate + serviceJob)
@@ -37,6 +42,7 @@ class PulseLinkForegroundService : Service() {
             this,
             Intent(this, PulseLinkVoiceService::class.java)
         )
+        initializeIncomingCallMonitoring()
     }
 
     private fun observeListeningState() {
@@ -66,6 +72,7 @@ class PulseLinkForegroundService : Service() {
     }
 
     override fun onDestroy() {
+        contactLinkManager.stopIncomingMonitoring()
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -74,6 +81,7 @@ class PulseLinkForegroundService : Service() {
 
     companion object {
         private const val NOTIFICATION_ID = 42
+        private const val TAG = "PulseLinkService"
 
         fun enqueue(context: Context) {
             val intent = Intent(context, PulseLinkForegroundService::class.java)
@@ -82,6 +90,23 @@ class PulseLinkForegroundService : Service() {
 
         fun stop(context: Context) {
             context.stopService(Intent(context, PulseLinkForegroundService::class.java))
+        }
+    }
+
+    private fun initializeIncomingCallMonitoring() {
+        val phoneStateGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.READ_PHONE_STATE
+        ) == PackageManager.PERMISSION_GRANTED
+        val callLogGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.READ_CALL_LOG
+        ) == PackageManager.PERMISSION_GRANTED
+        if (phoneStateGranted && callLogGranted) {
+            runCatching { contactLinkManager.startIncomingMonitoring() }
+                .onFailure { Log.w(TAG, "Failed to start incoming call monitoring", it) }
+        } else {
+            Log.w(TAG, "Call monitoring disabled; missing phone state or call log permission")
         }
     }
 }
