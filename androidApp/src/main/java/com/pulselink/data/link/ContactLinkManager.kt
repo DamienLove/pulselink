@@ -201,6 +201,9 @@ class ContactLinkManager @Inject constructor(
         val deviceId = settingsRepository.ensureDeviceId()
         val response = SmsCodec.encodeAlertReady(deviceId, message.code, overrideApplied)
         smsSender.sendSms(contact.phoneNumber, response)
+        if (message.reason == PulseLinkMessage.AlertPrepareReason.CALL) {
+            remoteActionHandler.notifyIncomingCall(contact, message.tier)
+        }
     }
 
     private fun handleAlertReady(message: PulseLinkMessage.AlertReady) {
@@ -504,7 +507,9 @@ class RemoteActionHandler @Inject constructor(
         tier: EscalationTier,
         title: String,
         body: String,
-        notificationId: Int
+        notificationId: Int,
+        forceBypass: Boolean = false,
+        overrideHoldMs: Long = MESSAGE_OVERRIDE_HOLD_MS
     ) {
         val settings = settingsRepository.settings.first()
         val (profile, category, soundKey) = when (tier) {
@@ -521,7 +526,7 @@ class RemoteActionHandler @Inject constructor(
         }
         val soundOption = soundCatalog.resolve(soundKey, category)
         val channel = notificationRegistrar.ensureAlertChannel(category, soundOption, profile)
-        val requestBypass = profile.breakThroughDnd || contact.allowRemoteOverride
+        val requestBypass = forceBypass || profile.breakThroughDnd || contact.allowRemoteOverride
         val overrideApplied = withContext(Dispatchers.Main) {
             audioOverrideManager.overrideForAlert(requestBypass)
         }
@@ -549,8 +554,22 @@ class RemoteActionHandler @Inject constructor(
         NotificationManagerCompat.from(context).notify(notificationId, notification)
 
         if (overrideApplied) {
-            audioOverrideManager.scheduleRestore(MESSAGE_OVERRIDE_HOLD_MS)
+            audioOverrideManager.scheduleRestore(overrideHoldMs)
         }
+    }
+
+    suspend fun notifyIncomingCall(contact: Contact, tier: EscalationTier) {
+        val title = context.getString(R.string.incoming_call_alert_title, contact.displayName)
+        val body = context.getString(R.string.incoming_call_alert_body)
+        playAttentionTone(
+            contact = contact,
+            tier = tier,
+            title = title,
+            body = body,
+            notificationId = (contact.id.hashCode() and 0xFFFF) + 4000,
+            forceBypass = true,
+            overrideHoldMs = CALL_OVERRIDE_HOLD_MS
+        )
     }
 
     suspend fun finishCall(contact: Contact, callDuration: Long) {

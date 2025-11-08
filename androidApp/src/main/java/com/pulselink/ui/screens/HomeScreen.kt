@@ -301,39 +301,53 @@ fun HomeScreen(
 
 @Composable
 private fun HeaderSection(state: PulseLinkUiState, onToggleListening: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.ic_logo),
-            contentDescription = "PulseLink logo",
-            modifier = Modifier.size(80.dp)
+        Column(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.ic_logo),
+                contentDescription = "PulseLink logo",
+                modifier = Modifier.size(132.dp)
+            )
+            Text(
+                text = "PulseLink",
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center
+            )
+        }
+
+        MicToggle(
+            isListening = state.isListening,
+            onToggle = onToggleListening,
+            modifier = Modifier.align(Alignment.TopEnd)
         )
-        Text(
-            text = "PulseLink",
-            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.onBackground,
-            textAlign = TextAlign.Center
-        )
-        Text(
-            text = "Use the mic button below or the Settings toggle to control listening.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-            textAlign = TextAlign.Center
-        )
-        MicToggle(isListening = state.isListening, onToggle = onToggleListening)
     }
 }
 
 @Composable
-private fun MicToggle(isListening: Boolean, onToggle: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun MicToggle(
+    isListening: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         val background = if (isListening) Color(0xFF059669) else Color(0xFFDC2626)
         Box(
             modifier = Modifier
-                .size(56.dp)
+                .size(44.dp)
                 .background(background, CircleShape)
                 .clickable(onClick = onToggle),
             contentAlignment = Alignment.Center
@@ -347,7 +361,7 @@ private fun MicToggle(isListening: Boolean, onToggle: () -> Unit) {
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = if (isListening) "Listening on" else "Listening off",
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center
         )
