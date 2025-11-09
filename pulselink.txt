@@ -112,3 +112,8 @@ Next Immediate actions:
 - `ContactsList` now caps its internal `LazyColumn` height at 400.dp to avoid nested scroll conflicts while still allowing drag-to-reorder.
 - Remote action handling forces DND overrides for emergency tiers regardless of per-contact settings: `prepareForAlert()` always boosts audio for emergency/call reasons, and `playAttentionTone()` now requests bypass + loops tones for emergency tiers.
 - Emergency notifications explicitly call `AudioOverrideManager.playTone()` so receivers always hear the configured siren even if the notification channel sound was customized.
+-- 2025-11-09 Update --
+- Removed the always-on microphone foreground service and the broken Hands-free listening toggle.
+- Added Google Assistant voice shortcuts ("Hey Google, PulseLink emergency/check-in") via AssistantShortcutActivity and dynamic shortcuts.
+- Settings/Home now guide reviewers to enable the Assistant shortcut, and the manifest drops RECORD_AUDIO/foreground-service permissions.
+- Rebuilt free (com.free.pulselink) and pro bundles with the updated signing keys.

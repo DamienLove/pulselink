@@ -24,7 +24,6 @@ private const val DATA_STORE_NAME = "pulselink_settings"
 
 private val PRIMARY_PHRASE = stringPreferencesKey("primary_phrase")
 private val SECONDARY_PHRASE = stringPreferencesKey("secondary_phrase")
-private val LISTENING_ENABLED = booleanPreferencesKey("listening_enabled")
 private val INCLUDE_LOCATION = booleanPreferencesKey("include_location")
 private val AUTO_ALLOW_REMOTE_SOUND = booleanPreferencesKey("auto_allow_remote_sound")
 private val EMERGENCY_PROFILE = stringPreferencesKey("emergency_profile")
@@ -48,7 +47,6 @@ class SettingsRepositoryImpl @Inject constructor(
         PulseLinkSettings(
             primaryPhrase = prefs[PRIMARY_PHRASE] ?: PulseLinkSettings().primaryPhrase,
             secondaryPhrase = prefs[SECONDARY_PHRASE] ?: PulseLinkSettings().secondaryPhrase,
-            listeningEnabled = prefs[LISTENING_ENABLED] ?: PulseLinkSettings().listeningEnabled,
             includeLocation = prefs[INCLUDE_LOCATION] ?: PulseLinkSettings().includeLocation,
             autoAllowRemoteSoundChange = prefs[AUTO_ALLOW_REMOTE_SOUND]
                 ?: PulseLinkSettings().autoAllowRemoteSoundChange,
@@ -71,7 +69,6 @@ class SettingsRepositoryImpl @Inject constructor(
             val updated = transform(current)
             prefs[PRIMARY_PHRASE] = updated.primaryPhrase
             prefs[SECONDARY_PHRASE] = updated.secondaryPhrase
-            prefs[LISTENING_ENABLED] = updated.listeningEnabled
             prefs[INCLUDE_LOCATION] = updated.includeLocation
             prefs[AUTO_ALLOW_REMOTE_SOUND] = updated.autoAllowRemoteSoundChange
             prefs[EMERGENCY_PROFILE] = json.encodeToString(AlertProfile.serializer(), updated.emergencyProfile)
@@ -82,12 +79,6 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[DEVICE_ID] = updated.deviceId
             prefs[OWNER_NAME] = updated.ownerName
             prefs[IS_BETA_TESTER] = updated.isBetaTester
-        }
-    }
-
-    override suspend fun setListening(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[LISTENING_ENABLED] = enabled
         }
     }
 
@@ -135,7 +126,6 @@ class SettingsRepositoryImpl @Inject constructor(
         return PulseLinkSettings(
             primaryPhrase = prefs[PRIMARY_PHRASE] ?: PulseLinkSettings().primaryPhrase,
             secondaryPhrase = prefs[SECONDARY_PHRASE] ?: PulseLinkSettings().secondaryPhrase,
-            listeningEnabled = prefs[LISTENING_ENABLED] ?: PulseLinkSettings().listeningEnabled,
             includeLocation = prefs[INCLUDE_LOCATION] ?: PulseLinkSettings().includeLocation,
             autoAllowRemoteSoundChange = prefs[AUTO_ALLOW_REMOTE_SOUND]
                 ?: PulseLinkSettings().autoAllowRemoteSoundChange,

@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PulseLink</string>
-    <string name="status_listening_on">PulseLink is actively listening.</string>
-    <string name="status_listening_off">Listening paused.</string>
-    <string name="cta_enable_listening">Enable Listening</string>
-    <string name="cta_pause_listening">Pause Listening</string>
     <string name="cta_add_contact">Add trusted contact</string>
     <string name="cta_send_check_in">Send check-in</string>
     <string name="cta_trigger_test">Trigger test alert</string>
@@ -30,7 +26,6 @@
     <string name="notification_action_ack">Acknowledge</string>
     <string name="channel_alerts">PulseLink Alerts</string>
     <string name="channel_check_ins">PulseLink Check-ins</string>
-    <string name="channel_listening">PulseLink Listening</string>
     <string name="channel_background">PulseLink Services</string>
     <string name="link_notification_channel">PulseLink Linking</string>
     <string name="link_request_title">Link request received</string>
@@ -49,8 +44,6 @@
     <string name="permission_location">PulseLink needs location access to share your position.</string>
     <string name="permission_call_log_title">Allow access to call log</string>
     <string name="permission_call_log_description">PulseLink needs this to detect incoming calls from your linked contacts and play emergency tones.</string>
-    <string name="shortcut_start_listening_short">Start listening</string>
-    <string name="shortcut_start_listening_long">Start PulseLink listening</string>
     <string name="shortcut_check_in_short">Send check-in</string>
     <string name="shortcut_check_in_long">Send PulseLink check-in</string>
     <string name="pulselink_contact_import_failed">PulseLink couldn\'t load that contact. Check contact permissions and try again.</string>
@@ -96,4 +89,16 @@
     <string name="settings_beta_testers">Beta Testers</string>
     <string name="emergency_alert_title">%1$s triggered an emergency</string>
     <string name="emergency_alert_body">PulseLink is overriding Do Not Disturb and playing the emergency tone so you can respond immediately.</string>
+    <string name="assistant_trigger_emergency">Emergency alert sent via Google Assistant.</string>
+    <string name="assistant_trigger_check_in">Check-in sent via Google Assistant.</string>
+    <string name="assistant_setup_title">Enable Google Assistant voice shortcuts</string>
+    <string name="assistant_setup_subtitle">Say “Hey Google, PulseLink emergency” (or “check-in”) after adding the shortcuts below.</string>
+    <string name="assistant_setup_action">Open Assistant shortcuts</string>
+    <string name="assistant_shortcut_emergency_short">PulseLink emergency</string>
+    <string name="assistant_shortcut_emergency_long">Send a PulseLink emergency alert</string>
+    <string name="assistant_shortcut_check_in_short">PulseLink check-in</string>
+    <string name="assistant_shortcut_check_in_long">Send a PulseLink check-in</string>
+    <string name="assistant_hint_title">Google Assistant</string>
+    <string name="assistant_hint_subtitle">Say “Hey Google, PulseLink emergency”</string>
+    <string name="assistant_settings_not_found">Open Google Assistant settings manually to add the PulseLink shortcut.</string>
 </resources>

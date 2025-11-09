@@ -110,7 +110,7 @@ fun OnboardingIntroScreen(
                     color = Color.White
                 )
                 Text(
-                    text = "PulseLink listens for safewords, alerts trusted contacts, and pushes through Do Not Disturb when it matters most.",
+                    text = "PulseLink links your trusted contacts, pushes through Do Not Disturb, and keeps everyone in sync when it matters most.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFFCBD5F5)
                 )
@@ -123,7 +123,7 @@ fun OnboardingIntroScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                IntroBullet(text = "Hands-free safewords trigger emergency or check-in alerts.")
+                IntroBullet(text = "Say “Hey Google, PulseLink emergency” for a hands-free alert.")
                 IntroBullet(text = "Escalations send SMS, play tones, and can auto-dial help.")
                 IntroBullet(text = "PulseLink can override silent/DND so partners hear urgent alerts.")
             }

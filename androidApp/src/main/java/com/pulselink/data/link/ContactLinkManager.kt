@@ -560,16 +560,18 @@ class RemoteActionHandler @Inject constructor(
             reason == PulseLinkMessage.AlertPrepareReason.CALL ||
             reason == PulseLinkMessage.AlertPrepareReason.ALERT
         if (!shouldOverride) return false
-        val applied = audioOverrideManager.overrideForAlert(true)
-        if (applied) {
-            val delay = when (reason) {
-                PulseLinkMessage.AlertPrepareReason.CALL -> CALL_OVERRIDE_HOLD_MS
-                PulseLinkMessage.AlertPrepareReason.MESSAGE -> MESSAGE_OVERRIDE_HOLD_MS
-                PulseLinkMessage.AlertPrepareReason.ALERT -> DEFAULT_OVERRIDE_HOLD_MS
+        return withContext(Dispatchers.Main) {
+            val applied = audioOverrideManager.overrideForAlert(true)
+            if (applied) {
+                val delay = when (reason) {
+                    PulseLinkMessage.AlertPrepareReason.CALL -> CALL_OVERRIDE_HOLD_MS
+                    PulseLinkMessage.AlertPrepareReason.MESSAGE -> MESSAGE_OVERRIDE_HOLD_MS
+                    PulseLinkMessage.AlertPrepareReason.ALERT -> DEFAULT_OVERRIDE_HOLD_MS
+                }
+                audioOverrideManager.scheduleRestore(delay)
             }
-            audioOverrideManager.scheduleRestore(delay)
+            applied
         }
-        return applied
     }
 
     suspend fun routeRemoteAlert(contact: Contact, tier: EscalationTier) {
@@ -604,7 +606,9 @@ class RemoteActionHandler @Inject constructor(
             profile.breakThroughDnd ||
             tier == EscalationTier.EMERGENCY ||
             contact.allowRemoteOverride
-        val overrideApplied = audioOverrideManager.overrideForAlert(requestBypass)
+        val overrideApplied = withContext(Dispatchers.Main) {
+            audioOverrideManager.overrideForAlert(requestBypass)
+        }
         val notificationBuilder = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_logo)
             .setContentTitle(title)

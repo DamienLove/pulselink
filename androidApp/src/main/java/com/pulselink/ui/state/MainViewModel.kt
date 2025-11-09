@@ -20,7 +20,6 @@ import com.pulselink.domain.repository.ContactRepository
 import com.pulselink.domain.repository.MessageRepository
 import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.service.AlertRouter
-import com.pulselink.service.PulseLinkForegroundService
 import com.pulselink.ui.screens.BugReportData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
@@ -59,9 +58,6 @@ class MainViewModel @Inject constructor(
                 lastMessage
             ) { settings, contacts, events, isDispatching, message ->
                 val normalizedSettings = ensureSoundDefaults(settings)
-                val permissionHints = buildList {
-                    if (!normalizedSettings.listeningEnabled) add("Listening is paused")
-                }
                 val adsAvailable = BuildConfig.ADS_ENABLED
                 val showAds = adsAvailable && !normalizedSettings.proUnlocked
                 val isProUser = normalizedSettings.proUnlocked || !adsAvailable
@@ -70,8 +66,6 @@ class MainViewModel @Inject constructor(
                     settings = normalizedSettings,
                     contacts = contacts,
                     recentEvents = events,
-                    isListening = normalizedSettings.listeningEnabled,
-                    permissionHints = permissionHints,
                     isDispatching = isDispatching,
                     lastMessagePreview = message,
                     emergencySoundOptions = emergencySounds,
@@ -84,12 +78,6 @@ class MainViewModel @Inject constructor(
             }.collect { state ->
                 _uiState.value = state
             }
-        }
-    }
-
-    fun toggleListening(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.setListening(enabled)
         }
     }
 
@@ -249,14 +237,6 @@ class MainViewModel @Inject constructor(
             alertRouter.dispatchManual(tier, phrase)
             dispatching.value = false
         }
-    }
-
-    fun ensureServiceRunning(context: android.content.Context) {
-        PulseLinkForegroundService.enqueue(context)
-    }
-
-    fun stopService(context: android.content.Context) {
-        PulseLinkForegroundService.stop(context)
     }
 
     fun createBugReportIntent(context: Context, bugReportData: BugReportData): Intent {

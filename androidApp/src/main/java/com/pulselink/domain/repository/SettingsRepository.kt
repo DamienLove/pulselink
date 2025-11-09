@@ -6,7 +6,6 @@ import kotlinx.coroutines.flow.Flow
 interface SettingsRepository {
     val settings: Flow<PulseLinkSettings>
     suspend fun update(transform: (PulseLinkSettings) -> PulseLinkSettings)
-    suspend fun setListening(enabled: Boolean)
     suspend fun setProUnlocked(enabled: Boolean)
     suspend fun setOnboardingComplete()
     suspend fun ensureDeviceId(): String

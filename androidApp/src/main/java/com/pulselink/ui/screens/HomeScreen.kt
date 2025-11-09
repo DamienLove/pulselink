@@ -95,7 +95,7 @@ import org.burnoutcrew.reorderable.reorderable
 @Composable
 fun HomeScreen(
     state: PulseLinkUiState,
-    onToggleListening: (Boolean) -> Unit,
+    onAssistantShortcutsClick: () -> Unit,
     onTriggerEmergency: () -> Unit,
     onSendCheckIn: () -> Unit,
     onAddContact: (Contact) -> Unit,
@@ -157,7 +157,10 @@ fun HomeScreen(
                 .padding(horizontal = 20.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            HeaderSection(state, onToggleListening = { onToggleListening(!state.isListening) })
+            HeaderSection(
+                state = state,
+                onOpenAssistantShortcuts = onAssistantShortcutsClick
+            )
             NavigationRow(
                 onAlertsClick = onAlertsClick,
                 onSettingsClick = onSettingsClick,
@@ -305,7 +308,10 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HeaderSection(state: PulseLinkUiState, onToggleListening: () -> Unit) {
+private fun HeaderSection(
+    state: PulseLinkUiState,
+    onOpenAssistantShortcuts: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -331,45 +337,57 @@ private fun HeaderSection(state: PulseLinkUiState, onToggleListening: () -> Unit
             )
         }
 
-        MicToggle(
-            isListening = state.isListening,
-            onToggle = onToggleListening,
-            modifier = Modifier.align(Alignment.TopEnd)
+        AssistantShortcutHint(
+            modifier = Modifier.align(Alignment.TopEnd),
+            onClick = onOpenAssistantShortcuts
         )
     }
 }
 
 @Composable
-private fun MicToggle(
-    isListening: Boolean,
-    onToggle: () -> Unit,
-    modifier: Modifier = Modifier
+private fun AssistantShortcutHint(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
-    Column(
+    Surface(
         modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
+        shape = RoundedCornerShape(20.dp),
+        tonalElevation = 2.dp,
+        color = MaterialTheme.colorScheme.primaryContainer
     ) {
-        val background = if (isListening) Color(0xFF059669) else Color(0xFFDC2626)
-        Box(
+        Row(
             modifier = Modifier
-                .size(44.dp)
-                .background(background, CircleShape)
-                .clickable(onClick = onToggle),
-            contentAlignment = Alignment.Center
+                .clickable(onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(
                 imageVector = Icons.Filled.Mic,
-                contentDescription = if (isListening) "Turn listening off" else "Turn listening on",
-                tint = Color.White
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.assistant_hint_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Text(
+                    text = stringResource(R.string.assistant_hint_subtitle),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            Text(
+                text = stringResource(R.string.assistant_setup_action),
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.primary
             )
         }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = if (isListening) "Listening on" else "Listening off",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onBackground,
-            textAlign = TextAlign.Center
-        )
     }
 }
 

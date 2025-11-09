@@ -98,7 +98,7 @@ android {
     productFlavors {
         create("free") {
             dimension = "tier"
-            applicationIdSuffix = ".free"
+            applicationId = "com.free.pulselink"
             versionNameSuffix = "-free"
             manifestPlaceholders += mapOf(
                 "admobAppId" to "ca-app-pub-5327057757821609~9533221188"

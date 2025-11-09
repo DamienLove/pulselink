@@ -6,6 +6,7 @@ import androidx.work.Configuration
 import com.google.android.gms.ads.MobileAds
 import com.pulselink.data.ads.AdConfig
 import com.pulselink.data.ads.AppOpenAdController
+import com.pulselink.assistant.AssistantShortcuts
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -23,6 +24,7 @@ class PulseLinkApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        AssistantShortcuts.publish(this)
         if (AdConfig.isAdsEnabled) {
             MobileAds.initialize(this)
             appOpenAdController.updateAvailability(false)

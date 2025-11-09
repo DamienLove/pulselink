@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,7 +43,7 @@ import com.pulselink.domain.model.PulseLinkSettings
 fun SettingsScreen(
     settings: PulseLinkSettings,
     hasDndAccess: Boolean,
-    onToggleListening: (Boolean) -> Unit,
+    onAssistantShortcuts: () -> Unit,
     onToggleIncludeLocation: (Boolean) -> Unit,
     onRequestDndAccess: () -> Unit,
     onToggleAutoAllowRemoteSoundChange: (Boolean) -> Unit,
@@ -73,11 +74,12 @@ fun SettingsScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            SettingsToggleCard(
-                title = "Hands-free listening",
-                subtitle = "Control PulseLink's always-listening mic from here or the home mic button.",
-                checked = settings.listeningEnabled,
-                onCheckedChange = onToggleListening
+            SettingsActionCard(
+                title = stringResource(R.string.assistant_setup_title),
+                subtitle = stringResource(R.string.assistant_setup_subtitle),
+                actionLabel = stringResource(R.string.assistant_setup_action),
+                onAction = onAssistantShortcuts,
+                leadingIcon = Icons.Filled.Mic
             )
             SettingsToggleCard(
                 title = "Share location in alerts",

@@ -25,17 +25,12 @@ class NotificationRegistrar @Inject constructor(
             val group = NotificationChannelGroup(GROUP_ALERTS, context.getString(R.string.channel_alerts))
             manager.createNotificationChannelGroup(group)
 
-            val listening = NotificationChannel(
-                CHANNEL_LISTENING,
-                context.getString(R.string.channel_listening),
-                NotificationManager.IMPORTANCE_MIN
-            ).apply { setGroup(GROUP_ALERTS) }
             val background = NotificationChannel(
                 CHANNEL_BACKGROUND,
                 context.getString(R.string.channel_background),
                 NotificationManager.IMPORTANCE_LOW
             ).apply { setGroup(GROUP_ALERTS) }
-            manager.createNotificationChannels(listOf(listening, background))
+            manager.createNotificationChannel(background)
         }
     }
 
@@ -100,7 +95,6 @@ class NotificationRegistrar @Inject constructor(
     companion object {
         private const val LEGACY_ALERT_CHANNEL = "pulse_alerts_legacy"
         private const val LEGACY_CHECK_IN_CHANNEL = "pulse_checkins_legacy"
-        const val CHANNEL_LISTENING = "pulse_listening"
         const val CHANNEL_BACKGROUND = "pulse_background"
         private const val GROUP_ALERTS = "pulse_group_alerts"
     }

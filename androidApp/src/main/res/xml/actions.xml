@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<actions xmlns:android="http://schemas.android.com/apk/res/android">
-    <action
-        android:name="com.pulselink.action.START_LISTENING"
-        android:label="Start PulseLink listening" />
-    <action
-        android:name="com.pulselink.action.SEND_CHECK_IN"
-        android:label="Send PulseLink check-in" />
-</actions>

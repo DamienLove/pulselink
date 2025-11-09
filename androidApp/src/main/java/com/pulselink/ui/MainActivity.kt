@@ -41,6 +41,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.pulselink.data.ads.AppOpenAdController
+import com.pulselink.assistant.AssistantShortcuts
 import com.pulselink.domain.model.Contact
 import com.pulselink.R
 import com.pulselink.ui.screens.BetaTesterListScreen
@@ -63,7 +64,6 @@ import com.pulselink.ui.theme.PulseLinkTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.LocationOn
@@ -108,7 +108,6 @@ class MainActivity : ComponentActivity() {
 
                 val requiredPermissions = remember {
                     buildList {
-                        add(Manifest.permission.RECORD_AUDIO)
                         add(Manifest.permission.SEND_SMS)
                         add(Manifest.permission.RECEIVE_SMS)
                         add(Manifest.permission.READ_CONTACTS)
@@ -121,7 +120,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                var hasMicrophonePermission by remember { mutableStateOf(hasMicrophone(context)) }
                 var pendingPermissionCheck by remember { mutableStateOf(false) }
 
                 val permissionLauncher = rememberLauncherForActivityResult(
@@ -182,7 +180,6 @@ class MainActivity : ComponentActivity() {
                         val missing = requiredPermissions.filter { perm ->
                             ContextCompat.checkSelfPermission(context, perm) != PackageManager.PERMISSION_GRANTED
                         }
-                        hasMicrophonePermission = hasMicrophone(context)
                         val dndGranted = notificationManager?.isNotificationPolicyAccessGranted == true
                         val sanitizedName = onboardingName.trim()
                         if (missing.isEmpty() && sanitizedName.isNotBlank() && dndGranted) {
@@ -206,14 +203,6 @@ class MainActivity : ComponentActivity() {
 
                 LaunchedEffect(state.showAds) {
                     appOpenAdController.updateAvailability(state.showAds)
-                }
-
-                LaunchedEffect(state.isListening, hasMicrophonePermission, state.onboardingComplete) {
-                    if (state.onboardingComplete && state.isListening && hasMicrophonePermission) {
-                        viewModel.ensureServiceRunning(context)
-                    } else {
-                        viewModel.stopService(context)
-                    }
                 }
 
                 NavHost(navController = navController, startDestination = "splash") {
@@ -259,7 +248,6 @@ class MainActivity : ComponentActivity() {
                                     viewModel.setOwnerName(sanitized)
                                 }
                                 onboardingNameDirty = false
-                                hasMicrophonePermission = hasMicrophone(context)
                                 viewModel.completeOnboarding()
                             }
                         }
@@ -267,8 +255,6 @@ class MainActivity : ComponentActivity() {
                         val smsGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED &&
                                     ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
-                        val micGranted =
-                            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
                         val locationGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                                     ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -303,12 +289,6 @@ class MainActivity : ComponentActivity() {
                                 manualHelp = if (!callLogGranted) {
                                     "Open Settings -> Apps -> PulseLink -> Permissions and allow Call logs so linked contacts can ring through."
                                 } else null
-                            ),
-                            OnboardingPermissionState(
-                                icon = Icons.Filled.Mic,
-                                title = "Microphone",
-                                description = "PulseLink listens for your safewords in the background.",
-                                granted = micGranted
                             ),
                             OnboardingPermissionState(
                                 icon = Icons.Filled.PowerSettingsNew,
@@ -349,7 +329,6 @@ class MainActivity : ComponentActivity() {
                                         if (ownerName != currentName) {
                                             viewModel.setOwnerName(currentName)
                                         }
-                                        hasMicrophonePermission = hasMicrophone(context)
                                         viewModel.completeOnboarding()
                                     }
                                 } else {
@@ -363,7 +342,7 @@ class MainActivity : ComponentActivity() {
                     composable("home") {
                         HomeScreen(
                             state = state,
-                            onToggleListening = viewModel::toggleListening,
+                            onAssistantShortcutsClick = { AssistantShortcuts.launchShortcutSettings(context) },
                             onTriggerEmergency = viewModel::triggerEmergency,
                             onSendCheckIn = viewModel::sendCheckIn,
                             onAddContact = viewModel::saveContact,
@@ -483,7 +462,7 @@ class MainActivity : ComponentActivity() {
                         SettingsScreen(
                             settings = state.settings,
                             hasDndAccess = hasDndAccess,
-                            onToggleListening = viewModel::toggleListening,
+                            onAssistantShortcuts = { AssistantShortcuts.launchShortcutSettings(context) },
                             onToggleIncludeLocation = viewModel::setIncludeLocation,
                             onRequestDndAccess = { openDndSettings(context) },
                             onToggleAutoAllowRemoteSoundChange = viewModel::setAutoAllowRemoteSoundChange,
@@ -570,10 +549,6 @@ class MainActivity : ComponentActivity() {
         callStateMonitor.cancel()
     }
 }
-
-private fun hasMicrophone(context: android.content.Context): Boolean =
-    ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
-        PackageManager.PERMISSION_GRANTED
 
 private fun placeCall(
     activity: MainActivity,
