@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -27,8 +28,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Call
@@ -111,6 +114,7 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
 
     var showAddDialog by remember { mutableStateOf(false) }
     var newContactName by remember { mutableStateOf(TextFieldValue()) }
@@ -149,6 +153,7 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
@@ -316,7 +321,7 @@ private fun HeaderSection(state: PulseLinkUiState, onToggleListening: () -> Unit
             Image(
                 painter = painterResource(id = R.drawable.ic_logo),
                 contentDescription = "PulseLink logo",
-                modifier = Modifier.size(132.dp)
+                modifier = Modifier.size(99.dp)
             )
             Text(
                 text = "PulseLink",
@@ -567,6 +572,7 @@ private fun ContactsList(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .heightIn(max = 400.dp)
                             .let { base ->
                                 if (canReorder) {
                                     base

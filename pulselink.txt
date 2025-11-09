@@ -100,8 +100,15 @@ Next Immediate actions:
 - Re-run end-to-end smoke tests (alerts, SMS flows, contact linking) once the UI changes land, then cut the next internal track build via the refreshed GitHub workflow.
 
 -- 2025-11-07 Update (Alpha baseline + signing assets) --
-- Declared `<uses-feature android.hardware.telephony android:required="false" />` so ChromeOS devices (and lint) treat SMS/phone capabilities as optional—resolves the Play Console install block encountered on Chromebooks.
+- Declared `<uses-feature android.hardware.telephony android:required="false" />` so ChromeOS devices (and lint) treat SMS/phone capabilities as optional-resolves the Play Console install block encountered on Chromebooks.
 - Fixed `NativeAdCard` to inflate `native_ad_view` into a `NativeAdView` container before binding, restoring padding/rounded corners on the Upgrade-to-Pro placement.
 - Added `docs/alpha-bugs.json` plus the `Publish Alpha Bug Baseline` workflow that turns each JSON entry into a GitHub issue. First run (workflow #2) created Issues #15 and #16 for the ChromeOS telephony flag + native ad layout regressions.
-- Granted the workflow `issues: write` scope via workflow-level `permissions` so it can open tickets using the default `GITHUB_TOKEN`—no PAT required. Trigger it from GitHub Actions (supports a `dry_run` boolean).
+- Granted the workflow `issues: write` scope via workflow-level `permissions` so it can open tickets using the default `GITHUB_TOKEN`-no PAT required. Trigger it from GitHub Actions (supports a `dry_run` boolean).
 - Dropped the new Play upload certificate (`upload_certificate.pem`) into the repo root. Use this PEM when Play requests proof of the active upload key while keeping the actual signing keystore (`upload-keystore.jks`) and passwords outside the repo. Always sign release artifacts with the legacy upload key before submitting the next build.
+
+-- 2025-11-09 Update (Home scroll + reliable overrides) --
+- Home screen now declares a shared `rememberScrollState()` and applies `verticalScroll` to the root `Column`, so the navigation tiles, quick actions, contact list, and ads remain reachable on compact phones.
+- The header logo shrank from 132.dp to 99.dp (75% scale) to reclaim vertical space without losing brand presence.
+- `ContactsList` now caps its internal `LazyColumn` height at 400.dp to avoid nested scroll conflicts while still allowing drag-to-reorder.
+- Remote action handling forces DND overrides for emergency tiers regardless of per-contact settings: `prepareForAlert()` always boosts audio for emergency/call reasons, and `playAttentionTone()` now requests bypass + loops tones for emergency tiers.
+- Emergency notifications explicitly call `AudioOverrideManager.playTone()` so receivers always hear the configured siren even if the notification channel sound was customized.

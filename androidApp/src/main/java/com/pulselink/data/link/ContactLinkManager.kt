@@ -556,20 +556,20 @@ class RemoteActionHandler @Inject constructor(
         contact: Contact,
         reason: PulseLinkMessage.AlertPrepareReason = PulseLinkMessage.AlertPrepareReason.ALERT
     ): Boolean {
-        val shouldOverride = contact.allowRemoteOverride || reason == PulseLinkMessage.AlertPrepareReason.CALL
+        val shouldOverride = contact.allowRemoteOverride ||
+            reason == PulseLinkMessage.AlertPrepareReason.CALL ||
+            reason == PulseLinkMessage.AlertPrepareReason.ALERT
         if (!shouldOverride) return false
-        return withContext(Dispatchers.Main) {
-            val applied = audioOverrideManager.overrideForAlert(true)
-            if (applied) {
-                val delay = when (reason) {
-                    PulseLinkMessage.AlertPrepareReason.CALL -> CALL_OVERRIDE_HOLD_MS
-                    PulseLinkMessage.AlertPrepareReason.MESSAGE -> MESSAGE_OVERRIDE_HOLD_MS
-                    PulseLinkMessage.AlertPrepareReason.ALERT -> DEFAULT_OVERRIDE_HOLD_MS
-                }
-                audioOverrideManager.scheduleRestore(delay)
+        val applied = audioOverrideManager.overrideForAlert(true)
+        if (applied) {
+            val delay = when (reason) {
+                PulseLinkMessage.AlertPrepareReason.CALL -> CALL_OVERRIDE_HOLD_MS
+                PulseLinkMessage.AlertPrepareReason.MESSAGE -> MESSAGE_OVERRIDE_HOLD_MS
+                PulseLinkMessage.AlertPrepareReason.ALERT -> DEFAULT_OVERRIDE_HOLD_MS
             }
-            applied
+            audioOverrideManager.scheduleRestore(delay)
         }
+        return applied
     }
 
     suspend fun routeRemoteAlert(contact: Contact, tier: EscalationTier) {
@@ -600,7 +600,10 @@ class RemoteActionHandler @Inject constructor(
         }
         val soundOption = soundCatalog.resolve(soundKey, category)
         val channel = notificationRegistrar.ensureAlertChannel(category, soundOption, profile)
-        val requestBypass = forceBypass || profile.breakThroughDnd || contact.allowRemoteOverride
+        val requestBypass = forceBypass ||
+            profile.breakThroughDnd ||
+            tier == EscalationTier.EMERGENCY ||
+            contact.allowRemoteOverride
         val overrideApplied = audioOverrideManager.overrideForAlert(requestBypass)
         val notificationBuilder = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_logo)
@@ -620,7 +623,7 @@ class RemoteActionHandler @Inject constructor(
         soundOption?.let {
             val soundUri = android.net.Uri.parse("android.resource://${context.packageName}/${it.resId}")
             notificationBuilder.setSound(soundUri)
-            audioOverrideManager.playTone(soundUri, looping = false)
+            audioOverrideManager.playTone(soundUri, looping = tier == EscalationTier.EMERGENCY)
         }
         val notification = notificationBuilder.build()
 
