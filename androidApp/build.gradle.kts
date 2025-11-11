@@ -1,3 +1,5 @@
+import java.io.File
+import java.util.Locale
 import java.util.Properties
 import org.gradle.api.Project
 
@@ -12,6 +14,19 @@ plugins {
 fun Project.optionalProperty(name: String): String? =
     if (hasProperty(name)) property(name)?.toString()?.takeIf { it.isNotBlank() } else null
 
+data class SigningSpec(
+    val storeFile: File?,
+    val storePassword: String?,
+    val keyAlias: String?,
+    val keyPassword: String?
+) {
+    val isConfigured: Boolean =
+        storeFile?.exists() == true &&
+            !storePassword.isNullOrBlank() &&
+            !keyAlias.isNullOrBlank() &&
+            !keyPassword.isNullOrBlank()
+}
+
 fun Properties.optional(key: String): String? =
     getProperty(key)?.takeIf { it.isNotBlank() }
 
@@ -24,29 +39,67 @@ val keystoreProperties = Properties().apply {
 
 val defaultKeystoreFile = rootProject.file("upload-keystore.jks")
 
-val signingStoreFilePath = project.optionalProperty("android.injected.signing.store.file")
-    ?: keystoreProperties.optional("storeFile")
-    ?: System.getenv("UPLOAD_KEYSTORE_PATH")
-    ?: defaultKeystoreFile.takeIf { it.exists() }?.absolutePath
+fun Project.signingEnvKey(base: String, flavor: String?): String {
+    val suffix = flavor?.uppercase(Locale.US)?.let { "_${it}" }.orEmpty()
+    val root = when (base) {
+        "storeFile" -> "UPLOAD_KEYSTORE_PATH"
+        "storePassword" -> "UPLOAD_KEYSTORE_PASSWORD"
+        "keyAlias" -> "UPLOAD_KEY_ALIAS"
+        "keyPassword" -> "UPLOAD_KEY_PASSWORD"
+        else -> error("Unknown signing field: $base")
+    }
+    return root + suffix
+}
 
-val signingStorePassword = project.optionalProperty("android.injected.signing.store.password")
-    ?: keystoreProperties.optional("storePassword")
-    ?: System.getenv("UPLOAD_KEYSTORE_PASSWORD")
+fun Project.resolveSigningValue(
+    base: String,
+    flavor: String?,
+    defaultSupplier: (() -> String?)? = null
+): String? {
+    val suffix = flavor?.lowercase(Locale.US)
+    val flavorSuffix = suffix?.let { ".$it" }.orEmpty()
+    val injectedBase = "android.injected.signing.$base"
+    return optionalProperty("$injectedBase$flavorSuffix")
+        ?: optionalProperty(injectedBase)
+        ?: optionalProperty("$base$flavorSuffix")
+        ?: optionalProperty(base)
+        ?: keystoreProperties.optional(listOfNotNull(suffix, base).joinToString("."))
+        ?: keystoreProperties.optional(base)
+        ?: System.getenv(signingEnvKey(base, flavor))
+        ?: System.getenv(signingEnvKey(base, null))
+        ?: defaultSupplier?.invoke()
+}
 
-val signingKeyAlias = project.optionalProperty("android.injected.signing.key.alias")
-    ?: keystoreProperties.optional("keyAlias")
-    ?: System.getenv("UPLOAD_KEY_ALIAS")
+fun Project.buildSigningSpec(flavor: String?): SigningSpec {
+    val storePath = resolveSigningValue("storeFile", flavor) {
+        if (flavor == null) defaultKeystoreFile.takeIf { it.exists() }?.absolutePath else null
+    }
+    return SigningSpec(
+        storeFile = storePath?.let { rootProject.file(it) },
+        storePassword = resolveSigningValue("storePassword", flavor),
+        keyAlias = resolveSigningValue("keyAlias", flavor),
+        keyPassword = resolveSigningValue("keyPassword", flavor)
+    )
+}
 
-val signingKeyPassword = project.optionalProperty("android.injected.signing.key.password")
-    ?: keystoreProperties.optional("keyPassword")
-    ?: System.getenv("UPLOAD_KEY_PASSWORD")
+fun com.android.build.api.dsl.SigningConfig.applySpec(
+    spec: SigningSpec,
+    label: String,
+    logger: org.gradle.api.logging.Logger
+) {
+    if (!spec.isConfigured) {
+        logger.warn("Signing configuration '$label' is incomplete; provide keystore credentials via keystore.properties, environment variables, or -P android.injected.signing.*")
+        return
+    }
+    storeFile = spec.storeFile
+    storePassword = spec.storePassword
+    keyAlias = spec.keyAlias
+    keyPassword = spec.keyPassword
+}
 
-val isSigningConfigured = listOf(
-    signingStoreFilePath,
-    signingStorePassword,
-    signingKeyAlias,
-    signingKeyPassword
-).all { !it.isNullOrBlank() }
+val releaseSigningSpec = project.buildSigningSpec(flavor = null)
+val freeSigningSpec = project.buildSigningSpec("free")
+val proSigningSpec = project.buildSigningSpec("pro")
 
 android {
     namespace = "com.pulselink"
@@ -56,15 +109,12 @@ android {
     flavorDimensions += "tier"
 
     signingConfigs {
-        create("release") {
-            if (isSigningConfigured) {
-                storeFile = rootProject.file(signingStoreFilePath!!)
-                storePassword = signingStorePassword!!
-                keyAlias = signingKeyAlias!!
-                keyPassword = signingKeyPassword!!
-            } else {
-                logger.warn("Release signing configuration is incomplete; provide keystore credentials via keystore.properties, environment variables, or -P android.injected.signing.*")
-            }
+        create("release") { applySpec(releaseSigningSpec, "release", logger) }
+        if (freeSigningSpec.isConfigured) {
+            create("freeRelease") { applySpec(freeSigningSpec, "freeRelease", logger) }
+        }
+        if (proSigningSpec.isConfigured) {
+            create("proRelease") { applySpec(proSigningSpec, "proRelease", logger) }
         }
     }
 
@@ -72,8 +122,8 @@ android {
         applicationId = "com.pulselink"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 6
+        versionName = "6.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -89,13 +139,14 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            if (isSigningConfigured) {
-                signingConfig = signingConfigs.getByName("release")
-            }
         }
     }
 
     productFlavors {
+        val releaseConfig = signingConfigs.getByName("release")
+        val freeReleaseConfig = signingConfigs.findByName("freeRelease")
+        val proReleaseConfig = signingConfigs.findByName("proRelease")
+
         create("free") {
             dimension = "tier"
             applicationId = "com.free.pulselink"
@@ -111,6 +162,14 @@ android {
             buildConfigField("String", "AD_UNIT_NATIVE_ADVANCED", "\"ca-app-pub-5327057757821609/2153424615\"")
             buildConfigField("String", "AD_UNIT_APP_OPEN", "\"ca-app-pub-5327057757821609/4210125201\"")
             resValue("string", "app_name", "PulseLink")
+            val targetSigning = when {
+                freeSigningSpec.isConfigured -> freeReleaseConfig
+                releaseSigningSpec.isConfigured -> releaseConfig
+                else -> null
+            }
+            if (targetSigning != null) {
+                signingConfig = targetSigning
+            }
         }
         create("pro") {
             dimension = "tier"
@@ -127,6 +186,14 @@ android {
             buildConfigField("String", "AD_UNIT_NATIVE_ADVANCED", "\"\"")
             buildConfigField("String", "AD_UNIT_APP_OPEN", "\"\"")
             resValue("string", "app_name", "PulseLink Pro")
+            val targetSigning = when {
+                proSigningSpec.isConfigured -> proReleaseConfig
+                releaseSigningSpec.isConfigured -> releaseConfig
+                else -> null
+            }
+            if (targetSigning != null) {
+                signingConfig = targetSigning
+            }
         }
     }
 
@@ -202,6 +269,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("com.google.android.gms:play-services-maps:18.2.0")
     implementation("com.google.android.gms:play-services-ads:22.6.0")
+    implementation("com.google.assistant.appactions:suggestions:1.0.0")
     implementation("com.google.android.play:integrity:1.5.0")
 
     implementation("com.google.dagger:hilt-android:2.51.1")

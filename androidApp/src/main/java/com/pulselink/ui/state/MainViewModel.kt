@@ -4,10 +4,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.util.Log
 import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pulselink.BuildConfig
+import com.pulselink.R
+import com.pulselink.data.alert.AlertDispatcher.AlertResult
 import com.pulselink.data.alert.SoundCatalog
 import com.pulselink.data.link.ContactLinkManager
 import com.pulselink.domain.model.Contact
@@ -16,16 +19,20 @@ import com.pulselink.domain.model.EscalationTier
 import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.domain.model.SoundCategory
 import com.pulselink.domain.repository.AlertRepository
+import com.pulselink.domain.repository.BlockedContactRepository
 import com.pulselink.domain.repository.ContactRepository
 import com.pulselink.domain.repository.MessageRepository
 import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.service.AlertRouter
 import com.pulselink.ui.screens.BugReportData
+import com.pulselink.ui.state.DndStatusMessage
+import com.pulselink.util.AudioOverrideManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -37,11 +44,13 @@ class MainViewModel @Inject constructor(
     private val alertRouter: AlertRouter,
     private val soundCatalog: SoundCatalog,
     private val linkManager: ContactLinkManager,
-    private val messageRepository: MessageRepository
+    private val messageRepository: MessageRepository,
+    private val blockedContactRepository: BlockedContactRepository
 ) : ViewModel() {
 
     private val dispatching = MutableStateFlow(false)
     private val lastMessage = MutableStateFlow<String?>(null)
+    private val dndStatus = MutableStateFlow<DndStatusMessage?>(null)
     private val emergencySounds = soundCatalog.emergencyOptions()
     private val checkInSounds = soundCatalog.checkInOptions()
 
@@ -50,7 +59,7 @@ class MainViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            combine(
+            val baseState = combine(
                 settingsRepository.settings,
                 contactRepository.observeContacts(),
                 alertRepository.observeRecent(10),
@@ -75,6 +84,9 @@ class MainViewModel @Inject constructor(
                     adsAvailable = adsAvailable,
                     onboardingComplete = normalizedSettings.onboardingComplete
                 )
+            }
+            combine(baseState, dndStatus) { state, dndStatusMessage ->
+                state.copy(dndStatus = dndStatusMessage)
             }.collect { state ->
                 _uiState.value = state
             }
@@ -96,6 +108,15 @@ class MainViewModel @Inject constructor(
 
     fun deleteContact(id: Long) {
         viewModelScope.launch {
+            val contact = contactRepository.getContact(id)
+            contact?.let {
+                blockedContactRepository.block(
+                    phoneNumber = it.phoneNumber,
+                    linkCode = it.linkCode,
+                    remoteDeviceId = it.remoteDeviceId,
+                    displayName = it.displayName
+                )
+            }
             contactRepository.delete(id)
             messageRepository.clear(id)
         }
@@ -132,6 +153,12 @@ class MainViewModel @Inject constructor(
     fun setAutoAllowRemoteSoundChange(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setAutoAllowRemoteSoundChange(enabled)
+        }
+    }
+
+    fun dismissAssistantHint() {
+        viewModelScope.launch {
+            settingsRepository.setAssistantShortcutsDismissed(true)
         }
     }
 
@@ -199,6 +226,12 @@ class MainViewModel @Inject constructor(
 
     fun setProUnlocked(enabled: Boolean) {
         viewModelScope.launch {
+            val current = settingsRepository.settings.first().proUnlocked
+            if (!enabled && current) {
+                Log.w("MainViewModel", "Pro downgrade attempt ignored")
+                return@launch
+            }
+            if (enabled == current) return@launch
             settingsRepository.setProUnlocked(enabled)
         }
     }
@@ -234,12 +267,13 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             dispatching.value = true
             lastMessage.value = phrase
-            alertRouter.dispatchManual(tier, phrase)
+            val result = alertRouter.dispatchManual(tier, phrase)
+            emitDndStatus(result)
             dispatching.value = false
         }
     }
 
-    fun createBugReportIntent(context: Context, bugReportData: BugReportData): Intent {
+    fun buildBugReportUri(context: Context, bugReportData: BugReportData): Uri {
         val packageManager = context.packageManager
         val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             packageManager.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0))
@@ -284,12 +318,22 @@ class MainViewModel @Inject constructor(
 
         val subjectSuffix = bugReportData.summary.ifBlank { "General issue" }
 
-        return Intent(Intent.ACTION_SENDTO).apply {
-            data = Uri.parse("mailto:")
-            putExtra(Intent.EXTRA_EMAIL, arrayOf("support@pulselink.app"))
-            putExtra(Intent.EXTRA_SUBJECT, "PulseLink Bug Report: $subjectSuffix")
-            putExtra(Intent.EXTRA_TEXT, formattedBody)
-        }
+        return Uri.parse(BUG_REPORT_PAGE_URL).buildUpon()
+            .appendQueryParameter("summary", bugReportData.summary)
+            .appendQueryParameter("steps", bugReportData.stepsToReproduce)
+            .appendQueryParameter("expected", bugReportData.expectedBehavior)
+            .appendQueryParameter("actual", bugReportData.actualBehavior)
+            .appendQueryParameter("frequency", bugReportData.frequency)
+            .appendQueryParameter("severity", bugReportData.severity)
+            .appendQueryParameter("reporter", bugReportData.userEmail)
+            .appendQueryParameter("version_name", versionName)
+            .appendQueryParameter("version_code", versionCode.toString())
+            .appendQueryParameter("build_flavor", if (BuildConfig.ADS_ENABLED) "free" else "pro")
+            .appendQueryParameter("device", "$manufacturer $model")
+            .appendQueryParameter("os_version", "Android $osVersion (API $apiLevel)")
+            .appendQueryParameter("summary_suffix", subjectSuffix)
+            .appendQueryParameter("body", formattedBody)
+            .build()
     }
 
     private fun ensureSoundDefaults(settings: com.pulselink.domain.model.PulseLinkSettings): com.pulselink.domain.model.PulseLinkSettings {
@@ -329,5 +373,30 @@ class MainViewModel @Inject constructor(
         object Ready : CallInitiationResult()
         object Timeout : CallInitiationResult()
         object Failure : CallInitiationResult()
+    }
+
+    fun clearDndStatusMessage() {
+        dndStatus.value = null
+    }
+
+    private fun emitDndStatus(result: AlertResult?) {
+        val overrideResult = result?.overrideResult ?: run {
+            dndStatus.value = null
+            return
+        }
+        val messageRes = when {
+            overrideResult.reason == AudioOverrideManager.OverrideResult.FailureReason.POLICY_PERMISSION_MISSING ->
+                R.string.audio_override_permission_missing
+            overrideResult.state == AudioOverrideManager.OverrideResult.State.PARTIAL ->
+                R.string.audio_override_partial
+            overrideResult.state == AudioOverrideManager.OverrideResult.State.FAILURE ->
+                R.string.audio_override_failed
+            else -> null
+        }
+        dndStatus.value = messageRes?.let { DndStatusMessage(it) }
+    }
+
+    companion object {
+        private const val BUG_REPORT_PAGE_URL = "https://DamienLove.github.io/PulseLink/bug-report/"
     }
 }

@@ -36,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.Mic
@@ -96,11 +97,11 @@ import org.burnoutcrew.reorderable.reorderable
 fun HomeScreen(
     state: PulseLinkUiState,
     onAssistantShortcutsClick: () -> Unit,
+    onDismissAssistantShortcuts: () -> Unit,
     onTriggerEmergency: () -> Unit,
     onSendCheckIn: () -> Unit,
     onAddContact: (Contact) -> Unit,
     onDeleteContact: (Long) -> Unit,
-    onToggleProMode: (Boolean) -> Unit,
     onContactSelected: (Long) -> Unit,
     onContactSettings: (Long) -> Unit,
     onSendLink: (Long) -> Unit,
@@ -159,7 +160,8 @@ fun HomeScreen(
         ) {
             HeaderSection(
                 state = state,
-                onOpenAssistantShortcuts = onAssistantShortcutsClick
+                onOpenAssistantShortcuts = onAssistantShortcutsClick,
+                onDismissAssistantShortcuts = onDismissAssistantShortcuts
             )
             NavigationRow(
                 onAlertsClick = onAlertsClick,
@@ -208,7 +210,7 @@ fun HomeScreen(
                 onReorderContacts = onReorderContacts
             )
             if (state.adsAvailable) {
-                UpgradeCard(isPro = state.isProUser, onTogglePro = onToggleProMode)
+                UpgradeCard(isPro = state.isProUser, onUpgradeClick = onUpgradeClick)
             }
             if (state.showAds) {
                 NativeAdCard(enabled = true)
@@ -310,7 +312,8 @@ fun HomeScreen(
 @Composable
 private fun HeaderSection(
     state: PulseLinkUiState,
-    onOpenAssistantShortcuts: () -> Unit
+    onOpenAssistantShortcuts: () -> Unit,
+    onDismissAssistantShortcuts: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -337,17 +340,21 @@ private fun HeaderSection(
             )
         }
 
-        AssistantShortcutHint(
-            modifier = Modifier.align(Alignment.TopEnd),
-            onClick = onOpenAssistantShortcuts
-        )
+        if (!state.settings.assistantShortcutsDismissed) {
+            AssistantShortcutHint(
+                modifier = Modifier.align(Alignment.TopEnd),
+                onClick = onOpenAssistantShortcuts,
+                onDismiss = onDismissAssistantShortcuts
+            )
+        }
     }
 }
 
 @Composable
 private fun AssistantShortcutHint(
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDismiss: () -> Unit
 ) {
     Surface(
         modifier = modifier,
@@ -357,36 +364,50 @@ private fun AssistantShortcutHint(
     ) {
         Row(
             modifier = Modifier
-                .clickable(onClick = onClick)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Icon(
-                imageVector = Icons.Filled.Mic,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onClick),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.assistant_hint_title),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                Icon(
+                    imageVector = Icons.Filled.Mic,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.assistant_hint_title),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = stringResource(R.string.assistant_hint_subtitle),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
                 Text(
-                    text = stringResource(R.string.assistant_hint_subtitle),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    text = stringResource(R.string.assistant_setup_action),
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
-            Text(
-                text = stringResource(R.string.assistant_setup_action),
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.primary
-            )
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = stringResource(R.string.assistant_hint_dismiss),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
         }
     }
 }
@@ -806,7 +827,7 @@ private fun LinkActionButtons(
 }
 
 @Composable
-private fun UpgradeCard(isPro: Boolean, onTogglePro: (Boolean) -> Unit) {
+private fun UpgradeCard(isPro: Boolean, onUpgradeClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -822,23 +843,51 @@ private fun UpgradeCard(isPro: Boolean, onTogglePro: (Boolean) -> Unit) {
             )
             Text(
                 text = if (isPro) {
-                    "Pro mode is active on this device."
+                    "Pro mode is active — enjoy ad-free safety tools with priority automations."
                 } else {
-                    "Unlock Pro to remove ads and enable premium automations."
+                    "Unlock Pro to remove ads, prioritize alerts, and enable the full remote toolkit."
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Button(
-                onClick = { onTogglePro(!isPro) },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isPro) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
-                    contentColor = if (isPro) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onPrimary
-                ),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Text(text = if (isPro) "Disable Pro mode" else "Enable Pro mode")
+            if (isPro) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Text(
+                        text = "Lifetime access activated",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Button(
+                    onClick = {},
+                    enabled = false,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        disabledContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        disabledContentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                ) {
+                    Text(text = "Pro active")
+                }
+            } else {
+                Button(
+                    onClick = onUpgradeClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text(text = "Learn more")
+                }
             }
         }
     }

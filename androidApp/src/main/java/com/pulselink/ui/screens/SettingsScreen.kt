@@ -1,5 +1,6 @@
 package com.pulselink.ui.screens
 
+import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -87,14 +88,24 @@ fun SettingsScreen(
                 checked = settings.includeLocation,
                 onCheckedChange = onToggleIncludeLocation
             )
-            SettingsActionCard(
-                title = "Do Not Disturb override",
-                subtitle = if (hasDndAccess) {
-                    "PulseLink can break through Do Not Disturb for critical alerts."
+            val dndSubtitle = if (hasDndAccess) {
+                val base = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                    stringResource(R.string.dnd_override_android15_note)
                 } else {
-                    "Grant access so PulseLink can break through Do Not Disturb during emergencies."
+                    stringResource(R.string.dnd_override_ready)
+                }
+                "$base\n${stringResource(R.string.dnd_override_troubleshooting)}"
+            } else {
+                stringResource(R.string.dnd_override_permission_prompt)
+            }
+            SettingsActionCard(
+                title = stringResource(R.string.dnd_override_title),
+                subtitle = dndSubtitle,
+                actionLabel = if (hasDndAccess) {
+                    stringResource(R.string.dnd_override_action_manage)
+                } else {
+                    stringResource(R.string.dnd_override_action_allow)
                 },
-                actionLabel = if (hasDndAccess) "Manage" else "Allow",
                 onAction = onRequestDndAccess
             )
             SettingsToggleCard(

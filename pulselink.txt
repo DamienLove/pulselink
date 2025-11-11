@@ -117,3 +117,18 @@ Next Immediate actions:
 - Added Google Assistant voice shortcuts ("Hey Google, PulseLink emergency/check-in") via AssistantShortcutActivity and dynamic shortcuts.
 - Settings/Home now guide reviewers to enable the Assistant shortcut, and the manifest drops RECORD_AUDIO/foreground-service permissions.
 - Rebuilt free (com.free.pulselink) and pro bundles with the updated signing keys.
+
+
+\n-- 2025-11-09 Update --\n- Added remote alert automation so pressing Emergency also sends AlertPrepare/RemoteAlert control SMS to linked contacts, ensuring their devices arm the siren even before the human-readable SMS lands.\n- AudioOverrideManager now manages STREAM_ALARM alongside ring/notification streams, requests transient audio focus, and surfaces structured status (success/partial/missing permission) to the UI.\n- RemoteActionHandler and ContactLinkManager propagate the override status and insert short delays so Samsung devices apply volume changes before sirens fire.\n- Settings and onboarding flows now guide users through DND changes (Android 15+ channel bypass) and request CALL_PHONE permission up front to avoid surprises during the first escalation call.\n- release-aab GitHub workflow uploads both free (com.free.pulselink) and pro (com.pulselink.pro) bundles automatically to the selected Play track.\n
+
+-- 2025-11-09 Update --
+- Added remote alert automation so pressing Emergency also sends AlertPrepare/RemoteAlert control SMS to linked contacts, ensuring their devices arm the siren even before the human-readable SMS lands.
+- AudioOverrideManager now manages STREAM_ALARM alongside ring/notification streams, requests transient audio focus, and surfaces structured status (success/partial/missing permission) to the UI.
+- RemoteActionHandler and ContactLinkManager propagate the override status and insert short delays so Samsung devices apply volume changes before sirens fire.
+- Settings and onboarding flows now guide users through DND changes (Android 15+ channel bypass) and request CALL_PHONE permission up front to avoid surprises during the first escalation call.
+- release-aab GitHub workflow uploads both free (com.free.pulselink) and pro (com.pulselink.pro) bundles automatically to the selected Play track.
+- In-app bug reporting now opens the GitHub Pages portal (auto-prefilled) so submissions file directly into Issues.
+
+-- 2025-11-11 Update (DND policy + Assistant hint) --
+- AudioOverrideManager now adheres to Android 15's priority-based DND rules: we expand the NotificationManager.Policy to allow alarms/media/calls, request PRIORITY instead of ALL on V-IC devices, and log when OEM policies still limit the override. Legacy devices continue to flip the full interruption filter, so sirens break through again without Play warnings.
+- Home screen Assistant hint can be dismissed via the new close affordance; the dismissal flag is persisted in DataStore (PulseLinkSettings.assistantShortcutsDismissed) so reviewers who don't have Google Assistant (e.g., Gemini-only devices) aren't stuck with a dead card. Settings still expose the shortcut launcher for manual enablement.

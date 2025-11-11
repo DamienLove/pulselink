@@ -1,5 +1,6 @@
 package com.pulselink.ui.state
 
+import androidx.annotation.StringRes
 import com.pulselink.domain.model.AlertEvent
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.PulseLinkSettings
@@ -16,5 +17,10 @@ data class PulseLinkUiState(
     val showAds: Boolean = false,
     val isProUser: Boolean = true,
     val adsAvailable: Boolean = false,
-    val onboardingComplete: Boolean = false
+    val onboardingComplete: Boolean = false,
+    val dndStatus: DndStatusMessage? = null
+)
+
+data class DndStatusMessage(
+    @StringRes val messageResId: Int
 )

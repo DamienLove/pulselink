@@ -16,7 +16,8 @@ on:
 
 env:
   JAVA_VERSION: "17"
-  AAB_PATH: androidApp/build/outputs/bundle/freeRelease/androidApp-free-release.aab
+  FREE_AAB_PATH: androidApp/build/outputs/bundle/freeRelease/androidApp-free-release.aab
+  PRO_AAB_PATH: androidApp/build/outputs/bundle/proRelease/androidApp-pro-release.aab
 
 jobs:
   build-and-deploy:
@@ -49,12 +50,21 @@ jobs:
         run: |
           ./gradlew clean androidApp:bundleFreeRelease androidApp:bundleProRelease
 
-      - name: Upload bundle to Google Play
+      - name: Upload Free flavor to Google Play
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: com.pulselink.free
-          releaseFiles: ${{ env.AAB_PATH }}
+          packageName: com.free.pulselink
+          releaseFiles: ${{ env.FREE_AAB_PATH }}
+          track: ${{ github.event.inputs.track }}
+          status: completed
+
+      - name: Upload Pro flavor to Google Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.pulselink.pro
+          releaseFiles: ${{ env.PRO_AAB_PATH }}
           track: ${{ github.event.inputs.track }}
           status: completed
 

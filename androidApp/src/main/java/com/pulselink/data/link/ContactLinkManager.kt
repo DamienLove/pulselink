@@ -22,6 +22,7 @@ import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.domain.model.MessageDirection
 import com.pulselink.domain.model.SoundCategory
+import com.pulselink.domain.repository.BlockedContactRepository
 import com.pulselink.domain.repository.ContactRepository
 import com.pulselink.domain.repository.MessageRepository
 import com.pulselink.domain.repository.SettingsRepository
@@ -34,6 +35,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -49,6 +51,7 @@ class ContactLinkManager @Inject constructor(
     private val smsSender: SmsSender,
     private val settingsRepository: SettingsRepository,
     private val contactRepository: ContactRepository,
+    private val blockedContactRepository: BlockedContactRepository,
     private val remoteActionHandler: RemoteActionHandler,
     private val messageRepository: MessageRepository,
     private val callStateMonitor: CallStateMonitor
@@ -144,7 +147,19 @@ class ContactLinkManager @Inject constructor(
         }
     }
 
+    private suspend fun isSenderBlocked(
+        phoneNumber: String?,
+        linkCode: String?,
+        remoteDeviceId: String?
+    ): Boolean {
+        return blockedContactRepository.isBlocked(phoneNumber, linkCode, remoteDeviceId)
+    }
+
     private suspend fun handleLinkRequest(message: PulseLinkMessage.LinkRequest, fromPhone: String) {
+        if (isSenderBlocked(fromPhone, message.code, message.senderId)) {
+            Log.i(TAG, "Ignoring link request from blocked sender: $fromPhone")
+            return
+        }
         val existing = contactRepository.getByLinkCode(message.code)
             ?: findContactByPhoneFlexible(fromPhone)
         val base = existing ?: Contact(
@@ -165,6 +180,10 @@ class ContactLinkManager @Inject constructor(
     }
 
     private suspend fun handleLinkAccept(message: PulseLinkMessage.LinkAccept, fromPhone: String) {
+        if (isSenderBlocked(fromPhone, message.code, message.senderId)) {
+            Log.i(TAG, "Ignoring link accept from blocked sender: $fromPhone")
+            return
+        }
         val base = contactRepository.getByLinkCode(message.code) ?: findContactByPhoneFlexible(fromPhone)
         base?.let {
             val allowOverride = if (it.linkStatus == LinkStatus.LINKED) {
@@ -198,7 +217,13 @@ class ContactLinkManager @Inject constructor(
 
     private suspend fun handleRemoteAlert(message: PulseLinkMessage.RemoteAlert) {
         val contact = contactRepository.getByLinkCode(message.code) ?: return
-        remoteActionHandler.prepareForAlert(contact)
+        val overrideResult = remoteActionHandler.prepareForAlert(contact)
+        if (!overrideResult.success) {
+            Log.w(
+                TAG,
+                "Remote emergency override limited for ${contact.displayName} reason=${overrideResult.reason} message=${overrideResult.message}"
+            )
+        }
         remoteActionHandler.routeRemoteAlert(contact, message.tier)
         if (message.tier == EscalationTier.EMERGENCY) {
             val title = context.getString(R.string.emergency_alert_title, contact.displayName)
@@ -216,9 +241,14 @@ class ContactLinkManager @Inject constructor(
 
     private suspend fun handleAlertPrepare(message: PulseLinkMessage.AlertPrepare) {
         val contact = contactRepository.getByLinkCode(message.code) ?: return
-        val overrideApplied = remoteActionHandler.prepareForAlert(contact, message.reason)
+        val overrideResult = remoteActionHandler.prepareForAlert(contact, message.reason)
+        val overrideApplied = overrideResult.state != AudioOverrideManager.OverrideResult.State.FAILURE &&
+            overrideResult.state != AudioOverrideManager.OverrideResult.State.SKIPPED
         if (!overrideApplied) {
-            Log.w(TAG, "Unable to apply remote override for contact ${contact.displayName}")
+            Log.w(
+                TAG,
+                "Unable to apply remote override for contact ${contact.displayName} reason=${overrideResult.reason} message=${overrideResult.message}"
+            )
         }
         val deviceId = settingsRepository.ensureDeviceId()
         val response = SmsCodec.encodeAlertReady(deviceId, message.code, overrideApplied)
@@ -278,6 +308,15 @@ class ContactLinkManager @Inject constructor(
         message: PulseLinkMessage.ManualMessage,
         fromPhone: String
     ): Contact? = withContext(Dispatchers.IO) {
+        if (isSenderBlocked(fromPhone, message.code, message.senderId)) {
+            val displayName = when {
+                fromPhone.isNotBlank() -> fromPhone
+                message.senderId.isNotBlank() -> message.senderId
+                else -> context.getString(R.string.app_name)
+            }
+            notifyBlockedAttempt(displayName)
+            return@withContext null
+        }
         val initial = contactRepository.getByLinkCode(message.code)
             ?: findContactByPhoneFlexible(fromPhone)
             ?: run {
@@ -343,6 +382,18 @@ class ContactLinkManager @Inject constructor(
         notificationManager.notify((contact.id.hashCode() and 0xFFFF) + 1000, notification)
     }
 
+    private fun notifyBlockedAttempt(name: String) {
+        ensureChannel()
+        val safeName = name.ifBlank { context.getString(R.string.app_name) }
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setContentTitle(context.getString(R.string.blocked_contact_attempt_title))
+            .setContentText(context.getString(R.string.blocked_contact_attempt_body, safeName))
+            .setSmallIcon(R.drawable.ic_logo)
+            .setAutoCancel(true)
+            .build()
+        notificationManager.notify((safeName.hashCode() and 0xFFFF) + 4000, notification)
+    }
+
     private fun ensureChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -391,7 +442,11 @@ class ContactLinkManager @Inject constructor(
         }
         return try {
             val ready = if (contact.linkStatus == LinkStatus.LINKED) {
-                requestRemotePrepare(contact, EscalationTier.CHECK_IN)
+                requestRemotePrepare(
+                    contact,
+                    EscalationTier.CHECK_IN,
+                    reason = PulseLinkMessage.AlertPrepareReason.MESSAGE
+                )
             } else {
                 false
             }
@@ -422,7 +477,7 @@ class ContactLinkManager @Inject constructor(
         tier: EscalationTier,
         reason: PulseLinkMessage.AlertPrepareReason = PulseLinkMessage.AlertPrepareReason.ALERT
     ): Boolean {
-        if (!contact.allowRemoteOverride && reason != PulseLinkMessage.AlertPrepareReason.CALL) return true
+        if (!contact.allowRemoteOverride && reason == PulseLinkMessage.AlertPrepareReason.MESSAGE) return true
         val code = contact.linkCode ?: return false
         alertHandshake.remove(code)?.cancel()
         val deviceId = settingsRepository.ensureDeviceId()
@@ -499,6 +554,28 @@ class ContactLinkManager @Inject constructor(
         }
     }
 
+    suspend fun triggerRemoteAlert(contact: Contact, tier: EscalationTier): RemoteAlertResult {
+        if (contact.linkStatus != LinkStatus.LINKED || contact.linkCode.isNullOrBlank()) {
+            return RemoteAlertResult(contact.id, contact.displayName, RemoteAlertStatus.NOT_LINKED, tier)
+        }
+        val deviceId = settingsRepository.ensureDeviceId()
+        val code = contact.linkCode
+        val preparePayload = SmsCodec.encodeAlertPrepare(
+            deviceId,
+            code,
+            tier,
+            PulseLinkMessage.AlertPrepareReason.ALERT
+        )
+        smsSender.sendSms(contact.phoneNumber, preparePayload, awaitResult = false)
+        val alertPayload = SmsCodec.encodeRemoteAlert(deviceId, code, tier)
+        val alertSent = smsSender.sendSms(contact.phoneNumber, alertPayload, awaitResult = false)
+        return if (alertSent) {
+            RemoteAlertResult(contact.id, contact.displayName, RemoteAlertStatus.SUCCESS, tier)
+        } else {
+            RemoteAlertResult(contact.id, contact.displayName, RemoteAlertStatus.SMS_FAILED, tier)
+        }
+    }
+
     companion object {
         private const val TAG = "ContactLinkManager"
         private const val CHANNEL_ID = "pulselink_link_channel"
@@ -519,15 +596,17 @@ private fun Contact.resolveLinkState(message: PulseLinkMessage.ManualMessage): C
         updated = updated.copy(remoteDeviceId = message.senderId)
         needsUpdate = true
     }
-    if (updated.linkStatus != LinkStatus.LINKED) {
-        updated = updated.copy(
-            linkStatus = LinkStatus.LINKED,
-            pendingApproval = false
-        )
-        needsUpdate = true
-    }
     return if (needsUpdate) updated else this
 }
+
+data class RemoteAlertResult(
+    val contactId: Long,
+    val contactName: String,
+    val status: RemoteAlertStatus,
+    val tier: EscalationTier
+)
+
+enum class RemoteAlertStatus { SUCCESS, NOT_LINKED, SMS_FAILED }
 
 private fun normalizePhone(input: String): String {
     if (input.isBlank()) return ""
@@ -555,14 +634,27 @@ class RemoteActionHandler @Inject constructor(
     suspend fun prepareForAlert(
         contact: Contact,
         reason: PulseLinkMessage.AlertPrepareReason = PulseLinkMessage.AlertPrepareReason.ALERT
-    ): Boolean {
+    ): AudioOverrideManager.OverrideResult {
         val shouldOverride = contact.allowRemoteOverride ||
             reason == PulseLinkMessage.AlertPrepareReason.CALL ||
             reason == PulseLinkMessage.AlertPrepareReason.ALERT
-        if (!shouldOverride) return false
+        if (!shouldOverride) return AudioOverrideManager.OverrideResult.skipped()
         return withContext(Dispatchers.Main) {
-            val applied = audioOverrideManager.overrideForAlert(true)
-            if (applied) {
+            Log.d(
+                TAG,
+                "prepareForAlert contact=${contact.displayName} reason=$reason allowRemote=${contact.allowRemoteOverride}"
+            )
+            val result = runCatching { audioOverrideManager.overrideForAlert(true) }
+                .onFailure { error -> Log.e(TAG, "Remote override failed", error) }
+                .getOrElse {
+                    AudioOverrideManager.OverrideResult.failure(
+                        AudioOverrideManager.OverrideResult.FailureReason.UNKNOWN,
+                        it.message
+                    )
+                }
+            if (result.state != AudioOverrideManager.OverrideResult.State.FAILURE &&
+                result.state != AudioOverrideManager.OverrideResult.State.SKIPPED
+            ) {
                 val delay = when (reason) {
                     PulseLinkMessage.AlertPrepareReason.CALL -> CALL_OVERRIDE_HOLD_MS
                     PulseLinkMessage.AlertPrepareReason.MESSAGE -> MESSAGE_OVERRIDE_HOLD_MS
@@ -570,7 +662,7 @@ class RemoteActionHandler @Inject constructor(
                 }
                 audioOverrideManager.scheduleRestore(delay)
             }
-            applied
+            result
         }
     }
 
@@ -606,8 +698,17 @@ class RemoteActionHandler @Inject constructor(
             profile.breakThroughDnd ||
             tier == EscalationTier.EMERGENCY ||
             contact.allowRemoteOverride
-        val overrideApplied = withContext(Dispatchers.Main) {
-            audioOverrideManager.overrideForAlert(requestBypass)
+        val toneProfile = if (tier == EscalationTier.EMERGENCY) {
+            AudioOverrideManager.ToneProfile.Emergency
+        } else {
+            AudioOverrideManager.ToneProfile.CheckIn
+        }
+        val overrideResult = if (requestBypass) {
+            withContext(Dispatchers.Main) {
+                audioOverrideManager.overrideForAlert(true)
+            }
+        } else {
+            AudioOverrideManager.OverrideResult.skipped()
         }
         val notificationBuilder = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_logo)
@@ -627,13 +728,18 @@ class RemoteActionHandler @Inject constructor(
         soundOption?.let {
             val soundUri = android.net.Uri.parse("android.resource://${context.packageName}/${it.resId}")
             notificationBuilder.setSound(soundUri)
-            audioOverrideManager.playTone(soundUri, looping = tier == EscalationTier.EMERGENCY)
+            if (overrideResult.state != AudioOverrideManager.OverrideResult.State.SKIPPED) {
+                delay(AUDIO_PRIME_DELAY_MS)
+            }
+            audioOverrideManager.playTone(soundUri, profile = toneProfile)
         }
         val notification = notificationBuilder.build()
 
         NotificationManagerCompat.from(context).notify(notificationId, notification)
 
-        if (overrideApplied) {
+        if (overrideResult.state != AudioOverrideManager.OverrideResult.State.FAILURE &&
+            overrideResult.state != AudioOverrideManager.OverrideResult.State.SKIPPED
+        ) {
             audioOverrideManager.scheduleRestore(overrideHoldMs)
         }
     }
@@ -644,12 +750,23 @@ class RemoteActionHandler @Inject constructor(
         val soundKey = contact.emergencySoundKey ?: profile.soundKey
         val soundOption = soundCatalog.resolve(soundKey, SoundCategory.SIREN)
         val channel = notificationRegistrar.ensureAlertChannel(SoundCategory.SIREN, soundOption, profile)
-        val overrideApplied = audioOverrideManager.overrideForAlert(true)
+        val overrideResult = audioOverrideManager.overrideForAlert(true)
+        if (!overrideResult.success) {
+            Log.w(
+                TAG,
+                "Incoming call override limited state=${overrideResult.state} reason=${overrideResult.reason} message=${overrideResult.message}"
+            )
+        } else {
+            Log.d(TAG, "Incoming call override applied for ${contact.displayName}")
+        }
         val soundUri = soundOption?.let {
             Uri.parse("android.resource://${context.packageName}/${it.resId}")
         }
         if (soundUri != null) {
-            audioOverrideManager.playTone(soundUri, looping = true)
+            if (overrideResult.state != AudioOverrideManager.OverrideResult.State.SKIPPED) {
+                delay(AUDIO_PRIME_DELAY_MS)
+            }
+            audioOverrideManager.playTone(soundUri, profile = AudioOverrideManager.ToneProfile.IncomingCall)
         }
         val title = context.getString(R.string.incoming_call_alert_title, contact.displayName)
         val body = context.getString(R.string.incoming_call_detected, contact.displayName)
@@ -669,7 +786,9 @@ class RemoteActionHandler @Inject constructor(
             .build()
         NotificationManagerCompat.from(context)
             .notify((contact.id.hashCode() and 0xFFFF) + 6000, notification)
-        if (overrideApplied) {
+        if (overrideResult.state != AudioOverrideManager.OverrideResult.State.FAILURE &&
+            overrideResult.state != AudioOverrideManager.OverrideResult.State.SKIPPED
+        ) {
             audioOverrideManager.scheduleRestore(CALL_OVERRIDE_HOLD_MS)
         }
     }
@@ -703,5 +822,7 @@ class RemoteActionHandler @Inject constructor(
         private const val DEFAULT_OVERRIDE_HOLD_MS = 120_000L
         private const val MESSAGE_OVERRIDE_HOLD_MS = 90_000L
         private const val CALL_OVERRIDE_HOLD_MS = 180_000L
+        private const val AUDIO_PRIME_DELAY_MS = 90L
+        private const val TAG = "RemoteActionHandler"
     }
 }

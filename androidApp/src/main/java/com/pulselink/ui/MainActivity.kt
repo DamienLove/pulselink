@@ -105,11 +105,18 @@ class MainActivity : ComponentActivity() {
                         onboardingName = ownerName
                     }
                 }
+                LaunchedEffect(state.dndStatus) {
+                    state.dndStatus?.let { status ->
+                        Toast.makeText(context, context.getString(status.messageResId), Toast.LENGTH_LONG).show()
+                        viewModel.clearDndStatusMessage()
+                    }
+                }
 
                 val requiredPermissions = remember {
                     buildList {
                         add(Manifest.permission.SEND_SMS)
                         add(Manifest.permission.RECEIVE_SMS)
+                        add(Manifest.permission.CALL_PHONE)
                         add(Manifest.permission.READ_CONTACTS)
                         add(Manifest.permission.READ_CALL_LOG)
                         add(Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -255,6 +262,8 @@ class MainActivity : ComponentActivity() {
                         val smsGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED &&
                                     ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+                        val callPermissionGranted =
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
                         val locationGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                                     ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -268,9 +277,9 @@ class MainActivity : ComponentActivity() {
                                 icon = Icons.Filled.Call,
                                 title = "SMS & Call",
                                 description = "Allow PulseLink to send emergency messages and place calls.",
-                                granted = smsGranted,
-                                manualHelp = if (!smsGranted) {
-                                    "If SMS stays disabled: open Settings -> Apps -> PulseLink -> Permissions, tap SMS, open the 3-dot menu, choose \"Allow disallowed permissions\", confirm with fingerprint or PIN, then switch SMS to Allow."
+                                granted = smsGranted && callPermissionGranted,
+                                manualHelp = if (!smsGranted || !callPermissionGranted) {
+                                    "If SMS or Call stays disabled: open Settings -> Apps -> PulseLink -> Permissions, tap SMS and Phone, open the 3-dot menu, choose \"Allow disallowed permissions\", confirm with fingerprint or PIN, then switch both to Allow."
                                 } else null
                             ),
                             OnboardingPermissionState(
@@ -343,11 +352,11 @@ class MainActivity : ComponentActivity() {
                         HomeScreen(
                             state = state,
                             onAssistantShortcutsClick = { AssistantShortcuts.launchShortcutSettings(context) },
+                            onDismissAssistantShortcuts = viewModel::dismissAssistantHint,
                             onTriggerEmergency = viewModel::triggerEmergency,
                             onSendCheckIn = viewModel::sendCheckIn,
                             onAddContact = viewModel::saveContact,
                             onDeleteContact = viewModel::deleteContact,
-                            onToggleProMode = viewModel::setProUnlocked,
                             onContactSelected = { contactId -> navController.navigate("contact/$contactId") },
                             onContactSettings = { contactId -> navController.navigate("contact/$contactId/settings") },
                             onSendLink = viewModel::sendLinkRequest,
@@ -482,34 +491,22 @@ class MainActivity : ComponentActivity() {
                                 navController.popBackStack()
                             },
                             onSubmit = { report ->
-                                val intent = viewModel.createBugReportIntent(context, report)
-                                val resolved = intent.resolveActivity(context.packageManager)
-                                if (resolved != null) {
-                                    try {
-                                        startActivity(
-                                            Intent.createChooser(
-                                                intent,
-                                                activity.getString(R.string.bug_report_title)
-                                            )
-                                        )
-                                        Toast.makeText(
-                                            context,
-                                            activity.getString(R.string.bug_report_success),
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                        bugReportDraft = BugReportData()
-                                        navController.popBackStack()
-                                    } catch (error: ActivityNotFoundException) {
-                                        Toast.makeText(
-                                            context,
-                                            activity.getString(R.string.bug_report_no_email_app),
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                } else {
+                                val bugUri = viewModel.buildBugReportUri(context, report)
+                                val viewIntent = Intent(Intent.ACTION_VIEW, bugUri)
+                                runCatching {
+                                    startActivity(viewIntent)
+                                }.onSuccess {
                                     Toast.makeText(
                                         context,
-                                        activity.getString(R.string.bug_report_no_email_app),
+                                        activity.getString(R.string.bug_report_success),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    bugReportDraft = BugReportData()
+                                    navController.popBackStack()
+                                }.onFailure {
+                                    Toast.makeText(
+                                        context,
+                                        activity.getString(R.string.bug_report_portal_unavailable),
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }
@@ -526,7 +523,7 @@ class MainActivity : ComponentActivity() {
                     composable("upgrade") {
                         UpgradeProScreen(
                             isPro = state.isProUser,
-                            onTogglePro = { viewModel.setProUnlocked(it) },
+                            onUpgradeClick = { viewModel.setProUnlocked(true) },
                             onBack = { navController.popBackStack() }
                         )
                     }

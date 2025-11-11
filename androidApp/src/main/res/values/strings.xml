@@ -36,7 +36,7 @@
     <string name="ping_received_body">They are checking in with you.</string>
     <string name="manual_message_title">%1$s sent a message</string>
     <string name="incoming_call_alert_title">%1$s is trying to reach you</string>
-    <string name="incoming_call_alert_body">PulseLink is overriding Do Not Disturb so you don\'t miss their call.</string>
+    <string name="incoming_call_alert_body">PulseLink is overriding Do Not Disturb so you don\'t miss their call. If you still can\'t hear it, confirm the Emergency Alerts notification channel can bypass DND.</string>
     <string name="incoming_call_detected">Emergency call from %1$s</string>
     <string name="channel_manual_messages">PulseLink Messages</string>
     <string name="permission_microphone">PulseLink needs microphone access for hotword detection.</string>
@@ -78,9 +78,10 @@
     <string name="bug_report_contact_label">Your Email (Optional)</string>
     <string name="bug_report_contact_hint">For follow-up questions</string>
     <string name="bug_report_submit">Send Bug Report</string>
-    <string name="bug_report_success">Bug report sent successfully</string>
-    <string name="bug_report_no_email_app">No email app found. Please install an email app.</string>
+    <string name="bug_report_success">Bug report portal opened. Finish submission on GitHub.</string>
+    <string name="bug_report_portal_unavailable">Unable to open the bug portal. Install or enable a browser and try again.</string>
     <string name="bug_report_fields_required">Please fill in the summary and description fields</string>
+    <string name="bug_report_submission_hint">Submitting opens the PulseLink GitHub portal so you can review and file the issue.</string>
     <string name="beta_tester_list_title">Beta Testers</string>
     <string name="beta_tester_status">Beta Tester Status</string>
     <string name="beta_tester_enabled">You are a beta tester</string>
@@ -88,7 +89,7 @@
     <string name="settings_report_bug">Report a Bug</string>
     <string name="settings_beta_testers">Beta Testers</string>
     <string name="emergency_alert_title">%1$s triggered an emergency</string>
-    <string name="emergency_alert_body">PulseLink is overriding Do Not Disturb and playing the emergency tone so you can respond immediately.</string>
+    <string name="emergency_alert_body">PulseLink is overriding Do Not Disturb and playing the emergency tone so you can respond immediately. If the siren stays silent, open Settings → Apps → PulseLink → Notifications and re-enable bypass.</string>
     <string name="assistant_trigger_emergency">Emergency alert sent via Google Assistant.</string>
     <string name="assistant_trigger_check_in">Check-in sent via Google Assistant.</string>
     <string name="assistant_setup_title">Enable Google Assistant voice shortcuts</string>
@@ -99,6 +100,22 @@
     <string name="assistant_shortcut_check_in_short">PulseLink check-in</string>
     <string name="assistant_shortcut_check_in_long">Send a PulseLink check-in</string>
     <string name="assistant_hint_title">Google Assistant</string>
-    <string name="assistant_hint_subtitle">Say “Hey Google, PulseLink emergency”</string>
-    <string name="assistant_settings_not_found">Open Google Assistant settings manually to add the PulseLink shortcut.</string>
+    <string name="assistant_hint_subtitle">Say "Hey Google, PulseLink emergency"</string>
+    <string name="assistant_hint_dismiss">Hide Assistant hint</string>
+    <string name="assistant_shortcut_help_google">In the Google app, tap your profile photo -> Settings -> Shortcuts to finish setup.</string>
+    <string name="assistant_shortcut_help_gemini">In Gemini, open Profile -> Settings -> Google Assistant features in Gemini -> Shortcuts.</string>
+    <string name="assistant_shortcut_help_generic">Follow your assistant\'s instructions on the next screen to enable the PulseLink shortcuts.</string>
+    <string name="assistant_shortcut_missing">No Assistant or Gemini app found. Install the Google app or Gemini to enable hands-free shortcuts.</string>
+    <string name="blocked_contact_attempt_title">Blocked contact tried to reach you</string>
+    <string name="blocked_contact_attempt_body">%1$s attempted to send a message but is blocked.</string>
+    <string name="dnd_override_title">Do Not Disturb override</string>
+    <string name="dnd_override_permission_prompt">Grant access so PulseLink can break through Do Not Disturb during emergencies.</string>
+    <string name="dnd_override_ready">PulseLink can raise alarm volume and use bypass-enabled channels so emergency alerts break through Do Not Disturb.</string>
+    <string name="dnd_override_android15_note">On Android 15+, notification channels control Do Not Disturb bypass. Ensure the PulseLink Emergency Alerts channel is set to allow interruptions.</string>
+    <string name="dnd_override_troubleshooting">If alerts stay quiet, open Settings → Apps → PulseLink → Notifications and confirm the channel can override Do Not Disturb.</string>
+    <string name="dnd_override_action_allow">Allow</string>
+    <string name="dnd_override_action_manage">Manage</string>
+    <string name="audio_override_failed">Unable to override audio settings. Check Do Not Disturb permissions.</string>
+    <string name="audio_override_partial">Android limited the Do Not Disturb override. Verify PulseLink\'s notification channels can bypass DND.</string>
+    <string name="audio_override_permission_missing">PulseLink can\'t override Do Not Disturb without notification policy access. Grant the permission in system settings.</string>
 </resources>

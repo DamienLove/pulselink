@@ -1,10 +1,12 @@
 package com.pulselink.data.alert
 
 import android.Manifest
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.core.app.NotificationCompat
@@ -61,10 +63,32 @@ class AlertDispatcher @Inject constructor(
         )
 
         val shouldOverrideAudio = profile.breakThroughDnd || tier == EscalationTier.EMERGENCY
-        val overrideApplied = if (shouldOverrideAudio) {
-            audioOverrideManager.overrideForAlert(profile.breakThroughDnd)
+        val notificationManager = context.getSystemService(NotificationManager::class.java)
+        val preFilter = notificationManager?.currentInterruptionFilter
+        val overrideResult = if (shouldOverrideAudio) {
+            Log.d(
+                TAG,
+                "Attempting audio override tier=$tier breakThrough=${profile.breakThroughDnd} sdk=${Build.VERSION.SDK_INT} hasPolicy=${notificationManager?.isNotificationPolicyAccessGranted}"
+            )
+            audioOverrideManager.overrideForAlert(profile.breakThroughDnd).also { result ->
+                val postFilter = notificationManager?.currentInterruptionFilter
+                if (!result.success) {
+                    Log.w(
+                        TAG,
+                        "Audio override state=${result.state} reason=${result.reason} message=${result.message} preFilter=$preFilter postFilter=$postFilter"
+                    )
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                        Log.w(
+                            TAG,
+                            "Android 15+ only toggles the app's AutomaticZenRule; rely on channel bypass for full DND break-through."
+                        )
+                    }
+                } else {
+                    Log.d(TAG, "Audio override applied preFilter=$preFilter postFilter=$postFilter")
+                }
+            }
         } else {
-            false
+            AudioOverrideManager.OverrideResult.skipped()
         }
 
         val smsCount = try {
@@ -83,11 +107,16 @@ class AlertDispatcher @Inject constructor(
             primaryContact = orderedContacts.firstOrNull()
         )
 
-        if (overrideApplied) {
+        if (shouldOverrideAudio && overrideResult.state != AudioOverrideManager.OverrideResult.State.FAILURE && overrideResult.state != AudioOverrideManager.OverrideResult.State.SKIPPED) {
             audioOverrideManager.scheduleRestore()
         }
 
-        AlertResult(message = message, notifiedContacts = smsCount, sharedLocation = locationText != null)
+        AlertResult(
+            message = message,
+            notifiedContacts = smsCount,
+            sharedLocation = locationText != null,
+            overrideResult = overrideResult.takeIf { shouldOverrideAudio }
+        )
     }
 
     private suspend fun buildLocationText(): String? {
@@ -172,13 +201,26 @@ class AlertDispatcher @Inject constructor(
             )
         }
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val sysManager = context.getSystemService(NotificationManager::class.java)
+            if (sysManager?.getNotificationChannel(channel) == null) {
+                Log.w(TAG, "Expected notification channel $channel missing; re-registering")
+                registrar.ensureAlertChannel(
+                    SoundCategory.SIREN.takeIf { tier == EscalationTier.EMERGENCY } ?: SoundCategory.CHIME,
+                    soundOption,
+                    profile
+                )
+            }
+        }
+
         manager.notify(tier.ordinal + 100, builder.build())
     }
 
     data class AlertResult(
         val message: String,
         val notifiedContacts: Int,
-        val sharedLocation: Boolean
+        val sharedLocation: Boolean,
+        val overrideResult: AudioOverrideManager.OverrideResult? = null
     )
 
     companion object {

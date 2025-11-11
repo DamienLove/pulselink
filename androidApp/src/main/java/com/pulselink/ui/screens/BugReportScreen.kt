@@ -230,6 +230,12 @@ fun BugReportScreen(
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.bug_report_submission_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFCBD5F5)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         modifier = Modifier.fillMaxWidth(),
                         onClick = {

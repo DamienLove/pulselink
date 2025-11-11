@@ -1,12 +1,19 @@
 package com.pulselink.service
 
+import android.util.Log
 import com.pulselink.data.alert.AlertDispatcher
 import com.pulselink.data.alert.AlertDispatcher.AlertResult
+import com.pulselink.data.link.ContactLinkManager
+import com.pulselink.data.link.RemoteAlertResult
+import com.pulselink.data.link.RemoteAlertStatus
 import com.pulselink.domain.model.AlertEvent
 import com.pulselink.domain.model.EscalationTier
 import com.pulselink.domain.repository.AlertRepository
 import com.pulselink.domain.repository.ContactRepository
 import com.pulselink.domain.repository.SettingsRepository
+import dagger.Lazy
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -18,7 +25,8 @@ class AlertRouter @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val contactRepository: ContactRepository,
     private val alertRepository: AlertRepository,
-    private val dispatcher: AlertDispatcher
+    private val dispatcher: AlertDispatcher,
+    private val contactLinkManager: Lazy<ContactLinkManager>
 ) {
     private val mutex = Mutex()
 
@@ -34,8 +42,8 @@ class AlertRouter @Inject constructor(
         }
     }
 
-    suspend fun dispatchManual(tier: EscalationTier, trigger: String) {
-        mutex.withLock {
+    suspend fun dispatchManual(tier: EscalationTier, trigger: String): AlertResult? {
+        return mutex.withLock {
             val settings = settingsRepository.settings.first()
             route(tier, trigger, settings)
         }
@@ -61,13 +69,40 @@ class AlertRouter @Inject constructor(
         tier: EscalationTier,
         trigger: String,
         settings: com.pulselink.domain.model.PulseLinkSettings
-    ) {
+    ): AlertResult? = coroutineScope {
         val contacts = when (tier) {
             EscalationTier.EMERGENCY -> contactRepository.getEmergencyContacts()
             EscalationTier.CHECK_IN -> contactRepository.getCheckInContacts()
         }
-        if (contacts.isEmpty()) return
+        if (contacts.isEmpty()) {
+            return@coroutineScope null
+        }
+
+        val remoteJobs = if (tier == EscalationTier.EMERGENCY) {
+            contacts.map { contact ->
+                async {
+                    contactLinkManager.get().triggerRemoteAlert(contact, tier)
+                }
+            }
+        } else emptyList()
+
         val result: AlertResult = dispatcher.dispatch(trigger, tier, contacts, settings)
+
+        remoteJobs.forEach { deferred ->
+            val remoteResult = runCatching { deferred.await() }
+                .onFailure { error -> Log.e(TAG, "Remote override task failed", error) }
+                .getOrNull()
+            if (remoteResult != null) {
+                Log.d(
+                    TAG,
+                    "Remote alert ${remoteResult.status} for ${remoteResult.contactName} (${remoteResult.contactId})"
+                )
+                if (remoteResult.status == RemoteAlertStatus.SMS_FAILED) {
+                    Log.w(TAG, "Unable to deliver remote alert control SMS to ${remoteResult.contactName}")
+                }
+            }
+        }
+
         alertRepository.record(
             AlertEvent(
                 timestamp = System.currentTimeMillis(),
@@ -78,5 +113,10 @@ class AlertRouter @Inject constructor(
                 sharedLocation = result.sharedLocation
             )
         )
+        result
+    }
+
+    companion object {
+        private const val TAG = "AlertRouter"
     }
 }

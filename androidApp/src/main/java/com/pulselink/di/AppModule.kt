@@ -12,6 +12,8 @@ import com.pulselink.data.alert.NotificationRegistrar
 import com.pulselink.data.alert.SoundCatalog
 import com.pulselink.data.db.AlertEventDao
 import com.pulselink.data.db.AlertRepositoryImpl
+import com.pulselink.data.db.BlockedContactDao
+import com.pulselink.data.db.BlockedContactRepositoryImpl
 import com.pulselink.data.db.ContactDao
 import com.pulselink.data.db.ContactRepositoryImpl
 import com.pulselink.data.db.ContactMessageDao
@@ -20,6 +22,7 @@ import com.pulselink.data.db.PulseLinkDatabase
 import com.pulselink.data.settings.SettingsRepositoryImpl
 import com.pulselink.data.settings.provideSettingsDataStore
 import com.pulselink.domain.repository.AlertRepository
+import com.pulselink.domain.repository.BlockedContactRepository
 import com.pulselink.domain.repository.ContactRepository
 import com.pulselink.domain.repository.MessageRepository
 import com.pulselink.domain.repository.SettingsRepository
@@ -50,6 +53,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindMessageRepository(impl: MessageRepositoryImpl): MessageRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBlockedContactRepository(impl: BlockedContactRepositoryImpl): BlockedContactRepository
 }
 
 @Module
@@ -71,6 +78,9 @@ object DatabaseModule {
 
     @Provides
     fun provideContactMessageDao(database: PulseLinkDatabase): ContactMessageDao = database.contactMessageDao()
+
+    @Provides
+    fun provideBlockedContactDao(database: PulseLinkDatabase): BlockedContactDao = database.blockedContactDao()
 
     @Provides
     @Singleton

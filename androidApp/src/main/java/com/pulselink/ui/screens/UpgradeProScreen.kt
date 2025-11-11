@@ -24,7 +24,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -40,7 +39,7 @@ import com.pulselink.R
 @Composable
 fun UpgradeProScreen(
     isPro: Boolean,
-    onTogglePro: (Boolean) -> Unit,
+    onUpgradeClick: () -> Unit,
     onBack: () -> Unit
 ) {
     val features = listOf(
@@ -77,7 +76,10 @@ fun UpgradeProScreen(
                     modifier = Modifier.height(72.dp)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(text = "Go Pro", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
+                Text(
+                    text = "Go Pro",
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                )
                 Text(
                     text = "Unlock the full emergency toolkit, silence every ad, and keep your loved ones reachable anywhere.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -102,20 +104,33 @@ fun UpgradeProScreen(
                 }
             }
 
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column {
-                    Text(text = "PulseLink Pro", fontWeight = FontWeight.Bold)
-                    Text(text = "$5 one-time unlock • lifetime access", color = Color(0xFF9AA0B4))
+                Text(text = "$5 one-time unlock • lifetime access", color = Color(0xFF9AA0B4))
+                if (isPro) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Filled.Check, contentDescription = null, tint = Color(0xFF34D399))
+                        Text(
+                            text = "Pro active on this device",
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF34D399)
+                        )
+                    }
                 }
-                Switch(checked = isPro, onCheckedChange = onTogglePro)
-            }
 
-            Button(onClick = { onTogglePro(true) }, modifier = Modifier.fillMaxWidth()) {
-                Text(text = if (isPro) "Thank you for upgrading" else "Unlock Pro for $5")
+                Button(
+                    onClick = onUpgradeClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isPro
+                ) {
+                    Text(text = if (isPro) "Pro unlocked" else "Unlock Pro for $5")
+                }
             }
         }
     }

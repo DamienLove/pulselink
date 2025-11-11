@@ -17,6 +17,7 @@ data class PulseLinkSettings(
     val secondaryPhrase: String = "check in pulselink",
     val includeLocation: Boolean = true,
     val autoAllowRemoteSoundChange: Boolean = false,
+    val assistantShortcutsDismissed: Boolean = false,
     val emergencyProfile: AlertProfile = AlertProfile(),
     val checkInProfile: AlertProfile = AlertProfile(
         breakThroughDnd = false,
