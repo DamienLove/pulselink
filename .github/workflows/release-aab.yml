@@ -37,16 +37,28 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
 
-      - name: Decode signing keystore
+      - name: Decode Free signing keystore
         run: |
-          echo "${{ secrets.UPLOAD_KEYSTORE_BASE64 }}" | base64 -d > signing-keystore.jks
+          echo "${{ secrets.UPLOAD_KEYSTORE_BASE64 }}" | base64 -d > signing-keystore-free.jks
+
+      - name: Decode Pro signing keystore
+        run: |
+          echo "${{ secrets.PRO_UPLOAD_KEYSTORE_BASE64 }}" | base64 -d > signing-keystore-pro.jks
 
       - name: Build signed release bundles
         env:
-          UPLOAD_KEYSTORE_PATH: ${{ github.workspace }}/signing-keystore.jks
+          UPLOAD_KEYSTORE_PATH: ${{ github.workspace }}/signing-keystore-free.jks
           UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
           UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
           UPLOAD_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+          UPLOAD_KEYSTORE_PATH_FREE: ${{ github.workspace }}/signing-keystore-free.jks
+          UPLOAD_KEYSTORE_PASSWORD_FREE: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+          UPLOAD_KEY_ALIAS_FREE: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          UPLOAD_KEY_PASSWORD_FREE: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+          UPLOAD_KEYSTORE_PATH_PRO: ${{ github.workspace }}/signing-keystore-pro.jks
+          UPLOAD_KEYSTORE_PASSWORD_PRO: ${{ secrets.PRO_KEYSTORE_PASSWORD }}
+          UPLOAD_KEY_ALIAS_PRO: ${{ secrets.PRO_KEY_ALIAS }}
+          UPLOAD_KEY_PASSWORD_PRO: ${{ secrets.PRO_KEY_PASSWORD }}
         run: |
           ./gradlew clean androidApp:bundleFreeRelease androidApp:bundleProRelease
 
@@ -71,4 +83,4 @@ jobs:
       - name: Clean up signing materials
         if: always()
         run: |
-          rm -f signing-keystore.jks
+          rm -f signing-keystore-free.jks signing-keystore-pro.jks

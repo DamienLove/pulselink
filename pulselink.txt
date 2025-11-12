@@ -109,7 +109,6 @@ Next Immediate actions:
 -- 2025-11-09 Update (Home scroll + reliable overrides) --
 - Home screen now declares a shared `rememberScrollState()` and applies `verticalScroll` to the root `Column`, so the navigation tiles, quick actions, contact list, and ads remain reachable on compact phones.
 - The header logo shrank from 132.dp to 99.dp (75% scale) to reclaim vertical space without losing brand presence.
-- `ContactsList` now caps its internal `LazyColumn` height at 400.dp to avoid nested scroll conflicts while still allowing drag-to-reorder.
 - Remote action handling forces DND overrides for emergency tiers regardless of per-contact settings: `prepareForAlert()` always boosts audio for emergency/call reasons, and `playAttentionTone()` now requests bypass + loops tones for emergency tiers.
 - Emergency notifications explicitly call `AudioOverrideManager.playTone()` so receivers always hear the configured siren even if the notification channel sound was customized.
 -- 2025-11-09 Update --
@@ -132,3 +131,4 @@ Next Immediate actions:
 -- 2025-11-11 Update (DND policy + Assistant hint) --
 - AudioOverrideManager now adheres to Android 15's priority-based DND rules: we expand the NotificationManager.Policy to allow alarms/media/calls, request PRIORITY instead of ALL on V-IC devices, and log when OEM policies still limit the override. Legacy devices continue to flip the full interruption filter, so sirens break through again without Play warnings.
 - Home screen Assistant hint can be dismissed via the new close affordance; the dismissal flag is persisted in DataStore (PulseLinkSettings.assistantShortcutsDismissed) so reviewers who don't have Google Assistant (e.g., Gemini-only devices) aren't stuck with a dead card. Settings still expose the shortcut launcher for manual enablement.
+- GitHub Actions `release-aab.yml` now decodes two signing keystores: Free keeps the existing `UPLOAD_KEYSTORE_*` secrets, while Pro reads `${{ secrets.PRO_UPLOAD_KEYSTORE_BASE64 }}` + `PRO_KEYSTORE_PASSWORD/PRO_KEY_ALIAS/PRO_KEY_PASSWORD`. Gradle picks them up via the `_PRO` environment suffixes when bundling the pro flavor.
