@@ -3,8 +3,28 @@ name: Release PulseLink AAB
 on:
   workflow_dispatch:
     inputs:
-      track:
-        description: "Google Play track to upload to"
+      upload_free:
+        description: "Upload the Free flavor"
+        required: true
+        type: boolean
+        default: true
+      upload_pro:
+        description: "Upload the Pro flavor"
+        required: true
+        type: boolean
+        default: true
+      track_free:
+        description: "Google Play track for Free"
+        required: true
+        type: choice
+        default: internal
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+      track_pro:
+        description: "Google Play track for Pro"
         required: true
         type: choice
         default: internal
@@ -45,6 +65,21 @@ jobs:
         run: |
           echo "${{ secrets.PRO_UPLOAD_KEYSTORE_BASE64 }}" | base64 -d > signing-keystore-pro.jks
 
+      - name: Determine Gradle bundle targets
+        run: |
+          tasks=()
+          if [[ "${{ github.event.inputs.upload_free }}" == 'true' ]]; then
+            tasks+=("androidApp:bundleFreeRelease")
+          fi
+          if [[ "${{ github.event.inputs.upload_pro }}" == 'true' ]]; then
+            tasks+=("androidApp:bundleProRelease")
+          fi
+          if [[ ${#tasks[@]} -eq 0 ]]; then
+            echo "At least one flavor must be selected for publication." >&2
+            exit 1
+          fi
+          echo "GRADLE_TASKS=${tasks[*]}" >> "$GITHUB_ENV"
+
       - name: Build signed release bundles
         env:
           UPLOAD_KEYSTORE_PATH: ${{ github.workspace }}/signing-keystore-free.jks
@@ -60,24 +95,26 @@ jobs:
           UPLOAD_KEY_ALIAS_PRO: ${{ secrets.PRO_KEY_ALIAS }}
           UPLOAD_KEY_PASSWORD_PRO: ${{ secrets.PRO_KEY_PASSWORD }}
         run: |
-          ./gradlew clean androidApp:bundleFreeRelease androidApp:bundleProRelease
+          ./gradlew clean $GRADLE_TASKS
 
       - name: Upload Free flavor to Google Play
+        if: ${{ github.event.inputs.upload_free == 'true' }}
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.free.pulselink
           releaseFiles: ${{ env.FREE_AAB_PATH }}
-          track: ${{ github.event.inputs.track }}
+          track: ${{ github.event.inputs.track_free }}
           status: completed
 
       - name: Upload Pro flavor to Google Play
+        if: ${{ github.event.inputs.upload_pro == 'true' }}
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.pulselink.pro
           releaseFiles: ${{ env.PRO_AAB_PATH }}
-          track: ${{ github.event.inputs.track }}
+          track: ${{ github.event.inputs.track_pro }}
           status: completed
 
       - name: Clean up signing materials

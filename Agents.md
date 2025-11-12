@@ -61,12 +61,12 @@
 - **Review expectations**: Call out breaking changes, migrations, or ops playbook updates. Request reviews from owners of affected areas (UI/alerts/data) and mention any follow-up tasks.
 - **Merge policy**: Squash commits with a clear title (`feature: assistant shortcut polish`) unless a multi-commit history is required for bisecting. CI must be green before merge.
 
-## 5. Automation & Release Workflow
+-## 5. Automation & Release Workflow
 
-- `release-aab.yml` builds both flavors (free/pro) and uses `r0adkll/upload-google-play` to push `.aab` files to Google Play. Provide the Free secrets (`UPLOAD_KEYSTORE_*`) plus the Pro-specific ones (`PRO_UPLOAD_KEYSTORE_BASE64`, `PRO_KEYSTORE_PASSWORD`, `PRO_KEY_ALIAS`, `PRO_KEY_PASSWORD`) alongside `PLAY_SERVICE_ACCOUNT_JSON`. Trigger with `workflow_dispatch` and pick the track (internal/alpha/beta/production).
+- `release-aab.yml` builds both flavors (free/pro) and uses `r0adkll/upload-google-play` to push `.aab` files to Google Play. Provide the Free secrets (`UPLOAD_KEYSTORE_*`) plus the Pro-specific ones (`PRO_UPLOAD_KEYSTORE_BASE64`, `PRO_KEYSTORE_PASSWORD`, `PRO_KEY_ALIAS`, `PRO_KEY_PASSWORD`) alongside `PLAY_SERVICE_ACCOUNT_JSON`. Trigger with `workflow_dispatch`; you can now independently toggle each upload (`upload_free`, `upload_pro`) and select different tracks (`track_free`, `track_pro`) for the variants.
 - Free flavor package: `com.free.pulselink` → bundle path `androidApp/build/outputs/bundle/freeRelease/androidApp-free-release.aab`.
 - Pro flavor package: `com.pulselink.pro` → bundle path `androidApp/build/outputs/bundle/proRelease/androidApp-pro-release.aab`.
-- The workflow decodes both keystores: Free from `${{ secrets.UPLOAD_KEYSTORE_BASE64 }}` (with `UPLOAD_KEYSTORE_PASSWORD`, `UPLOAD_KEY_ALIAS`, `UPLOAD_KEY_PASSWORD`) and Pro from the `PRO_*` counterparts listed above. Rotate the appropriate set when Play revokes a certificate.
+- The workflow decodes both keystores: Free from `${{ secrets.UPLOAD_KEYSTORE_BASE64 }}` (with `UPLOAD_KEYSTORE_PASSWORD`, `UPLOAD_KEY_ALIAS`, `UPLOAD_KEY_PASSWORD`) and Pro from the `PRO_*` counterparts listed above. Rotate the appropriate set when Play revokes a certificate. If only one flavor needs shipping, leave the other toggle off so the Gradle step skips that bundle.
 - Always run `bundleFreeRelease bundleProRelease` locally when touching release signing logic to catch issues outside CI.
 - For staged rollouts, adjust the `track` input or extend the upload step with `inAppUpdatePriority`, `releaseStatus`, etc.
 - `deploy-pages.yml` publishes everything under `docs/` to GitHub Pages. The Android bug reporter opens `https://DamienLove.github.io/PulseLink/bug-report/`, which prefills a GitHub Issue with the captured form data (labels `bug`, `triage`).
