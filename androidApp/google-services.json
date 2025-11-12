@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "156950194350",
+    "project_id": "pulselink-24899",
+    "storage_bucket": "pulselink-24899.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156950194350:android:131cad4bd8eae76564653f",
+        "android_client_info": {
+          "package_name": "com.free.pulselink"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

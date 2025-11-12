@@ -9,6 +9,7 @@ plugins {
     kotlin("kapt")
     id("com.google.dagger.hilt.android")
     id("org.jetbrains.kotlin.plugin.serialization")
+    id("com.google.gms.google-services")
 }
 
 fun Project.optionalProperty(name: String): String? =
@@ -220,6 +221,10 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+    }
+
+    buildTypes.forEach {
+        it.manifestPlaceholders["googleServices"] = "true"
     }
 }
 
