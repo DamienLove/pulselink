@@ -18,7 +18,8 @@ data class PulseLinkUiState(
     val isProUser: Boolean = true,
     val adsAvailable: Boolean = false,
     val onboardingComplete: Boolean = false,
-    val dndStatus: DndStatusMessage? = null
+    val dndStatus: DndStatusMessage? = null,
+    val isEmergencyActive: Boolean = false
 )
 
 data class DndStatusMessage(

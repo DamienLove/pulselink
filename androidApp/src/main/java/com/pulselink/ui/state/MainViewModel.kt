@@ -51,6 +51,7 @@ class MainViewModel @Inject constructor(
     private val dispatching = MutableStateFlow(false)
     private val lastMessage = MutableStateFlow<String?>(null)
     private val dndStatus = MutableStateFlow<DndStatusMessage?>(null)
+    private val emergencyActive = MutableStateFlow(false)
     private val emergencySounds = soundCatalog.emergencyOptions()
     private val checkInSounds = soundCatalog.checkInOptions()
 
@@ -85,8 +86,8 @@ class MainViewModel @Inject constructor(
                     onboardingComplete = normalizedSettings.onboardingComplete
                 )
             }
-            combine(baseState, dndStatus) { state, dndStatusMessage ->
-                state.copy(dndStatus = dndStatusMessage)
+            combine(baseState, dndStatus, emergencyActive) { state, dndStatusMessage, isEmergencyActive ->
+                state.copy(dndStatus = dndStatusMessage, isEmergencyActive = isEmergencyActive)
             }.collect { state ->
                 _uiState.value = state
             }
@@ -263,11 +264,24 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun cancelEmergency(onComplete: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val cancelled = linkManager.cancelActiveEmergency()
+            if (cancelled) {
+                emergencyActive.value = false
+            }
+            onComplete(cancelled)
+        }
+    }
+
     private fun dispatch(tier: EscalationTier, phrase: String) {
         viewModelScope.launch {
             dispatching.value = true
             lastMessage.value = phrase
             val result = alertRouter.dispatchManual(tier, phrase)
+            if (tier == EscalationTier.EMERGENCY && result != null) {
+                emergencyActive.value = true
+            }
             emitDndStatus(result)
             dispatching.value = false
         }

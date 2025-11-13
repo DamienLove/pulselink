@@ -10,7 +10,9 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,6 +20,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -75,7 +78,7 @@ import com.pulselink.util.CallStateMonitor
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
 
     private val viewModel: MainViewModel by viewModels()
     @Inject lateinit var appOpenAdController: AppOpenAdController
@@ -93,6 +96,42 @@ class MainActivity : ComponentActivity() {
                 val ownerName = state.settings.ownerName
                 var isPreparingCall by remember { mutableStateOf(false) }
                 val activity = this@MainActivity
+                var isCancelingEmergency by remember { mutableStateOf(false) }
+                val cancelEmergencyLauncher = rememberCancelEmergencyLauncher(
+                    activity = activity,
+                    onAuthenticated = {
+                        isCancelingEmergency = true
+                        viewModel.cancelEmergency { success ->
+                            isCancelingEmergency = false
+                            val message = if (success) {
+                                R.string.cancel_emergency_success
+                            } else {
+                                R.string.cancel_emergency_failure
+                            }
+                            Toast.makeText(context, context.getString(message), Toast.LENGTH_LONG).show()
+                        }
+                    },
+                    onError = { error ->
+                        error?.takeIf { it.isNotBlank() }?.let {
+                            Toast.makeText(context, it.toString(), Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                )
+                val cancelEmergencyHandler = remember(cancelEmergencyLauncher, context) {
+                    {
+                        val biometricResult = BiometricManager.from(context)
+                            .canAuthenticate(CANCEL_EMERGENCY_AUTHENTICATORS)
+                        if (biometricResult == BiometricManager.BIOMETRIC_SUCCESS) {
+                            cancelEmergencyLauncher()
+                        } else {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.cancel_emergency_biometric_unavailable),
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
 
                 var onboardingName by rememberSaveable { mutableStateOf("") }
                 var onboardingNameDirty by rememberSaveable { mutableStateOf(false) }
@@ -351,7 +390,6 @@ class MainActivity : ComponentActivity() {
                     composable("home") {
                         HomeScreen(
                             state = state,
-                            onAssistantShortcutsClick = { AssistantShortcuts.launchShortcutSettings(context) },
                             onDismissAssistantShortcuts = viewModel::dismissAssistantHint,
                             onTriggerEmergency = viewModel::triggerEmergency,
                             onSendCheckIn = viewModel::sendCheckIn,
@@ -366,6 +404,8 @@ class MainActivity : ComponentActivity() {
                                 viewModel.sendManualMessage(contact.id, body)
                             },
                             onReorderContacts = viewModel::reorderContacts,
+                            onRequestCancelEmergency = cancelEmergencyHandler,
+                            isCancelingEmergency = isCancelingEmergency,
                             onAlertsClick = { navController.navigate("alerts/default/emergency") },
                             onSettingsClick = { navController.navigate("settings") },
                             onUpgradeClick = { navController.navigate("upgrade") }
@@ -546,6 +586,58 @@ class MainActivity : ComponentActivity() {
         callStateMonitor.cancel()
     }
 }
+
+@Composable
+private fun rememberCancelEmergencyLauncher(
+    activity: AppCompatActivity,
+    onAuthenticated: () -> Unit,
+    onError: (CharSequence?) -> Unit
+): () -> Unit {
+    val promptInfo = remember {
+        val builder = BiometricPrompt.PromptInfo.Builder()
+            .setTitle(activity.getString(R.string.cancel_emergency_prompt_title))
+            .setSubtitle(activity.getString(R.string.cancel_emergency_prompt_subtitle))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            builder.setAllowedAuthenticators(CANCEL_EMERGENCY_AUTHENTICATORS)
+        } else {
+            builder.setNegativeButtonText(activity.getString(android.R.string.cancel))
+        }
+        builder.build()
+    }
+    val executor = remember { ContextCompat.getMainExecutor(activity) }
+    return remember {
+        val prompt = BiometricPrompt(
+            activity,
+            executor,
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    onAuthenticated()
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    if (
+                        errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
+                        errorCode == BiometricPrompt.ERROR_CANCELED ||
+                        errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON
+                    ) {
+                        return
+                    }
+                    onError(errString)
+                }
+
+                override fun onAuthenticationFailed() {
+                    onError(activity.getString(R.string.cancel_emergency_failure))
+                }
+            }
+        )
+        return@remember {
+            prompt.authenticate(promptInfo)
+        }
+    }
+}
+
+private const val CANCEL_EMERGENCY_AUTHENTICATORS =
+    BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
 
 private fun placeCall(
     activity: MainActivity,

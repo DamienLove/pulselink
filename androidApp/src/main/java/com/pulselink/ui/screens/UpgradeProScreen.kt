@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pulselink.R
@@ -43,10 +44,11 @@ fun UpgradeProScreen(
     onBack: () -> Unit
 ) {
     val features = listOf(
-        "No advertising or promotional banners anywhere in the app",
-        "One-tap concierge routing with your custom escalation tiers",
-        "Priority SMS delivery with aggressive retry + delivery tracking",
-        "Offline fallback: keeps emergency phrases available without data"
+        stringResource(id = R.string.pro_feature_voice),
+        stringResource(id = R.string.pro_feature_realtime),
+        stringResource(id = R.string.pro_feature_biometric_cancel),
+        stringResource(id = R.string.pro_feature_override),
+        stringResource(id = R.string.pro_feature_ads)
     )
 
     Scaffold(
@@ -71,7 +73,7 @@ fun UpgradeProScreen(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Image(
-                    painter = painterResource(id = R.drawable.ic_logo),
+                    painter = painterResource(id = R.drawable.ic_pulselink_pro),
                     contentDescription = null,
                     modifier = Modifier.height(72.dp)
                 )
@@ -81,7 +83,7 @@ fun UpgradeProScreen(
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
                 )
                 Text(
-                    text = "Unlock the full emergency toolkit, silence every ad, and keep your loved ones reachable anywhere.",
+                    text = "Unlock the full emergency toolkit, silence every ad, and bring Gemini-powered hands-free control to your alerts.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFF9AA0B4)
                 )
@@ -109,7 +111,7 @@ fun UpgradeProScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = "$5 one-time unlock • lifetime access", color = Color(0xFF9AA0B4))
+                Text(text = stringResource(id = R.string.pro_upgrade_price_blurb), color = Color(0xFF9AA0B4))
                 if (isPro) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -117,7 +119,7 @@ fun UpgradeProScreen(
                     ) {
                         Icon(Icons.Filled.Check, contentDescription = null, tint = Color(0xFF34D399))
                         Text(
-                            text = "Pro active on this device",
+                            text = stringResource(id = R.string.pro_upgrade_active),
                             fontWeight = FontWeight.SemiBold,
                             color = Color(0xFF34D399)
                         )
@@ -129,7 +131,13 @@ fun UpgradeProScreen(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isPro
                 ) {
-                    Text(text = if (isPro) "Pro unlocked" else "Unlock Pro for $5")
+                    Text(
+                        text = if (isPro) {
+                            stringResource(id = R.string.pro_upgrade_button_active)
+                        } else {
+                            stringResource(id = R.string.pro_upgrade_cta)
+                        }
+                    )
                 }
             }
         }

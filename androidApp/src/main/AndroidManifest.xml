@@ -74,6 +74,10 @@
                 <action android:name="com.pulselink.intent.ASSISTANT_CHECK_IN" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="com.pulselink.intent.ASSISTANT_VOICE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
         <provider

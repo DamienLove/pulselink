@@ -52,6 +52,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -96,7 +97,6 @@ import org.burnoutcrew.reorderable.reorderable
 @Composable
 fun HomeScreen(
     state: PulseLinkUiState,
-    onAssistantShortcutsClick: () -> Unit,
     onDismissAssistantShortcuts: () -> Unit,
     onTriggerEmergency: () -> Unit,
     onSendCheckIn: () -> Unit,
@@ -109,6 +109,8 @@ fun HomeScreen(
     onCallContact: suspend (Contact) -> Unit,
     onSendManualMessage: suspend (Contact, String) -> ManualMessageResult,
     onReorderContacts: (List<Long>) -> Unit,
+    onRequestCancelEmergency: () -> Unit,
+    isCancelingEmergency: Boolean = false,
     onAlertsClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onUpgradeClick: () -> Unit = {}
@@ -160,8 +162,8 @@ fun HomeScreen(
         ) {
             HeaderSection(
                 state = state,
-                onOpenAssistantShortcuts = onAssistantShortcutsClick,
-                onDismissAssistantShortcuts = onDismissAssistantShortcuts
+                onDismissAssistantShortcuts = onDismissAssistantShortcuts,
+                onUpgradeClick = onUpgradeClick
             )
             NavigationRow(
                 onAlertsClick = onAlertsClick,
@@ -170,7 +172,10 @@ fun HomeScreen(
             )
             QuickActionsRow(
                 onTriggerEmergency = onTriggerEmergency,
-                onSendCheckInAll = onSendCheckIn
+                onSendCheckInAll = onSendCheckIn,
+                isEmergencyActive = state.isEmergencyActive,
+                onCancelEmergency = onRequestCancelEmergency,
+                isCancelingEmergency = isCancelingEmergency
             )
             SearchAndAddRow(
                 searchValue = searchValue,
@@ -312,8 +317,8 @@ fun HomeScreen(
 @Composable
 private fun HeaderSection(
     state: PulseLinkUiState,
-    onOpenAssistantShortcuts: () -> Unit,
-    onDismissAssistantShortcuts: () -> Unit
+    onDismissAssistantShortcuts: () -> Unit,
+    onUpgradeClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -341,9 +346,10 @@ private fun HeaderSection(
         }
 
         if (!state.settings.assistantShortcutsDismissed) {
-            AssistantShortcutHint(
+            VoiceTipsCard(
                 modifier = Modifier.align(Alignment.TopEnd),
-                onClick = onOpenAssistantShortcuts,
+                isProUser = state.isProUser,
+                onUpgradeClick = onUpgradeClick,
                 onDismiss = onDismissAssistantShortcuts
             )
         }
@@ -351,9 +357,10 @@ private fun HeaderSection(
 }
 
 @Composable
-private fun AssistantShortcutHint(
+private fun VoiceTipsCard(
     modifier: Modifier = Modifier,
-    onClick: () -> Unit,
+    isProUser: Boolean,
+    onUpgradeClick: () -> Unit,
     onDismiss: () -> Unit
 ) {
     Surface(
@@ -362,51 +369,100 @@ private fun AssistantShortcutHint(
         tonalElevation = 2.dp,
         color = MaterialTheme.colorScheme.primaryContainer
     ) {
-        Row(
+        Column(
             modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable(onClick = onClick),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Mic,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Column(
+                Row(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(
-                        text = stringResource(R.string.assistant_hint_title),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    Icon(
+                        imageVector = Icons.Filled.Mic,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        if (!isProUser) {
+                            Text(
+                                text = stringResource(R.string.assistant_hint_upgrade_badge),
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .background(
+                                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(999.dp)
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
+                        Text(
+                            text = stringResource(R.string.assistant_hint_title),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = stringResource(R.string.assistant_hint_subtitle),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = stringResource(R.string.assistant_hint_dismiss),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+            Text(
+                text = stringResource(R.string.assistant_hint_examples_title),
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Text(
+                text = stringResource(R.string.assistant_hint_examples),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            if (isProUser) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Text(
-                        text = stringResource(R.string.assistant_hint_subtitle),
-                        style = MaterialTheme.typography.labelSmall,
+                        text = stringResource(R.string.assistant_hint_ready_state),
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
+            } else {
                 Text(
-                    text = stringResource(R.string.assistant_setup_action),
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.primary
+                    text = stringResource(R.string.assistant_hint_upgrade_copy),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
-            }
-            IconButton(onClick = onDismiss) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = stringResource(R.string.assistant_hint_dismiss),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                TextButton(onClick = onUpgradeClick) {
+                    Text(
+                        text = stringResource(R.string.assistant_hint_upgrade_action),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
             }
         }
     }
@@ -447,7 +503,13 @@ private fun NavButton(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 }
 
 @Composable
-private fun QuickActionsRow(onTriggerEmergency: () -> Unit, onSendCheckInAll: () -> Unit) {
+private fun QuickActionsRow(
+    onTriggerEmergency: () -> Unit,
+    onSendCheckInAll: () -> Unit,
+    isEmergencyActive: Boolean,
+    onCancelEmergency: () -> Unit,
+    isCancelingEmergency: Boolean
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -464,6 +526,26 @@ private fun QuickActionsRow(onTriggerEmergency: () -> Unit, onSendCheckInAll: ()
             Icon(imageVector = Icons.Filled.Warning, contentDescription = "Trigger emergency alert")
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = "EMERGENCY", fontWeight = FontWeight.Black)
+        }
+        if (isEmergencyActive) {
+            OutlinedButton(
+                onClick = onCancelEmergency,
+                modifier = Modifier.weight(1f),
+                enabled = !isCancelingEmergency,
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                if (isCancelingEmergency) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else {
+                    Icon(imageVector = Icons.Filled.Close, contentDescription = null)
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = stringResource(id = R.string.cancel_emergency_button))
+            }
         }
         Button(
             onClick = onSendCheckInAll,
@@ -843,9 +925,9 @@ private fun UpgradeCard(isPro: Boolean, onUpgradeClick: () -> Unit) {
             )
             Text(
                 text = if (isPro) {
-                    "Pro mode is active — enjoy ad-free safety tools with priority automations."
+                    stringResource(id = R.string.upgrade_card_active_copy)
                 } else {
-                    "Unlock Pro to remove ads, prioritize alerts, and enable the full remote toolkit."
+                    stringResource(id = R.string.upgrade_card_pitch)
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -874,7 +956,7 @@ private fun UpgradeCard(isPro: Boolean, onUpgradeClick: () -> Unit) {
                         disabledContentColor = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 ) {
-                    Text(text = "Pro active")
+                    Text(text = stringResource(id = R.string.pro_upgrade_button_active))
                 }
             } else {
                 Button(
@@ -886,7 +968,7 @@ private fun UpgradeCard(isPro: Boolean, onUpgradeClick: () -> Unit) {
                     ),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text(text = "Learn more")
+                    Text(text = stringResource(id = R.string.upgrade_card_cta))
                 }
             }
         }

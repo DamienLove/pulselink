@@ -323,6 +323,30 @@ class ContactLinkManager @Inject constructor(
         }
     }
 
+    suspend fun cancelActiveEmergency(): Boolean = withContext(Dispatchers.IO) {
+        val contacts = contactRepository.getEmergencyContacts()
+        if (contacts.isEmpty()) return@withContext false
+        val deviceId = settingsRepository.ensureDeviceId()
+        val body = context.getString(R.string.cancel_emergency_sms_body)
+        var sentAny = false
+        contacts.forEach { contact ->
+            val code = contact.linkCode ?: return@forEach
+            val payload = SmsCodec.encodeManualMessage(deviceId, code, body)
+            if (smsSender.sendSms(contact.phoneNumber, payload)) {
+                sentAny = true
+                messageRepository.record(
+                    ContactMessage(
+                        contactId = contact.id,
+                        body = body,
+                        direction = MessageDirection.OUTBOUND,
+                        overrideSucceeded = false
+                    )
+                )
+            }
+        }
+        sentAny
+    }
+
     private suspend fun handleCallEnded(message: PulseLinkMessage.CallEnded) {
         val contact = contactRepository.getByLinkCode(message.code) ?: return
         remoteActionHandler.finishCall(contact, message.callDuration)
