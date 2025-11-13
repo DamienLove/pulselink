@@ -23,6 +23,63 @@
           "other_platform_oauth_client": []
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156950194350:android:131cad4bd8eae76564653f-debug",
+        "android_client_info": {
+          "package_name": "com.free.pulselink.debug"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156950194350:android:131cad4bd8eae76564653f-pro",
+        "android_client_info": {
+          "package_name": "com.pulselink.pro"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156950194350:android:131cad4bd8eae76564653f-prodebug",
+        "android_client_info": {
+          "package_name": "com.pulselink.pro.debug"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
     }
   ],
   "configuration_version": "1"

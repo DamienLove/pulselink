@@ -7,6 +7,7 @@ import android.telephony.TelephonyManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.room.Room
+import com.google.firebase.firestore.FirebaseFirestore
 import com.pulselink.data.alert.AlertDispatcher
 import com.pulselink.data.alert.NotificationRegistrar
 import com.pulselink.data.alert.SoundCatalog
@@ -129,4 +130,8 @@ object DatabaseModule {
     @Singleton
     fun provideTelephonyManager(@ApplicationContext context: Context): TelephonyManager =
         context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+
+    @Provides
+    @Singleton
+    fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
 }

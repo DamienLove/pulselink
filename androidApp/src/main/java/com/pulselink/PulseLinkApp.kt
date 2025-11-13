@@ -3,6 +3,7 @@ package com.pulselink
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.google.firebase.FirebaseApp
 import com.google.android.gms.ads.MobileAds
 import com.pulselink.data.ads.AdConfig
 import com.pulselink.data.ads.AppOpenAdController
@@ -24,6 +25,7 @@ class PulseLinkApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        FirebaseApp.initializeApp(this)
         AssistantShortcuts.publish(this)
         if (AdConfig.isAdsEnabled) {
             MobileAds.initialize(this)

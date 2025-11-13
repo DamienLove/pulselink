@@ -39,6 +39,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -54,7 +55,8 @@ class ContactLinkManager @Inject constructor(
     private val blockedContactRepository: BlockedContactRepository,
     private val remoteActionHandler: RemoteActionHandler,
     private val messageRepository: MessageRepository,
-    private val callStateMonitor: CallStateMonitor
+    private val callStateMonitor: CallStateMonitor,
+    private val linkChannelService: LinkChannelService
 ) {
 
     private val notificationManager by lazy { NotificationManagerCompat.from(context) }
@@ -62,6 +64,15 @@ class ContactLinkManager @Inject constructor(
     @Volatile private var incomingMonitorActive = false
     private val monitorScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     enum class CallPreparationResult { READY, TIMEOUT, FAILED }
+
+    init {
+        linkChannelService.start()
+        monitorScope.launch {
+            linkChannelService.inboundMessages.collect { payload ->
+                handleRealtimeManualMessage(payload)
+            }
+        }
+    }
 
     suspend fun sendLinkRequest(contactId: Long) {
         val contact = contactRepository.getContact(contactId) ?: return
@@ -275,27 +286,40 @@ class ContactLinkManager @Inject constructor(
     private suspend fun handleManualMessage(message: PulseLinkMessage.ManualMessage, fromPhone: String) {
         try {
             val persisted = resolveContactForManualMessage(message, fromPhone) ?: return
-            val title = context.getString(R.string.manual_message_title, persisted.displayName)
-            val body = message.body.ifBlank { context.getString(R.string.ping_received_body) }
-            remoteActionHandler.playAttentionTone(
-                contact = persisted,
-                tier = EscalationTier.CHECK_IN,
-                title = title,
-                body = body,
-                notificationId = (persisted.id.hashCode() and 0xFFFF) + 3000
-            )
-            withContext(Dispatchers.IO) {
-                messageRepository.record(
-                    ContactMessage(
-                        contactId = persisted.id,
-                        body = body,
-                        direction = MessageDirection.INBOUND,
-                        overrideSucceeded = true
-                    )
-                )
-            }
+            deliverManualMessage(persisted, message.body, overrideApplied = true)
         } catch (error: Exception) {
             Log.e(TAG, "Failed to process manual message from $fromPhone", error)
+        }
+    }
+
+    private suspend fun handleRealtimeManualMessage(payload: LinkChannelPayload) {
+        try {
+            val contact = contactRepository.getContact(payload.contactId) ?: return
+            deliverManualMessage(contact, payload.body, overrideApplied = true)
+        } catch (error: Exception) {
+            Log.e(TAG, "Failed to process realtime message ${payload.id}", error)
+        }
+    }
+
+    private suspend fun deliverManualMessage(contact: Contact, rawBody: String, overrideApplied: Boolean) {
+        val body = rawBody.ifBlank { context.getString(R.string.ping_received_body) }
+        val title = context.getString(R.string.manual_message_title, contact.displayName)
+        remoteActionHandler.playAttentionTone(
+            contact = contact,
+            tier = EscalationTier.CHECK_IN,
+            title = title,
+            body = body,
+            notificationId = (contact.id.hashCode() and 0xFFFF) + 3000
+        )
+        withContext(Dispatchers.IO) {
+            messageRepository.record(
+                ContactMessage(
+                    contactId = contact.id,
+                    body = body,
+                    direction = MessageDirection.INBOUND,
+                    overrideSucceeded = overrideApplied
+                )
+            )
         }
     }
 
@@ -441,6 +465,20 @@ class ContactLinkManager @Inject constructor(
             return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.NOT_LINKED)
         }
         return try {
+            val realtimeSent = linkChannelService.sendManualMessage(contact, message)
+            if (realtimeSent) {
+                withContext(Dispatchers.IO) {
+                    messageRepository.record(
+                        ContactMessage(
+                            contactId = contact.id,
+                            body = message,
+                            direction = MessageDirection.OUTBOUND,
+                            overrideSucceeded = false
+                        )
+                    )
+                }
+                return ManualMessageResult.Success(overrideApplied = false)
+            }
             val ready = if (contact.linkStatus == LinkStatus.LINKED) {
                 requestRemotePrepare(
                     contact,
