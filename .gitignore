@@ -7,6 +7,9 @@ gradle-8.6/
 gradle-8.6-bin.zip
 pulselink-*.json
 
+functions/node_modules/
+functions/lib/
+
 # Sensitive signing material (must never be deleted manually)
 *.pem
 *.p12

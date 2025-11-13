@@ -62,6 +62,7 @@
 - **Merge policy**: Squash commits with a clear title (`feature: assistant shortcut polish`) unless a multi-commit history is required for bisecting. CI must be green before merge.
 
 -## 5. Automation & Release Workflow
+## 5. Automation & Release Workflow
 
 - `release-aab.yml` builds both flavors (free/pro) and uses `r0adkll/upload-google-play` to push `.aab` files to Google Play. Provide the Free secrets (`UPLOAD_KEYSTORE_*`) plus the Pro-specific ones (`PRO_UPLOAD_KEYSTORE_BASE64`, `PRO_KEYSTORE_PASSWORD`, `PRO_KEY_ALIAS`, `PRO_KEY_PASSWORD`) alongside `PLAY_SERVICE_ACCOUNT_JSON`. Trigger with `workflow_dispatch`; you can now independently toggle each upload (`upload_free`, `upload_pro`) and select different tracks (`track_free`, `track_pro`) for the variants.
 - Free flavor package: `com.free.pulselink` → bundle path `androidApp/build/outputs/bundle/freeRelease/androidApp-free-release.aab`.
@@ -70,3 +71,18 @@
 - Always run `bundleFreeRelease bundleProRelease` locally when touching release signing logic to catch issues outside CI.
 - For staged rollouts, adjust the `track` input or extend the upload step with `inAppUpdatePriority`, `releaseStatus`, etc.
 - `deploy-pages.yml` publishes everything under `docs/` to GitHub Pages. The Android bug reporter opens `https://DamienLove.github.io/PulseLink/bug-report/`, which prefills a GitHub Issue with the captured form data (labels `bug`, `triage`).
+
+## 6. Firebase & Genkit
+
+- `androidApp/` ships `google-services.json` and applies the Google Services Gradle plugin so both flavors target the shared Firebase project (`pulselink-24899`).
+- Cloud Functions + Genkit live under `functions/` (TypeScript, Node.js 20). Run `npm install` inside that folder, then use:
+  - `npm run genkit:dev` for local iteration
+  - `npm run build` before deploying
+  - `firebase deploy --only functions` (the root-level `firebase.json` runs the TypeScript build predeploy)
+- Generative AI flows use the Vertex plugin. Store the Gemini/Generative AI key in Secret Manager (`GOOGLE_GENAI_API_KEY`) before deploying.
+- `naturalLanguageQuery` is restricted to Pro accounts via `hasClaim("pro", true)`. Grant access with the Admin SDK:
+  ```js
+  await admin.auth().setCustomUserClaims(uid, { pro: true });
+  ```
+  Then have the client refresh its ID token (`getIdToken(true)` or sign-out/in) so the new claim propagates before calling the function.
+
