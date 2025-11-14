@@ -11,8 +11,8 @@
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 7,
-      "versionName": "7.0.0-pro",
+      "versionCode": 8,
+      "versionName": "8.0.0-pro",
       "outputFile": "androidApp-pro-release.apk"
     }
   ],
