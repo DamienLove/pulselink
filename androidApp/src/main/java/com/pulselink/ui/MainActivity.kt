@@ -455,7 +455,12 @@ class MainActivity : AppCompatActivity() {
                             onApproveLink = viewModel::approveLink,
                             onCallContact = callContactHandler,
                             onSendManualMessage = { contact, body ->
-                                viewModel.sendManualMessage(contact.id, body)
+                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
+                                    viewModel.sendManualMessage(contact.id, body)
+                                } else {
+                                    permissionLauncher.launch(arrayOf(Manifest.permission.SEND_SMS))
+                                    Toast.makeText(context, context.getString(R.string.sms_permission_required), Toast.LENGTH_SHORT).show()
+                                }
                             },
                             onReorderContacts = viewModel::reorderContacts,
                             onRequestCancelEmergency = cancelEmergencyHandler,
