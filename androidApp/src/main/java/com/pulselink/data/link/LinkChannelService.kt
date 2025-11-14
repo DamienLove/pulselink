@@ -60,7 +60,6 @@ class LinkChannelService @Inject constructor(
             FIELD_ID to UUID.randomUUID().toString(),
             FIELD_SENDER_ID to senderId,
             FIELD_RECEIVER_ID to remoteDeviceId,
-            FIELD_CONTACT_ID to contact.id,
             FIELD_BODY to body,
             FIELD_TIMESTAMP to System.currentTimeMillis(),
             FIELD_TYPE to TYPE_MANUAL
@@ -113,7 +112,7 @@ class LinkChannelService @Inject constructor(
                         val doc = change.document
                         val payload = LinkChannelPayload(
                             id = doc.getString(FIELD_ID).orEmpty(),
-                            contactId = doc.getLong(FIELD_CONTACT_ID)?.toLong() ?: contactId,
+                            contactId = contactId,
                             senderId = doc.getString(FIELD_SENDER_ID).orEmpty(),
                             receiverId = doc.getString(FIELD_RECEIVER_ID).orEmpty(),
                             body = doc.getString(FIELD_BODY).orEmpty(),
@@ -139,7 +138,6 @@ class LinkChannelService @Inject constructor(
         private const val FIELD_ID = "id"
         private const val FIELD_SENDER_ID = "senderId"
         private const val FIELD_RECEIVER_ID = "receiverId"
-        private const val FIELD_CONTACT_ID = "contactId"
         private const val FIELD_BODY = "body"
         private const val FIELD_TIMESTAMP = "timestamp"
         private const val FIELD_TYPE = "type"
