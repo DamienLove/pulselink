@@ -106,6 +106,7 @@ android {
     namespace = "com.pulselink"
     compileSdk = 35
     buildToolsVersion = "35.0.0"
+    ndkVersion = "28.0.12433562"
 
     flavorDimensions += "tier"
 
