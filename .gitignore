@@ -25,3 +25,9 @@ upload_certificate.pem
 private.pem
 public.pem
 keystore.properties
+# Ignore Pro build artifacts
+androidApp/build/outputs/apk/pro/
+androidApp/build/outputs/bundle/proRelease/
+artifacts/releases/**/androidApp-pro-*.apk
+artifacts/releases/**/androidApp-pro-*.aab
+
