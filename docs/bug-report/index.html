@@ -1,279 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PulseLink Bug Reporter</title>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecting to Bug Report...</title>
     <style>
-      :root {
-        color-scheme: dark;
-        --bg: #0b0d16;
-        --card: #141829;
-        --accent: #5da9ff;
-        --border: #2a2f45;
-      }
-      body {
-        margin: 0;
-        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-          sans-serif;
-        background: linear-gradient(180deg, #0b0d16 0%, #05060a 100%);
-        color: #e8ebff;
-        min-height: 100vh;
-        display: flex;
-        justify-content: center;
-        padding: 32px 16px;
-      }
-      .container {
-        width: min(960px, 100%);
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 20px;
-        padding: 32px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
-      }
-      h1 {
-        margin-top: 0;
-        font-size: 1.8rem;
-      }
-      p.description {
-        margin-bottom: 24px;
-        color: #cfd5ff;
-      }
-      label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: 600;
-      }
-      input,
-      textarea,
-      select {
-        width: 100%;
-        padding: 12px 14px;
-        border-radius: 12px;
-        border: 1px solid #303651;
-        background: rgba(255, 255, 255, 0.04);
-        color: inherit;
-        font-size: 0.95rem;
-        font-family: inherit;
-        margin-bottom: 18px;
-      }
-      textarea {
-        min-height: 100px;
-      }
-      button {
-        background: var(--accent);
-        border: none;
-        color: #03060f;
-        padding: 14px 20px;
-        border-radius: 14px;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        width: 100%;
-      }
-      button:hover {
-        opacity: 0.95;
-      }
-      .hint {
-        margin-bottom: 18px;
-        font-size: 0.9rem;
-        color: #9fb0ff;
-      }
-      .preview {
-        margin-top: 24px;
-        background: rgba(255, 255, 255, 0.03);
-        border-radius: 16px;
-        padding: 20px;
-        border: 1px dashed #39405d;
-      }
-      .preview textarea {
-        margin: 0;
-        min-height: 160px;
-        font-family: "JetBrains Mono", "Fira Code", monospace;
-      }
-      .two-column {
-        display: flex;
-        gap: 16px;
-        flex-wrap: wrap;
-      }
-      .two-column > div {
-        flex: 1;
-        min-width: 240px;
-      }
-      @media (max-width: 720px) {
-        .container {
-          padding: 24px;
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f6f8fa;
+            color: #24292e;
         }
-      }
+        .container {
+            text-align: center;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <div class="container">
-      <h1>PulseLink Bug Reporter</h1>
-      <p class="description">
-        Fill in the details below. When you submit, we'll open GitHub with a pre-filled issue using this information. Review it there to finish filing the ticket.
-      </p>
-      <form id="bug-form">
-        <label for="summary">Summary *</label>
-        <input id="summary" name="summary" maxlength="120" required />
-
-        <label for="steps">Steps to Reproduce</label>
-        <textarea id="steps" name="steps" placeholder="1. …&#10;2. …"></textarea>
-
-        <label for="expected">Expected Behavior</label>
-        <textarea id="expected" name="expected" placeholder="What you thought would happen"></textarea>
-
-        <label for="actual">Actual Behavior *</label>
-        <textarea id="actual" name="actual" placeholder="What actually happened" required></textarea>
-
-        <div class="two-column">
-          <div>
-            <label for="frequency">Frequency</label>
-            <select id="frequency" name="frequency">
-              <option>Always</option>
-              <option>Sometimes</option>
-              <option>Rarely</option>
-            </select>
-          </div>
-          <div>
-            <label for="severity">Severity</label>
-            <select id="severity" name="severity">
-              <option>Critical</option>
-              <option>High</option>
-              <option selected>Medium</option>
-              <option>Low</option>
-            </select>
-          </div>
-        </div>
-
-        <label for="reporter">Email (optional)</label>
-        <input id="reporter" name="reporter" type="email" placeholder="you@example.com" />
-
-        <label for="device">Device</label>
-        <input id="device" name="device" placeholder="Pixel 8, Samsung S25 FE, etc." />
-
-        <label for="os_version">Android Version</label>
-        <input id="os_version" name="os_version" placeholder="Android 15 (API 35)" />
-
-        <label for="version_name">App Version</label>
-        <input id="version_name" name="version_name" placeholder="6.0.0 (600000)" />
-
-        <input id="body" name="body" type="hidden" />
-
-        <p class="hint">
-          Clicking “Open GitHub Issue” launches github.com. Sign in (if prompted) and press “Submit new issue” there.
-        </p>
-
-        <button type="submit">Open GitHub Issue</button>
-      </form>
-
-      <div class="preview">
-        <label for="preview-body">Issue Preview</label>
-        <textarea id="preview-body" readonly></textarea>
-      </div>
+        <div class="spinner"></div>
+        <h1>Preparing Your Bug Report</h1>
+        <p>Please wait, we are redirecting you to GitHub.</p>
     </div>
 
     <script>
-      const ISSUE_BASE = "https://github.com/DamienLove/PulseLink/issues/new";
-      const params = new URLSearchParams(window.location.search);
+        (function() {
+            // The GitHub repository where issues will be created.
+            const owner = 'DamienLove';
+            const repo = 'PulseLink';
 
-      const fields = [
-        "summary",
-        "steps",
-        "expected",
-        "actual",
-        "frequency",
-        "severity",
-        "reporter",
-        "device",
-        "os_version",
-        "version_name",
-        "version_code",
-        "build_flavor",
-        "body"
-      ];
+            // --- Main Script ---
+            const params = new URLSearchParams(window.location.search);
 
-      fields.forEach((field) => {
-        const el = document.getElementById(field);
-        if (el && params.has(field)) {
-          el.value = params.get(field) || "";
-        }
-      });
+            // Get the pre-formatted body from the app.
+            const bodyFromApp = params.get('body') || 'No details provided.';
+            
+            // Get the summary for the issue title.
+            const summary = params.get('summary_suffix') || 'Bug Report';
+            const title = `[Bug]: ${summary}`;
+            
+            // Define labels for the issue.
+            const labels = 'bug,triage';
 
-      function buildBody(data) {
-        return [
-          `### Summary`,
-          data.summary || "n/a",
-          "",
-          `### Steps to Reproduce`,
-          data.steps || "n/a",
-          "",
-          `### Expected Behavior`,
-          data.expected || "n/a",
-          "",
-          `### Actual Behavior`,
-          data.actual || "n/a",
-          "",
-          `### Frequency`,
-          data.frequency || "n/a",
-          "",
-          `### Severity`,
-          data.severity || "n/a",
-          "",
-          `### Device`,
-          data.device || "n/a",
-          "",
-          `### Android Version`,
-          data.os_version || "n/a",
-          "",
-          `### App Version`,
-          `${data.version_name || "n/a"} (${data.version_code || "?"})`,
-          "",
-          `### Flavor`,
-          data.build_flavor || "unknown",
-          "",
-          `### Reporter`,
-          data.reporter || "n/a",
-          "",
-          `---`,
-          (data.body || "").trim()
-        ].join("\n");
-      }
+            // Construct the final GitHub issue URL.
+            const issueUrl = new URL(`https://github.com/${owner}/${repo}/issues/new`);
+            issueUrl.searchParams.append('title', title);
+            issueUrl.searchParams.append('body', bodyFromApp);
+            issueUrl.searchParams.append('labels', labels);
 
-      function updatePreview() {
-        const data = Object.fromEntries(
-          fields.map((f) => [f, (document.getElementById(f)?.value || "").trim()])
-        );
-        const body = buildBody(data);
-        document.getElementById("preview-body").value = body;
-        return { data, body };
-      }
-
-      updatePreview();
-      fields.forEach((field) => {
-        const el = document.getElementById(field);
-        if (el) {
-          el.addEventListener("input", updatePreview);
-        }
-      });
-
-      document.getElementById("bug-form").addEventListener("submit", (event) => {
-        event.preventDefault();
-        const { data, body } = updatePreview();
-        if (!data.summary) {
-          alert("Summary is required.");
-          return;
-        }
-        if (!data.actual) {
-          alert("Actual behavior is required.");
-          return;
-        }
-        const issue = new URL(ISSUE_BASE);
-        issue.searchParams.set("labels", "bug,triage");
-        issue.searchParams.set("title", `[Bug] ${data.summary}`.substring(0, 120));
-        issue.searchParams.set("body", body);
-        window.open(issue.toString(), "_blank", "noopener");
-      });
+            // Redirect the user.
+            window.location.href = issueUrl.toString();
+        })();
     </script>
-  </body>
+</body>
 </html>
