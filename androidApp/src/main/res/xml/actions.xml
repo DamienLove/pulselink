@@ -14,10 +14,12 @@
 
     <entity-set entitySetId="featureParam">
         <entity
-            name="emergency"
+            identifier="emergency"
+            name="Emergency"
             alternateName="@array/emergencySynonyms" />
         <entity
-            name="cancel"
+            identifier="cancel"
+            name="Cancel"
             alternateName="@array/cancelSynonyms" />
     </entity-set>
 </actions>
