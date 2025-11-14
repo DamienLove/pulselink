@@ -32,12 +32,14 @@ import com.pulselink.ui.screens.BugReportData
 import com.pulselink.ui.state.DndStatusMessage
 import com.pulselink.util.AudioOverrideManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 
 @HiltViewModel
@@ -168,17 +170,32 @@ class MainViewModel @Inject constructor(
 
     fun acceptBetaAgreement(onResult: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
-            val success = try {
-                val settings = settingsRepository.settings.first()
-                val name = settings.ownerName.ifBlank { "PulseLink Tester" }
-                betaAgreementRepository.recordAgreement(name, BETA_AGREEMENT_VERSION)
+            val name = runCatching { settingsRepository.settings.first().ownerName }
+                .getOrDefault("")
+                .ifBlank { "PulseLink Tester" }
+
+            val localSuccess = runCatching {
                 settingsRepository.setBetaAgreementAcceptance(BETA_AGREEMENT_VERSION)
-                true
-            } catch (error: Exception) {
-                Log.e(TAG, "Unable to capture beta agreement acceptance", error)
-                false
+            }.onFailure { error ->
+                Log.e(TAG, "Unable to persist local beta agreement acceptance", error)
+            }.isSuccess
+
+            if (!localSuccess) {
+                onResult(false)
+                return@launch
             }
-            onResult(success)
+
+            onResult(true)
+
+            viewModelScope.launch(Dispatchers.IO) {
+                runCatching {
+                    withTimeout(REMOTE_BETA_AGREEMENT_TIMEOUT_MS) {
+                        betaAgreementRepository.recordAgreement(name, BETA_AGREEMENT_VERSION)
+                    }
+                }.onFailure { error ->
+                    Log.w(TAG, "Unable to upload beta agreement acceptance", error)
+                }
+            }
         }
     }
 
@@ -466,5 +483,6 @@ class MainViewModel @Inject constructor(
         private const val TAG = "MainViewModel"
         private const val BUG_REPORT_PAGE_URL = "https://DamienLove.github.io/PulseLink/bug-report/"
         const val BETA_AGREEMENT_VERSION = "2025-11-13"
+        private const val REMOTE_BETA_AGREEMENT_TIMEOUT_MS = 10_000L
     }
 }
