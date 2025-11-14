@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.pulselink.R
 import com.pulselink.domain.model.SoundOption
+import com.pulselink.util.resolveUri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,7 +80,8 @@ fun AlertTonePickerScreen(
             mediaPlayer = null
             playingKey = null
 
-            val player = MediaPlayer.create(context, option.resId) ?: return@preview
+            val uri = option.resolveUri(context) ?: return@preview
+            val player = MediaPlayer()
             mediaPlayer = player
             playingKey = option.key
             player.setOnCompletionListener {
@@ -89,12 +91,17 @@ fun AlertTonePickerScreen(
                 }
                 playingKey = null
             }
-            runCatching { player.start() }.onFailure {
+            runCatching {
+                player.setDataSource(context, uri)
+                player.prepare()
+                player.start()
+            }.onFailure { error ->
                 player.release()
                 if (mediaPlayer === player) {
                     mediaPlayer = null
                 }
                 playingKey = null
+                android.util.Log.e("AlertTonePicker", "Unable to preview tone ${option.key}", error)
             }
         }
     }

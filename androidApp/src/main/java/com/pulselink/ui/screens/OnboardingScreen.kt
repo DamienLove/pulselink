@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -27,6 +28,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -35,9 +38,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +50,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -350,6 +356,181 @@ private fun PermissionCard(state: OnboardingPermissionState) {
                     }
                 }
             }
+        }
+    }
+}
+@Composable
+fun BetaAgreementScreen(
+    ownerName: String,
+    agreementVersion: String,
+    isSubmitting: Boolean,
+    onViewFullAgreement: () -> Unit,
+    onAgree: () -> Unit,
+    onBack: () -> Unit
+) {
+    val gradient = Brush.verticalGradient(
+        colors = listOf(Color(0xFF10131F), Color(0xFF0B0D16))
+    )
+    val displayName = if (ownerName.isBlank()) {
+        stringResource(id = R.string.beta_agreement_tester_default)
+    } else ownerName
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .background(gradient)
+            .padding(horizontal = 24.dp, vertical = 24.dp)
+    ) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(28.dp))
+                .background(Color.White.copy(alpha = 0.04f))
+                .padding(horizontal = 24.dp, vertical = 24.dp)
+        ) {
+            val scrollState = rememberScrollState()
+            val needsScroll = maxHeight < 640.dp
+            val columnModifier = if (needsScroll) {
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState)
+            } else {
+                Modifier.fillMaxSize()
+            }
+            val arrangement: Arrangement.Vertical = if (needsScroll) {
+                Arrangement.spacedBy(20.dp)
+            } else {
+                Arrangement.SpaceBetween
+            }
+
+            Column(
+                modifier = columnModifier,
+                verticalArrangement = arrangement
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color.White
+                            )
+                        }
+                        Text(
+                            text = stringResource(
+                                id = R.string.beta_agreement_tester_label,
+                                displayName,
+                                agreementVersion
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFBACCFF)
+                        )
+                    }
+
+                    Text(
+                        text = stringResource(id = R.string.beta_agreement_summary_title),
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White
+                    )
+                    Text(
+                        text = stringResource(id = R.string.beta_agreement_summary_body),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFFD6DCFF)
+                    )
+                    Text(
+                        text = stringResource(id = R.string.beta_agreement_summary_points),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFFD6DCFF)
+                    )
+                    Text(
+                        text = stringResource(id = R.string.beta_agreement_summary_footer),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFFD6DCFF)
+                    )
+                }
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    TextButton(onClick = onViewFullAgreement) {
+                        Text(
+                            text = stringResource(id = R.string.beta_agreement_view_full),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF7FB2FF)
+                        )
+                    }
+
+                    Button(
+                        onClick = onAgree,
+                        enabled = !isSubmitting,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                    ) {
+                        if (isSubmitting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White
+                            )
+                        } else {
+                            Text(text = stringResource(id = R.string.beta_agreement_agree_button))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BetaAgreementFullScreen(
+    onBack: () -> Unit
+) {
+    val gradient = Brush.verticalGradient(
+        colors = listOf(Color(0xFF0B0D16), Color(0xFF05060B))
+    )
+    val scrollState = rememberScrollState()
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(gradient),
+        containerColor = Color.Transparent,
+        topBar = {
+            TopAppBar(
+                title = { Text(text = stringResource(id = R.string.beta_agreement_full_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = stringResource(id = R.string.beta_agreement_full_text),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFFE6EAFF)
+            )
         }
     }
 }

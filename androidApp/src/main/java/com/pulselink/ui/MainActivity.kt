@@ -52,6 +52,8 @@ import com.pulselink.ui.screens.BugReportData
 import com.pulselink.ui.screens.BugReportDataSaver
 import com.pulselink.ui.screens.BugReportScreen
 import com.pulselink.ui.screens.HomeScreen
+import com.pulselink.ui.screens.BetaAgreementFullScreen
+import com.pulselink.ui.screens.BetaAgreementScreen
 import com.pulselink.ui.screens.ContactDetailScreen
 import com.pulselink.ui.screens.AlertTonePickerScreen
 import com.pulselink.ui.screens.ContactConversationScreen
@@ -261,6 +263,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     composable("onboarding_intro") {
+                        val requiresAgreement = viewModel.needsBetaAgreement(state.settings)
                         OnboardingIntroScreen(
                             ownerName = onboardingName,
                             onOwnerNameChange = { updated ->
@@ -275,10 +278,52 @@ class MainActivity : AppCompatActivity() {
                                     onboardingName = sanitized
                                     onboardingNameDirty = false
                                     viewModel.setOwnerName(sanitized)
-                                    navController.navigate("onboarding_permissions")
+                                    val destination = if (requiresAgreement) {
+                                        "onboarding_beta_agreement"
+                                    } else {
+                                        "onboarding_permissions"
+                                    }
+                                    navController.navigate(destination)
                                 }
                             }
                         )
+                    }
+                    composable("onboarding_beta_agreement") {
+                        val context = LocalContext.current
+                        var submitting by remember { mutableStateOf(false) }
+                        BetaAgreementScreen(
+                            ownerName = onboardingName.ifBlank { ownerName },
+                            agreementVersion = MainViewModel.BETA_AGREEMENT_VERSION,
+                            isSubmitting = submitting,
+                            onViewFullAgreement = { navController.navigate("onboarding_beta_agreement_full") },
+                            onAgree = {
+                                if (submitting) return@BetaAgreementScreen
+                                submitting = true
+                                viewModel.acceptBetaAgreement { success ->
+                                    submitting = false
+                                    if (success) {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.beta_agreement_agree_success),
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                        navController.navigate("onboarding_permissions") {
+                                            popUpTo("onboarding_beta_agreement") { inclusive = true }
+                                        }
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.beta_agreement_agree_error),
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                }
+                            },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable("onboarding_beta_agreement_full") {
+                        BetaAgreementFullScreen(onBack = { navController.popBackStack() })
                     }
                     composable("onboarding_permissions") {
                         val missingPermissions = requiredPermissions.filter { perm ->
@@ -289,7 +334,13 @@ class MainActivity : AppCompatActivity() {
 
                         LaunchedEffect(state.onboardingComplete, missingPermissions, onboardingName, hasDndAccess) {
                             val sanitized = onboardingName.trim()
-                            if (!state.onboardingComplete && missingPermissions.isEmpty() && sanitized.isNotBlank() && hasDndAccess) {
+                            if (
+                                !state.onboardingComplete &&
+                                missingPermissions.isEmpty() &&
+                                sanitized.isNotBlank() &&
+                                hasDndAccess &&
+                                !viewModel.needsBetaAgreement(state.settings)
+                            ) {
                                 if (ownerName != sanitized) {
                                     viewModel.setOwnerName(sanitized)
                                 }
@@ -359,7 +410,10 @@ class MainActivity : AppCompatActivity() {
                         )
 
                         val sanitizedOnboardingName = onboardingName.trim()
-                        val canContinue = missingPermissions.isEmpty() && sanitizedOnboardingName.isNotBlank() && hasDndAccess
+                        val canContinue = missingPermissions.isEmpty() &&
+                            sanitizedOnboardingName.isNotBlank() &&
+                            hasDndAccess &&
+                            !viewModel.needsBetaAgreement(state.settings)
 
                         OnboardingScreen(
                             permissions = permissionCards,
@@ -421,11 +475,14 @@ class MainActivity : AppCompatActivity() {
                         ContactConversationScreen(
                             contact = contact,
                             messages = messages,
+                            isProUser = state.isProUser,
                             onBack = { navController.popBackStack() },
                             onOpenSettings = { navController.navigate("contact/$contactId/settings") },
                             onCallContact = callContactHandler,
                             onSendMessage = { body -> viewModel.sendManualMessage(contactId, body) },
-                            onPing = { viewModel.sendPing(contactId) }
+                            onPing = { viewModel.sendPing(contactId) },
+                            onVoiceCommand = { query -> viewModel.processVoiceCommand(query) },
+                            onUpgradeClick = { navController.navigate("upgrade") }
                         )
                     }
                     composable(
@@ -474,6 +531,18 @@ class MainActivity : AppCompatActivity() {
                             onBack = { navController.popBackStack() }
                         )
                     }
+                    composable("alerts/default/call") {
+                        val callTitle = stringResource(id = R.string.settings_call_tone_title)
+                        val callSubtitle = stringResource(id = R.string.settings_call_tone_subtitle)
+                        AlertTonePickerScreen(
+                            title = callTitle,
+                            subtitle = callSubtitle,
+                            options = state.callSoundOptions,
+                            selectedKey = state.settings.callSoundKey,
+                            onSelect = viewModel::updateCallSound,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
                     composable(
                         route = "alerts/contact/{contactId}/emergency",
                         arguments = listOf(navArgument("contactId") { type = NavType.LongType })
@@ -517,6 +586,7 @@ class MainActivity : AppCompatActivity() {
                             onToggleAutoAllowRemoteSoundChange = viewModel::setAutoAllowRemoteSoundChange,
                             onEditEmergencyTone = { navController.navigate("alerts/default/emergency") },
                             onEditCheckInTone = { navController.navigate("alerts/default/checkin") },
+                            onEditCallTone = { navController.navigate("alerts/default/call") },
                             onReportBug = { navController.navigate("bug_report") },
                             onBetaTesters = { navController.navigate("beta_testers") },
                             onBack = { navController.popBackStack() }

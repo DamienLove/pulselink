@@ -13,4 +13,5 @@ interface SettingsRepository {
     suspend fun setAutoAllowRemoteSoundChange(enabled: Boolean)
     suspend fun setBetaTesterStatus(enabled: Boolean)
     suspend fun setAssistantShortcutsDismissed(dismissed: Boolean)
+    suspend fun setBetaAgreementAcceptance(version: String)
 }

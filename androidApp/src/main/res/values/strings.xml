@@ -38,6 +38,7 @@
     <string name="incoming_call_alert_title">%1$s is trying to reach you</string>
     <string name="incoming_call_alert_body">PulseLink is overriding Do Not Disturb so you don\'t miss their call. If you still can\'t hear it, confirm the Emergency Alerts notification channel can bypass DND.</string>
     <string name="incoming_call_detected">Emergency call from %1$s</string>
+    <string name="channel_calls">PulseLink Call Alerts</string>
     <string name="channel_manual_messages">PulseLink Messages</string>
     <string name="permission_microphone">PulseLink needs microphone access for hotword detection.</string>
     <string name="permission_sms">PulseLink needs SMS permission to contact your circle.</string>
@@ -144,6 +145,93 @@
     <string name="voice_command_siren_failed">Couldn\'t reach that contact.</string>
     <string name="voice_command_error_network">Assistant request failed. Check your connection.</string>
     <string name="voice_command_error_unknown">I couldn\'t understand that command.</string>
+    <string name="beta_agreement_summary_title">PulseLink Beta Agreement – Summary</string>
+    <string name="beta_agreement_summary_body">You are about to use a beta, pre-release version of PulseLink. It is experimental software. It may crash, fail to send alerts, report incorrect locations, or behave unpredictably.</string>
+    <string name="beta_agreement_summary_points">By tapping "I Agree", you confirm that:\n– you are using PulseLink for testing and evaluation only,\n– you understand it must not be relied on as your only way to get help in an emergency,\n– you consent to our collection of technical, usage, limited communications-related, and location data as described in the Agreement below, solely to operate, test, and improve the app, and\n– you will keep unreleased features and non-public information about PulseLink confidential.</string>
+    <string name="beta_agreement_summary_footer">Please read the full legal Agreement below carefully. If you do not agree, do not use PulseLink.</string>
+    <string name="beta_agreement_view_full">Read the full Beta Tester Agreement</string>
+    <string name="beta_agreement_agree_button">I Agree</string>
+    <string name="beta_agreement_full_title">Full In-App Beta Tester Agreement</string>
+    <string name="beta_agreement_tester_label">Testing as %1$s · Agreement v%2$s</string>
+    <string name="beta_agreement_tester_default">PulseLink Tester</string>
+    <string name="beta_agreement_agree_error">Unable to record your agreement. Check your connection and try again.</string>
+    <string name="beta_agreement_agree_success">Thanks for accepting the PulseLink beta agreement.</string>
+    <string name="beta_agreement_full_text"><![CDATA[PULSELINK BETA TESTER AGREEMENT
+
+This Beta Tester Agreement ("Agreement") governs your use of the pre-release, beta version of the PulseLink mobile application (the "App"). The App is published on the Google Play Store under the developer name "Damien Nichols." For legal purposes, the App is owned and operated by Holldasa LLC, a California limited liability company ("Developer").
+
+By tapping "I Agree", installing, or using the App, you ("Tester") agree to be bound by this Agreement with Developer.
+
+Nature of the Beta; No Emergency Reliance
+1.1 The App is a beta, pre-release product and is provided solely for testing, evaluation, and feedback. It may be incomplete, unstable, or contain defects, including but not limited to crashes, data loss, false alerts, missed alerts, inaccurate or delayed location information, and failure to override device settings.
+
+1.2 Tester understands and expressly agrees that the App must not be relied upon as the sole or primary means of contacting emergency services, requesting help, or protecting life, health, or property. Tester remains fully responsible for maintaining direct access to emergency services (such as dialing 911) and any other safety measures.
+
+License and Use Restrictions
+2.1 Subject to this Agreement, Developer grants Tester a limited, personal, revocable, non-exclusive, non-transferable license to install and use the App only for internal testing and evaluation.
+
+2.2 Tester shall not, and shall not permit any third party to: (a) copy, distribute, sell, sublicense, or publicly make available the App or any part of it; (b) reverse engineer, decompile, disassemble, or attempt to derive the source code of the App, except where such restriction is prohibited by law; (c) modify, adapt, translate, or create derivative works based on the App; or (d) circumvent any technical protection measures or access controls used by the App.
+
+2.3 Developer may modify, suspend, or discontinue the App, or terminate Tester’s access, at any time, with or without notice, and without liability.
+
+Data Collection and Processing
+3.1 To operate, test, and improve the App, Developer may collect, store, and process information including, but not limited to:
+• Device and technical data: device model, operating system version, app version, performance metrics, crash logs, and diagnostic information.
+• Usage data: screens visited, features used, approximate frequency and duration of sessions, and interaction patterns.
+• Communication-related data, to the extent required for the App’s intended functionality, such as access to Tester-selected contacts, limited SMS and call-related metadata, and automated messaging required for alert workflows.
+• Location data, including approximate or precise location when the App is triggered or as configured in the App’s settings.
+
+3.2 Developer will use such data for purposes including operation of the App, debugging, analytics, safety testing, and product improvement. Developer will take reasonable measures to protect such data against unauthorized access or disclosure; however, Tester acknowledges that no system is entirely risk-free, particularly in a beta environment.
+
+3.3 By using the App and tapping "I Agree", Tester consents to this data collection and use as described in this Section 3 and in any applicable privacy notice presented within the App or on Developer’s website.
+
+Confidentiality
+4.1 The App, its design, features, interfaces, behavior, documentation, roadmap, and any non-public information relating to Developer or the App (collectively, "Confidential Information") are confidential and proprietary to Developer.
+
+4.2 Tester shall: (a) keep Confidential Information strictly confidential; (b) not disclose Confidential Information to any third party without Developer’s prior written consent; and (c) not publicly post, publish, or share screenshots, videos, or descriptions of unreleased features, performance, or behavior of the App without Developer’s permission.
+
+4.3 The confidentiality obligations do not apply to information that: (i) becomes publicly available through no breach by Tester; (ii) was lawfully known to Tester before use of the App; or (iii) must be disclosed under applicable law or court order, provided that Tester, where legally permissible, gives Developer prompt notice of such requirement.
+
+Feedback
+5.1 Tester may provide Developer with comments, suggestions, bug reports, ideas, or other feedback relating to the App ("Feedback").
+
+5.2 Tester agrees that Developer may freely use, copy, modify, adapt, publish, or otherwise exploit such Feedback for any purpose (including developing and improving products and services) without any obligation, compensation, or attribution to Tester. To the maximum extent permitted by law, Tester hereby assigns to Developer all rights, title, and interest in and to the Feedback.
+
+Ownership
+6.1 The App is licensed, not sold. Developer and its licensors retain all rights, title, and interest in and to the App, including all associated intellectual property rights.
+
+6.2 No rights or licenses are granted to Tester except as expressly set forth in this Agreement.
+
+Disclaimers
+7.1 THE APP IS PROVIDED "AS IS" AND "AS AVAILABLE", WITH ALL FAULTS, DEFECTS, ERRORS, AND BUGS. IT IS A BETA PRODUCT.
+
+7.2 TO THE MAXIMUM EXTENT PERMITTED BY LAW, DEVELOPER DISCLAIMS ALL WARRANTIES, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, INCLUDING ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT, AND ANY WARRANTIES ARISING FROM COURSE OF DEALING OR USAGE OF TRADE.
+
+7.3 WITHOUT LIMITING THE FOREGOING, DEVELOPER DOES NOT WARRANT THAT THE APP WILL BE UNINTERRUPTED, SECURE, OR ERROR-FREE, OR THAT IT WILL OPERATE CORRECTLY IN ANY PARTICULAR EMERGENCY SCENARIO OR ENVIRONMENT.
+
+Limitation of Liability
+8.1 TO THE MAXIMUM EXTENT PERMITTED BY LAW, DEVELOPER SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, CONSEQUENTIAL, SPECIAL, EXEMPLARY, OR PUNITIVE DAMAGES, OR FOR ANY LOSS OF DATA, LOSS OF PROFITS, LOSS OF OPPORTUNITIES, OR LOSS RELATING TO PERSONAL SAFETY OR PROPERTY, ARISING OUT OF OR IN CONNECTION WITH THE APP OR THIS AGREEMENT, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+8.2 TO THE MAXIMUM EXTENT PERMITTED BY LAW, DEVELOPER’S TOTAL CUMULATIVE LIABILITY ARISING OUT OF OR RELATING TO THE APP OR THIS AGREEMENT SHALL NOT EXCEED ONE HUNDRED U.S. DOLLARS (US $100) (OR, IF REQUIRED BY LAW, THE MINIMUM GREATER AMOUNT MANDATED BY SUCH LAW).
+
+8.3 THE ABOVE LIMITATIONS SHALL APPLY REGARDLESS OF THE THEORY OF LIABILITY (CONTRACT, TORT, NEGLIGENCE, STRICT LIABILITY, OR OTHERWISE) AND EVEN IF ANY REMEDY FAILS OF ITS ESSENTIAL PURPOSE.
+
+Term and Termination
+9.1 This Agreement becomes effective when Tester installs or uses the App or taps "I Agree" and continues until terminated in accordance with this Section.
+
+9.2 Developer may terminate this Agreement, and/or suspend or revoke Tester’s access to the App, at any time and for any reason, with or without notice.
+
+9.3 Upon termination, Tester shall immediately cease all use of the App and uninstall it from all devices. Sections relating to confidentiality, ownership, Feedback, disclaimers, limitations of liability, and any other provisions which by their nature should survive, shall survive termination.
+
+Governing Law and Jurisdiction
+This Agreement shall be governed by and construed in accordance with the laws of the State of California, without regard to its conflict of laws principles. Any dispute arising out of or relating to this Agreement or the App shall be subject to the exclusive jurisdiction of the state or federal courts located in Los Angeles County, California, and Tester hereby consents to such jurisdiction and venue.
+
+Entire Agreement; Changes
+This Agreement constitutes the entire agreement between Tester and Developer regarding the beta testing of the App and supersedes all prior or contemporaneous understandings on this subject. Developer may update this Agreement from time to time; material changes for existing users may be communicated through the App or by other reasonable means. If Tester continues to use the App after such changes become effective, Tester is deemed to accept the updated Agreement.
+
+BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE TO BE BOUND BY THIS AGREEMENT WITH HOLLDASA LLC.]]></string>
+    <string name="voice_command_prompt">Tell PulseLink what you need…</string>
+    <string name="voice_command_no_recognizer">Voice recognition isn\'t available on this device.</string>
     <string name="voice_command_emergency_cancelled">Emergency cancelled and contacts notified.</string>
     <string name="voice_command_cancel_failed">Couldn\'t cancel the alert.</string>
     <string name="voice_command_upgrade_required">Hands-free commands are a PulseLink Pro feature. Upgrade to unlock them.</string>
@@ -156,4 +244,9 @@
     <string name="pro_upgrade_cta">Unlock Pro for $5</string>
     <string name="pro_upgrade_active">Pro active on this device</string>
     <string name="pro_upgrade_button_active">Pro unlocked</string>
+    <string name="sound_option_phone_default_notification">Phone default (notification)</string>
+    <string name="sound_option_phone_default_ringtone">Phone default (ringtone)</string>
+    <string name="sound_option_call_variant">PulseLink tone – %1$s</string>
+    <string name="settings_call_tone_title">Call alert tone</string>
+    <string name="settings_call_tone_subtitle">Customize the sound PulseLink plays when a linked contact calls you.</string>
 </resources>

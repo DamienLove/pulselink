@@ -5,6 +5,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.functions.FirebaseFunctions
 import com.pulselink.BuildConfig
 import com.pulselink.R
+import com.pulselink.auth.FirebaseAuthManager
 import com.pulselink.data.link.ContactLinkManager
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.EscalationTier
@@ -24,10 +25,12 @@ class NaturalLanguageCommandProcessor @Inject constructor(
     private val auth: FirebaseAuth,
     private val alertRouter: AlertRouter,
     private val contactRepository: ContactRepository,
-    private val linkManager: ContactLinkManager
+    private val linkManager: ContactLinkManager,
+    private val firebaseAuthManager: FirebaseAuthManager
 ) {
 
     suspend fun handleCommand(query: String): VoiceCommandResult = withContext(Dispatchers.IO) {
+        firebaseAuthManager.ensureSignedIn()
         if (!ensureProAccess()) {
             return@withContext VoiceCommandResult.UpgradeRequired
         }
@@ -101,7 +104,7 @@ class NaturalLanguageCommandProcessor @Inject constructor(
 
     private suspend fun ensureProAccess(): Boolean {
         if (BuildConfig.PRO_FEATURES) return true
-        val user = auth.currentUser ?: return false
+        val user = firebaseAuthManager.currentUser() ?: return false
         val claims = runCatching { user.getIdToken(false).await().claims }.getOrNull() ?: return false
         return claims["pro"] == true
     }

@@ -39,6 +39,10 @@
             </intent-filter>
         </activity>
 
+        <meta-data
+            android:name="com.google.android.actions"
+            android:resource="@xml/actions" />
+
         <receiver
             android:name=".receiver.PulseLinkSmsReceiver"
             android:enabled="true"
@@ -66,6 +70,14 @@
             android:launchMode="singleTop"
             android:taskAffinity=""
             android:theme="@style/Theme.PulseLink.Transparent">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="assistant"
+                    android:scheme="pulselink" />
+            </intent-filter>
             <intent-filter>
                 <action android:name="com.pulselink.intent.ASSISTANT_EMERGENCY" />
                 <category android:name="android.intent.category.DEFAULT" />

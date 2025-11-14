@@ -13,6 +13,7 @@ import com.google.firebase.functions.FirebaseFunctions
 import com.pulselink.data.alert.AlertDispatcher
 import com.pulselink.data.alert.NotificationRegistrar
 import com.pulselink.data.alert.SoundCatalog
+import com.pulselink.data.beta.BetaAgreementRepositoryImpl
 import com.pulselink.data.db.AlertEventDao
 import com.pulselink.data.db.AlertRepositoryImpl
 import com.pulselink.data.db.BlockedContactDao
@@ -25,6 +26,7 @@ import com.pulselink.data.db.PulseLinkDatabase
 import com.pulselink.data.settings.SettingsRepositoryImpl
 import com.pulselink.data.settings.provideSettingsDataStore
 import com.pulselink.domain.repository.AlertRepository
+import com.pulselink.domain.repository.BetaAgreementRepository
 import com.pulselink.domain.repository.BlockedContactRepository
 import com.pulselink.domain.repository.ContactRepository
 import com.pulselink.domain.repository.MessageRepository
@@ -60,6 +62,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindBlockedContactRepository(impl: BlockedContactRepositoryImpl): BlockedContactRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBetaAgreementRepository(impl: BetaAgreementRepositoryImpl): BetaAgreementRepository
 }
 
 @Module

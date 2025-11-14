@@ -10,7 +10,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pulselink.BuildConfig
 import com.pulselink.R
+import com.pulselink.auth.FirebaseAuthManager
 import com.pulselink.data.alert.AlertDispatcher.AlertResult
+import com.pulselink.data.assistant.NaturalLanguageCommandProcessor
+import com.pulselink.data.assistant.VoiceCommandResult
 import com.pulselink.data.alert.SoundCatalog
 import com.pulselink.data.link.ContactLinkManager
 import com.pulselink.domain.model.Contact
@@ -19,6 +22,7 @@ import com.pulselink.domain.model.EscalationTier
 import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.domain.model.SoundCategory
 import com.pulselink.domain.repository.AlertRepository
+import com.pulselink.domain.repository.BetaAgreementRepository
 import com.pulselink.domain.repository.BlockedContactRepository
 import com.pulselink.domain.repository.ContactRepository
 import com.pulselink.domain.repository.MessageRepository
@@ -45,7 +49,10 @@ class MainViewModel @Inject constructor(
     private val soundCatalog: SoundCatalog,
     private val linkManager: ContactLinkManager,
     private val messageRepository: MessageRepository,
-    private val blockedContactRepository: BlockedContactRepository
+    private val blockedContactRepository: BlockedContactRepository,
+    private val betaAgreementRepository: BetaAgreementRepository,
+    private val naturalLanguageCommandProcessor: NaturalLanguageCommandProcessor,
+    private val firebaseAuthManager: FirebaseAuthManager
 ) : ViewModel() {
 
     private val dispatching = MutableStateFlow(false)
@@ -54,6 +61,7 @@ class MainViewModel @Inject constructor(
     private val emergencyActive = MutableStateFlow(false)
     private val emergencySounds = soundCatalog.emergencyOptions()
     private val checkInSounds = soundCatalog.checkInOptions()
+    private val callSounds = soundCatalog.callOptions()
 
     private val _uiState = MutableStateFlow(PulseLinkUiState())
     val uiState: StateFlow<PulseLinkUiState> = _uiState
@@ -80,6 +88,7 @@ class MainViewModel @Inject constructor(
                     lastMessagePreview = message,
                     emergencySoundOptions = emergencySounds,
                     checkInSoundOptions = checkInSounds,
+                    callSoundOptions = callSounds,
                     showAds = showAds,
                     isProUser = isProUser,
                     adsAvailable = adsAvailable,
@@ -157,6 +166,22 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun acceptBetaAgreement(onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            val success = try {
+                val settings = settingsRepository.settings.first()
+                val name = settings.ownerName.ifBlank { "PulseLink Tester" }
+                betaAgreementRepository.recordAgreement(name, BETA_AGREEMENT_VERSION)
+                settingsRepository.setBetaAgreementAcceptance(BETA_AGREEMENT_VERSION)
+                true
+            } catch (error: Exception) {
+                Log.e(TAG, "Unable to capture beta agreement acceptance", error)
+                false
+            }
+            onResult(success)
+        }
+    }
+
     fun dismissAssistantHint() {
         viewModelScope.launch {
             settingsRepository.setAssistantShortcutsDismissed(true)
@@ -179,6 +204,14 @@ class MainViewModel @Inject constructor(
                 settings.copy(
                     checkInProfile = settings.checkInProfile.copy(soundKey = key)
                 )
+            }
+        }
+    }
+
+    fun updateCallSound(key: String) {
+        viewModelScope.launch {
+            settingsRepository.update { settings ->
+                settings.copy(callSoundKey = key)
             }
         }
     }
@@ -234,6 +267,9 @@ class MainViewModel @Inject constructor(
             }
             if (enabled == current) return@launch
             settingsRepository.setProUnlocked(enabled)
+            if (enabled) {
+                firebaseAuthManager.refreshClaims()
+            }
         }
     }
 
@@ -263,6 +299,12 @@ class MainViewModel @Inject constructor(
             linkManager.sendCallEndedNotification(contactId, callDuration)
         }
     }
+
+    fun needsBetaAgreement(settings: com.pulselink.domain.model.PulseLinkSettings): Boolean =
+        settings.betaAgreementVersion != BETA_AGREEMENT_VERSION
+
+    suspend fun processVoiceCommand(query: String): VoiceCommandResult =
+        naturalLanguageCommandProcessor.handleCommand(query)
 
     fun cancelEmergency(onComplete: (Boolean) -> Unit) {
         viewModelScope.launch {
@@ -380,6 +422,16 @@ class MainViewModel @Inject constructor(
                 )
             }
         }
+        if (settings.callSoundKey == null) {
+            soundCatalog.defaultKeyFor(SoundCategory.CALL)?.let { defaultKey ->
+                viewModelScope.launch {
+                    settingsRepository.update { current ->
+                        current.copy(callSoundKey = defaultKey)
+                    }
+                }
+                updatedSettings = updatedSettings.copy(callSoundKey = defaultKey)
+            }
+        }
         return updatedSettings
     }
 
@@ -411,6 +463,8 @@ class MainViewModel @Inject constructor(
     }
 
     companion object {
+        private const val TAG = "MainViewModel"
         private const val BUG_REPORT_PAGE_URL = "https://DamienLove.github.io/PulseLink/bug-report/"
+        const val BETA_AGREEMENT_VERSION = "2025-11-13"
     }
 }

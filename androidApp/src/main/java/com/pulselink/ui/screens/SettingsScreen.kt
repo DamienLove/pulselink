@@ -50,6 +50,7 @@ fun SettingsScreen(
     onToggleAutoAllowRemoteSoundChange: (Boolean) -> Unit,
     onEditEmergencyTone: () -> Unit,
     onEditCheckInTone: () -> Unit,
+    onEditCallTone: () -> Unit,
     onReportBug: () -> Unit,
     onBetaTesters: () -> Unit,
     onBack: () -> Unit
@@ -125,6 +126,12 @@ fun SettingsScreen(
                 subtitle = "Set the chime that plays when you send a check-in.",
                 actionLabel = "Edit tone",
                 onAction = onEditCheckInTone
+            )
+            SettingsActionCard(
+                title = stringResource(R.string.settings_call_tone_title),
+                subtitle = stringResource(R.string.settings_call_tone_subtitle),
+                actionLabel = "Edit tone",
+                onAction = onEditCallTone
             )
             SettingsActionCard(
                 title = stringResource(id = R.string.settings_report_bug),

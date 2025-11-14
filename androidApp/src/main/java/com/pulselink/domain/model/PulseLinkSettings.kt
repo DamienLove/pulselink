@@ -23,6 +23,9 @@ data class PulseLinkSettings(
         breakThroughDnd = false,
         vibrate = true
     ),
+    val callSoundKey: String? = null,
+    val betaAgreementAccepted: Boolean = false,
+    val betaAgreementVersion: String? = null,
     val autoCallAfterAlert: Boolean = false,
     val proUnlocked: Boolean = true,
     val onboardingComplete: Boolean = false,

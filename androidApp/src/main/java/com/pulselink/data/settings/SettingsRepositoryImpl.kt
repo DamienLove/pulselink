@@ -29,6 +29,9 @@ private val AUTO_ALLOW_REMOTE_SOUND = booleanPreferencesKey("auto_allow_remote_s
 private val ASSISTANT_HINT_DISMISSED = booleanPreferencesKey("assistant_hint_dismissed")
 private val EMERGENCY_PROFILE = stringPreferencesKey("emergency_profile")
 private val CHECKIN_PROFILE = stringPreferencesKey("checkin_profile")
+private val CALL_SOUND = stringPreferencesKey("call_sound")
+private val BETA_AGREEMENT_ACCEPTED = booleanPreferencesKey("beta_agreement_accepted")
+private val BETA_AGREEMENT_VERSION = stringPreferencesKey("beta_agreement_version")
 private val AUTO_CALL = booleanPreferencesKey("auto_call")
 private val PRO_UNLOCKED = booleanPreferencesKey("pro_unlocked")
 private val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
@@ -57,6 +60,9 @@ class SettingsRepositoryImpl @Inject constructor(
                 ?: PulseLinkSettings().emergencyProfile,
             checkInProfile = prefs[CHECKIN_PROFILE]?.let { json.decodeFromString(AlertProfile.serializer(), it) }
                 ?: PulseLinkSettings().checkInProfile,
+            callSoundKey = prefs[CALL_SOUND] ?: PulseLinkSettings().callSoundKey,
+            betaAgreementAccepted = prefs[BETA_AGREEMENT_ACCEPTED] ?: PulseLinkSettings().betaAgreementAccepted,
+            betaAgreementVersion = prefs[BETA_AGREEMENT_VERSION] ?: PulseLinkSettings().betaAgreementVersion,
             autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,
             proUnlocked = prefs[PRO_UNLOCKED] ?: PulseLinkSettings().proUnlocked,
             onboardingComplete = prefs[ONBOARDING_COMPLETE] ?: PulseLinkSettings().onboardingComplete,
@@ -77,6 +83,9 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[ASSISTANT_HINT_DISMISSED] = updated.assistantShortcutsDismissed
             prefs[EMERGENCY_PROFILE] = json.encodeToString(AlertProfile.serializer(), updated.emergencyProfile)
             prefs[CHECKIN_PROFILE] = json.encodeToString(AlertProfile.serializer(), updated.checkInProfile)
+            updated.callSoundKey?.let { prefs[CALL_SOUND] = it } ?: prefs.remove(CALL_SOUND)
+            prefs[BETA_AGREEMENT_ACCEPTED] = updated.betaAgreementAccepted
+            updated.betaAgreementVersion?.let { prefs[BETA_AGREEMENT_VERSION] = it } ?: prefs.remove(BETA_AGREEMENT_VERSION)
             prefs[AUTO_CALL] = updated.autoCallAfterAlert
             prefs[PRO_UNLOCKED] = updated.proUnlocked
             prefs[ONBOARDING_COMPLETE] = updated.onboardingComplete
@@ -132,6 +141,13 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun setBetaAgreementAcceptance(version: String) {
+        dataStore.edit { prefs ->
+            prefs[BETA_AGREEMENT_ACCEPTED] = true
+            prefs[BETA_AGREEMENT_VERSION] = version
+        }
+    }
+
     private fun settingsValue(prefs: Preferences): PulseLinkSettings {
         return PulseLinkSettings(
             primaryPhrase = prefs[PRIMARY_PHRASE] ?: PulseLinkSettings().primaryPhrase,
@@ -145,6 +161,9 @@ class SettingsRepositoryImpl @Inject constructor(
                 ?: PulseLinkSettings().emergencyProfile,
             checkInProfile = prefs[CHECKIN_PROFILE]?.let { json.decodeFromString(AlertProfile.serializer(), it) }
                 ?: PulseLinkSettings().checkInProfile,
+            callSoundKey = prefs[CALL_SOUND] ?: PulseLinkSettings().callSoundKey,
+            betaAgreementAccepted = prefs[BETA_AGREEMENT_ACCEPTED] ?: PulseLinkSettings().betaAgreementAccepted,
+            betaAgreementVersion = prefs[BETA_AGREEMENT_VERSION] ?: PulseLinkSettings().betaAgreementVersion,
             autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,
             proUnlocked = prefs[PRO_UNLOCKED] ?: PulseLinkSettings().proUnlocked,
             onboardingComplete = prefs[ONBOARDING_COMPLETE] ?: PulseLinkSettings().onboardingComplete,

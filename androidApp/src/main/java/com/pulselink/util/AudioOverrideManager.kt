@@ -77,23 +77,14 @@ class AudioOverrideManager @Inject constructor(
         var dndPermissionGranted = false
         var limitedByPolicy = false
         val notifManager = notificationManager
-        val desiredFilter =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-                NotificationManager.INTERRUPTION_FILTER_PRIORITY
-            } else {
-                NotificationManager.INTERRUPTION_FILTER_ALL
-            }
-        if (requestDndBypass && notifManager?.isNotificationPolicyAccessGranted == true) {
+        val supportsGlobalZenOverride = Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM
+        val desiredFilter = NotificationManager.INTERRUPTION_FILTER_ALL
+        var channelBypassOnly = false
+        if (requestDndBypass && supportsGlobalZenOverride &&
+            notifManager?.isNotificationPolicyAccessGranted == true
+        ) {
             dndPermissionGranted = true
             runCatching {
-                if (desiredFilter == NotificationManager.INTERRUPTION_FILTER_PRIORITY) {
-                    val policy = notifManager.notificationPolicy
-                    val categories = policy.priorityCategories or
-                        NotificationManager.Policy.PRIORITY_CATEGORY_ALARMS or
-                        NotificationManager.Policy.PRIORITY_CATEGORY_MEDIA or
-                        NotificationManager.Policy.PRIORITY_CATEGORY_CALLS
-                    notifManager.setNotificationPolicy(policy.withCategories(categories))
-                }
                 notifManager.setInterruptionFilter(desiredFilter)
             }.onSuccess {
                 val postFilter = notifManager.currentInterruptionFilter
@@ -109,18 +100,26 @@ class AudioOverrideManager @Inject constructor(
             }.onFailure { error ->
                 Log.w(TAG, "Unable to modify interruption filter", error)
             }
-        } else if (requestDndBypass) {
+        } else if (requestDndBypass && supportsGlobalZenOverride) {
             Log.w(TAG, "Notification policy access missing; cannot bypass DND")
+        } else if (requestDndBypass) {
+            channelBypassOnly = true
+            Log.i(
+                TAG,
+                "Android 15+ relies on notification channel bypass; skipping global DND change."
+            )
         }
         val message = when {
-            requestDndBypass && !dndPermissionGranted ->
+            channelBypassOnly ->
+                "Android 15+ relies on channel bypass; leaving system Do Not Disturb untouched."
+            requestDndBypass && supportsGlobalZenOverride && !dndPermissionGranted ->
                 "Missing Notification Policy access"
             limitedByPolicy ->
-                "Android 15+ limits interruption filter changes"
+                "System limited the interruption filter change"
             else -> null
         }
         return when {
-            requestDndBypass && !dndPermissionGranted ->
+            requestDndBypass && supportsGlobalZenOverride && !dndPermissionGranted ->
                 OverrideResult.partial(
                     reason = OverrideResult.FailureReason.POLICY_PERMISSION_MISSING,
                     dndApplied = dndApplied,
@@ -142,8 +141,9 @@ class AudioOverrideManager @Inject constructor(
 
     fun scheduleRestore(delayMillis: Long = DEFAULT_RESTORE_DELAY_MS) {
         pendingRestoreJob?.cancel()
+        val effectiveDelay = preferredRestoreDelay(delayMillis)
         pendingRestoreJob = scope.launch {
-            delay(delayMillis)
+            delay(effectiveDelay)
             restoreIfNeeded()
         }
     }
@@ -301,37 +301,18 @@ class AudioOverrideManager @Inject constructor(
         }
     }
 
-    private fun NotificationManager.Policy.withCategories(categories: Int): NotificationManager.Policy {
-        return when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ->
-                NotificationManager.Policy(
-                    categories,
-                    priorityCallSenders,
-                    priorityMessageSenders,
-                    suppressedVisualEffects,
-                    priorityConversationSenders
-                )
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.P ->
-                NotificationManager.Policy(
-                    categories,
-                    priorityCallSenders,
-                    priorityMessageSenders,
-                    suppressedVisualEffects
-                )
-            else ->
-                NotificationManager.Policy(
-                    categories,
-                    priorityCallSenders,
-                    priorityMessageSenders
-                )
-        }
-    }
-
     private fun buildToneAudioAttributes(): AudioAttributes {
         return AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_ALARM)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
+    }
+
+    private fun preferredRestoreDelay(requestedDelay: Long): Long {
+        if (requestedDelay != DEFAULT_RESTORE_DELAY_MS) return requestedDelay
+        val storedFilter = prefs.getInt(KEY_INTERRUPTION_FILTER, NotificationManager.INTERRUPTION_FILTER_ALL)
+        val originalDndActive = storedFilter != NotificationManager.INTERRUPTION_FILTER_ALL
+        return if (originalDndActive) PRIORITY_RESTORE_DELAY_MS else DEFAULT_RESTORE_DELAY_MS
     }
 
     companion object {
@@ -346,6 +327,7 @@ class AudioOverrideManager @Inject constructor(
         private const val KEY_TIMESTAMP = "timestamp"
 
         private const val DEFAULT_RESTORE_DELAY_MS = 120_000L
+        private const val PRIORITY_RESTORE_DELAY_MS = 25_000L
     }
 
     data class OverrideResult(

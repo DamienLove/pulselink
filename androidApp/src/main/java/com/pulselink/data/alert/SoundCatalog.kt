@@ -2,6 +2,8 @@ package com.pulselink.data.alert
 
 import android.content.Context
 import com.pulselink.R
+import com.pulselink.domain.model.SOUND_RES_PHONE_DEFAULT_NOTIFICATION
+import com.pulselink.domain.model.SOUND_RES_PHONE_DEFAULT_RINGTONE
 import com.pulselink.domain.model.SoundCategory
 import com.pulselink.domain.model.SoundOption
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -15,6 +17,7 @@ class SoundCatalog @Inject constructor(
 ) {
 
     private val soundOptions: List<SoundOption> by lazy { discoverSounds() }
+    private val callSoundOptions: List<SoundOption> by lazy { buildCallOptions() }
 
     fun emergencyOptions(): List<SoundOption> =
         soundOptions.filter { it.category == SoundCategory.SIREN }
@@ -23,25 +26,39 @@ class SoundCatalog @Inject constructor(
         soundOptions.filter { it.category == SoundCategory.CHIME }
             .ifEmpty { emergencyOptions() }
 
+    fun callOptions(): List<SoundOption> = callSoundOptions
+
     fun resolve(key: String?, fallbackCategory: SoundCategory): SoundOption? {
         key?.let { cachedOptions[it] }?.let { return it }
         return when (fallbackCategory) {
             SoundCategory.SIREN -> emergencyOptions().firstOrNull()
             SoundCategory.CHIME -> checkInOptions().firstOrNull()
+            SoundCategory.CALL -> callOptions().firstOrNull()
         }
     }
 
     fun defaultKeyFor(category: SoundCategory): String? =
-        resolve(null, category)?.key
+        when (category) {
+            SoundCategory.SIREN -> emergencyOptions().firstOrNull()?.key
+            SoundCategory.CHIME -> checkInOptions().firstOrNull()?.key
+            SoundCategory.CALL -> callOptions().firstOrNull()?.key
+        }
 
     private val cachedOptions: Map<String, SoundOption> by lazy {
-        soundOptions.associateBy { it.key }
+        (soundOptions + callSoundOptions).associateBy { it.key }
     }
 
     private fun discoverSounds(): List<SoundOption> {
+        val options = mutableListOf<SoundOption>()
+        options += SoundOption(
+            key = KEY_SYSTEM_NOTIFICATION_DEFAULT,
+            label = context.getString(R.string.sound_option_phone_default_notification),
+            resId = SOUND_RES_PHONE_DEFAULT_NOTIFICATION,
+            category = SoundCategory.CHIME
+        )
         val rawClass = R.raw::class.java
         val fields = rawClass.fields.orEmpty()
-        return fields.mapNotNull { field ->
+        fields.mapNotNull { field ->
             val name = field.name
             val resId = runCatching { field.getInt(null) }.getOrNull() ?: return@mapNotNull null
             when {
@@ -66,7 +83,28 @@ class SoundCatalog @Inject constructor(
                 }
                 else -> null
             }
-        }.sortedBy { it.label.lowercase(Locale.getDefault()) }
+        }.forEach { option -> options += option }
+        return options.sortedBy { it.label.lowercase(Locale.getDefault()) }
+    }
+
+    private fun buildCallOptions(): List<SoundOption> {
+        val options = mutableListOf(
+            SoundOption(
+                key = KEY_SYSTEM_RINGTONE_DEFAULT,
+                label = context.getString(R.string.sound_option_phone_default_ringtone),
+                resId = SOUND_RES_PHONE_DEFAULT_RINGTONE,
+                category = SoundCategory.CALL
+            )
+        )
+        val chimeOptions = soundOptions.filter { it.category == SoundCategory.CHIME }
+        chimeOptions.forEach { option ->
+            options += option.copy(
+                key = "call_${option.key}",
+                label = context.getString(R.string.sound_option_call_variant, option.label),
+                category = SoundCategory.CALL
+            )
+        }
+        return options.sortedBy { it.label.lowercase(Locale.getDefault()) }
     }
 
     private fun toLabel(raw: String, fallback: String): String {
@@ -84,5 +122,7 @@ class SoundCatalog @Inject constructor(
     companion object {
         private const val SIREN_PREFIX = "alert_siren"
         private const val CHIME_PREFIX = "alert_chime"
+        private const val KEY_SYSTEM_NOTIFICATION_DEFAULT = "system_default_notification"
+        private const val KEY_SYSTEM_RINGTONE_DEFAULT = "system_default_ringtone"
     }
 }

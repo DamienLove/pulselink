@@ -3,7 +3,6 @@ package com.pulselink.data.link
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
-import android.net.Uri
 import android.os.Build
 import android.provider.CallLog
 import android.util.Log
@@ -28,6 +27,7 @@ import com.pulselink.domain.repository.MessageRepository
 import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.service.AlertRouter
 import com.pulselink.util.AudioOverrideManager
+import com.pulselink.util.resolveUri
 import com.pulselink.util.CallStateMonitor
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
@@ -787,8 +787,7 @@ class RemoteActionHandler @Inject constructor(
                     setCategory(NotificationCompat.CATEGORY_ALARM)
                 }
             }
-        soundOption?.let {
-            val soundUri = android.net.Uri.parse("android.resource://${context.packageName}/${it.resId}")
+        soundOption?.resolveUri(context)?.let { soundUri ->
             notificationBuilder.setSound(soundUri)
             if (overrideResult.state != AudioOverrideManager.OverrideResult.State.SKIPPED) {
                 delay(AUDIO_PRIME_DELAY_MS)
@@ -809,9 +808,11 @@ class RemoteActionHandler @Inject constructor(
     suspend fun handleIncomingCall(contact: Contact) {
         val settings = settingsRepository.settings.first()
         val profile = settings.emergencyProfile
-        val soundKey = contact.emergencySoundKey ?: profile.soundKey
-        val soundOption = soundCatalog.resolve(soundKey, SoundCategory.SIREN)
-        val channel = notificationRegistrar.ensureAlertChannel(SoundCategory.SIREN, soundOption, profile)
+        val soundKey = settings.callSoundKey
+            ?: contact.emergencySoundKey
+            ?: profile.soundKey
+        val soundOption = soundCatalog.resolve(soundKey, SoundCategory.CALL)
+        val channel = notificationRegistrar.ensureAlertChannel(SoundCategory.CALL, soundOption, profile)
         val overrideResult = audioOverrideManager.overrideForAlert(true)
         if (!overrideResult.success) {
             Log.w(
@@ -821,9 +822,7 @@ class RemoteActionHandler @Inject constructor(
         } else {
             Log.d(TAG, "Incoming call override applied for ${contact.displayName}")
         }
-        val soundUri = soundOption?.let {
-            Uri.parse("android.resource://${context.packageName}/${it.resId}")
-        }
+        val soundUri = soundOption?.resolveUri(context)
         if (soundUri != null) {
             if (overrideResult.state != AudioOverrideManager.OverrideResult.State.SKIPPED) {
                 delay(AUDIO_PRIME_DELAY_MS)

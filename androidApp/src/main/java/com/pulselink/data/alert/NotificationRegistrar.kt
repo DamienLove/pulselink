@@ -12,6 +12,7 @@ import com.pulselink.R
 import com.pulselink.domain.model.AlertProfile
 import com.pulselink.domain.model.SoundCategory
 import com.pulselink.domain.model.SoundOption
+import com.pulselink.util.resolveUri
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -44,6 +45,7 @@ class NotificationRegistrar @Inject constructor(
             return when (category) {
                 SoundCategory.SIREN -> LEGACY_ALERT_CHANNEL
                 SoundCategory.CHIME -> LEGACY_CHECK_IN_CHANNEL
+                SoundCategory.CALL -> LEGACY_CALL_CHANNEL
             }
         }
         val manager = context.getSystemService<NotificationManager>() ?: return LEGACY_ALERT_CHANNEL
@@ -65,6 +67,11 @@ class NotificationRegistrar @Inject constructor(
                 NotificationManager.IMPORTANCE_DEFAULT,
                 AudioAttributes.USAGE_NOTIFICATION_EVENT
             )
+            SoundCategory.CALL -> Triple(
+                context.getString(R.string.channel_calls),
+                NotificationManager.IMPORTANCE_HIGH,
+                AudioAttributes.USAGE_NOTIFICATION_RINGTONE
+            )
         }
 
         val channelLabel = soundOption?.label?.let { "$name - $it" } ?: name
@@ -72,9 +79,7 @@ class NotificationRegistrar @Inject constructor(
             .setUsage(usage)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
-        val soundUri = soundOption?.let {
-            android.net.Uri.parse("android.resource://${context.packageName}/${it.resId}")
-        }
+        val soundUri = soundOption?.resolveUri(context)
 
         val channel = NotificationChannel(channelId, channelLabel, importance).apply {
             setGroup(GROUP_ALERTS)
@@ -95,6 +100,7 @@ class NotificationRegistrar @Inject constructor(
         val base = when (category) {
             SoundCategory.SIREN -> "pulse_alert"
             SoundCategory.CHIME -> "pulse_checkin"
+            SoundCategory.CALL -> "pulse_call"
         }
         val suffix = soundOption?.key ?: "default"
         return "${base}_$suffix"
@@ -117,11 +123,12 @@ class NotificationRegistrar @Inject constructor(
         }
     }
 
-    companion object {
-        private const val TAG = "NotificationRegistrar"
-        private const val LEGACY_ALERT_CHANNEL = "pulse_alerts_legacy"
-        private const val LEGACY_CHECK_IN_CHANNEL = "pulse_checkins_legacy"
-        const val CHANNEL_BACKGROUND = "pulse_background"
-        private const val GROUP_ALERTS = "pulse_group_alerts"
-    }
+        companion object {
+            private const val TAG = "NotificationRegistrar"
+            private const val LEGACY_ALERT_CHANNEL = "pulse_alerts_legacy"
+            private const val LEGACY_CHECK_IN_CHANNEL = "pulse_checkins_legacy"
+            private const val LEGACY_CALL_CHANNEL = "pulse_call_legacy"
+            const val CHANNEL_BACKGROUND = "pulse_background"
+            private const val GROUP_ALERTS = "pulse_group_alerts"
+        }
 }

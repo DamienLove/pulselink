@@ -1,6 +1,12 @@
 package com.pulselink.ui.screens
 
+import android.app.Activity
+import android.content.Intent
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -56,6 +62,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.foundation.layout.widthIn
 import com.pulselink.R
+import com.pulselink.data.assistant.VoiceCommandResult
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ContactMessage
 import com.pulselink.domain.model.LinkStatus
@@ -68,11 +75,14 @@ import kotlin.coroutines.cancellation.CancellationException
 fun ContactConversationScreen(
     contact: Contact?,
     messages: List<ContactMessage>,
+    isProUser: Boolean,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
     onCallContact: suspend (Contact) -> Unit,
     onSendMessage: suspend (String) -> ManualMessageResult,
-    onPing: suspend () -> Boolean
+    onPing: suspend () -> Boolean,
+    onVoiceCommand: suspend (String) -> VoiceCommandResult,
+    onUpgradeClick: () -> Unit
 ) {
     val gradient = Brush.verticalGradient(
         colors = listOf(Color(0xFF0B0E1A), Color(0xFF151826))
@@ -89,11 +99,14 @@ fun ContactConversationScreen(
             ConversationBody(
                 contact = contact,
                 messages = messages,
+                isProUser = isProUser,
                 onBack = onBack,
                 onOpenSettings = onOpenSettings,
                 onCallContact = onCallContact,
                 onSendMessage = onSendMessage,
-                onPing = onPing
+                onPing = onPing,
+                onVoiceCommand = onVoiceCommand,
+                onUpgradeClick = onUpgradeClick
             )
         }
     }
@@ -118,15 +131,40 @@ private fun EmptyConversationState(onBack: () -> Unit) {
 private fun ConversationBody(
     contact: Contact,
     messages: List<ContactMessage>,
+    isProUser: Boolean,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
     onCallContact: suspend (Contact) -> Unit,
     onSendMessage: suspend (String) -> ManualMessageResult,
-    onPing: suspend () -> Boolean
+    onPing: suspend () -> Boolean,
+    onVoiceCommand: suspend (String) -> VoiceCommandResult,
+    onUpgradeClick: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var input by remember { mutableStateOf(TextFieldValue("")) }
+    val voiceLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
+        val spoken = result.data
+            ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            ?.firstOrNull()
+            ?.trim()
+        if (spoken.isNullOrEmpty()) {
+            Toast.makeText(context, context.getString(R.string.voice_command_error_unknown), Toast.LENGTH_SHORT).show()
+            return@rememberLauncherForActivityResult
+        }
+        scope.launch {
+            val outcome = onVoiceCommand(spoken)
+            val message = when (outcome) {
+                is VoiceCommandResult.Success -> outcome.message
+                is VoiceCommandResult.Error -> outcome.message
+                VoiceCommandResult.UpgradeRequired -> context.getString(R.string.voice_command_upgrade_required)
+            }
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -258,6 +296,23 @@ private fun ConversationBody(
                         input = TextFieldValue("")
                     }
                 }
+            },
+            onVoice = {
+                if (!isProUser) {
+                    Toast.makeText(context, context.getString(R.string.voice_command_upgrade_required), Toast.LENGTH_SHORT).show()
+                    onUpgradeClick()
+                    return@ComposerRow
+                }
+                if (!SpeechRecognizer.isRecognitionAvailable(context)) {
+                    Toast.makeText(context, context.getString(R.string.voice_command_no_recognizer), Toast.LENGTH_SHORT).show()
+                    return@ComposerRow
+                }
+                val prompt = context.getString(R.string.voice_command_prompt)
+                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(RecognizerIntent.EXTRA_PROMPT, prompt)
+                }
+                voiceLauncher.launch(intent)
             }
         )
     }
@@ -289,7 +344,8 @@ private fun StatusRow(contact: Contact) {
 private fun ComposerRow(
     input: TextFieldValue,
     onInputChange: (TextFieldValue) -> Unit,
-    onSend: () -> Unit
+    onSend: () -> Unit,
+    onVoice: () -> Unit
 ) {
     val gradient = Brush.horizontalGradient(listOf(Color(0xFF1D4ED8), Color(0xFF3B82F6)))
     Row(
@@ -319,7 +375,7 @@ private fun ComposerRow(
                 innerField()
             }
         )
-        IconButton(onClick = { /* TODO: future voice support */ }) {
+        IconButton(onClick = onVoice) {
             Icon(Icons.Filled.Mic, contentDescription = "Voice message", tint = Color.White)
         }
         Spacer(modifier = Modifier.width(4.dp))

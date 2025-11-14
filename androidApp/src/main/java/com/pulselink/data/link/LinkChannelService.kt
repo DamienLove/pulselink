@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.pulselink.auth.FirebaseAuthManager
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.repository.ContactRepository
@@ -26,7 +27,8 @@ import kotlinx.coroutines.tasks.await
 class LinkChannelService @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val settingsRepository: SettingsRepository,
-    private val contactRepository: ContactRepository
+    private val contactRepository: ContactRepository,
+    private val authManager: FirebaseAuthManager
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -39,6 +41,7 @@ class LinkChannelService @Inject constructor(
     fun start() {
         if (!started.compareAndSet(false, true)) return
         scope.launch {
+            authManager.ensureSignedIn()
             val deviceId = settingsRepository.ensureDeviceId()
             localDeviceId = deviceId
             contactRepository.observeContacts().collect { contacts ->
@@ -49,6 +52,7 @@ class LinkChannelService @Inject constructor(
 
     suspend fun sendManualMessage(contact: Contact, body: String): Boolean {
         start()
+        authManager.ensureSignedIn()
         val remoteDeviceId = contact.remoteDeviceId ?: return false
         val senderId = localDeviceId ?: settingsRepository.ensureDeviceId().also { localDeviceId = it }
         val channelId = channelIdFor(senderId, remoteDeviceId)
