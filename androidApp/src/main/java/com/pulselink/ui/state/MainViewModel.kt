@@ -176,6 +176,7 @@ class MainViewModel @Inject constructor(
 
             val localSuccess = runCatching {
                 settingsRepository.setBetaAgreementAcceptance(BETA_AGREEMENT_VERSION)
+                settingsRepository.setBetaTesterStatus(true)
             }.onFailure { error ->
                 Log.e(TAG, "Unable to persist local beta agreement acceptance", error)
             }.isSuccess

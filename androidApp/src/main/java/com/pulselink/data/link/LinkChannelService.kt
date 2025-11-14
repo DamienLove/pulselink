@@ -64,6 +64,8 @@ class LinkChannelService @Inject constructor(
             FIELD_TIMESTAMP to System.currentTimeMillis(),
             FIELD_TYPE to TYPE_MANUAL
         )
+        contact.linkCode?.let { payload[FIELD_LINK_CODE] = it }
+        payload[FIELD_PHONE] = contact.phoneNumber.orEmpty()
         return runCatching {
             firestore.collection(COLLECTION_CHANNELS)
                 .document(channelId)
@@ -112,11 +114,12 @@ class LinkChannelService @Inject constructor(
                         val doc = change.document
                         val payload = LinkChannelPayload(
                             id = doc.getString(FIELD_ID).orEmpty(),
-                            contactId = contactId,
                             senderId = doc.getString(FIELD_SENDER_ID).orEmpty(),
                             receiverId = doc.getString(FIELD_RECEIVER_ID).orEmpty(),
                             body = doc.getString(FIELD_BODY).orEmpty(),
-                            timestamp = doc.getLong(FIELD_TIMESTAMP) ?: System.currentTimeMillis()
+                            timestamp = doc.getLong(FIELD_TIMESTAMP) ?: System.currentTimeMillis(),
+                            linkCode = doc.getString(FIELD_LINK_CODE),
+                            phoneNumber = doc.getString(FIELD_PHONE)?.takeIf { it.isNotBlank() }
                         )
                         scope.launch {
                             _inboundMessages.emit(payload)
@@ -141,15 +144,18 @@ class LinkChannelService @Inject constructor(
         private const val FIELD_BODY = "body"
         private const val FIELD_TIMESTAMP = "timestamp"
         private const val FIELD_TYPE = "type"
+        private const val FIELD_LINK_CODE = "linkCode"
+        private const val FIELD_PHONE = "phoneNumber"
         private const val TYPE_MANUAL = "manual"
     }
 }
 
 data class LinkChannelPayload(
     val id: String,
-    val contactId: Long,
     val senderId: String,
     val receiverId: String,
     val body: String,
-    val timestamp: Long
+    val timestamp: Long,
+    val linkCode: String?,
+    val phoneNumber: String?
 )

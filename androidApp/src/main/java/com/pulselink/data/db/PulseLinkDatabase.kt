@@ -30,6 +30,9 @@ interface ContactDao {
     @Query("SELECT * FROM contacts WHERE phoneNumber = :phone LIMIT 1")
     suspend fun getByPhone(phone: String): Contact?
 
+    @Query("SELECT * FROM contacts WHERE remoteDeviceId = :deviceId LIMIT 1")
+    suspend fun getByRemoteDeviceId(deviceId: String): Contact?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(contact: Contact)
 

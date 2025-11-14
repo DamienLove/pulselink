@@ -38,14 +38,18 @@ class AlertRouter @Inject constructor(
             val matchIndex = phrases.indexOfFirst { normalized.contains(it) }
             if (matchIndex == -1) return
             val tier = if (matchIndex == 0) EscalationTier.EMERGENCY else EscalationTier.CHECK_IN
-            route(tier, normalized, settings)
+            route(tier, normalized, settings, emptySet())
         }
     }
 
-    suspend fun dispatchManual(tier: EscalationTier, trigger: String): AlertResult? {
+    suspend fun dispatchManual(
+        tier: EscalationTier,
+        trigger: String,
+        excludeContactIds: Set<Long> = emptySet()
+    ): AlertResult? {
         return mutex.withLock {
             val settings = settingsRepository.settings.first()
-            route(tier, trigger, settings)
+            route(tier, trigger, settings, excludeContactIds)
         }
     }
 
@@ -68,12 +72,13 @@ class AlertRouter @Inject constructor(
     private suspend fun route(
         tier: EscalationTier,
         trigger: String,
-        settings: com.pulselink.domain.model.PulseLinkSettings
+        settings: com.pulselink.domain.model.PulseLinkSettings,
+        excludeContactIds: Set<Long>
     ): AlertResult? = coroutineScope {
         val contacts = when (tier) {
             EscalationTier.EMERGENCY -> contactRepository.getEmergencyContacts()
             EscalationTier.CHECK_IN -> contactRepository.getCheckInContacts()
-        }
+        }.filterNot { excludeContactIds.contains(it.id) }
         if (contacts.isEmpty()) {
             return@coroutineScope null
         }

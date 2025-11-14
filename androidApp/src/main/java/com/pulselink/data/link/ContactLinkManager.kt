@@ -63,6 +63,7 @@ class ContactLinkManager @Inject constructor(
     private val alertHandshake = ConcurrentHashMap<String, CompletableDeferred<Boolean>>()
     @Volatile private var incomingMonitorActive = false
     private val monitorScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val remoteAlertDedup = ConcurrentHashMap<String, Long>()
     enum class CallPreparationResult { READY, TIMEOUT, FAILED }
 
     init {
@@ -227,6 +228,10 @@ class ContactLinkManager @Inject constructor(
     }
 
     private suspend fun handleRemoteAlert(message: PulseLinkMessage.RemoteAlert) {
+        if (!shouldProcessRemoteAlert(message.senderId, message.code)) {
+            Log.d(TAG, "Ignoring duplicate remote alert sender=${message.senderId} code=${message.code}")
+            return
+        }
         val contact = contactRepository.getByLinkCode(message.code) ?: return
         val overrideResult = remoteActionHandler.prepareForAlert(contact)
         if (!overrideResult.success) {
@@ -235,7 +240,7 @@ class ContactLinkManager @Inject constructor(
                 "Remote emergency override limited for ${contact.displayName} reason=${overrideResult.reason} message=${overrideResult.message}"
             )
         }
-        remoteActionHandler.routeRemoteAlert(contact, message.tier)
+        remoteActionHandler.routeRemoteAlert(contact, message.tier, setOf(contact.id))
         if (message.tier == EscalationTier.EMERGENCY) {
             val title = context.getString(R.string.emergency_alert_title, contact.displayName)
             val body = context.getString(R.string.emergency_alert_body)
@@ -273,6 +278,21 @@ class ContactLinkManager @Inject constructor(
         alertHandshake.remove(message.code)?.complete(message.ready)
     }
 
+    private fun shouldProcessRemoteAlert(senderId: String, code: String): Boolean {
+        val now = System.currentTimeMillis()
+        val key = "$senderId|$code"
+        val last = remoteAlertDedup[key]
+        if (last != null && now - last < REMOTE_ALERT_DEDUP_WINDOW_MS) {
+            return false
+        }
+        remoteAlertDedup[key] = now
+        if (remoteAlertDedup.size > REMOTE_ALERT_DEDUP_MAX) {
+            val cutoff = now - REMOTE_ALERT_DEDUP_WINDOW_MS
+            remoteAlertDedup.entries.removeIf { it.value < cutoff }
+        }
+        return true
+    }
+
     private suspend fun handleSoundOverride(message: PulseLinkMessage.SoundOverride) {
         val contact = contactRepository.getByLinkCode(message.code) ?: return
         if (!contact.allowRemoteSoundChange) return
@@ -294,7 +314,10 @@ class ContactLinkManager @Inject constructor(
 
     private suspend fun handleRealtimeManualMessage(payload: LinkChannelPayload) {
         try {
-            val contact = contactRepository.getContact(payload.contactId) ?: return
+            val contact = payload.linkCode?.takeIf { it.isNotBlank() }?.let { contactRepository.getByLinkCode(it) }
+                ?: contactRepository.getByRemoteDeviceId(payload.senderId)
+                ?: payload.phoneNumber?.takeIf { it.isNotBlank() }?.let { contactRepository.getByPhone(it) }
+                ?: return
             deliverManualMessage(contact, payload.body, overrideApplied = true)
         } catch (error: Exception) {
             Log.e(TAG, "Failed to process realtime message ${payload.id}", error)
@@ -304,6 +327,19 @@ class ContactLinkManager @Inject constructor(
     private suspend fun deliverManualMessage(contact: Contact, rawBody: String, overrideApplied: Boolean) {
         val body = rawBody.ifBlank { context.getString(R.string.ping_received_body) }
         val title = context.getString(R.string.manual_message_title, contact.displayName)
+        if (isAutoAlertBody(rawBody)) {
+            withContext(Dispatchers.IO) {
+                messageRepository.record(
+                    ContactMessage(
+                        contactId = contact.id,
+                        body = body,
+                        direction = MessageDirection.INBOUND,
+                        overrideSucceeded = overrideApplied
+                    )
+                )
+            }
+            return
+        }
         remoteActionHandler.playAttentionTone(
             contact = contact,
             tier = EscalationTier.CHECK_IN,
@@ -322,6 +358,9 @@ class ContactLinkManager @Inject constructor(
             )
         }
     }
+
+    private fun isAutoAlertBody(body: String): Boolean =
+        body.startsWith("PulseLink EMERGENCY") || body.startsWith("PulseLink CHECK-IN")
 
     suspend fun cancelActiveEmergency(): Boolean = withContext(Dispatchers.IO) {
         val contacts = contactRepository.getEmergencyContacts()
@@ -644,6 +683,8 @@ class ContactLinkManager @Inject constructor(
         const val CONFIG_REMOTE_SOUND = "ALLOW_SOUND"
         const val CONFIG_REMOTE_OVERRIDE = "ALLOW_OVERRIDE"
         private const val PREPARE_TIMEOUT_MS = 10_000L
+        private const val REMOTE_ALERT_DEDUP_WINDOW_MS = 120_000L
+        private const val REMOTE_ALERT_DEDUP_MAX = 64
     }
 }
 
@@ -728,8 +769,17 @@ class RemoteActionHandler @Inject constructor(
         }
     }
 
-    suspend fun routeRemoteAlert(contact: Contact, tier: EscalationTier) {
-        alertRouter.dispatchManual(tier, "Remote trigger from ${contact.displayName}")
+    suspend fun routeRemoteAlert(
+        contact: Contact,
+        tier: EscalationTier,
+        excludeContactIds: Set<Long> = emptySet()
+    ) {
+        val updatedExcludes = excludeContactIds + contact.id
+        alertRouter.dispatchManual(
+            tier = tier,
+            trigger = "Remote trigger from ${contact.displayName}",
+            excludeContactIds = updatedExcludes
+        )
     }
 
     suspend fun playAttentionTone(
