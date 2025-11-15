@@ -14,7 +14,6 @@ import com.pulselink.data.alert.AlertDispatcher
 import com.pulselink.data.alert.NotificationRegistrar
 import com.pulselink.data.alert.SoundCatalog
 import com.pulselink.data.beta.BetaAgreementRepositoryImpl
-import com.pulselink.data.billing.BillingService
 import com.pulselink.data.db.AlertEventDao
 import com.pulselink.data.db.AlertRepositoryImpl
 import com.pulselink.data.db.BlockedContactDao
@@ -152,8 +151,4 @@ object DatabaseModule {
     @Singleton
     fun provideFirebaseFunctions(): FirebaseFunctions = FirebaseFunctions.getInstance()
 
-    @Provides
-    @Singleton
-    fun provideBillingService(@ApplicationContext context: Context): BillingService =
-        BillingService(context)
 }
