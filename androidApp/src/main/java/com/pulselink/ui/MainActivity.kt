@@ -26,6 +26,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -43,9 +44,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.google.firebase.crashlytics.ktx.crashlytics
+import com.google.firebase.ktx.Firebase
 import com.pulselink.data.ads.AppOpenAdController
 import com.pulselink.assistant.AssistantShortcuts
 import com.pulselink.domain.model.Contact
+import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.R
 import com.pulselink.ui.screens.BetaTesterListScreen
 import com.pulselink.ui.screens.BugReportData
@@ -77,6 +81,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import dagger.hilt.android.AndroidEntryPoint
 import com.pulselink.util.CallStateMonitor
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -251,6 +256,27 @@ class MainActivity : AppCompatActivity() {
 
                 LaunchedEffect(state.showAds) {
                     appOpenAdController.updateAvailability(state.showAds)
+                }
+
+                val scope = rememberCoroutineScope()
+                val sendMessageHandler: (Long, String) -> Unit = { contactId, body ->
+                    scope.launch {
+                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+                            permissionLauncher.launch(arrayOf(Manifest.permission.SEND_SMS))
+                            Toast.makeText(context, context.getString(R.string.sms_permission_required), Toast.LENGTH_SHORT).show()
+                            return@launch
+                        }
+                        
+                        val result = viewModel.sendManualMessage(contactId, body)
+                        val message = when (result) {
+                            is ManualMessageResult.Success -> context.getString(R.string.message_sent_success)
+                            is ManualMessageResult.Failure -> when (result.reason) {
+                                ManualMessageResult.Failure.Reason.SMS_FAILED -> context.getString(R.string.message_sent_failure_sms)
+                                else -> context.getString(R.string.message_sent_failure_unknown)
+                            }
+                        }
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    }
                 }
 
                 NavHost(navController = navController, startDestination = "splash") {
@@ -454,9 +480,7 @@ class MainActivity : AppCompatActivity() {
                             onSendLink = viewModel::sendLinkRequest,
                             onApproveLink = viewModel::approveLink,
                             onCallContact = callContactHandler,
-                            onSendManualMessage = { contact, body ->
-                                viewModel.sendManualMessage(contact.id, body)
-                            },
+                            onSendManualMessage = { contact, body -> sendMessageHandler(contact.id, body) },
                             onReorderContacts = viewModel::reorderContacts,
                             onRequestCancelEmergency = cancelEmergencyHandler,
                             isCancelingEmergency = isCancelingEmergency,
@@ -479,7 +503,7 @@ class MainActivity : AppCompatActivity() {
                             onBack = { navController.popBackStack() },
                             onOpenSettings = { navController.navigate("contact/$contactId/settings") },
                             onCallContact = callContactHandler,
-                            onSendMessage = { body -> viewModel.sendManualMessage(contactId, body) },
+                            onSendMessage = { body -> sendMessageHandler(contactId, body) },
                             onPing = { viewModel.sendPing(contactId) },
                             onVoiceCommand = { query -> viewModel.processVoiceCommand(query) },
                             onUpgradeClick = { navController.navigate("upgrade") }
@@ -601,25 +625,28 @@ class MainActivity : AppCompatActivity() {
                                 navController.popBackStack()
                             },
                             onSubmit = { report ->
-                                val bugUri = viewModel.buildBugReportUri(context, report)
-                                val viewIntent = Intent(Intent.ACTION_VIEW, bugUri)
-                                runCatching {
-                                    startActivity(viewIntent)
-                                }.onSuccess {
-                                    Toast.makeText(
-                                        context,
-                                        activity.getString(R.string.bug_report_success),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    bugReportDraft = BugReportData()
-                                    navController.popBackStack()
-                                }.onFailure {
-                                    Toast.makeText(
-                                        context,
-                                        activity.getString(R.string.bug_report_portal_unavailable),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+                                // Use Firebase Crashlytics for bug reporting
+                                val reportException = Exception(report.summary.ifBlank { "User-submitted bug report" })
+                                val crashlytics = Firebase.crashlytics
+                                crashlytics.setCustomKey("steps_to_reproduce", report.stepsToReproduce.ifBlank { "N/A" })
+                                crashlytics.setCustomKey("expected_behavior", report.expectedBehavior.ifBlank { "N/A" })
+                                crashlytics.setCustomKey("actual_behavior", report.actualBehavior)
+                                crashlytics.setCustomKey("frequency", report.frequency)
+                                crashlytics.setCustomKey("severity", report.severity)
+                                if (report.userEmail.isNotBlank()) {
+                                    crashlytics.setCustomKey("reporter_email", report.userEmail)
                                 }
+                                crashlytics.log("User Report: ${report.summary}")
+                                crashlytics.recordException(reportException)
+
+                                Toast.makeText(
+                                    context,
+                                    activity.getString(R.string.bug_report_success),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                
+                                bugReportDraft = BugReportData()
+                                navController.popBackStack()
                             }
                         )
                     }

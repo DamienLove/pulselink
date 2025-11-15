@@ -107,14 +107,29 @@ class MainViewModel @Inject constructor(
 
     fun saveContact(contact: Contact) {
         viewModelScope.launch {
+            val isNewContact = contact.id == 0L
             val nextOrder = if (contact.id == 0L) {
                 (_uiState.value.contacts.maxOfOrNull { it.contactOrder } ?: -1) + 1
             } else {
                 contact.contactOrder
             }
-            contactRepository.upsert(
-                if (contact.id == 0L) contact.copy(contactOrder = nextOrder) else contact
-            )
+            val storedContact = if (isNewContact) {
+                contact.copy(contactOrder = nextOrder)
+            } else {
+                contact
+            }
+            contactRepository.upsert(storedContact)
+
+            if (isNewContact && contact.phoneNumber.isNotBlank()) {
+                runCatching {
+                    val persisted = contactRepository.getByPhone(contact.phoneNumber)
+                    if (persisted != null) {
+                        linkManager.sendLinkRequest(persisted.id)
+                    }
+                }.onFailure { error ->
+                    Log.w(TAG, "Unable to auto-send link request for ${contact.displayName}", error)
+                }
+            }
         }
     }
 
