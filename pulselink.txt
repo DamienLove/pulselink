@@ -54,6 +54,11 @@ App requests microphone, SMS (send/receive), notification, and location access. 
 - Remote contact attention flow now plays the configured alert tone (respecting per-contact overrides) for pings, manual messages, and remote handshakes while forcing ring volume/DND overrides and scheduling automatic restore.
 - Manual message and ping senders receive immediate feedback if the remote device fails to acknowledge the override; manual composer blocks unlinked contacts and preserves guidance to try again if delivery raises an error.
 - Notification sound picker now manages preview playback via a single MediaPlayer instance that stops/cleans up when leaving the screen.
+
+-- 2025-11-16 Update --
+- Added the new cancel-emergency card to the Home screen (matches `PulseLink-ui-mockup/PulseLinkcancel.png`). When an alert is active, the gradient card replaces the outlined button, shows contextual copy, and routes into the existing biometric cancel flow.
+- Fixed the settings cog in the Home quick actions row by wiring `onSettingsClick` to `NavController.navigate("settings")`. Users on v10 can now open the settings sheet again.
+- Enabled AdMob in the free flavor by declaring `com.google.android.gms.ads.APPLICATION_ID` in the manifest and adding an `app-ads.txt` entry (`google.com, pub-5327057757821609, DIRECT, f08c47fec0942fa0`). This aligns with Google Play requirements and makes banner/native/app-open slots serve again.
 - Onboarding permission help clarified the SMS unlock steps (Settings > Apps > PulseLink > Permissions > 3-dot menu) per Motorola fingerprint flows.
 - Contact detail and home actions now await handshake completion, show success/fallback toasts, and refuse remote messaging until the contact is fully linked.
 - Restored the Pro upsell card on Home so the existing navigation entry no longer references a missing composable.
