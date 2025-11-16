@@ -65,7 +65,6 @@ import com.pulselink.ui.screens.OnboardingScreen
 import com.pulselink.ui.screens.OnboardingIntroScreen
 import com.pulselink.ui.screens.SettingsScreen
 import com.pulselink.ui.screens.SplashScreen
-import com.pulselink.ui.screens.UpgradeProScreen
 import com.pulselink.ui.screens.OnboardingPermissionState
 import com.pulselink.ui.state.MainViewModel
 import com.pulselink.ui.state.MainViewModel.CallInitiationResult

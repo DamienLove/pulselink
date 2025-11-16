@@ -282,6 +282,7 @@ private fun ConversationBody(
                                     ManualMessageResult.Failure.Reason.CONTACT_MISSING -> "Contact no longer available"
                                     ManualMessageResult.Failure.Reason.NOT_LINKED -> "Link this contact before messaging"
                                     ManualMessageResult.Failure.Reason.SMS_FAILED -> "Message failed to send"
+                                    ManualMessageResult.Failure.Reason.PERMISSION_REQUIRED -> context.getString(R.string.permission_sms)
                                     ManualMessageResult.Failure.Reason.UNKNOWN -> "Message failed to send"
                                 }
                             }

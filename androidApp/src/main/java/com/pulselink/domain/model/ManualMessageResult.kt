@@ -10,6 +10,7 @@ sealed class ManualMessageResult {
             CONTACT_MISSING,
             NOT_LINKED,
             SMS_FAILED,
+            PERMISSION_REQUIRED,
             UNKNOWN
         }
     }
