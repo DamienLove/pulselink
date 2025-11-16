@@ -145,6 +145,12 @@ class ContactLinkManager @Inject constructor(
     }
 
     suspend fun handleInbound(message: PulseLinkMessage, fromPhone: String) {
+        val localDeviceId = settingsRepository.ensureDeviceId()
+        if (message.senderId == localDeviceId) {
+            Log.d(TAG, "Ignoring inbound message from self (senderId == localDeviceId).")
+            return
+        }
+
         when (message) {
             is PulseLinkMessage.LinkRequest -> handleLinkRequest(message, fromPhone)
             is PulseLinkMessage.LinkAccept -> handleLinkAccept(message, fromPhone)
@@ -520,58 +526,125 @@ class ContactLinkManager @Inject constructor(
         return requestRemotePrepare(contact, tier)
     }
 
-    suspend fun sendManualMessage(contactId: Long, message: String): ManualMessageResult {
-        val contact = contactRepository.getContact(contactId)
-            ?: return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.CONTACT_MISSING)
-        val code = contact.linkCode
-        if (code.isNullOrBlank()) {
-            return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.NOT_LINKED)
-        }
-        return try {
-            val realtimeSent = linkChannelService.sendManualMessage(contact, message)
-            if (realtimeSent) {
-                withContext(Dispatchers.IO) {
-                    messageRepository.record(
-                        ContactMessage(
-                            contactId = contact.id,
-                            body = message,
-                            direction = MessageDirection.OUTBOUND,
-                            overrideSucceeded = false
+        suspend fun sendManualMessage(contactId: Long, message: String): ManualMessageResult {
+
+            Log.d(TAG, "sendManualMessage: START for contactId=$contactId")
+
+            val contact = contactRepository.getContact(contactId)
+
+                ?: return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.CONTACT_MISSING)
+
+            val code = contact.linkCode
+
+            if (code.isNullOrBlank()) {
+
+                Log.w(TAG, "sendManualMessage: FAILED. Reason: NOT_LINKED for contactId=$contactId")
+
+                return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.NOT_LINKED)
+
+            }
+
+            return try {
+
+                Log.d(TAG, "sendManualMessage: Attempting realtime send for contactId=$contactId.")
+
+                val realtimeSent = linkChannelService.sendManualMessage(contact, message)
+
+                Log.d(TAG, "sendManualMessage: Realtime send result for contactId=$contactId: $realtimeSent")
+
+                if (realtimeSent) {
+
+                    withContext(Dispatchers.IO) {
+
+                        Log.d(TAG, "Recording realtime outbound message for contact=$contactId")
+
+                        messageRepository.record(
+
+                            ContactMessage(
+
+                                contactId = contact.id,
+
+                                body = message,
+
+                                direction = MessageDirection.OUTBOUND,
+
+                                overrideSucceeded = false
+
+                            )
+
                         )
-                    )
+
+                    }
+
+                    return ManualMessageResult.Success(overrideApplied = false)
+
                 }
-                return ManualMessageResult.Success(overrideApplied = false)
-            }
-            val ready = if (contact.linkStatus == LinkStatus.LINKED) {
-                requestRemotePrepare(
-                    contact,
-                    EscalationTier.CHECK_IN,
-                    reason = PulseLinkMessage.AlertPrepareReason.MESSAGE
-                )
-            } else {
-                false
-            }
-            val deviceId = settingsRepository.ensureDeviceId()
-            val payload = SmsCodec.encodeManualMessage(deviceId, code, message)
-            val sent = smsSender.sendSms(contact.phoneNumber, payload)
-            if (!sent) {
-                ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.SMS_FAILED)
-            } else {
-                messageRepository.record(
-                    ContactMessage(
-                        contactId = contact.id,
-                        body = message,
-                        direction = MessageDirection.OUTBOUND,
-                        overrideSucceeded = ready
+
+    
+
+                Log.d(TAG, "sendManualMessage: Realtime send failed, falling back to SMS for contactId=$contactId.")
+
+                val ready = if (contact.linkStatus == LinkStatus.LINKED) {
+
+                    requestRemotePrepare(
+
+                        contact,
+
+                        EscalationTier.CHECK_IN,
+
+                        reason = PulseLinkMessage.AlertPrepareReason.MESSAGE
+
                     )
-                )
-                ManualMessageResult.Success(overrideApplied = ready)
+
+                } else {
+
+                    false
+
+                }
+
+                val deviceId = settingsRepository.ensureDeviceId()
+
+                val payload = SmsCodec.encodeManualMessage(deviceId, code, message)
+
+                val sent = smsSender.sendSms(contact.phoneNumber, payload)
+
+                if (!sent) {
+
+                    ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.SMS_FAILED)
+
+                } else {
+
+                    Log.d(TAG, "Recording SMS outbound message for contact=$contactId overrideReady=$ready")
+
+                    messageRepository.record(
+
+                        ContactMessage(
+
+                            contactId = contact.id,
+
+                            body = message,
+
+                            direction = MessageDirection.OUTBOUND,
+
+                            overrideSucceeded = ready
+
+                        )
+
+                    )
+
+                    ManualMessageResult.Success(overrideApplied = ready)
+
+                }
+
+            } catch (error: Exception) {
+
+                Log.e(TAG, "Unable to send manual message for contactId=$contactId", error)
+
+                ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.UNKNOWN)
+
             }
-        } catch (error: Exception) {
-            Log.e(TAG, "Unable to send manual message", error)
-            ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.UNKNOWN)
+
         }
-    }
 
     private suspend fun requestRemotePrepare(
         contact: Contact,

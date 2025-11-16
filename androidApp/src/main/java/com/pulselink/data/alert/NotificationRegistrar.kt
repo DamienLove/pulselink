@@ -48,6 +48,11 @@ class NotificationRegistrar @Inject constructor(
                 SoundCategory.CALL -> LEGACY_CALL_CHANNEL
             }
         }
+        // Guarantee the notification group exists even if AlertDispatcher.ensureChannels()
+        // has never been called on this install. Without the group, channel creation
+        // throws and inbound manual messages never reach the conversation list.
+        ensureChannels()
+
         val manager = context.getSystemService<NotificationManager>() ?: return LEGACY_ALERT_CHANNEL
         val channelId = buildChannelId(category, soundOption)
         Log.d(TAG, "Ensuring alert channel=$channelId category=$category sound=${soundOption?.key}")
