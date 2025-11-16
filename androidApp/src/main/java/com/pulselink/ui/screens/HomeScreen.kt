@@ -72,6 +72,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -511,55 +512,136 @@ private fun QuickActionsRow(
     onCancelEmergency: () -> Unit,
     isCancelingEmergency: Boolean
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Button(
-            onClick = onTriggerEmergency,
-            modifier = Modifier.weight(1f),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFB91C1C),
-                contentColor = Color.White
-            ),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Icon(imageVector = Icons.Filled.Warning, contentDescription = "Trigger emergency alert")
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "EMERGENCY", fontWeight = FontWeight.Black)
-        }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (isEmergencyActive) {
-            OutlinedButton(
-                onClick = onCancelEmergency,
+            CancelEmergencyCard(
+                isCanceling = isCancelingEmergency,
+                onCancelEmergency = onCancelEmergency
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Button(
+                onClick = onTriggerEmergency,
                 modifier = Modifier.weight(1f),
-                enabled = !isCancelingEmergency,
+                enabled = !isEmergencyActive,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFB91C1C),
+                    contentColor = Color.White,
+                    disabledContainerColor = Color(0xFF4C1A1A),
+                    disabledContentColor = Color.White.copy(alpha = 0.7f)
+                ),
                 shape = RoundedCornerShape(16.dp)
             ) {
-                if (isCancelingEmergency) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                } else {
-                    Icon(imageVector = Icons.Filled.Close, contentDescription = null)
-                }
+                Icon(imageVector = Icons.Filled.Warning, contentDescription = "Trigger emergency alert")
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = stringResource(id = R.string.cancel_emergency_button))
+                Text(text = "EMERGENCY", fontWeight = FontWeight.Black)
+            }
+            Button(
+                onClick = onSendCheckInAll,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(imageVector = Icons.Filled.NotificationsActive, contentDescription = "Send check-in to all contacts")
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Check-in all")
             }
         }
-        Button(
-            onClick = onSendCheckInAll,
-            modifier = Modifier.weight(1f),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ),
-            shape = RoundedCornerShape(16.dp)
+    }
+}
+
+@Composable
+private fun CancelEmergencyCard(
+    isCanceling: Boolean,
+    onCancelEmergency: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val gradient = Brush.linearGradient(
+        colors = listOf(Color(0xFFB91C1C), Color(0xFF4C1A1A))
+    )
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = Color.Transparent
+    ) {
+        Column(
+            modifier = Modifier
+                .background(gradient)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Icon(imageVector = Icons.Filled.NotificationsActive, contentDescription = "Send check-in to all contacts")
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Check-in all")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(Color.White.copy(alpha = 0.18f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = null,
+                        tint = Color.White
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = stringResource(id = R.string.cancel_emergency_card_status),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
+                    Text(
+                        text = stringResource(id = R.string.cancel_emergency_card_title),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = Color.White
+                    )
+                }
+            }
+            Text(
+                text = stringResource(id = R.string.cancel_emergency_card_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.9f)
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = stringResource(id = R.string.cancel_emergency_card_secondary),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = 0.75f),
+                    modifier = Modifier.weight(1f)
+                )
+                Button(
+                    onClick = onCancelEmergency,
+                    enabled = !isCanceling,
+                    shape = RoundedCornerShape(999.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = Color(0xFFB91C1C),
+                        disabledContainerColor = Color.White.copy(alpha = 0.7f),
+                        disabledContentColor = Color(0xFFB91C1C).copy(alpha = 0.5f)
+                    )
+                ) {
+                    if (isCanceling) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = Color(0xFFB91C1C)
+                        )
+                    } else {
+                        Icon(imageVector = Icons.Filled.Close, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text(text = stringResource(id = R.string.cancel_emergency_card_cta))
+                }
+            }
         }
     }
 }
