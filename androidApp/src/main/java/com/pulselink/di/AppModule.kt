@@ -147,8 +147,10 @@ object DatabaseModule {
     @Singleton
     fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
 
-    @Provides
-    @Singleton
-    fun provideFirebaseFunctions(): FirebaseFunctions = FirebaseFunctions.getInstance()
+            @Provides
 
-}
+            @Singleton
+
+            fun provideFirebaseFunctions(): FirebaseFunctions = FirebaseFunctions.getInstance()
+
+        }

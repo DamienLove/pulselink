@@ -26,7 +26,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,6 +38,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -70,6 +70,7 @@ import com.pulselink.ui.screens.OnboardingPermissionState
 import com.pulselink.ui.state.MainViewModel
 import com.pulselink.ui.state.MainViewModel.CallInitiationResult
 import com.pulselink.ui.theme.PulseLinkTheme
+import kotlinx.coroutines.withContext
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Lock
@@ -81,7 +82,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import dagger.hilt.android.AndroidEntryPoint
 import com.pulselink.util.CallStateMonitor
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -258,24 +258,14 @@ class MainActivity : AppCompatActivity() {
                     appOpenAdController.updateAvailability(state.showAds)
                 }
 
-                val scope = rememberCoroutineScope()
-                val sendMessageHandler: (Long, String) -> Unit = { contactId, body ->
-                    scope.launch {
-                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
-                            permissionLauncher.launch(arrayOf(Manifest.permission.SEND_SMS))
-                            Toast.makeText(context, context.getString(R.string.sms_permission_required), Toast.LENGTH_SHORT).show()
-                            return@launch
+                val sendMessageHandler: suspend (Long, String) -> ManualMessageResult = { contactId, body ->
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+                        permissionLauncher.launch(arrayOf(Manifest.permission.SEND_SMS))
+                        ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.PERMISSION_REQUIRED)
+                    } else {
+                        withContext(viewModel.viewModelScope.coroutineContext) {
+                            viewModel.sendManualMessage(contactId, body)
                         }
-                        
-                        val result = viewModel.sendManualMessage(contactId, body)
-                        val message = when (result) {
-                            is ManualMessageResult.Success -> context.getString(R.string.message_sent_success)
-                            is ManualMessageResult.Failure -> when (result.reason) {
-                                ManualMessageResult.Failure.Reason.SMS_FAILED -> context.getString(R.string.message_sent_failure_sms)
-                                else -> context.getString(R.string.message_sent_failure_unknown)
-                            }
-                        }
-                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                     }
                 }
 
@@ -485,8 +475,19 @@ class MainActivity : AppCompatActivity() {
                             onRequestCancelEmergency = cancelEmergencyHandler,
                             isCancelingEmergency = isCancelingEmergency,
                             onAlertsClick = { navController.navigate("alerts/default/emergency") },
-                            onSettingsClick = { navController.navigate("settings") },
-                            onUpgradeClick = { navController.navigate("upgrade") }
+                            onUpgradeClick = {
+                                val playStoreIntent = Intent(Intent.ACTION_VIEW).apply {
+                                    data = Uri.parse("market://details?id=com.pulselink.pro")
+                                    setPackage("com.android.vending")
+                                }
+                                try {
+                                    startActivity(playStoreIntent)
+                                } catch (e: ActivityNotFoundException) {
+                                    // Fallback to a browser if the Play Store app is not installed
+                                    data = Uri.parse("https://play.google.com/store/apps/details?id=com.pulselink.pro")
+                                    startActivity(playStoreIntent)
+                                }
+                            }
                         )
                     }
                     composable(
@@ -506,7 +507,19 @@ class MainActivity : AppCompatActivity() {
                             onSendMessage = { body -> sendMessageHandler(contactId, body) },
                             onPing = { viewModel.sendPing(contactId) },
                             onVoiceCommand = { query -> viewModel.processVoiceCommand(query) },
-                            onUpgradeClick = { navController.navigate("upgrade") }
+                            onUpgradeClick = {
+                                val playStoreIntent = Intent(Intent.ACTION_VIEW).apply {
+                                    data = Uri.parse("market://details?id=com.pulselink.pro")
+                                    setPackage("com.android.vending")
+                                }
+                                try {
+                                    startActivity(playStoreIntent)
+                                } catch (e: ActivityNotFoundException) {
+                                    // Fallback to a browser if the Play Store app is not installed
+                                    data = Uri.parse("https://play.google.com/store/apps/details?id=com.pulselink.pro")
+                                    startActivity(playStoreIntent)
+                                }
+                            }
                         )
                     }
                     composable(
@@ -654,13 +667,6 @@ class MainActivity : AppCompatActivity() {
                         BetaTesterListScreen(
                             isBetaTester = state.settings.isBetaTester,
                             onToggleBetaTester = { enabled -> viewModel.setBetaTesterStatus(enabled) },
-                            onBack = { navController.popBackStack() }
-                        )
-                    }
-                    composable("upgrade") {
-                        UpgradeProScreen(
-                            isPro = state.isProUser,
-                            onUpgradeClick = { viewModel.setProUnlocked(true) },
                             onBack = { navController.popBackStack() }
                         )
                     }
