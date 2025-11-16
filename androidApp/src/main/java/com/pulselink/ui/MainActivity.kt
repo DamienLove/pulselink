@@ -70,6 +70,7 @@ import com.pulselink.ui.screens.OnboardingPermissionState
 import com.pulselink.ui.state.MainViewModel
 import com.pulselink.ui.state.MainViewModel.CallInitiationResult
 import com.pulselink.ui.theme.PulseLinkTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
@@ -263,7 +264,7 @@ class MainActivity : AppCompatActivity() {
                         permissionLauncher.launch(arrayOf(Manifest.permission.SEND_SMS))
                         ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.PERMISSION_REQUIRED)
                     } else {
-                        withContext(viewModel.viewModelScope.coroutineContext) {
+                        withContext(Dispatchers.IO) {
                             viewModel.sendManualMessage(contactId, body)
                         }
                     }
@@ -484,7 +485,8 @@ class MainActivity : AppCompatActivity() {
                                     startActivity(playStoreIntent)
                                 } catch (e: ActivityNotFoundException) {
                                     // Fallback to a browser if the Play Store app is not installed
-                                    data = Uri.parse("https://play.google.com/store/apps/details?id=com.pulselink.pro")
+                                    playStoreIntent.data = Uri.parse("https://play.google.com/store/apps/details?id=com.pulselink.pro")
+                                    playStoreIntent.setPackage(null)
                                     startActivity(playStoreIntent)
                                 }
                             }
@@ -516,7 +518,8 @@ class MainActivity : AppCompatActivity() {
                                     startActivity(playStoreIntent)
                                 } catch (e: ActivityNotFoundException) {
                                     // Fallback to a browser if the Play Store app is not installed
-                                    data = Uri.parse("https://play.google.com/store/apps/details?id=com.pulselink.pro")
+                                    playStoreIntent.data = Uri.parse("https://play.google.com/store/apps/details?id=com.pulselink.pro")
+                                    playStoreIntent.setPackage(null)
                                     startActivity(playStoreIntent)
                                 }
                             }
