@@ -1,4 +1,4 @@
-# PulseLink CHROME OS DO NOT MERGE
+# PulseLink
 
 Alpha APK is:
 
