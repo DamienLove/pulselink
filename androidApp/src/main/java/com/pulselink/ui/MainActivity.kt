@@ -463,6 +463,7 @@ class MainActivity : AppCompatActivity() {
                             onDismissAssistantShortcuts = viewModel::dismissAssistantHint,
                             onTriggerEmergency = viewModel::triggerEmergency,
                             onSendCheckIn = viewModel::sendCheckIn,
+                            onSettingsClick = { navController.navigate("settings") },
                             onAddContact = viewModel::saveContact,
                             onDeleteContact = viewModel::deleteContact,
                             onContactSelected = { contactId -> navController.navigate("contact/$contactId") },
