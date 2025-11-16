@@ -16,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,7 +43,6 @@ import com.pulselink.domain.model.PulseLinkSettings
 fun SettingsScreen(
     settings: PulseLinkSettings,
     hasDndAccess: Boolean,
-    onAssistantShortcuts: () -> Unit,
     onToggleIncludeLocation: (Boolean) -> Unit,
     onRequestDndAccess: () -> Unit,
     onToggleAutoAllowRemoteSoundChange: (Boolean) -> Unit,
@@ -76,13 +74,6 @@ fun SettingsScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            SettingsActionCard(
-                title = stringResource(R.string.assistant_setup_title),
-                subtitle = stringResource(R.string.assistant_setup_subtitle),
-                actionLabel = stringResource(R.string.assistant_setup_action),
-                onAction = onAssistantShortcuts,
-                leadingIcon = Icons.Filled.Mic
-            )
             SettingsToggleCard(
                 title = "Share location in alerts",
                 subtitle = "Include your latest location when PulseLink sends emergency or check-in notifications.",

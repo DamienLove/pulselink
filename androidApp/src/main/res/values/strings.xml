@@ -93,9 +93,6 @@
     <string name="emergency_alert_body">PulseLink is overriding Do Not Disturb and playing the emergency tone so you can respond immediately. If the siren stays silent, open Settings → Apps → PulseLink → Notifications and re-enable bypass.</string>
     <string name="assistant_trigger_emergency">Emergency alert sent via Google Assistant.</string>
     <string name="assistant_trigger_check_in">Check-in sent via Google Assistant.</string>
-    <string name="assistant_setup_title">Enable Google Assistant voice shortcuts</string>
-    <string name="assistant_setup_subtitle">Say "Hey Google, PulseLink emergency" (or "check-in") after adding the shortcuts below.</string>
-    <string name="assistant_setup_action">Open Assistant shortcuts</string>
     <string name="assistant_shortcut_emergency_short">PulseLink emergency</string>
     <string name="assistant_shortcut_emergency_long">Send a PulseLink emergency alert</string>
     <string name="assistant_shortcut_check_in_short">PulseLink check-in</string>

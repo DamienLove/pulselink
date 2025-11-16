@@ -47,7 +47,6 @@ import androidx.navigation.navArgument
 import com.google.firebase.crashlytics.ktx.crashlytics
 import com.google.firebase.ktx.Firebase
 import com.pulselink.data.ads.AppOpenAdController
-import com.pulselink.assistant.AssistantShortcuts
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.R
@@ -620,7 +619,6 @@ class MainActivity : AppCompatActivity() {
                         SettingsScreen(
                             settings = state.settings,
                             hasDndAccess = hasDndAccess,
-                            onAssistantShortcuts = { AssistantShortcuts.launchShortcutSettings(context) },
                             onToggleIncludeLocation = viewModel::setIncludeLocation,
                             onRequestDndAccess = { openDndSettings(context) },
                             onToggleAutoAllowRemoteSoundChange = viewModel::setAutoAllowRemoteSoundChange,
