@@ -172,3 +172,9 @@ Next Immediate actions:
 - Contact creation automatically issues a link request (via `ContactLinkManager.sendLinkRequest`) when a brand-new record is saved, eliminating the extra "Send link" tap in the contact sheet.
 - Remote alert handling gained deduplication/exclusion logic so two devices can’t re-trigger each other after a cancel, and inbound auto-generated “PulseLink EMERGENCY/CHECK-IN” texts skip the extra tone so the emergency siren stays audible.
 - Cleaned up stray dependencies (`firebase-appdistribution-api-ktx`, unused Billing scaffold) to keep the build lean and avoid compile failures on the v9 branch.
+
+-- 2025-11-17 Update (Beta messaging branch spin-up) --
+- Pushed `Beta` (631d64b) to origin, ran `./gradlew clean`, and cut `beta-messaging` for the inbound messaging fixes.
+- Fixed the realtime manual message handler to rely on Firestore listener cleanup instead of an undefined `LinkChannelService.deleteMessage` call, and imported `EmergencyPopupActivity` so release builds compile cleanly again.
+- Built `assembleFreeDebug`, `assembleProDebug`, `assembleFreeRelease`, `assembleProRelease`, `bundleFreeRelease`, and `bundleProRelease` to refresh all APK/AAB artifacts under `androidApp/build/outputs/**`.
+- Bumped `versionCode` to 11 and `versionName` to 11.0.0 ahead of the Play Console submission discussed last week so both flavors advertise the new beta messaging milestone.

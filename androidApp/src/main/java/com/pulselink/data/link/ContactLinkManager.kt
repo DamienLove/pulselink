@@ -28,6 +28,7 @@ import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.service.AlertRouter
 import com.pulselink.util.AudioOverrideManager
 import com.pulselink.util.resolveUri
+import com.pulselink.ui.EmergencyPopupActivity
 import com.pulselink.util.CallStateMonitor
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
@@ -329,7 +330,6 @@ class ContactLinkManager @Inject constructor(
                 ?: payload.phoneNumber?.takeIf { it.isNotBlank() }?.let { contactRepository.getByPhone(it) }
                 ?: return
             deliverManualMessage(contact, payload.body, overrideApplied = true)
-            linkChannelService.deleteMessage(payload.channelId, payload.id)
         } catch (error: Exception) {
             Log.e(TAG, "Failed to process realtime message ${payload.id}", error)
         }
