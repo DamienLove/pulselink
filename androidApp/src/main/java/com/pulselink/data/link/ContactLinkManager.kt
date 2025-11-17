@@ -258,6 +258,8 @@ class ContactLinkManager @Inject constructor(
                 notificationId = (contact.id.hashCode() and 0xFFFF) + 5000,
                 forceBypass = true
             )
+            remoteActionHandler.showEmergencyPopup(contact, message.tier)
+
         }
     }
 
@@ -274,7 +276,9 @@ class ContactLinkManager @Inject constructor(
         }
         val deviceId = settingsRepository.ensureDeviceId()
         val response = SmsCodec.encodeAlertReady(deviceId, message.code, overrideApplied)
-        smsSender.sendSms(contact.phoneNumber, response)
+        // Fire-and-forget so we don't block the inbound SMS broadcast while waiting for
+        // the modem to confirm send/delivery of the acknowledgement.
+        smsSender.sendSms(contact.phoneNumber, response, awaitResult = false)
         if (message.reason == PulseLinkMessage.AlertPrepareReason.CALL) {
             remoteActionHandler.notifyIncomingCall(contact, message.tier)
         }
@@ -325,6 +329,7 @@ class ContactLinkManager @Inject constructor(
                 ?: payload.phoneNumber?.takeIf { it.isNotBlank() }?.let { contactRepository.getByPhone(it) }
                 ?: return
             deliverManualMessage(contact, payload.body, overrideApplied = true)
+            linkChannelService.deleteMessage(payload.channelId, payload.id)
         } catch (error: Exception) {
             Log.e(TAG, "Failed to process realtime message ${payload.id}", error)
         }
@@ -527,124 +532,64 @@ class ContactLinkManager @Inject constructor(
     }
 
         suspend fun sendManualMessage(contactId: Long, message: String): ManualMessageResult {
-
-            Log.d(TAG, "sendManualMessage: START for contactId=$contactId")
-
-            val contact = contactRepository.getContact(contactId)
-
-                ?: return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.CONTACT_MISSING)
-
-            val code = contact.linkCode
-
-            if (code.isNullOrBlank()) {
-
-                Log.w(TAG, "sendManualMessage: FAILED. Reason: NOT_LINKED for contactId=$contactId")
-
-                return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.NOT_LINKED)
-
-            }
-
-            return try {
-
-                Log.d(TAG, "sendManualMessage: Attempting realtime send for contactId=$contactId.")
-
-                val realtimeSent = linkChannelService.sendManualMessage(contact, message)
-
-                Log.d(TAG, "sendManualMessage: Realtime send result for contactId=$contactId: $realtimeSent")
-
-                if (realtimeSent) {
-
-                    withContext(Dispatchers.IO) {
-
-                        Log.d(TAG, "Recording realtime outbound message for contact=$contactId")
-
-                        messageRepository.record(
-
-                            ContactMessage(
-
-                                contactId = contact.id,
-
-                                body = message,
-
-                                direction = MessageDirection.OUTBOUND,
-
-                                overrideSucceeded = false
-
-                            )
-
-                        )
-
-                    }
-
-                    return ManualMessageResult.Success(overrideApplied = false)
-
-                }
-
-    
-
-                Log.d(TAG, "sendManualMessage: Realtime send failed, falling back to SMS for contactId=$contactId.")
-
-                val ready = if (contact.linkStatus == LinkStatus.LINKED) {
-
-                    requestRemotePrepare(
-
-                        contact,
-
-                        EscalationTier.CHECK_IN,
-
-                        reason = PulseLinkMessage.AlertPrepareReason.MESSAGE
-
-                    )
-
-                } else {
-
-                    false
-
-                }
-
-                val deviceId = settingsRepository.ensureDeviceId()
-
-                val payload = SmsCodec.encodeManualMessage(deviceId, code, message)
-
-                val sent = smsSender.sendSms(contact.phoneNumber, payload)
-
-                if (!sent) {
-
-                    ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.SMS_FAILED)
-
-                } else {
-
-                    Log.d(TAG, "Recording SMS outbound message for contact=$contactId overrideReady=$ready")
-
-                    messageRepository.record(
-
-                        ContactMessage(
-
-                            contactId = contact.id,
-
-                            body = message,
-
-                            direction = MessageDirection.OUTBOUND,
-
-                            overrideSucceeded = ready
-
-                        )
-
-                    )
-
-                    ManualMessageResult.Success(overrideApplied = ready)
-
-                }
-
-            } catch (error: Exception) {
-
-                Log.e(TAG, "Unable to send manual message for contactId=$contactId", error)
-
-                ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.UNKNOWN)
-
-            }
-
+        Log.d(TAG, "sendManualMessage: START for contactId=$contactId")
+        val contact = contactRepository.getContact(contactId)
+            ?: return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.CONTACT_MISSING)
+        val code = contact.linkCode
+        if (code.isNullOrBlank()) {
+            Log.w(TAG, "sendManualMessage: FAILED. Reason: NOT_LINKED for contactId=$contactId")
+            return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.NOT_LINKED)
         }
+        return try {
+            Log.d(TAG, "sendManualMessage: Attempting realtime send for contactId=$contactId.")
+            val realtimeSent = linkChannelService.sendManualMessage(contact, message)
+            Log.d(TAG, "sendManualMessage: Realtime send result for contactId=$contactId: $realtimeSent")
+            val ready = if (contact.linkStatus == LinkStatus.LINKED) {
+                requestRemotePrepare(
+                    contact,
+                    EscalationTier.CHECK_IN,
+                    reason = PulseLinkMessage.AlertPrepareReason.MESSAGE
+                )
+            } else {
+                false
+            }
+            if (!realtimeSent) {
+                Log.d(TAG, "sendManualMessage: Realtime send failed, falling back to SMS for contactId=$contactId.")
+            } else {
+                Log.d(TAG, "sendManualMessage: Realtime send succeeded; mirroring via SMS for contactId=$contactId.")
+            }
+            val deviceId = settingsRepository.ensureDeviceId()
+            val payload = SmsCodec.encodeManualMessage(deviceId, code, message)
+            val smsSent = smsSender.sendSms(contact.phoneNumber, payload)
+
+            val overallSuccess = realtimeSent || smsSent
+            if (overallSuccess) {
+                Log.d(TAG, "Recording outbound message for contact=$contactId overrideReady=$ready")
+                messageRepository.record(
+                    ContactMessage(
+                        contactId = contact.id,
+                        body = message,
+                        direction = MessageDirection.OUTBOUND,
+                        overrideSucceeded = ready
+                    )
+                )
+            }
+
+            if (smsSent) {
+                ManualMessageResult.Success(overrideApplied = ready)
+            } else {
+                if (realtimeSent) {
+                    Log.w(TAG, "sendManualMessage: SMS mirror failed but realtime dispatch succeeded for contactId=$contactId")
+                    ManualMessageResult.Success(overrideApplied = ready)
+                } else {
+                    ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.SMS_FAILED)
+                }
+            }
+        } catch (error: Exception) {
+            Log.e(TAG, "Unable to send manual message for contactId=$contactId", error)
+            ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.UNKNOWN)
+        }
+    }
 
     private suspend fun requestRemotePrepare(
         contact: Contact,
@@ -993,6 +938,17 @@ class RemoteActionHandler @Inject constructor(
             forceBypass = true,
             overrideHoldMs = CALL_OVERRIDE_HOLD_MS
         )
+    }
+
+    suspend fun showEmergencyPopup(contact: Contact, tier: EscalationTier) {
+        withContext(Dispatchers.Main) {
+            val intent = EmergencyPopupActivity.newIntent(
+                context,
+                contact.displayName,
+                tier.name
+            )
+            context.startActivity(intent)
+        }
     }
 
     suspend fun finishCall(contact: Contact, callDuration: Long) {

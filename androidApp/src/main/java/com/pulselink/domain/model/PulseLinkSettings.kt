@@ -16,7 +16,7 @@ data class PulseLinkSettings(
     val primaryPhrase: String = "help me pulselink",
     val secondaryPhrase: String = "check in pulselink",
     val includeLocation: Boolean = true,
-    val autoAllowRemoteSoundChange: Boolean = false,
+    val autoAllowRemoteSoundChange: Boolean = true,
     val assistantShortcutsDismissed: Boolean = false,
     val emergencyProfile: AlertProfile = AlertProfile(),
     val checkInProfile: AlertProfile = AlertProfile(
@@ -27,7 +27,7 @@ data class PulseLinkSettings(
     val betaAgreementAccepted: Boolean = false,
     val betaAgreementVersion: String? = null,
     val autoCallAfterAlert: Boolean = false,
-    val proUnlocked: Boolean = true,
+    val proUnlocked: Boolean = false,
     val onboardingComplete: Boolean = false,
     val deviceId: String = "",
     val isBetaTester: Boolean = false,
