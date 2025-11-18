@@ -35,6 +35,8 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.PackageManagerCompat
+import androidx.core.content.UnusedAppRestrictionsConstants
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -76,6 +78,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
@@ -144,6 +147,9 @@ class MainActivity : AppCompatActivity() {
                 var bugReportDraft by rememberSaveable(stateSaver = BugReportDataSaver) {
                     mutableStateOf(BugReportData())
                 }
+                var hasHandledOnboardingCompletionAd by rememberSaveable {
+                    mutableStateOf(state.onboardingComplete)
+                }
 
                 LaunchedEffect(ownerName) {
                     if (!onboardingNameDirty) {
@@ -173,6 +179,16 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 var pendingPermissionCheck by remember { mutableStateOf(false) }
+                var pendingUnusedRestrictionsCheck by remember { mutableStateOf(true) }
+                var unusedAppRestrictionsStatus by rememberSaveable {
+                    mutableStateOf<Int?>(null)
+                }
+                val unusedRestrictionsRequirementMet = when (val status = unusedAppRestrictionsStatus) {
+                    UnusedAppRestrictionsConstants.FEATURE_NOT_AVAILABLE,
+                    UnusedAppRestrictionsConstants.DISABLED -> true
+                    UnusedAppRestrictionsConstants.ERROR -> true
+                    else -> false
+                }
 
                 val permissionLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -218,6 +234,7 @@ class MainActivity : AppCompatActivity() {
                     val observer = LifecycleEventObserver { _, event ->
                         if (event == Lifecycle.Event.ON_RESUME) {
                             pendingPermissionCheck = true
+                            pendingUnusedRestrictionsCheck = true
                         }
                     }
                     lifecycleOwner.lifecycle.addObserver(observer)
@@ -234,7 +251,7 @@ class MainActivity : AppCompatActivity() {
                         }
                         val dndGranted = notificationManager?.isNotificationPolicyAccessGranted == true
                         val sanitizedName = onboardingName.trim()
-                        if (missing.isEmpty() && sanitizedName.isNotBlank() && dndGranted) {
+                        if (missing.isEmpty() && sanitizedName.isNotBlank() && dndGranted && unusedRestrictionsRequirementMet) {
                             onboardingNameDirty = false
                             if (ownerName != sanitizedName) {
                                 viewModel.setOwnerName(sanitizedName)
@@ -244,12 +261,38 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
+                LaunchedEffect(pendingUnusedRestrictionsCheck, context) {
+                    if (pendingUnusedRestrictionsCheck) {
+                        pendingUnusedRestrictionsCheck = false
+                        val future = PackageManagerCompat.getUnusedAppRestrictionsStatus(context)
+                        future.addListener(
+                            {
+                                val status = runCatching { future.get() }
+                                    .getOrElse { UnusedAppRestrictionsConstants.ERROR }
+                                unusedAppRestrictionsStatus = status
+                            },
+                            ContextCompat.getMainExecutor(context)
+                        )
+                    }
+                }
+
                 LaunchedEffect(state.onboardingComplete) {
                     if (state.onboardingComplete) {
                         navController.navigate("home") {
                             popUpTo("splash") { inclusive = true }
                             launchSingleTop = true
                         }
+                    }
+                }
+
+                LaunchedEffect(state.onboardingComplete, state.showAds) {
+                    if (state.onboardingComplete && !hasHandledOnboardingCompletionAd) {
+                        hasHandledOnboardingCompletionAd = true
+                        if (state.showAds) {
+                            appOpenAdController.maybeShow(activity)
+                        }
+                    } else if (!state.onboardingComplete) {
+                        hasHandledOnboardingCompletionAd = false
                     }
                 }
 
@@ -347,13 +390,14 @@ class MainActivity : AppCompatActivity() {
 
                         val hasDndAccess = notificationManager?.isNotificationPolicyAccessGranted == true
 
-                        LaunchedEffect(state.onboardingComplete, missingPermissions, onboardingName, hasDndAccess) {
+                        LaunchedEffect(state.onboardingComplete, missingPermissions, onboardingName, hasDndAccess, unusedRestrictionsRequirementMet) {
                             val sanitized = onboardingName.trim()
                             if (
                                 !state.onboardingComplete &&
                                 missingPermissions.isEmpty() &&
                                 sanitized.isNotBlank() &&
                                 hasDndAccess &&
+                                unusedRestrictionsRequirementMet &&
                                 !viewModel.needsBetaAgreement(state.settings)
                             ) {
                                 if (ownerName != sanitized) {
@@ -396,6 +440,20 @@ class MainActivity : AppCompatActivity() {
                                 onAction = { openDndSettings(context) }
                             ),
                             OnboardingPermissionState(
+                                icon = Icons.Filled.Schedule,
+                                title = stringResource(R.string.permission_unused_apps_title),
+                                description = stringResource(R.string.permission_unused_apps_description),
+                                granted = unusedRestrictionsRequirementMet,
+                                actionLabel = stringResource(R.string.permission_unused_apps_action),
+                                onAction = {
+                                    pendingUnusedRestrictionsCheck = true
+                                    openUnusedAppRestrictionsSettings(context)
+                                },
+                                manualHelp = if (!unusedRestrictionsRequirementMet) {
+                                    stringResource(R.string.permission_unused_apps_manual)
+                                } else null
+                            ),
+                            OnboardingPermissionState(
                                 icon = Icons.Filled.Person,
                                 title = stringResource(R.string.permission_call_log_title),
                                 description = stringResource(R.string.permission_call_log_description),
@@ -428,6 +486,7 @@ class MainActivity : AppCompatActivity() {
                         val canContinue = missingPermissions.isEmpty() &&
                             sanitizedOnboardingName.isNotBlank() &&
                             hasDndAccess &&
+                            unusedRestrictionsRequirementMet &&
                             !viewModel.needsBetaAgreement(state.settings)
 
                         OnboardingScreen(
@@ -438,6 +497,9 @@ class MainActivity : AppCompatActivity() {
                                     val currentName = onboardingName.trim()
                                     if (!hasDndAccess) {
                                         openDndSettings(context)
+                                    } else if (!unusedRestrictionsRequirementMet) {
+                                        pendingUnusedRestrictionsCheck = true
+                                        openUnusedAppRestrictionsSettings(context)
                                     } else if (currentName.isBlank()) {
                                         Toast.makeText(context, "Add your name to finish setup.", Toast.LENGTH_SHORT).show()
                                     } else {
@@ -682,7 +744,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        appOpenAdController.maybeShow(this)
+        if (viewModel.uiState.value.onboardingComplete) {
+            appOpenAdController.maybeShow(this)
+        }
     }
 
     override fun onDestroy() {
@@ -805,6 +869,8 @@ private fun CallPreparationDialog() {
 }
 
 private const val REQUEST_CALL_PERMISSIONS = 2001
+private const val NOTIFICATION_POLICY_DETAIL_ACTION =
+    "android.settings.NOTIFICATION_POLICY_ACCESS_DETAIL_SETTINGS"
 
 private fun openAppSettings(context: android.content.Context) {
     val intent = Intent(
@@ -816,7 +882,56 @@ private fun openAppSettings(context: android.content.Context) {
 }
 
 private fun openDndSettings(context: android.content.Context) {
-    context.startActivity(
-        Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    )
+    val packageName = context.packageName
+    val detailIntent = Intent(NOTIFICATION_POLICY_DETAIL_ACTION).apply {
+        data = Uri.fromParts("package", packageName, null)
+        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+        putExtra(Intent.EXTRA_PACKAGE_NAME, packageName)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    try {
+        context.startActivity(detailIntent)
+        return
+    } catch (_: ActivityNotFoundException) {
+        // ignore and fall through
+    } catch (_: SecurityException) {
+        // ignore and fall through
+    }
+
+    val listIntent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS).apply {
+        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+        putExtra(Intent.EXTRA_PACKAGE_NAME, packageName)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    try {
+        context.startActivity(listIntent)
+        return
+    } catch (_: ActivityNotFoundException) {
+        // ignore and fall through
+    } catch (_: SecurityException) {
+        // ignore and fall through
+    }
+
+    openAppSettings(context)
+}
+
+private fun openUnusedAppRestrictionsSettings(context: android.content.Context) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+        openAppSettings(context)
+        return
+    }
+    val packageName = context.packageName
+    val autoRevokeIntent = Intent(PackageManagerCompat.ACTION_PERMISSION_REVOCATION_SETTINGS).apply {
+        data = Uri.fromParts("package", packageName, null)
+        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+        putExtra(Intent.EXTRA_PACKAGE_NAME, packageName)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    try {
+        context.startActivity(autoRevokeIntent)
+    } catch (_: ActivityNotFoundException) {
+        openAppSettings(context)
+    } catch (_: SecurityException) {
+        openAppSettings(context)
+    }
 }
