@@ -2,6 +2,10 @@
 
 ### Latest build is on Google Playstore
 
+Beta APK is
+
+## [Download PulseLink Alpha](https://github.com/DamienLove/pulselink/releases/download/Beta/androidApp-free-release.apk)
+
 Alpha APK is:
 
 [![Latest APK](https://github.com/DamienLove/pulselink/actions/workflows/verify-main.yml/badge.svg)](https://github.com/DamienLove/pulselink/actions/workflows/verify-main.yml)
