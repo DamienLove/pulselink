@@ -4,7 +4,7 @@
 
 Beta APK is
 
-## [Download PulseLink Alpha](https://github.com/DamienLove/pulselink/releases/download/Beta/androidApp-free-release.apk)
+## [Download PulseLink Beta](https://github.com/DamienLove/pulselink/releases/download/Beta/androidApp-free-release.apk)
 
 Alpha APK is:
 
