@@ -45,6 +45,10 @@
     <string name="permission_location">PulseLink needs location access to share your position.</string>
     <string name="permission_call_log_title">Allow access to call log</string>
     <string name="permission_call_log_description">PulseLink needs this to detect incoming calls from your linked contacts and play emergency tones.</string>
+    <string name="permission_unused_apps_title">Keep PulseLink active</string>
+    <string name="permission_unused_apps_description">Turn off unused-app management to keep permissions intact.</string>
+    <string name="permission_unused_apps_action">Manage</string>
+    <string name="permission_unused_apps_manual">Open the permissions screen, tap Manage app if unused, and switch it off so PulseLink stays ready.</string>
     <string name="shortcut_check_in_short">Send check-in</string>
     <string name="shortcut_check_in_long">Send PulseLink check-in</string>
     <string name="pulselink_contact_import_failed">PulseLink couldn\'t load that contact. Check contact permissions and try again.</string>

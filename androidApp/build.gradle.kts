@@ -243,6 +243,9 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
 
     implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.core:core:1.13.1")
+    implementation("com.google.guava:guava:32.1.2-android")
+    implementation("androidx.concurrent:concurrent-futures:1.1.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
 
