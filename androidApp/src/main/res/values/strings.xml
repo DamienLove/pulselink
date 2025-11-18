@@ -49,6 +49,13 @@
     <string name="permission_unused_apps_description">Turn off unused-app management to keep permissions intact.</string>
     <string name="permission_unused_apps_action">Manage</string>
     <string name="permission_unused_apps_manual">Open the permissions screen, tap Manage app if unused, and switch it off so PulseLink stays ready.</string>
+    <string name="quick_action_emergency_label">Emergency alert</string>
+    <string name="quick_action_emergency_description">Loud siren and shares your location.</string>
+    <string name="quick_action_checkin_label">I am safe</string>
+    <string name="quick_action_checkin_description">Send a calm update with GPS.</string>
+    <string name="quick_action_scroll_hint">Scroll down for contacts and tools</string>
+    <string name="quick_action_location_primary">Emergency and I am safe share your location.</string>
+    <string name="quick_action_location_secondary">Calls and manual messages stay private.</string>
     <string name="shortcut_check_in_short">Send check-in</string>
     <string name="shortcut_check_in_long">Send PulseLink check-in</string>
     <string name="pulselink_contact_import_failed">PulseLink couldn\'t load that contact. Check contact permissions and try again.</string>
@@ -69,6 +76,11 @@
     <string name="contact_action_resend_link">Resend link</string>
     <string name="contact_action_help_inbound_request">Approve to enable alerts and remote support.</string>
     <string name="contact_action_approve_link">Approve link</string>
+    <string name="contact_check_in_primary">Share &quot;I am safe&quot;</string>
+    <string name="contact_check_in_secondary">Reassures this contact and includes your latest location.</string>
+    <string name="contact_check_in_toast_success">I am safe update sent.</string>
+    <string name="contact_check_in_toast_muted">Update sent (receiver may still be on silent).</string>
+    <string name="contact_check_in_toast_failure">Could not send I am safe update.</string>
     <string name="bug_report_title">Report a Bug</string>
     <string name="bug_report_summary_label">Summary</string>
     <string name="bug_report_summary_hint">Brief description of the issue</string>
@@ -255,4 +267,19 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="sound_option_call_variant">PulseLink tone – %1$s</string>
     <string name="settings_call_tone_title">Call alert tone</string>
     <string name="settings_call_tone_subtitle">Customize the sound PulseLink plays when a linked contact calls you.</string>
+    <string name="alert_history_title">Alert History</string>
+    <string name="alert_history_empty_title">No alerts yet</string>
+    <string name="alert_history_empty_message">Your emergency alerts and check-ins will appear here</string>
+    <string name="alert_history_section_today">Today</string>
+    <string name="alert_history_section_yesterday">Yesterday</string>
+    <string name="alert_history_section_this_week">This Week</string>
+    <string name="alert_history_section_older">Older</string>
+    <string name="alert_history_you">You</string>
+    <string name="alert_history_incoming">Received from</string>
+    <string name="alert_history_outgoing">Sent to</string>
+    <string name="alert_history_contacts_notified">%1$d contacts notified</string>
+    <string name="alert_history_location_shared">Location shared</string>
+    <string name="alert_history_sound_used">Sound: %1$s</string>
+    <string name="contact_detail_sound_sync_explanation">This tone will play on both your device and %1$s\'s device when you alert them</string>
+    <string name="contact_detail_sound_sync_note">Changes sync automatically between linked contacts</string>
 </resources>

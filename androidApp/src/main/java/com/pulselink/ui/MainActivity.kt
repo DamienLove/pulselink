@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricManager
@@ -57,10 +58,11 @@ import com.pulselink.ui.screens.BugReportData
 import com.pulselink.ui.screens.BugReportDataSaver
 import com.pulselink.ui.screens.BugReportScreen
 import com.pulselink.ui.screens.HomeScreen
+import com.pulselink.ui.screens.AlertHistoryScreen
+import com.pulselink.ui.screens.AlertTonePickerScreen
 import com.pulselink.ui.screens.BetaAgreementFullScreen
 import com.pulselink.ui.screens.BetaAgreementScreen
 import com.pulselink.ui.screens.ContactDetailScreen
-import com.pulselink.ui.screens.AlertTonePickerScreen
 import com.pulselink.ui.screens.ContactConversationScreen
 import com.pulselink.ui.screens.OnboardingScreen
 import com.pulselink.ui.screens.OnboardingIntroScreen
@@ -526,17 +528,15 @@ class MainActivity : AppCompatActivity() {
                             onSendCheckIn = viewModel::sendCheckIn,
                             onSettingsClick = { navController.navigate("settings") },
                             onAddContact = viewModel::saveContact,
-                            onDeleteContact = viewModel::deleteContact,
                             onContactSelected = { contactId -> navController.navigate("contact/$contactId") },
                             onContactSettings = { contactId -> navController.navigate("contact/$contactId/settings") },
                             onSendLink = viewModel::sendLinkRequest,
                             onApproveLink = viewModel::approveLink,
                             onCallContact = callContactHandler,
-                            onSendManualMessage = { contact, body -> sendMessageHandler(contact.id, body) },
                             onReorderContacts = viewModel::reorderContacts,
                             onRequestCancelEmergency = cancelEmergencyHandler,
                             isCancelingEmergency = isCancelingEmergency,
-                            onAlertsClick = { navController.navigate("alerts/default/emergency") },
+                            onAlertsClick = { navController.navigate("alert_history") },
                             onUpgradeClick = {
                                 val playStoreIntent = Intent(Intent.ACTION_VIEW).apply {
                                     data = Uri.parse("market://details?id=com.pulselink.pro")
@@ -551,6 +551,14 @@ class MainActivity : AppCompatActivity() {
                                     startActivity(playStoreIntent)
                                 }
                             }
+                        )
+                    }
+                    composable("alert_history") {
+                        AlertHistoryScreen(
+                            alerts = state.recentEvents,
+                            contacts = state.contacts,
+                            onBack = { navController.popBackStack() },
+                            onContactClick = { contactId -> navController.navigate("contact/$contactId") }
                         )
                     }
                     composable(
@@ -714,6 +722,14 @@ class MainActivity : AppCompatActivity() {
                                 }
                                 crashlytics.log("User Report: ${report.summary}")
                                 crashlytics.recordException(reportException)
+
+                                val bugReportUri = viewModel.buildBugReportUri(context, report)
+                                val browserIntent = Intent(Intent.ACTION_VIEW, bugReportUri)
+                                try {
+                                    context.startActivity(browserIntent)
+                                } catch (error: ActivityNotFoundException) {
+                                    Log.w("MainActivity", "Unable to open bug report URI", error)
+                                }
 
                                 Toast.makeText(
                                     context,

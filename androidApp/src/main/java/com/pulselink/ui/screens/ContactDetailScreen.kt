@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pulselink.R
@@ -257,6 +258,16 @@ private fun SettingsCard(
             ToggleRow(title = "Location share", subtitle = "Include GPS when alerting", checked = contact.includeLocation, onCheckedChange = onToggleLocation)
             ActionRow(title = "Emergency alert tone", subtitle = contact.emergencySoundKey ?: "Default", onClick = onEditEmergencyAlert)
             ActionRow(title = "Check-in alert tone", subtitle = contact.checkInSoundKey ?: "Default", onClick = onEditCheckInAlert)
+            Text(
+                text = stringResource(R.string.contact_detail_sound_sync_explanation, contact.displayName),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = stringResource(R.string.contact_detail_sound_sync_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             ToggleRow(title = "Camera enable", subtitle = "Capture short evidence clip", checked = contact.cameraEnabled, onCheckedChange = onToggleCamera)
             ToggleRow(title = "Auto call after alert", subtitle = "Call after sending SMS", checked = contact.autoCall, onCheckedChange = onToggleAutoCall)
             ToggleRow(

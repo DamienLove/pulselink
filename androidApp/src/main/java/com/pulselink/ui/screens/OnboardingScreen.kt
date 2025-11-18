@@ -2,9 +2,9 @@ package com.pulselink.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -29,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,17 +44,25 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.pulselink.R
 
@@ -368,12 +377,38 @@ fun BetaAgreementScreen(
     onAgree: () -> Unit,
     onBack: () -> Unit
 ) {
-    val gradient = Brush.verticalGradient(
-        colors = listOf(Color(0xFF10131F), Color(0xFF0B0D16))
-    )
+    val isDarkTheme = isSystemInDarkTheme()
+    val gradient = if (isDarkTheme) {
+        Brush.verticalGradient(colors = listOf(Color(0xFF10131F), Color(0xFF0B0D16)))
+    } else {
+        Brush.verticalGradient(colors = listOf(Color(0xFFE5E9FF), Color(0xFFF9FAFF)))
+    }
+    val panelColor = if (isDarkTheme) {
+        Color.White.copy(alpha = 0.06f)
+    } else {
+        Color.White
+    }
+    val headingColor = if (isDarkTheme) Color.White else MaterialTheme.colorScheme.onBackground
+    val bodyColor = if (isDarkTheme) Color(0xFFD6DCFF) else MaterialTheme.colorScheme.onSurfaceVariant
+    val metaColor = if (isDarkTheme) Color(0xFFBACCFF) else MaterialTheme.colorScheme.primary
+    val actionColor = if (isDarkTheme) Color(0xFF7FB2FF) else MaterialTheme.colorScheme.primary
+    val dividerColor = if (isDarkTheme) {
+        Color.White.copy(alpha = 0.1f)
+    } else {
+        MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+    }
     val displayName = if (ownerName.isBlank()) {
         stringResource(id = R.string.beta_agreement_tester_default)
     } else ownerName
+
+    val scrollState = rememberScrollState()
+    val density = LocalDensity.current
+    var actionHeightPx by remember { mutableIntStateOf(0) }
+    val contentBottomPadding = if (actionHeightPx == 0) {
+        128.dp
+    } else {
+        with(density) { actionHeightPx.toDp() } + 16.dp
+    }
 
     Box(
         modifier = Modifier
@@ -382,31 +417,19 @@ fun BetaAgreementScreen(
             .background(gradient)
             .padding(horizontal = 24.dp, vertical = 24.dp)
     ) {
-        BoxWithConstraints(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(28.dp))
-                .background(Color.White.copy(alpha = 0.04f))
+                .background(panelColor)
                 .padding(horizontal = 24.dp, vertical = 24.dp)
         ) {
-            val scrollState = rememberScrollState()
-            val needsScroll = maxHeight < 640.dp
-            val columnModifier = if (needsScroll) {
-                Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(scrollState)
-            } else {
-                Modifier.fillMaxSize()
-            }
-            val arrangement: Arrangement.Vertical = if (needsScroll) {
-                Arrangement.spacedBy(20.dp)
-            } else {
-                Arrangement.SpaceBetween
-            }
-
             Column(
-                modifier = columnModifier,
-                verticalArrangement = arrangement
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = contentBottomPadding)
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -414,13 +437,13 @@ fun BetaAgreementScreen(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         IconButton(onClick = onBack) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
-                                tint = Color.White
+                                tint = headingColor
                             )
                         }
                         Text(
@@ -430,59 +453,70 @@ fun BetaAgreementScreen(
                                 agreementVersion
                             ),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFFBACCFF)
+                            color = metaColor,
+                            modifier = Modifier.weight(1f),
+                            textAlign = TextAlign.End
                         )
                     }
 
                     Text(
                         text = stringResource(id = R.string.beta_agreement_summary_title),
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White
+                        color = headingColor
                     )
                     Text(
                         text = stringResource(id = R.string.beta_agreement_summary_body),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFFD6DCFF)
+                        color = bodyColor
                     )
                     Text(
                         text = stringResource(id = R.string.beta_agreement_summary_points),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFFD6DCFF)
+                        color = bodyColor
                     )
                     Text(
                         text = stringResource(id = R.string.beta_agreement_summary_footer),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFFD6DCFF)
+                        color = bodyColor
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .onGloballyPositioned { coordinates ->
+                        actionHeightPx = coordinates.size.height
+                    },
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Divider(color = dividerColor)
+                TextButton(
+                    onClick = onViewFullAgreement,
+                    colors = ButtonDefaults.textButtonColors(contentColor = actionColor)
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.beta_agreement_view_full),
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
 
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                Button(
+                    onClick = onAgree,
+                    enabled = !isSubmitting,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
                 ) {
-                    TextButton(onClick = onViewFullAgreement) {
-                        Text(
-                            text = stringResource(id = R.string.beta_agreement_view_full),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF7FB2FF)
+                    if (isSubmitting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
-                    }
-
-                    Button(
-                        onClick = onAgree,
-                        enabled = !isSubmitting,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                    ) {
-                        if (isSubmitting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
-                                color = Color.White
-                            )
-                        } else {
-                            Text(text = stringResource(id = R.string.beta_agreement_agree_button))
-                        }
+                    } else {
+                        Text(text = stringResource(id = R.string.beta_agreement_agree_button))
                     }
                 }
             }
@@ -495,9 +529,13 @@ fun BetaAgreementScreen(
 fun BetaAgreementFullScreen(
     onBack: () -> Unit
 ) {
-    val gradient = Brush.verticalGradient(
-        colors = listOf(Color(0xFF0B0D16), Color(0xFF05060B))
-    )
+    val isDarkTheme = isSystemInDarkTheme()
+    val gradient = if (isDarkTheme) {
+        Brush.verticalGradient(colors = listOf(Color(0xFF0B0D16), Color(0xFF05060B)))
+    } else {
+        Brush.verticalGradient(colors = listOf(Color(0xFFE7EBFF), Color(0xFFF9FAFF)))
+    }
+    val textColor = if (isDarkTheme) Color(0xFFE6EAFF) else MaterialTheme.colorScheme.onBackground
     val scrollState = rememberScrollState()
     Scaffold(
         modifier = Modifier
@@ -506,6 +544,11 @@ fun BetaAgreementFullScreen(
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = textColor,
+                    navigationIconContentColor = textColor
+                ),
                 title = { Text(text = stringResource(id = R.string.beta_agreement_full_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -529,7 +572,7 @@ fun BetaAgreementFullScreen(
             Text(
                 text = stringResource(id = R.string.beta_agreement_full_text),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFFE6EAFF)
+                color = textColor
             )
         }
     }

@@ -76,6 +76,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): PulseLinkDatabase =
         Room.databaseBuilder(context, PulseLinkDatabase::class.java, "pulselink.db")
+            .addMigrations(PulseLinkDatabase.MIGRATION_3_4)
             .fallbackToDestructiveMigration()
             .build()
 

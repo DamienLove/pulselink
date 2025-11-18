@@ -14,6 +14,7 @@ import com.pulselink.data.alert.SoundCatalog
 import com.pulselink.data.sms.PulseLinkMessage
 import com.pulselink.data.sms.SmsCodec
 import com.pulselink.data.sms.SmsSender
+import com.pulselink.domain.model.AlertEvent
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ContactMessage
 import com.pulselink.domain.model.EscalationTier
@@ -21,6 +22,7 @@ import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.domain.model.MessageDirection
 import com.pulselink.domain.model.SoundCategory
+import com.pulselink.domain.repository.AlertRepository
 import com.pulselink.domain.repository.BlockedContactRepository
 import com.pulselink.domain.repository.ContactRepository
 import com.pulselink.domain.repository.MessageRepository
@@ -52,6 +54,7 @@ class ContactLinkManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val smsSender: SmsSender,
     private val settingsRepository: SettingsRepository,
+    private val alertRepository: AlertRepository,
     private val contactRepository: ContactRepository,
     private val blockedContactRepository: BlockedContactRepository,
     private val remoteActionHandler: RemoteActionHandler,
@@ -142,6 +145,15 @@ class ContactLinkManager @Inject constructor(
         val code = contact.linkCode ?: return
         val deviceId = settingsRepository.ensureDeviceId()
         val payload = SmsCodec.encodeCallEnded(deviceId, code, callDuration)
+        smsSender.sendSms(contact.phoneNumber, payload, awaitResult = false)
+    }
+
+    suspend fun sendSoundOverride(contactId: Long, tier: EscalationTier, soundKey: String?) {
+        val contact = contactRepository.getContact(contactId) ?: return
+        if (contact.linkStatus != LinkStatus.LINKED) return
+        val code = contact.linkCode ?: return
+        val deviceId = settingsRepository.ensureDeviceId()
+        val payload = SmsCodec.encodeSoundOverride(deviceId, code, tier, soundKey)
         smsSender.sendSms(contact.phoneNumber, payload, awaitResult = false)
     }
 
@@ -240,6 +252,11 @@ class ContactLinkManager @Inject constructor(
             return
         }
         val contact = contactRepository.getByLinkCode(message.code) ?: return
+        val settings = settingsRepository.settings.first()
+        val resolvedSoundKey = when (message.tier) {
+            EscalationTier.EMERGENCY -> contact.emergencySoundKey ?: settings.emergencyProfile.soundKey
+            EscalationTier.CHECK_IN -> contact.checkInSoundKey ?: settings.checkInProfile.soundKey
+        }
         val overrideResult = remoteActionHandler.prepareForAlert(contact)
         if (!overrideResult.success) {
             Log.w(
@@ -262,6 +279,20 @@ class ContactLinkManager @Inject constructor(
             remoteActionHandler.showEmergencyPopup(contact, message.tier)
 
         }
+        alertRepository.record(
+            AlertEvent(
+                timestamp = System.currentTimeMillis(),
+                triggeredBy = "Remote alert from ${contact.displayName}",
+                tier = message.tier,
+                contactCount = 0,
+                sentSms = false,
+                sharedLocation = false,
+                contactId = contact.id,
+                contactName = contact.displayName,
+                isIncoming = true,
+                soundKey = resolvedSoundKey
+            )
+        )
     }
 
     private suspend fun handleAlertPrepare(message: PulseLinkMessage.AlertPrepare) {
@@ -312,6 +343,7 @@ class ContactLinkManager @Inject constructor(
             EscalationTier.CHECK_IN -> contact.copy(checkInSoundKey = message.soundKey)
         }
         contactRepository.upsert(updated)
+        Log.d(TAG, "Applied remote sound override for ${contact.displayName} tier=${message.tier} key=${message.soundKey}")
     }
 
     private suspend fun handleManualMessage(message: PulseLinkMessage.ManualMessage, fromPhone: String) {

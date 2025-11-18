@@ -32,8 +32,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,8 +56,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.BasicTextField
@@ -227,18 +232,40 @@ private fun ConversationBody(
             )
             StatusRow(contact)
             if (contact.linkStatus == LinkStatus.LINKED) {
-                TextButton(onClick = {
-                    scope.launch {
-                        val result = runCatching { onPing() }
-                        val toastText = when {
-                            result.isFailure -> "Check-in failed to send"
-                            result.getOrDefault(false) -> "Check-in sent"
-                            else -> "Check-in sent (receiver may still be on silent)"
-                        }
-                        Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                val result = runCatching { onPing() }
+                                val toastText = when {
+                                    result.isFailure -> context.getString(R.string.contact_check_in_toast_failure)
+                                    result.getOrDefault(false) -> context.getString(R.string.contact_check_in_toast_success)
+                                    else -> context.getString(R.string.contact_check_in_toast_muted)
+                                }
+                                Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF059669),
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(28.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Filled.CheckCircle, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = stringResource(id = R.string.contact_check_in_primary))
                     }
-                }) {
-                    Text(text = "Send check-in", color = Color(0xFF67DBA0))
+                    Text(
+                        text = stringResource(id = R.string.contact_check_in_secondary),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF9BE7C4),
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
         }

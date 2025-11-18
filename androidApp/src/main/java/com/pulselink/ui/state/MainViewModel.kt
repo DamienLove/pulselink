@@ -258,12 +258,28 @@ class MainViewModel @Inject constructor(
     fun updateContactSounds(contactId: Long, emergencyKey: String?, checkInKey: String?) {
         viewModelScope.launch {
             val contact = uiState.value.contacts.firstOrNull { it.id == contactId } ?: return@launch
+            val emergencyChanged = emergencyKey != null && emergencyKey != contact.emergencySoundKey
+            val checkInChanged = checkInKey != null && checkInKey != contact.checkInSoundKey
             contactRepository.upsert(
                 contact.copy(
                     emergencySoundKey = emergencyKey ?: contact.emergencySoundKey,
                     checkInSoundKey = checkInKey ?: contact.checkInSoundKey
                 )
             )
+            if (emergencyChanged) {
+                runCatching {
+                    linkManager.sendSoundOverride(contactId, EscalationTier.EMERGENCY, emergencyKey)
+                }.onFailure { error ->
+                    Log.w(TAG, "Failed to sync emergency sound override for ${contact.displayName}", error)
+                }
+            }
+            if (checkInChanged) {
+                runCatching {
+                    linkManager.sendSoundOverride(contactId, EscalationTier.CHECK_IN, checkInKey)
+                }.onFailure { error ->
+                    Log.w(TAG, "Failed to sync check-in sound override for ${contact.displayName}", error)
+                }
+            }
         }
     }
 

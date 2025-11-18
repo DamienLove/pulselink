@@ -107,7 +107,7 @@
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.pulselink.export"
+            android:authorities="${applicationId}.export"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

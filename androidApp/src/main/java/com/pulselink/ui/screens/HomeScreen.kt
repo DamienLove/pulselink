@@ -34,11 +34,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragIndicator
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -71,25 +73,25 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.pulselink.R
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.LinkStatus
-import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.ads.NativeAdCard
 import com.pulselink.ui.state.PulseLinkUiState
 import kotlinx.coroutines.launch
-import kotlin.coroutines.cancellation.CancellationException
 import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.detectReorderAfterLongPress
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
@@ -102,13 +104,11 @@ fun HomeScreen(
     onTriggerEmergency: () -> Unit,
     onSendCheckIn: () -> Unit,
     onAddContact: (Contact) -> Unit,
-    onDeleteContact: (Long) -> Unit,
     onContactSelected: (Long) -> Unit,
     onContactSettings: (Long) -> Unit,
     onSendLink: (Long) -> Unit,
     onApproveLink: (Long) -> Unit,
     onCallContact: suspend (Contact) -> Unit,
-    onSendManualMessage: suspend (Contact, String) -> ManualMessageResult,
     onReorderContacts: (List<Long>) -> Unit,
     onRequestCancelEmergency: () -> Unit,
     isCancelingEmergency: Boolean = false,
@@ -125,9 +125,6 @@ fun HomeScreen(
     var newContactPhone by remember { mutableStateOf(TextFieldValue()) }
     var allowRemoteSound by remember { mutableStateOf(false) }
     var searchValue by remember { mutableStateOf(TextFieldValue()) }
-
-    var messageContact by remember { mutableStateOf<Contact?>(null) }
-    var messageBody by remember { mutableStateOf(TextFieldValue()) }
 
     val contactPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickContact()) { uri ->
         if (uri != null) {
@@ -186,28 +183,8 @@ fun HomeScreen(
             ContactsList(
                 state = state,
                 searchQuery = searchValue.text,
-                onDeleteContact = onDeleteContact,
                 onCallContact = { contact ->
                     coroutineScope.launch { onCallContact(contact) }
-                },
-                onMessageContact = { contact ->
-                    if (contact.linkCode.isNullOrBlank()) {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.contact_action_message_requires_link),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } else {
-                        if (contact.linkStatus != LinkStatus.LINKED) {
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.contact_action_message_pending_warning),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                        messageContact = contact
-                        messageBody = TextFieldValue()
-                    }
                 },
                 onContactSelected = onContactSelected,
                 onContactSettings = onContactSettings,
@@ -250,67 +227,6 @@ fun HomeScreen(
                 } else {
                     Toast.makeText(context, "Name and phone are required", Toast.LENGTH_SHORT).show()
                 }
-            }
-        )
-    }
-
-    messageContact?.let { contact ->
-        AlertDialog(
-            onDismissRequest = { messageContact = null },
-            title = { Text(text = "Message ${contact.displayName}") },
-            text = {
-                OutlinedTextField(
-                    value = messageBody,
-                    onValueChange = { messageBody = it },
-                    label = { Text("Message") },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 3
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val body = messageBody.text.trim()
-                    if (body.isEmpty()) {
-                        Toast.makeText(context, "Message cannot be empty", Toast.LENGTH_SHORT).show()
-                    } else {
-                        coroutineScope.launch {
-                            var outcome: ManualMessageResult? = null
-                            val toastText = try {
-                                val result = onSendManualMessage(contact, body)
-                                outcome = result
-                                when (result) {
-                                    is ManualMessageResult.Success -> {
-                                        if (result.overrideApplied) {
-                                            "Message sent"
-                                        } else {
-                                            "Message sent (receiver may still be on silent)"
-                                        }
-                                    }
-                                    is ManualMessageResult.Failure -> when (result.reason) {
-                                        ManualMessageResult.Failure.Reason.CONTACT_MISSING -> "Contact no longer available"
-                                        ManualMessageResult.Failure.Reason.NOT_LINKED -> "Link this contact before messaging"
-                                        ManualMessageResult.Failure.Reason.SMS_FAILED -> "Message failed to send"
-                                        ManualMessageResult.Failure.Reason.PERMISSION_REQUIRED -> context.getString(R.string.permission_sms)
-                                        ManualMessageResult.Failure.Reason.UNKNOWN -> "Message failed to send"
-                                    }
-                                }
-                            } catch (cancelled: CancellationException) {
-                                throw cancelled
-                            } catch (error: Exception) {
-                                "Message failed to send"
-                            }
-                            Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
-                            if (outcome is ManualMessageResult.Success) {
-                                messageContact = null
-                            }
-                        }
-                    }
-                }) {
-                    Text("Send")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { messageContact = null }) { Text("Cancel") }
             }
         )
     }
@@ -512,7 +428,9 @@ private fun QuickActionsRow(
     onCancelEmergency: () -> Unit,
     isCancelingEmergency: Boolean
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val fontScale = LocalDensity.current.fontScale
+    val showScrollHint = fontScale >= 1.2f
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         if (isEmergencyActive) {
             CancelEmergencyCard(
                 isCanceling = isCancelingEmergency,
@@ -521,37 +439,145 @@ private fun QuickActionsRow(
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            QuickActionTile(
+                modifier = Modifier.weight(1f),
+                label = stringResource(id = R.string.quick_action_emergency_label),
+                description = stringResource(id = R.string.quick_action_emergency_description),
+                icon = Icons.Filled.Warning,
+                background = Brush.verticalGradient(listOf(Color(0xFF7F1D1D), Color(0xFFDC2626))),
+                onClick = onTriggerEmergency,
+                enabled = !isEmergencyActive
+            )
+            QuickActionTile(
+                modifier = Modifier.weight(1f),
+                label = stringResource(id = R.string.quick_action_checkin_label),
+                description = stringResource(id = R.string.quick_action_checkin_description),
+                icon = Icons.Filled.CheckCircle,
+                background = Brush.verticalGradient(listOf(Color(0xFF047857), Color(0xFF10B981))),
+                onClick = onSendCheckInAll
+            )
+        }
+        LocationDisclosureCard()
+        if (showScrollHint) {
+            ScrollHintCard()
+        }
+    }
+}
+
+@Composable
+private fun QuickActionTile(
+    modifier: Modifier = Modifier,
+    label: String,
+    description: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    background: Brush,
+    onClick: () -> Unit,
+    enabled: Boolean = true
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Surface(
+            modifier = Modifier.size(92.dp),
+            shape = CircleShape,
+            color = Color.Transparent
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(background, CircleShape)
+                    .clip(CircleShape)
+                    .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 4.dp)
+        )
+    }
+}
+
+@Composable
+private fun LocationDisclosureCard() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        tonalElevation = 2.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Button(
-                onClick = onTriggerEmergency,
-                modifier = Modifier.weight(1f),
-                enabled = !isEmergencyActive,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFB91C1C),
-                    contentColor = Color.White,
-                    disabledContainerColor = Color(0xFF4C1A1A),
-                    disabledContentColor = Color.White.copy(alpha = 0.7f)
-                ),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(imageVector = Icons.Filled.Warning, contentDescription = "Trigger emergency alert")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "EMERGENCY", fontWeight = FontWeight.Black)
+            Icon(
+                imageVector = Icons.Filled.LocationOn,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Column {
+                Text(
+                    text = stringResource(id = R.string.quick_action_location_primary),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = stringResource(id = R.string.quick_action_location_secondary),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            Button(
-                onClick = onSendCheckInAll,
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(imageVector = Icons.Filled.NotificationsActive, contentDescription = "Send check-in to all contacts")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Check-in all")
-            }
+        }
+    }
+}
+
+@Composable
+private fun ScrollHintCard() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.ArrowDownward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Text(
+                text = stringResource(id = R.string.quick_action_scroll_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
@@ -677,9 +703,7 @@ private fun SearchAndAddRow(
 private fun ContactsList(
     state: PulseLinkUiState,
     searchQuery: String,
-    onDeleteContact: (Long) -> Unit,
     onCallContact: (Contact) -> Unit,
-    onMessageContact: (Contact) -> Unit,
     onContactSelected: (Long) -> Unit,
     onContactSettings: (Long) -> Unit,
     onSendLink: (Long) -> Unit,
@@ -798,11 +822,9 @@ private fun ContactsList(
                                     contact = contact,
                                     onOpenMessages = { onContactSelected(contact.id) },
                                     onOpenSettings = { onContactSettings(contact.id) },
-                                    onDelete = { onDeleteContact(contact.id) },
                                     onSendLinkRequest = { onSendLink(contact.id) },
                                     onApproveLink = { onApproveLink(contact.id) },
                                     onCall = { onCallContact(contact) },
-                                    onMessage = { onMessageContact(contact) },
                                     reorderEnabled = canReorder,
                                     isDragging = isDragging
                                 )
@@ -820,11 +842,9 @@ private fun ContactRow(
     contact: Contact,
     onOpenMessages: () -> Unit,
     onOpenSettings: () -> Unit,
-    onDelete: () -> Unit,
     onSendLinkRequest: () -> Unit,
     onApproveLink: () -> Unit,
     onCall: () -> Unit,
-    onMessage: () -> Unit,
     reorderEnabled: Boolean,
     isDragging: Boolean
 ) {
@@ -860,24 +880,13 @@ private fun ContactRow(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.Start
                     ) {
                         Text(
                             text = contact.displayName,
                             color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(1f)
+                            fontWeight = FontWeight.SemiBold
                         )
-                        IconButton(
-                            onClick = onOpenSettings,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Settings,
-                                contentDescription = "Contact settings",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
                     Text(
                         text = contact.phoneNumber,
@@ -890,15 +899,27 @@ private fun ContactRow(
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    IconButton(onCall) {
-                        Icon(Icons.Filled.Call, contentDescription = "Call", tint = MaterialTheme.colorScheme.secondary)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onCall) {
+                        Icon(
+                            Icons.Filled.Call,
+                            contentDescription = "Call contact",
+                            tint = MaterialTheme.colorScheme.secondary
+                        )
                     }
-                    IconButton(onMessage) {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Message", tint = MaterialTheme.colorScheme.primary)
+                    IconButton(onClick = onOpenMessages) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Open conversation",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
-                    IconButton(onDelete) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error)
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(
+                            Icons.Filled.Settings,
+                            contentDescription = "Contact settings",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     if (reorderEnabled) {
                         Icon(

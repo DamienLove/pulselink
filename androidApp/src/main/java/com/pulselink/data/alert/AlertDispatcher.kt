@@ -46,7 +46,8 @@ class AlertDispatcher @Inject constructor(
         phrase: String,
         tier: EscalationTier,
         contacts: List<Contact>,
-        settings: PulseLinkSettings
+        settings: PulseLinkSettings,
+        contactId: Long? = null
     ): AlertResult = withContext(Dispatchers.IO) {
         registrar.ensureChannels()
 
@@ -112,11 +113,14 @@ class AlertDispatcher @Inject constructor(
             audioOverrideManager.scheduleRestore()
         }
 
+        val resolvedSoundKey = soundOption?.key ?: profile.soundKey
         AlertResult(
             message = message,
             notifiedContacts = smsCount,
             sharedLocation = locationText != null,
-            overrideResult = overrideResult.takeIf { shouldOverrideAudio }
+            overrideResult = overrideResult.takeIf { shouldOverrideAudio },
+            soundKey = resolvedSoundKey,
+            contactId = contactId
         )
     }
 
@@ -140,7 +144,7 @@ class AlertDispatcher @Inject constructor(
     private fun buildMessage(phrase: String, tier: EscalationTier, locationText: String?): String {
         val header = when (tier) {
             EscalationTier.EMERGENCY -> "EMERGENCY" to "I need help right now."
-            EscalationTier.CHECK_IN -> "CHECK-IN" to "I'm requesting a quick check-in."
+            EscalationTier.CHECK_IN -> "I'M SAFE" to "I'm safe and sharing my location."
         }
         val builder = StringBuilder()
             .append("PulseLink ${header.first}: ${header.second}\n")
@@ -219,7 +223,9 @@ class AlertDispatcher @Inject constructor(
         val message: String,
         val notifiedContacts: Int,
         val sharedLocation: Boolean,
-        val overrideResult: AudioOverrideManager.OverrideResult? = null
+        val overrideResult: AudioOverrideManager.OverrideResult? = null,
+        val soundKey: String? = null,
+        val contactId: Long? = null
     )
 
     companion object {

@@ -63,7 +63,8 @@ class AlertRouter @Inject constructor(
                     tier = EscalationTier.CHECK_IN,
                     contactCount = 0,
                     sentSms = false,
-                    sharedLocation = false
+                    sharedLocation = false,
+                    isIncoming = true
                 )
             )
         }
@@ -115,7 +116,11 @@ class AlertRouter @Inject constructor(
                 tier = tier,
                 contactCount = contacts.size,
                 sentSms = result.notifiedContacts > 0,
-                sharedLocation = result.sharedLocation
+                sharedLocation = result.sharedLocation,
+                contactId = result.contactId,
+                contactName = null,
+                isIncoming = false,
+                soundKey = result.soundKey
             )
         )
         result
