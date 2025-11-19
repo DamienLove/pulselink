@@ -1,0 +1,20 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.pulselink.androidApp-mergeFreeDebugResources-4:/values-watch-v21/values-watch-v21.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\me\\.gradle\\caches\\transforms-4\\95068f3c0ea7ac4e92f3b9bb14975bd2\\transformed\\appcompat-1.6.1\\res\\values-watch-v21\\values-watch-v21.xml",
+                    "from": {
+                        "startLines": "2,6,10",
+                        "startColumns": "4,4,4",
+                        "startOffsets": "55,271,499",
+                        "endLines": "5,9,13",
+                        "endColumns": "12,12,12",
+                        "endOffsets": "266,494,724"
+                    }
+                }
+            ]
+        }
+    ]
+}

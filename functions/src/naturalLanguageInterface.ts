@@ -1,8 +1,9 @@
 
 import { genkit, z } from "genkit";
 import { vertexAI, gemini15Pro } from "@genkit-ai/vertexai";
-import { onCallGenkit, hasClaim } from "firebase-functions/https";
+import { onCall } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
+import { HttpsError } from "firebase-functions/v2/https";
 
 const apiKey = defineSecret("GOOGLE_GENAI_API_KEY");
 
@@ -49,7 +50,7 @@ export const naturalLanguageQueryFlow = ai.defineFlow({
     Query: ${query}
   `;
 
-  const { response } = await ai.generate({
+  const response = await ai.generate({
     model: gemini15Pro,
     prompt,
     output: {
@@ -64,14 +65,21 @@ export const naturalLanguageQueryFlow = ai.defineFlow({
     },
   });
 
-  const structuredOutput = response.output();
+  const structuredOutput = response.output;
   if (!structuredOutput) {
     throw new Error("Failed to get structured output from the model.");
   }
   return structuredOutput;
 });
 
-export const naturalLanguageQuery = onCallGenkit({
-  authPolicy: hasClaim("pro", true),
+export const naturalLanguageQuery = onCall({
   secrets: [apiKey],
-}, naturalLanguageQueryFlow);
+}, async (request) => {
+    if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'The function must be called while authenticated.');
+    }
+    if (request.auth.token.pro !== true) {
+        throw new HttpsError('permission-denied', `The function must be called by a user with the 'pro' claim.`);
+    }
+    return await naturalLanguageQueryFlow.run(request.data);
+});

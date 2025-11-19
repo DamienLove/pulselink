@@ -1,0 +1,924 @@
+package com.pulselink;
+
+import android.app.Activity;
+import android.app.Service;
+import android.telephony.SmsManager;
+import android.telephony.TelephonyManager;
+import android.view.View;
+import androidx.datastore.core.DataStore;
+import androidx.datastore.preferences.core.Preferences;
+import androidx.fragment.app.Fragment;
+import androidx.hilt.work.HiltWorkerFactory;
+import androidx.hilt.work.WorkerAssistedFactory;
+import androidx.hilt.work.WorkerFactoryModule_ProvideFactoryFactory;
+import androidx.lifecycle.SavedStateHandle;
+import androidx.lifecycle.ViewModel;
+import androidx.work.ListenableWorker;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.functions.FirebaseFunctions;
+import com.pulselink.auth.FirebaseAuthManager;
+import com.pulselink.data.ads.AppOpenAdController;
+import com.pulselink.data.alert.AlertDispatcher;
+import com.pulselink.data.alert.NotificationRegistrar;
+import com.pulselink.data.alert.SoundCatalog;
+import com.pulselink.data.assistant.NaturalLanguageCommandProcessor;
+import com.pulselink.data.beta.BetaAgreementRepositoryImpl;
+import com.pulselink.data.db.AlertEventDao;
+import com.pulselink.data.db.AlertRepositoryImpl;
+import com.pulselink.data.db.BlockedContactDao;
+import com.pulselink.data.db.BlockedContactRepositoryImpl;
+import com.pulselink.data.db.ContactDao;
+import com.pulselink.data.db.ContactMessageDao;
+import com.pulselink.data.db.ContactRepositoryImpl;
+import com.pulselink.data.db.MessageRepositoryImpl;
+import com.pulselink.data.db.PulseLinkDatabase;
+import com.pulselink.data.link.ContactLinkManager;
+import com.pulselink.data.link.LinkChannelService;
+import com.pulselink.data.link.RemoteActionHandler;
+import com.pulselink.data.location.LocationProvider;
+import com.pulselink.data.remoteconfig.RemoteConfigService;
+import com.pulselink.data.settings.SettingsRepositoryImpl;
+import com.pulselink.data.sms.SmsSender;
+import com.pulselink.di.DatabaseModule_ProvideAlertDaoFactory;
+import com.pulselink.di.DatabaseModule_ProvideAlertDispatcherFactory;
+import com.pulselink.di.DatabaseModule_ProvideBlockedContactDaoFactory;
+import com.pulselink.di.DatabaseModule_ProvideContactDaoFactory;
+import com.pulselink.di.DatabaseModule_ProvideContactMessageDaoFactory;
+import com.pulselink.di.DatabaseModule_ProvideDataStoreFactory;
+import com.pulselink.di.DatabaseModule_ProvideDatabaseFactory;
+import com.pulselink.di.DatabaseModule_ProvideFirebaseAuthFactory;
+import com.pulselink.di.DatabaseModule_ProvideFirebaseFirestoreFactory;
+import com.pulselink.di.DatabaseModule_ProvideFirebaseFunctionsFactory;
+import com.pulselink.di.DatabaseModule_ProvideNotificationRegistrarFactory;
+import com.pulselink.di.DatabaseModule_ProvideSmsManagerFactory;
+import com.pulselink.di.DatabaseModule_ProvideSoundCatalogFactory;
+import com.pulselink.di.DatabaseModule_ProvideTelephonyManagerFactory;
+import com.pulselink.domain.repository.ContactRepository;
+import com.pulselink.domain.repository.MessageRepository;
+import com.pulselink.domain.repository.SettingsRepository;
+import com.pulselink.receiver.PulseLinkSmsReceiver;
+import com.pulselink.receiver.PulseLinkSmsReceiver_MembersInjector;
+import com.pulselink.receiver.SmsSendReceiver;
+import com.pulselink.receiver.SmsSendReceiver_MembersInjector;
+import com.pulselink.service.AlertRouter;
+import com.pulselink.ui.AssistantShortcutActivity;
+import com.pulselink.ui.AssistantShortcutActivity_MembersInjector;
+import com.pulselink.ui.MainActivity;
+import com.pulselink.ui.MainActivity_MembersInjector;
+import com.pulselink.ui.state.MainViewModel;
+import com.pulselink.ui.state.MainViewModel_HiltModules;
+import com.pulselink.util.AudioOverrideManager;
+import com.pulselink.util.CallStateMonitor;
+import dagger.hilt.android.ActivityRetainedLifecycle;
+import dagger.hilt.android.ViewModelLifecycle;
+import dagger.hilt.android.internal.builders.ActivityComponentBuilder;
+import dagger.hilt.android.internal.builders.ActivityRetainedComponentBuilder;
+import dagger.hilt.android.internal.builders.FragmentComponentBuilder;
+import dagger.hilt.android.internal.builders.ServiceComponentBuilder;
+import dagger.hilt.android.internal.builders.ViewComponentBuilder;
+import dagger.hilt.android.internal.builders.ViewModelComponentBuilder;
+import dagger.hilt.android.internal.builders.ViewWithFragmentComponentBuilder;
+import dagger.hilt.android.internal.lifecycle.DefaultViewModelFactories;
+import dagger.hilt.android.internal.lifecycle.DefaultViewModelFactories_InternalFactoryFactory_Factory;
+import dagger.hilt.android.internal.managers.ActivityRetainedComponentManager_LifecycleModule_ProvideActivityRetainedLifecycleFactory;
+import dagger.hilt.android.internal.managers.SavedStateHandleHolder;
+import dagger.hilt.android.internal.modules.ApplicationContextModule;
+import dagger.hilt.android.internal.modules.ApplicationContextModule_ProvideContextFactory;
+import dagger.internal.DaggerGenerated;
+import dagger.internal.DelegateFactory;
+import dagger.internal.DoubleCheck;
+import dagger.internal.IdentifierNameString;
+import dagger.internal.KeepFieldType;
+import dagger.internal.LazyClassKeyMap;
+import dagger.internal.Preconditions;
+import dagger.internal.Provider;
+import java.util.Map;
+import java.util.Set;
+import javax.annotation.processing.Generated;
+
+@DaggerGenerated
+@Generated(
+    value = "dagger.internal.codegen.ComponentProcessor",
+    comments = "https://dagger.dev"
+)
+@SuppressWarnings({
+    "unchecked",
+    "rawtypes",
+    "KotlinInternal",
+    "KotlinInternalInJava",
+    "cast"
+})
+public final class DaggerPulseLinkApp_HiltComponents_SingletonC {
+  private DaggerPulseLinkApp_HiltComponents_SingletonC() {
+  }
+
+  public static Builder builder() {
+    return new Builder();
+  }
+
+  public static final class Builder {
+    private ApplicationContextModule applicationContextModule;
+
+    private Builder() {
+    }
+
+    public Builder applicationContextModule(ApplicationContextModule applicationContextModule) {
+      this.applicationContextModule = Preconditions.checkNotNull(applicationContextModule);
+      return this;
+    }
+
+    public PulseLinkApp_HiltComponents.SingletonC build() {
+      Preconditions.checkBuilderRequirement(applicationContextModule, ApplicationContextModule.class);
+      return new SingletonCImpl(applicationContextModule);
+    }
+  }
+
+  private static final class ActivityRetainedCBuilder implements PulseLinkApp_HiltComponents.ActivityRetainedC.Builder {
+    private final SingletonCImpl singletonCImpl;
+
+    private SavedStateHandleHolder savedStateHandleHolder;
+
+    private ActivityRetainedCBuilder(SingletonCImpl singletonCImpl) {
+      this.singletonCImpl = singletonCImpl;
+    }
+
+    @Override
+    public ActivityRetainedCBuilder savedStateHandleHolder(
+        SavedStateHandleHolder savedStateHandleHolder) {
+      this.savedStateHandleHolder = Preconditions.checkNotNull(savedStateHandleHolder);
+      return this;
+    }
+
+    @Override
+    public PulseLinkApp_HiltComponents.ActivityRetainedC build() {
+      Preconditions.checkBuilderRequirement(savedStateHandleHolder, SavedStateHandleHolder.class);
+      return new ActivityRetainedCImpl(singletonCImpl, savedStateHandleHolder);
+    }
+  }
+
+  private static final class ActivityCBuilder implements PulseLinkApp_HiltComponents.ActivityC.Builder {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private Activity activity;
+
+    private ActivityCBuilder(SingletonCImpl singletonCImpl,
+        ActivityRetainedCImpl activityRetainedCImpl) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+    }
+
+    @Override
+    public ActivityCBuilder activity(Activity activity) {
+      this.activity = Preconditions.checkNotNull(activity);
+      return this;
+    }
+
+    @Override
+    public PulseLinkApp_HiltComponents.ActivityC build() {
+      Preconditions.checkBuilderRequirement(activity, Activity.class);
+      return new ActivityCImpl(singletonCImpl, activityRetainedCImpl, activity);
+    }
+  }
+
+  private static final class FragmentCBuilder implements PulseLinkApp_HiltComponents.FragmentC.Builder {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private final ActivityCImpl activityCImpl;
+
+    private Fragment fragment;
+
+    private FragmentCBuilder(SingletonCImpl singletonCImpl,
+        ActivityRetainedCImpl activityRetainedCImpl, ActivityCImpl activityCImpl) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+      this.activityCImpl = activityCImpl;
+    }
+
+    @Override
+    public FragmentCBuilder fragment(Fragment fragment) {
+      this.fragment = Preconditions.checkNotNull(fragment);
+      return this;
+    }
+
+    @Override
+    public PulseLinkApp_HiltComponents.FragmentC build() {
+      Preconditions.checkBuilderRequirement(fragment, Fragment.class);
+      return new FragmentCImpl(singletonCImpl, activityRetainedCImpl, activityCImpl, fragment);
+    }
+  }
+
+  private static final class ViewWithFragmentCBuilder implements PulseLinkApp_HiltComponents.ViewWithFragmentC.Builder {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private final ActivityCImpl activityCImpl;
+
+    private final FragmentCImpl fragmentCImpl;
+
+    private View view;
+
+    private ViewWithFragmentCBuilder(SingletonCImpl singletonCImpl,
+        ActivityRetainedCImpl activityRetainedCImpl, ActivityCImpl activityCImpl,
+        FragmentCImpl fragmentCImpl) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+      this.activityCImpl = activityCImpl;
+      this.fragmentCImpl = fragmentCImpl;
+    }
+
+    @Override
+    public ViewWithFragmentCBuilder view(View view) {
+      this.view = Preconditions.checkNotNull(view);
+      return this;
+    }
+
+    @Override
+    public PulseLinkApp_HiltComponents.ViewWithFragmentC build() {
+      Preconditions.checkBuilderRequirement(view, View.class);
+      return new ViewWithFragmentCImpl(singletonCImpl, activityRetainedCImpl, activityCImpl, fragmentCImpl, view);
+    }
+  }
+
+  private static final class ViewCBuilder implements PulseLinkApp_HiltComponents.ViewC.Builder {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private final ActivityCImpl activityCImpl;
+
+    private View view;
+
+    private ViewCBuilder(SingletonCImpl singletonCImpl, ActivityRetainedCImpl activityRetainedCImpl,
+        ActivityCImpl activityCImpl) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+      this.activityCImpl = activityCImpl;
+    }
+
+    @Override
+    public ViewCBuilder view(View view) {
+      this.view = Preconditions.checkNotNull(view);
+      return this;
+    }
+
+    @Override
+    public PulseLinkApp_HiltComponents.ViewC build() {
+      Preconditions.checkBuilderRequirement(view, View.class);
+      return new ViewCImpl(singletonCImpl, activityRetainedCImpl, activityCImpl, view);
+    }
+  }
+
+  private static final class ViewModelCBuilder implements PulseLinkApp_HiltComponents.ViewModelC.Builder {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private SavedStateHandle savedStateHandle;
+
+    private ViewModelLifecycle viewModelLifecycle;
+
+    private ViewModelCBuilder(SingletonCImpl singletonCImpl,
+        ActivityRetainedCImpl activityRetainedCImpl) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+    }
+
+    @Override
+    public ViewModelCBuilder savedStateHandle(SavedStateHandle handle) {
+      this.savedStateHandle = Preconditions.checkNotNull(handle);
+      return this;
+    }
+
+    @Override
+    public ViewModelCBuilder viewModelLifecycle(ViewModelLifecycle viewModelLifecycle) {
+      this.viewModelLifecycle = Preconditions.checkNotNull(viewModelLifecycle);
+      return this;
+    }
+
+    @Override
+    public PulseLinkApp_HiltComponents.ViewModelC build() {
+      Preconditions.checkBuilderRequirement(savedStateHandle, SavedStateHandle.class);
+      Preconditions.checkBuilderRequirement(viewModelLifecycle, ViewModelLifecycle.class);
+      return new ViewModelCImpl(singletonCImpl, activityRetainedCImpl, savedStateHandle, viewModelLifecycle);
+    }
+  }
+
+  private static final class ServiceCBuilder implements PulseLinkApp_HiltComponents.ServiceC.Builder {
+    private final SingletonCImpl singletonCImpl;
+
+    private Service service;
+
+    private ServiceCBuilder(SingletonCImpl singletonCImpl) {
+      this.singletonCImpl = singletonCImpl;
+    }
+
+    @Override
+    public ServiceCBuilder service(Service service) {
+      this.service = Preconditions.checkNotNull(service);
+      return this;
+    }
+
+    @Override
+    public PulseLinkApp_HiltComponents.ServiceC build() {
+      Preconditions.checkBuilderRequirement(service, Service.class);
+      return new ServiceCImpl(singletonCImpl, service);
+    }
+  }
+
+  private static final class ViewWithFragmentCImpl extends PulseLinkApp_HiltComponents.ViewWithFragmentC {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private final ActivityCImpl activityCImpl;
+
+    private final FragmentCImpl fragmentCImpl;
+
+    private final ViewWithFragmentCImpl viewWithFragmentCImpl = this;
+
+    private ViewWithFragmentCImpl(SingletonCImpl singletonCImpl,
+        ActivityRetainedCImpl activityRetainedCImpl, ActivityCImpl activityCImpl,
+        FragmentCImpl fragmentCImpl, View viewParam) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+      this.activityCImpl = activityCImpl;
+      this.fragmentCImpl = fragmentCImpl;
+
+
+    }
+  }
+
+  private static final class FragmentCImpl extends PulseLinkApp_HiltComponents.FragmentC {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private final ActivityCImpl activityCImpl;
+
+    private final FragmentCImpl fragmentCImpl = this;
+
+    private FragmentCImpl(SingletonCImpl singletonCImpl,
+        ActivityRetainedCImpl activityRetainedCImpl, ActivityCImpl activityCImpl,
+        Fragment fragmentParam) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+      this.activityCImpl = activityCImpl;
+
+
+    }
+
+    @Override
+    public DefaultViewModelFactories.InternalFactoryFactory getHiltInternalFactoryFactory() {
+      return activityCImpl.getHiltInternalFactoryFactory();
+    }
+
+    @Override
+    public ViewWithFragmentComponentBuilder viewWithFragmentComponentBuilder() {
+      return new ViewWithFragmentCBuilder(singletonCImpl, activityRetainedCImpl, activityCImpl, fragmentCImpl);
+    }
+  }
+
+  private static final class ViewCImpl extends PulseLinkApp_HiltComponents.ViewC {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private final ActivityCImpl activityCImpl;
+
+    private final ViewCImpl viewCImpl = this;
+
+    private ViewCImpl(SingletonCImpl singletonCImpl, ActivityRetainedCImpl activityRetainedCImpl,
+        ActivityCImpl activityCImpl, View viewParam) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+      this.activityCImpl = activityCImpl;
+
+
+    }
+  }
+
+  private static final class ActivityCImpl extends PulseLinkApp_HiltComponents.ActivityC {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private final ActivityCImpl activityCImpl = this;
+
+    private ActivityCImpl(SingletonCImpl singletonCImpl,
+        ActivityRetainedCImpl activityRetainedCImpl, Activity activityParam) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+
+
+    }
+
+    private NaturalLanguageCommandProcessor naturalLanguageCommandProcessor() {
+      return new NaturalLanguageCommandProcessor(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.provideFirebaseFunctionsProvider.get(), singletonCImpl.provideFirebaseAuthProvider.get(), singletonCImpl.alertRouterProvider.get(), singletonCImpl.contactRepositoryImplProvider.get(), singletonCImpl.contactLinkManagerProvider.get(), singletonCImpl.firebaseAuthManagerProvider.get());
+    }
+
+    @Override
+    public void injectAssistantShortcutActivity(
+        AssistantShortcutActivity assistantShortcutActivity) {
+      injectAssistantShortcutActivity2(assistantShortcutActivity);
+    }
+
+    @Override
+    public void injectMainActivity(MainActivity mainActivity) {
+      injectMainActivity2(mainActivity);
+    }
+
+    @Override
+    public DefaultViewModelFactories.InternalFactoryFactory getHiltInternalFactoryFactory() {
+      return DefaultViewModelFactories_InternalFactoryFactory_Factory.newInstance(getViewModelKeys(), new ViewModelCBuilder(singletonCImpl, activityRetainedCImpl));
+    }
+
+    @Override
+    public Map<Class<?>, Boolean> getViewModelKeys() {
+      return LazyClassKeyMap.<Boolean>of(ImmutableMap.<String, Boolean>of(LazyClassKeyProvider.com_pulselink_ui_state_MainViewModel, MainViewModel_HiltModules.KeyModule.provide()));
+    }
+
+    @Override
+    public ViewModelComponentBuilder getViewModelComponentBuilder() {
+      return new ViewModelCBuilder(singletonCImpl, activityRetainedCImpl);
+    }
+
+    @Override
+    public FragmentComponentBuilder fragmentComponentBuilder() {
+      return new FragmentCBuilder(singletonCImpl, activityRetainedCImpl, activityCImpl);
+    }
+
+    @Override
+    public ViewComponentBuilder viewComponentBuilder() {
+      return new ViewCBuilder(singletonCImpl, activityRetainedCImpl, activityCImpl);
+    }
+
+    @CanIgnoreReturnValue
+    private AssistantShortcutActivity injectAssistantShortcutActivity2(
+        AssistantShortcutActivity instance) {
+      AssistantShortcutActivity_MembersInjector.injectAlertRouter(instance, singletonCImpl.alertRouterProvider.get());
+      AssistantShortcutActivity_MembersInjector.injectNaturalLanguageCommandProcessor(instance, naturalLanguageCommandProcessor());
+      AssistantShortcutActivity_MembersInjector.injectContactLinkManager(instance, singletonCImpl.contactLinkManagerProvider.get());
+      return instance;
+    }
+
+    @CanIgnoreReturnValue
+    private MainActivity injectMainActivity2(MainActivity instance) {
+      MainActivity_MembersInjector.injectAppOpenAdController(instance, singletonCImpl.appOpenAdControllerProvider.get());
+      MainActivity_MembersInjector.injectCallStateMonitor(instance, singletonCImpl.callStateMonitorProvider.get());
+      return instance;
+    }
+
+    @IdentifierNameString
+    private static final class LazyClassKeyProvider {
+      static String com_pulselink_ui_state_MainViewModel = "com.pulselink.ui.state.MainViewModel";
+
+      @KeepFieldType
+      MainViewModel com_pulselink_ui_state_MainViewModel2;
+    }
+  }
+
+  private static final class ViewModelCImpl extends PulseLinkApp_HiltComponents.ViewModelC {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl;
+
+    private final ViewModelCImpl viewModelCImpl = this;
+
+    private Provider<MainViewModel> mainViewModelProvider;
+
+    private ViewModelCImpl(SingletonCImpl singletonCImpl,
+        ActivityRetainedCImpl activityRetainedCImpl, SavedStateHandle savedStateHandleParam,
+        ViewModelLifecycle viewModelLifecycleParam) {
+      this.singletonCImpl = singletonCImpl;
+      this.activityRetainedCImpl = activityRetainedCImpl;
+
+      initialize(savedStateHandleParam, viewModelLifecycleParam);
+
+    }
+
+    private NaturalLanguageCommandProcessor naturalLanguageCommandProcessor() {
+      return new NaturalLanguageCommandProcessor(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.provideFirebaseFunctionsProvider.get(), singletonCImpl.provideFirebaseAuthProvider.get(), singletonCImpl.alertRouterProvider.get(), singletonCImpl.contactRepositoryImplProvider.get(), singletonCImpl.contactLinkManagerProvider.get(), singletonCImpl.firebaseAuthManagerProvider.get());
+    }
+
+    @SuppressWarnings("unchecked")
+    private void initialize(final SavedStateHandle savedStateHandleParam,
+        final ViewModelLifecycle viewModelLifecycleParam) {
+      this.mainViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 0);
+    }
+
+    @Override
+    public Map<Class<?>, javax.inject.Provider<ViewModel>> getHiltViewModelMap() {
+      return LazyClassKeyMap.<javax.inject.Provider<ViewModel>>of(ImmutableMap.<String, javax.inject.Provider<ViewModel>>of(LazyClassKeyProvider.com_pulselink_ui_state_MainViewModel, ((Provider) mainViewModelProvider)));
+    }
+
+    @Override
+    public Map<Class<?>, Object> getHiltViewModelAssistedMap() {
+      return ImmutableMap.<Class<?>, Object>of();
+    }
+
+    @IdentifierNameString
+    private static final class LazyClassKeyProvider {
+      static String com_pulselink_ui_state_MainViewModel = "com.pulselink.ui.state.MainViewModel";
+
+      @KeepFieldType
+      MainViewModel com_pulselink_ui_state_MainViewModel2;
+    }
+
+    private static final class SwitchingProvider<T> implements Provider<T> {
+      private final SingletonCImpl singletonCImpl;
+
+      private final ActivityRetainedCImpl activityRetainedCImpl;
+
+      private final ViewModelCImpl viewModelCImpl;
+
+      private final int id;
+
+      SwitchingProvider(SingletonCImpl singletonCImpl, ActivityRetainedCImpl activityRetainedCImpl,
+          ViewModelCImpl viewModelCImpl, int id) {
+        this.singletonCImpl = singletonCImpl;
+        this.activityRetainedCImpl = activityRetainedCImpl;
+        this.viewModelCImpl = viewModelCImpl;
+        this.id = id;
+      }
+
+      @SuppressWarnings("unchecked")
+      @Override
+      public T get() {
+        switch (id) {
+          case 0: // com.pulselink.ui.state.MainViewModel 
+          return (T) new MainViewModel(singletonCImpl.contactRepositoryImplProvider.get(), singletonCImpl.alertRepositoryImplProvider.get(), singletonCImpl.settingsRepositoryImplProvider.get(), singletonCImpl.alertRouterProvider.get(), singletonCImpl.provideSoundCatalogProvider.get(), singletonCImpl.contactLinkManagerProvider.get(), singletonCImpl.messageRepositoryImplProvider.get(), singletonCImpl.blockedContactRepositoryImplProvider.get(), singletonCImpl.betaAgreementRepositoryImplProvider.get(), viewModelCImpl.naturalLanguageCommandProcessor(), singletonCImpl.firebaseAuthManagerProvider.get());
+
+          default: throw new AssertionError(id);
+        }
+      }
+    }
+  }
+
+  private static final class ActivityRetainedCImpl extends PulseLinkApp_HiltComponents.ActivityRetainedC {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ActivityRetainedCImpl activityRetainedCImpl = this;
+
+    private Provider<ActivityRetainedLifecycle> provideActivityRetainedLifecycleProvider;
+
+    private ActivityRetainedCImpl(SingletonCImpl singletonCImpl,
+        SavedStateHandleHolder savedStateHandleHolderParam) {
+      this.singletonCImpl = singletonCImpl;
+
+      initialize(savedStateHandleHolderParam);
+
+    }
+
+    @SuppressWarnings("unchecked")
+    private void initialize(final SavedStateHandleHolder savedStateHandleHolderParam) {
+      this.provideActivityRetainedLifecycleProvider = DoubleCheck.provider(new SwitchingProvider<ActivityRetainedLifecycle>(singletonCImpl, activityRetainedCImpl, 0));
+    }
+
+    @Override
+    public ActivityComponentBuilder activityComponentBuilder() {
+      return new ActivityCBuilder(singletonCImpl, activityRetainedCImpl);
+    }
+
+    @Override
+    public ActivityRetainedLifecycle getActivityRetainedLifecycle() {
+      return provideActivityRetainedLifecycleProvider.get();
+    }
+
+    private static final class SwitchingProvider<T> implements Provider<T> {
+      private final SingletonCImpl singletonCImpl;
+
+      private final ActivityRetainedCImpl activityRetainedCImpl;
+
+      private final int id;
+
+      SwitchingProvider(SingletonCImpl singletonCImpl, ActivityRetainedCImpl activityRetainedCImpl,
+          int id) {
+        this.singletonCImpl = singletonCImpl;
+        this.activityRetainedCImpl = activityRetainedCImpl;
+        this.id = id;
+      }
+
+      @SuppressWarnings("unchecked")
+      @Override
+      public T get() {
+        switch (id) {
+          case 0: // dagger.hilt.android.ActivityRetainedLifecycle 
+          return (T) ActivityRetainedComponentManager_LifecycleModule_ProvideActivityRetainedLifecycleFactory.provideActivityRetainedLifecycle();
+
+          default: throw new AssertionError(id);
+        }
+      }
+    }
+  }
+
+  private static final class ServiceCImpl extends PulseLinkApp_HiltComponents.ServiceC {
+    private final SingletonCImpl singletonCImpl;
+
+    private final ServiceCImpl serviceCImpl = this;
+
+    private ServiceCImpl(SingletonCImpl singletonCImpl, Service serviceParam) {
+      this.singletonCImpl = singletonCImpl;
+
+
+    }
+  }
+
+  private static final class SingletonCImpl extends PulseLinkApp_HiltComponents.SingletonC {
+    private final ApplicationContextModule applicationContextModule;
+
+    private final SingletonCImpl singletonCImpl = this;
+
+    private Provider<AppOpenAdController> appOpenAdControllerProvider;
+
+    private Provider<FirebaseAuth> provideFirebaseAuthProvider;
+
+    private Provider<FirebaseAuthManager> firebaseAuthManagerProvider;
+
+    private Provider<RemoteConfigService> remoteConfigServiceProvider;
+
+    private Provider<PulseLinkDatabase> provideDatabaseProvider;
+
+    private Provider<ContactRepositoryImpl> contactRepositoryImplProvider;
+
+    private Provider<SmsManager> provideSmsManagerProvider;
+
+    private Provider<SmsSender> smsSenderProvider;
+
+    private Provider<DataStore<Preferences>> provideDataStoreProvider;
+
+    private Provider<SettingsRepositoryImpl> settingsRepositoryImplProvider;
+
+    private Provider<AlertRepositoryImpl> alertRepositoryImplProvider;
+
+    private Provider<BlockedContactRepositoryImpl> blockedContactRepositoryImplProvider;
+
+    private Provider<LocationProvider> locationProvider;
+
+    private Provider<NotificationRegistrar> provideNotificationRegistrarProvider;
+
+    private Provider<SoundCatalog> provideSoundCatalogProvider;
+
+    private Provider<AudioOverrideManager> audioOverrideManagerProvider;
+
+    private Provider<AlertDispatcher> provideAlertDispatcherProvider;
+
+    private Provider<ContactLinkManager> contactLinkManagerProvider;
+
+    private Provider<AlertRouter> alertRouterProvider;
+
+    private Provider<RemoteActionHandler> remoteActionHandlerProvider;
+
+    private Provider<MessageRepositoryImpl> messageRepositoryImplProvider;
+
+    private Provider<TelephonyManager> provideTelephonyManagerProvider;
+
+    private Provider<CallStateMonitor> callStateMonitorProvider;
+
+    private Provider<FirebaseFirestore> provideFirebaseFirestoreProvider;
+
+    private Provider<LinkChannelService> linkChannelServiceProvider;
+
+    private Provider<FirebaseFunctions> provideFirebaseFunctionsProvider;
+
+    private Provider<BetaAgreementRepositoryImpl> betaAgreementRepositoryImplProvider;
+
+    private SingletonCImpl(ApplicationContextModule applicationContextModuleParam) {
+      this.applicationContextModule = applicationContextModuleParam;
+      initialize(applicationContextModuleParam);
+
+    }
+
+    private HiltWorkerFactory hiltWorkerFactory() {
+      return WorkerFactoryModule_ProvideFactoryFactory.provideFactory(ImmutableMap.<String, javax.inject.Provider<WorkerAssistedFactory<? extends ListenableWorker>>>of());
+    }
+
+    private ContactDao contactDao() {
+      return DatabaseModule_ProvideContactDaoFactory.provideContactDao(provideDatabaseProvider.get());
+    }
+
+    private AlertEventDao alertEventDao() {
+      return DatabaseModule_ProvideAlertDaoFactory.provideAlertDao(provideDatabaseProvider.get());
+    }
+
+    private BlockedContactDao blockedContactDao() {
+      return DatabaseModule_ProvideBlockedContactDaoFactory.provideBlockedContactDao(provideDatabaseProvider.get());
+    }
+
+    private ContactMessageDao contactMessageDao() {
+      return DatabaseModule_ProvideContactMessageDaoFactory.provideContactMessageDao(provideDatabaseProvider.get());
+    }
+
+    @SuppressWarnings("unchecked")
+    private void initialize(final ApplicationContextModule applicationContextModuleParam) {
+      this.appOpenAdControllerProvider = DoubleCheck.provider(new SwitchingProvider<AppOpenAdController>(singletonCImpl, 0));
+      this.provideFirebaseAuthProvider = DoubleCheck.provider(new SwitchingProvider<FirebaseAuth>(singletonCImpl, 2));
+      this.firebaseAuthManagerProvider = DoubleCheck.provider(new SwitchingProvider<FirebaseAuthManager>(singletonCImpl, 1));
+      this.remoteConfigServiceProvider = DoubleCheck.provider(new SwitchingProvider<RemoteConfigService>(singletonCImpl, 3));
+      this.provideDatabaseProvider = DoubleCheck.provider(new SwitchingProvider<PulseLinkDatabase>(singletonCImpl, 5));
+      this.contactRepositoryImplProvider = DoubleCheck.provider(new SwitchingProvider<ContactRepositoryImpl>(singletonCImpl, 4));
+      this.provideSmsManagerProvider = DoubleCheck.provider(new SwitchingProvider<SmsManager>(singletonCImpl, 8));
+      this.smsSenderProvider = DoubleCheck.provider(new SwitchingProvider<SmsSender>(singletonCImpl, 7));
+      this.provideDataStoreProvider = DoubleCheck.provider(new SwitchingProvider<DataStore<Preferences>>(singletonCImpl, 10));
+      this.settingsRepositoryImplProvider = DoubleCheck.provider(new SwitchingProvider<SettingsRepositoryImpl>(singletonCImpl, 9));
+      this.alertRepositoryImplProvider = DoubleCheck.provider(new SwitchingProvider<AlertRepositoryImpl>(singletonCImpl, 11));
+      this.blockedContactRepositoryImplProvider = DoubleCheck.provider(new SwitchingProvider<BlockedContactRepositoryImpl>(singletonCImpl, 12));
+      this.locationProvider = DoubleCheck.provider(new SwitchingProvider<LocationProvider>(singletonCImpl, 16));
+      this.provideNotificationRegistrarProvider = DoubleCheck.provider(new SwitchingProvider<NotificationRegistrar>(singletonCImpl, 17));
+      this.provideSoundCatalogProvider = DoubleCheck.provider(new SwitchingProvider<SoundCatalog>(singletonCImpl, 18));
+      this.audioOverrideManagerProvider = DoubleCheck.provider(new SwitchingProvider<AudioOverrideManager>(singletonCImpl, 19));
+      this.provideAlertDispatcherProvider = DoubleCheck.provider(new SwitchingProvider<AlertDispatcher>(singletonCImpl, 15));
+      this.contactLinkManagerProvider = new DelegateFactory<>();
+      this.alertRouterProvider = DoubleCheck.provider(new SwitchingProvider<AlertRouter>(singletonCImpl, 14));
+      this.remoteActionHandlerProvider = DoubleCheck.provider(new SwitchingProvider<RemoteActionHandler>(singletonCImpl, 13));
+      this.messageRepositoryImplProvider = DoubleCheck.provider(new SwitchingProvider<MessageRepositoryImpl>(singletonCImpl, 20));
+      this.provideTelephonyManagerProvider = DoubleCheck.provider(new SwitchingProvider<TelephonyManager>(singletonCImpl, 22));
+      this.callStateMonitorProvider = DoubleCheck.provider(new SwitchingProvider<CallStateMonitor>(singletonCImpl, 21));
+      this.provideFirebaseFirestoreProvider = DoubleCheck.provider(new SwitchingProvider<FirebaseFirestore>(singletonCImpl, 24));
+      this.linkChannelServiceProvider = DoubleCheck.provider(new SwitchingProvider<LinkChannelService>(singletonCImpl, 23));
+      DelegateFactory.setDelegate(contactLinkManagerProvider, DoubleCheck.provider(new SwitchingProvider<ContactLinkManager>(singletonCImpl, 6)));
+      this.provideFirebaseFunctionsProvider = DoubleCheck.provider(new SwitchingProvider<FirebaseFunctions>(singletonCImpl, 25));
+      this.betaAgreementRepositoryImplProvider = DoubleCheck.provider(new SwitchingProvider<BetaAgreementRepositoryImpl>(singletonCImpl, 26));
+    }
+
+    @Override
+    public void injectPulseLinkApp(PulseLinkApp pulseLinkApp) {
+      injectPulseLinkApp2(pulseLinkApp);
+    }
+
+    @Override
+    public ContactRepository contactRepository() {
+      return contactRepositoryImplProvider.get();
+    }
+
+    @Override
+    public ContactLinkManager linkManager() {
+      return contactLinkManagerProvider.get();
+    }
+
+    @Override
+    public SettingsRepository settingsRepository() {
+      return settingsRepositoryImplProvider.get();
+    }
+
+    @Override
+    public MessageRepository messageRepository() {
+      return messageRepositoryImplProvider.get();
+    }
+
+    @Override
+    public void injectPulseLinkSmsReceiver(PulseLinkSmsReceiver pulseLinkSmsReceiver) {
+      injectPulseLinkSmsReceiver2(pulseLinkSmsReceiver);
+    }
+
+    @Override
+    public void injectSmsSendReceiver(SmsSendReceiver smsSendReceiver) {
+      injectSmsSendReceiver2(smsSendReceiver);
+    }
+
+    @Override
+    public Set<Boolean> getDisableFragmentGetContextFix() {
+      return ImmutableSet.<Boolean>of();
+    }
+
+    @Override
+    public ActivityRetainedComponentBuilder retainedComponentBuilder() {
+      return new ActivityRetainedCBuilder(singletonCImpl);
+    }
+
+    @Override
+    public ServiceComponentBuilder serviceComponentBuilder() {
+      return new ServiceCBuilder(singletonCImpl);
+    }
+
+    @CanIgnoreReturnValue
+    private PulseLinkApp injectPulseLinkApp2(PulseLinkApp instance) {
+      PulseLinkApp_MembersInjector.injectWorkerFactory(instance, hiltWorkerFactory());
+      PulseLinkApp_MembersInjector.injectAppOpenAdController(instance, appOpenAdControllerProvider.get());
+      PulseLinkApp_MembersInjector.injectFirebaseAuthManager(instance, firebaseAuthManagerProvider.get());
+      PulseLinkApp_MembersInjector.injectRemoteConfigService(instance, remoteConfigServiceProvider.get());
+      return instance;
+    }
+
+    @CanIgnoreReturnValue
+    private PulseLinkSmsReceiver injectPulseLinkSmsReceiver2(PulseLinkSmsReceiver instance) {
+      PulseLinkSmsReceiver_MembersInjector.injectAlertRouter(instance, alertRouterProvider.get());
+      PulseLinkSmsReceiver_MembersInjector.injectContactLinkManager(instance, contactLinkManagerProvider.get());
+      return instance;
+    }
+
+    @CanIgnoreReturnValue
+    private SmsSendReceiver injectSmsSendReceiver2(SmsSendReceiver instance) {
+      SmsSendReceiver_MembersInjector.injectSmsSender(instance, smsSenderProvider.get());
+      return instance;
+    }
+
+    private static final class SwitchingProvider<T> implements Provider<T> {
+      private final SingletonCImpl singletonCImpl;
+
+      private final int id;
+
+      SwitchingProvider(SingletonCImpl singletonCImpl, int id) {
+        this.singletonCImpl = singletonCImpl;
+        this.id = id;
+      }
+
+      @SuppressWarnings("unchecked")
+      @Override
+      public T get() {
+        switch (id) {
+          case 0: // com.pulselink.data.ads.AppOpenAdController 
+          return (T) new AppOpenAdController(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 1: // com.pulselink.auth.FirebaseAuthManager 
+          return (T) new FirebaseAuthManager(singletonCImpl.provideFirebaseAuthProvider.get());
+
+          case 2: // com.google.firebase.auth.FirebaseAuth 
+          return (T) DatabaseModule_ProvideFirebaseAuthFactory.provideFirebaseAuth();
+
+          case 3: // com.pulselink.data.remoteconfig.RemoteConfigService 
+          return (T) new RemoteConfigService();
+
+          case 4: // com.pulselink.data.db.ContactRepositoryImpl 
+          return (T) new ContactRepositoryImpl(singletonCImpl.contactDao());
+
+          case 5: // com.pulselink.data.db.PulseLinkDatabase 
+          return (T) DatabaseModule_ProvideDatabaseFactory.provideDatabase(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 6: // com.pulselink.data.link.ContactLinkManager 
+          return (T) new ContactLinkManager(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.smsSenderProvider.get(), singletonCImpl.settingsRepositoryImplProvider.get(), singletonCImpl.alertRepositoryImplProvider.get(), singletonCImpl.contactRepositoryImplProvider.get(), singletonCImpl.blockedContactRepositoryImplProvider.get(), singletonCImpl.remoteActionHandlerProvider.get(), singletonCImpl.messageRepositoryImplProvider.get(), singletonCImpl.callStateMonitorProvider.get(), singletonCImpl.linkChannelServiceProvider.get());
+
+          case 7: // com.pulselink.data.sms.SmsSender 
+          return (T) new SmsSender(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.provideSmsManagerProvider.get());
+
+          case 8: // android.telephony.SmsManager 
+          return (T) DatabaseModule_ProvideSmsManagerFactory.provideSmsManager(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 9: // com.pulselink.data.settings.SettingsRepositoryImpl 
+          return (T) new SettingsRepositoryImpl(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.provideDataStoreProvider.get());
+
+          case 10: // androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences> 
+          return (T) DatabaseModule_ProvideDataStoreFactory.provideDataStore(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 11: // com.pulselink.data.db.AlertRepositoryImpl 
+          return (T) new AlertRepositoryImpl(singletonCImpl.alertEventDao());
+
+          case 12: // com.pulselink.data.db.BlockedContactRepositoryImpl 
+          return (T) new BlockedContactRepositoryImpl(singletonCImpl.blockedContactDao());
+
+          case 13: // com.pulselink.data.link.RemoteActionHandler 
+          return (T) new RemoteActionHandler(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.alertRouterProvider.get(), singletonCImpl.audioOverrideManagerProvider.get(), singletonCImpl.settingsRepositoryImplProvider.get(), singletonCImpl.provideNotificationRegistrarProvider.get(), singletonCImpl.provideSoundCatalogProvider.get());
+
+          case 14: // com.pulselink.service.AlertRouter 
+          return (T) new AlertRouter(singletonCImpl.settingsRepositoryImplProvider.get(), singletonCImpl.contactRepositoryImplProvider.get(), singletonCImpl.alertRepositoryImplProvider.get(), singletonCImpl.provideAlertDispatcherProvider.get(), DoubleCheck.lazy(singletonCImpl.contactLinkManagerProvider));
+
+          case 15: // com.pulselink.data.alert.AlertDispatcher 
+          return (T) DatabaseModule_ProvideAlertDispatcherFactory.provideAlertDispatcher(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.smsSenderProvider.get(), singletonCImpl.locationProvider.get(), singletonCImpl.provideNotificationRegistrarProvider.get(), singletonCImpl.provideSoundCatalogProvider.get(), singletonCImpl.audioOverrideManagerProvider.get());
+
+          case 16: // com.pulselink.data.location.LocationProvider 
+          return (T) new LocationProvider(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 17: // com.pulselink.data.alert.NotificationRegistrar 
+          return (T) DatabaseModule_ProvideNotificationRegistrarFactory.provideNotificationRegistrar(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 18: // com.pulselink.data.alert.SoundCatalog 
+          return (T) DatabaseModule_ProvideSoundCatalogFactory.provideSoundCatalog(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 19: // com.pulselink.util.AudioOverrideManager 
+          return (T) new AudioOverrideManager(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 20: // com.pulselink.data.db.MessageRepositoryImpl 
+          return (T) new MessageRepositoryImpl(singletonCImpl.contactMessageDao());
+
+          case 21: // com.pulselink.util.CallStateMonitor 
+          return (T) new CallStateMonitor(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.provideTelephonyManagerProvider.get());
+
+          case 22: // android.telephony.TelephonyManager 
+          return (T) DatabaseModule_ProvideTelephonyManagerFactory.provideTelephonyManager(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 23: // com.pulselink.data.link.LinkChannelService 
+          return (T) new LinkChannelService(singletonCImpl.provideFirebaseFirestoreProvider.get(), singletonCImpl.settingsRepositoryImplProvider.get(), singletonCImpl.contactRepositoryImplProvider.get(), singletonCImpl.firebaseAuthManagerProvider.get());
+
+          case 24: // com.google.firebase.firestore.FirebaseFirestore 
+          return (T) DatabaseModule_ProvideFirebaseFirestoreFactory.provideFirebaseFirestore();
+
+          case 25: // com.google.firebase.functions.FirebaseFunctions 
+          return (T) DatabaseModule_ProvideFirebaseFunctionsFactory.provideFirebaseFunctions();
+
+          case 26: // com.pulselink.data.beta.BetaAgreementRepositoryImpl 
+          return (T) new BetaAgreementRepositoryImpl(singletonCImpl.provideFirebaseFirestoreProvider.get(), singletonCImpl.settingsRepositoryImplProvider.get(), singletonCImpl.firebaseAuthManagerProvider.get());
+
+          default: throw new AssertionError(id);
+        }
+      }
+    }
+  }
+}

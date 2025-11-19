@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="pulse_on_surface">#F4F6FF</color>
+    <color name="pulse_surface">#0A0B12</color>
+    <style name="Theme.PulseLink" parent="Theme.Material3.Dark.NoActionBar"/>
+</resources>
