@@ -66,6 +66,7 @@ import com.pulselink.ui.screens.ContactDetailScreen
 import com.pulselink.ui.screens.ContactConversationScreen
 import com.pulselink.ui.screens.OnboardingScreen
 import com.pulselink.ui.screens.OnboardingIntroScreen
+import com.pulselink.ui.screens.SettingsHelpScreen
 import com.pulselink.ui.screens.SettingsScreen
 import com.pulselink.ui.screens.SplashScreen
 import com.pulselink.ui.screens.OnboardingPermissionState
@@ -423,7 +424,23 @@ class MainActivity : AppCompatActivity() {
                         val callLogGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
 
-                        val permissionCards = listOf(
+                        val managePermissionCard = OnboardingPermissionState(
+                            icon = Icons.Filled.Schedule,
+                            title = stringResource(R.string.permission_unused_apps_title),
+                            description = stringResource(R.string.permission_unused_apps_description),
+                            granted = unusedRestrictionsRequirementMet,
+                            actionLabel = stringResource(R.string.permission_unused_apps_action),
+                            onAction = {
+                                pendingUnusedRestrictionsCheck = true
+                                openUnusedAppRestrictionsSettings(context)
+                            },
+                            manualHelp = if (!unusedRestrictionsRequirementMet) {
+                                stringResource(R.string.permission_unused_apps_manual)
+                            } else null,
+                            emphasis = stringResource(R.string.permission_unused_apps_emphasis)
+                        )
+
+                        val permissionCards = buildList {
                             OnboardingPermissionState(
                                 icon = Icons.Filled.Call,
                                 title = "SMS & Call",
@@ -432,7 +449,7 @@ class MainActivity : AppCompatActivity() {
                                 manualHelp = if (!smsGranted || !callPermissionGranted) {
                                     "If SMS or Call stays disabled: open Settings -> Apps -> PulseLink -> Permissions, tap SMS and Phone, open the 3-dot menu, choose \"Allow disallowed permissions\", confirm with fingerprint or PIN, then switch both to Allow."
                                 } else null
-                            ),
+                            ).also { add(it) }
                             OnboardingPermissionState(
                                 icon = Icons.Filled.Lock,
                                 title = "Override Silent / DND",
@@ -440,21 +457,7 @@ class MainActivity : AppCompatActivity() {
                                 granted = hasDndAccess,
                                 actionLabel = if (hasDndAccess) "Manage" else "Allow",
                                 onAction = { openDndSettings(context) }
-                            ),
-                            OnboardingPermissionState(
-                                icon = Icons.Filled.Schedule,
-                                title = stringResource(R.string.permission_unused_apps_title),
-                                description = stringResource(R.string.permission_unused_apps_description),
-                                granted = unusedRestrictionsRequirementMet,
-                                actionLabel = stringResource(R.string.permission_unused_apps_action),
-                                onAction = {
-                                    pendingUnusedRestrictionsCheck = true
-                                    openUnusedAppRestrictionsSettings(context)
-                                },
-                                manualHelp = if (!unusedRestrictionsRequirementMet) {
-                                    stringResource(R.string.permission_unused_apps_manual)
-                                } else null
-                            ),
+                            ).also { add(it) }
                             OnboardingPermissionState(
                                 icon = Icons.Filled.Person,
                                 title = stringResource(R.string.permission_call_log_title),
@@ -463,26 +466,29 @@ class MainActivity : AppCompatActivity() {
                                 manualHelp = if (!callLogGranted) {
                                     "Open Settings -> Apps -> PulseLink -> Permissions and allow Call logs so linked contacts can ring through."
                                 } else null
-                            ),
+                            ).also { add(it) }
                             OnboardingPermissionState(
                                 icon = Icons.Filled.PowerSettingsNew,
                                 title = "Background activity",
                                 description = "Keep PulseLink active so alerts work whenever you need them.",
                                 granted = true
-                            ),
+                            ).also { add(it) }
                             OnboardingPermissionState(
                                 icon = Icons.Filled.LocationOn,
                                 title = "Location",
                                 description = "Include precise location when you trigger an alert.",
                                 granted = locationGranted
-                            ),
+                            ).also { add(it) }
                             OnboardingPermissionState(
                                 icon = Icons.Filled.Person,
                                 title = "Contacts",
                                 description = "Link trusted partners so they receive your alerts.",
                                 granted = contactsGranted
-                            )
-                        )
+                            ).also { add(it) }
+                            if (unusedRestrictionsRequirementMet) {
+                                add(managePermissionCard)
+                            }
+                        }
 
                         val sanitizedOnboardingName = onboardingName.trim()
                         val canContinue = missingPermissions.isEmpty() &&
@@ -493,6 +499,7 @@ class MainActivity : AppCompatActivity() {
 
                         OnboardingScreen(
                             permissions = permissionCards,
+                            focusedPermission = if (!unusedRestrictionsRequirementMet) managePermissionCard else null,
                             isReadyToFinish = canContinue,
                             onGrantPermissions = {
                                 if (missingPermissions.isEmpty()) {
@@ -697,6 +704,12 @@ class MainActivity : AppCompatActivity() {
                             onEditCallTone = { navController.navigate("alerts/default/call") },
                             onReportBug = { navController.navigate("bug_report") },
                             onBetaTesters = { navController.navigate("beta_testers") },
+                            onOpenHelp = { navController.navigate("settings_help") },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable("settings_help") {
+                        SettingsHelpScreen(
                             onBack = { navController.popBackStack() }
                         )
                     }

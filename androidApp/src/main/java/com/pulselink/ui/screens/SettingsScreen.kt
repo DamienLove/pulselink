@@ -15,7 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -51,6 +51,7 @@ fun SettingsScreen(
     onEditCallTone: () -> Unit,
     onReportBug: () -> Unit,
     onBetaTesters: () -> Unit,
+    onOpenHelp: () -> Unit,
     onBack: () -> Unit
 ) {
     Scaffold(
@@ -60,6 +61,14 @@ fun SettingsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onOpenHelp) {
+                        Icon(
+                            imageVector = Icons.Filled.Help,
+                            contentDescription = stringResource(id = R.string.settings_help_action)
+                        )
                     }
                 }
             )
@@ -72,25 +81,24 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(padding)
                 .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            SettingsToggleCard(
+            SettingsToggleRow(
                 title = "Share location in alerts",
-                subtitle = "Include your latest location when PulseLink sends emergency or check-in notifications.",
+                subtitle = "Include GPS when alerting your circle.",
                 checked = settings.includeLocation,
                 onCheckedChange = onToggleIncludeLocation
             )
             val dndSubtitle = if (hasDndAccess) {
-                val base = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                     stringResource(R.string.dnd_override_android15_note)
                 } else {
                     stringResource(R.string.dnd_override_ready)
                 }
-                "$base\n${stringResource(R.string.dnd_override_troubleshooting)}"
             } else {
                 stringResource(R.string.dnd_override_permission_prompt)
             }
-            SettingsActionCard(
+            SettingsActionRow(
                 title = stringResource(R.string.dnd_override_title),
                 subtitle = dndSubtitle,
                 actionLabel = if (hasDndAccess) {
@@ -100,40 +108,35 @@ fun SettingsScreen(
                 },
                 onAction = onRequestDndAccess
             )
-            SettingsToggleCard(
+            SettingsToggleRow(
                 title = "Auto-allow remote sound change",
-                subtitle = "Automatically let newly linked contacts update alert tones on this device.",
+                subtitle = "Automatically approve tone overrides from new links.",
                 checked = settings.autoAllowRemoteSoundChange,
                 onCheckedChange = onToggleAutoAllowRemoteSoundChange
             )
-            SettingsActionCard(
+            SettingsActionRow(
                 title = "Emergency alert tone",
-                subtitle = "Choose the default siren that plays during emergency alerts.",
-                actionLabel = "Edit tone",
+                actionLabel = "Edit",
                 onAction = onEditEmergencyTone
             )
-            SettingsActionCard(
+            SettingsActionRow(
                 title = "Check-in alert tone",
-                subtitle = "Set the chime that plays when you send a check-in.",
-                actionLabel = "Edit tone",
+                actionLabel = "Edit",
                 onAction = onEditCheckInTone
             )
-            SettingsActionCard(
+            SettingsActionRow(
                 title = stringResource(R.string.settings_call_tone_title),
-                subtitle = stringResource(R.string.settings_call_tone_subtitle),
-                actionLabel = "Edit tone",
+                actionLabel = "Edit",
                 onAction = onEditCallTone
             )
-            SettingsActionCard(
+            SettingsActionRow(
                 title = stringResource(id = R.string.settings_report_bug),
-                subtitle = "Help us improve PulseLink by reporting issues you encounter.",
                 actionLabel = "Report",
                 onAction = onReportBug,
                 leadingIcon = Icons.Filled.BugReport
             )
-            SettingsActionCard(
+            SettingsActionRow(
                 title = stringResource(id = R.string.settings_beta_testers),
-                subtitle = "Manage beta testing status and view tester information.",
                 actionLabel = "Manage",
                 onAction = onBetaTesters,
                 leadingIcon = Icons.Filled.Science
@@ -143,7 +146,7 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsToggleCard(
+private fun SettingsToggleRow(
     title: String,
     subtitle: String,
     checked: Boolean,
@@ -151,24 +154,24 @@ private fun SettingsToggleCard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        tonalElevation = 2.dp,
-        color = MaterialTheme.colorScheme.surfaceVariant
+        shape = RoundedCornerShape(18.dp),
+        tonalElevation = 1.dp,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -184,47 +187,52 @@ private fun SettingsToggleCard(
 }
 
 @Composable
-private fun SettingsActionCard(
+private fun SettingsActionRow(
     title: String,
-    subtitle: String,
+    subtitle: String? = null,
     actionLabel: String,
     onAction: () -> Unit,
     leadingIcon: ImageVector = Icons.Filled.NotificationsActive
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        tonalElevation = 2.dp,
-        color = MaterialTheme.colorScheme.surfaceVariant
+        shape = RoundedCornerShape(18.dp),
+        tonalElevation = 1.dp,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+            Icon(
+                imageVector = leadingIcon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
             )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            TextButton(onClick = onAction) {
-                Icon(
-                    imageVector = leadingIcon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
                 Text(
-                    text = actionLabel,
-                    modifier = Modifier.padding(start = 8.dp),
-                    color = MaterialTheme.colorScheme.primary
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            TextButton(onClick = onAction) {
+                Text(text = actionLabel)
             }
         }
     }

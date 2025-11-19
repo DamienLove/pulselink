@@ -7,6 +7,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -40,7 +41,6 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragIndicator
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -60,6 +60,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -73,6 +74,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Brush
@@ -161,9 +163,6 @@ fun HomeScreen(
             HeaderSection(
                 state = state,
                 onDismissAssistantShortcuts = onDismissAssistantShortcuts,
-                onUpgradeClick = onUpgradeClick
-            )
-            NavigationRow(
                 onAlertsClick = onAlertsClick,
                 onSettingsClick = onSettingsClick,
                 onUpgradeClick = onUpgradeClick
@@ -236,40 +235,62 @@ fun HomeScreen(
 private fun HeaderSection(
     state: PulseLinkUiState,
     onDismissAssistantShortcuts: () -> Unit,
+    onAlertsClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     onUpgradeClick: () -> Unit
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+    val heroShape = RoundedCornerShape(32.dp)
+    val heroBrush = Brush.verticalGradient(
+        colors = listOf(Color(0xFF181D35), Color(0xFF0E111E))
+    )
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = heroShape,
+        color = Color.Transparent
     ) {
         Column(
             modifier = Modifier
-                .align(Alignment.Center)
-                .padding(vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .background(heroBrush, heroShape)
+                .padding(horizontal = 20.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.ic_logo),
-                contentDescription = "PulseLink logo",
-                modifier = Modifier.size(99.dp)
-            )
-            Text(
-                text = "PulseLink",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onBackground,
-                textAlign = TextAlign.Center
-            )
-        }
-
-        if (!state.settings.assistantShortcutsDismissed) {
-            VoiceTipsCard(
-                modifier = Modifier.align(Alignment.TopEnd),
-                isProUser = state.isProUser,
-                onUpgradeClick = onUpgradeClick,
-                onDismiss = onDismissAssistantShortcuts
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_logo),
+                    contentDescription = "PulseLink logo",
+                    modifier = Modifier.size(48.dp)
+                )
+                Text(
+                    text = stringResource(id = R.string.app_name),
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    color = Color.White,
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                NavigationRow(
+                    onAlertsClick = onAlertsClick,
+                    onSettingsClick = onSettingsClick,
+                    onUpgradeClick = onUpgradeClick,
+                    isProUser = state.isProUser
+                )
+            }
+            if (!state.settings.assistantShortcutsDismissed) {
+                VoiceTipsCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    isProUser = state.isProUser,
+                    onUpgradeClick = onUpgradeClick,
+                    onDismiss = onDismissAssistantShortcuts
+                )
+            }
         }
     }
 }
@@ -390,32 +411,53 @@ private fun VoiceTipsCard(
 private fun NavigationRow(
     onAlertsClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    onUpgradeClick: () -> Unit
+    onUpgradeClick: () -> Unit,
+    isProUser: Boolean
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         NavButton(icon = Icons.Filled.Notifications, label = "Alerts", onClick = onAlertsClick)
         NavButton(icon = Icons.Filled.Settings, label = "Settings", onClick = onSettingsClick)
-        NavButton(icon = Icons.Filled.Star, label = "Pro", onClick = onUpgradeClick)
+        if (!isProUser) {
+            NavButton(icon = Icons.Filled.Star, label = "Pro", onClick = onUpgradeClick)
+        }
     }
 }
 
 @Composable
-private fun NavButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
+private fun NavButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        IconButton(onClick = onClick) {
-            Icon(icon, contentDescription = label, tint = MaterialTheme.colorScheme.primary)
+        val chipShape = RoundedCornerShape(16.dp)
+        Surface(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(chipShape)
+                .clickable(onClick = onClick),
+            shape = chipShape,
+            color = Color.White.copy(alpha = 0.08f),
+            tonalElevation = 0.dp
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    icon,
+                    contentDescription = label,
+                    tint = Color.White
+                )
+            }
         }
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White.copy(alpha = 0.85f)
         )
     }
 }
@@ -444,22 +486,17 @@ private fun QuickActionsRow(
             QuickActionTile(
                 modifier = Modifier.weight(1f),
                 label = stringResource(id = R.string.quick_action_emergency_label),
-                description = stringResource(id = R.string.quick_action_emergency_description),
-                icon = Icons.Filled.Warning,
-                background = Brush.verticalGradient(listOf(Color(0xFF7F1D1D), Color(0xFFDC2626))),
+                background = Brush.verticalGradient(listOf(Color(0xFFFC4D4D), Color(0xFFB60F1F))),
                 onClick = onTriggerEmergency,
                 enabled = !isEmergencyActive
             )
             QuickActionTile(
                 modifier = Modifier.weight(1f),
                 label = stringResource(id = R.string.quick_action_checkin_label),
-                description = stringResource(id = R.string.quick_action_checkin_description),
-                icon = Icons.Filled.CheckCircle,
-                background = Brush.verticalGradient(listOf(Color(0xFF047857), Color(0xFF10B981))),
+                background = Brush.verticalGradient(listOf(Color(0xFF14C997), Color(0xFF058252))),
                 onClick = onSendCheckInAll
             )
         }
-        LocationDisclosureCard()
         if (showScrollHint) {
             ScrollHintCard()
         }
@@ -470,85 +507,26 @@ private fun QuickActionsRow(
 private fun QuickActionTile(
     modifier: Modifier = Modifier,
     label: String,
-    description: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
     background: Brush,
     onClick: () -> Unit,
     enabled: Boolean = true
 ) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+    val shape = RoundedCornerShape(26.dp)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(72.dp)
+            .clip(shape)
+            .background(background)
+            .alpha(if (enabled) 1f else 0.4f)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center
     ) {
-        Surface(
-            modifier = Modifier.size(92.dp),
-            shape = CircleShape,
-            color = Color.Transparent
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(background, CircleShape)
-                    .clip(CircleShape)
-                    .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = label,
-                    tint = Color.White,
-                    modifier = Modifier.size(32.dp)
-                )
-            }
-        }
         Text(
             text = label,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onBackground,
-            textAlign = TextAlign.Center
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+            color = Color.White
         )
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 4.dp)
-        )
-    }
-}
-
-@Composable
-private fun LocationDisclosureCard() {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        tonalElevation = 2.dp
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.LocationOn,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Column {
-                Text(
-                    text = stringResource(id = R.string.quick_action_location_primary),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = stringResource(id = R.string.quick_action_location_secondary),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
     }
 }
 
@@ -556,25 +534,26 @@ private fun LocationDisclosureCard() {
 private fun ScrollHintCard() {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f))
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Icon(
                 imageVector = Icons.Filled.ArrowDownward,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                tint = MaterialTheme.colorScheme.primary
             )
             Text(
                 text = stringResource(id = R.string.quick_action_scroll_hint),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.weight(1f)
             )
@@ -678,22 +657,53 @@ private fun SearchAndAddRow(
     onSearchChange: (TextFieldValue) -> Unit,
     onAddClick: () -> Unit
 ) {
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
+        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
+        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        focusedSupportingTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        focusedContainerColor = MaterialTheme.colorScheme.surface,
+        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+    )
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
             value = searchValue,
             onValueChange = onSearchChange,
             modifier = Modifier.fillMaxWidth(),
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-            label = { Text("Search contacts") }
+            label = { Text("Search contacts") },
+            singleLine = true,
+            shape = RoundedCornerShape(18.dp),
+            colors = fieldColors
         )
-        OutlinedButton(
-            onClick = onAddClick,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp)
+        val addShape = RoundedCornerShape(18.dp)
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(addShape)
+                .clickable(onClick = onAddClick),
+            shape = addShape,
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
         ) {
-            Icon(Icons.Filled.PersonAdd, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Add trusted contact")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(Icons.Filled.PersonAdd, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Add trusted contact",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
         }
     }
 }
@@ -758,7 +768,9 @@ private fun ContactsList(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, colorScheme.onBackground.copy(alpha = 0.06f))
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -865,7 +877,9 @@ private fun ContactRow(
             .fillMaxWidth()
             .clickable { onOpenMessages() },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isDragging) 8.dp else 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isDragging) 8.dp else 0.dp),
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -1014,18 +1028,28 @@ private fun LinkActionButtons(
 
 @Composable
 private fun UpgradeCard(isPro: Boolean, onUpgradeClick: () -> Unit) {
-    Card(
+    val proShape = RoundedCornerShape(28.dp)
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = proShape,
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color(0xFF252C57), Color(0xFF131631))
+                    ),
+                    proShape
+                )
+                .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
                 text = "PulseLink Pro",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSurface
+                color = Color.White
             )
             Text(
                 text = if (isPro) {
@@ -1033,19 +1057,19 @@ private fun UpgradeCard(isPro: Boolean, onUpgradeClick: () -> Unit) {
                 } else {
                     stringResource(id = R.string.upgrade_card_pitch)
                 },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.8f)
             )
             if (isPro) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = Color(0xFF34D399))
                     Text(
                         text = "Lifetime access activated",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = Color.White
                     )
                 }
                 Button(
@@ -1054,10 +1078,10 @@ private fun UpgradeCard(isPro: Boolean, onUpgradeClick: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        disabledContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        disabledContentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        containerColor = Color.White.copy(alpha = 0.15f),
+                        contentColor = Color.White,
+                        disabledContainerColor = Color.White.copy(alpha = 0.15f),
+                        disabledContentColor = Color.White.copy(alpha = 0.7f)
                     )
                 ) {
                     Text(text = stringResource(id = R.string.pro_upgrade_button_active))
@@ -1067,8 +1091,8 @@ private fun UpgradeCard(isPro: Boolean, onUpgradeClick: () -> Unit) {
                     onClick = onUpgradeClick,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
+                        containerColor = Color(0xFF5663FF),
+                        contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(16.dp)
                 ) {

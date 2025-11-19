@@ -73,7 +73,8 @@ data class OnboardingPermissionState(
     val granted: Boolean,
     val manualHelp: String? = null,
     val actionLabel: String? = null,
-    val onAction: (() -> Unit)? = null
+    val onAction: (() -> Unit)? = null,
+    val emphasis: String? = null
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -198,6 +199,7 @@ private fun IntroBullet(text: String) {
 fun OnboardingScreen(
     modifier: Modifier = Modifier,
     permissions: List<OnboardingPermissionState>,
+    focusedPermission: OnboardingPermissionState? = null,
     isReadyToFinish: Boolean,
     onGrantPermissions: () -> Unit,
     onOpenAppSettings: () -> Unit,
@@ -206,7 +208,11 @@ fun OnboardingScreen(
     val gradient = Brush.verticalGradient(
         colors = listOf(Color(0xFF10131F), Color(0xFF0B0D16))
     )
-    val manualHelp = permissions.firstOrNull { it.manualHelp != null && !it.granted }?.manualHelp
+    val manualHelp = when {
+        focusedPermission != null && !focusedPermission.granted && !focusedPermission.manualHelp.isNullOrBlank() -> focusedPermission.manualHelp
+        else -> permissions.firstOrNull { it.manualHelp != null && !it.granted }?.manualHelp
+    }
+    val activeFocus = focusedPermission?.takeIf { !it.granted }
 
     Box(
         modifier = modifier
@@ -259,15 +265,38 @@ fun OnboardingScreen(
                 modifier = Modifier.align(Alignment.Start)
             )
             Spacer(modifier = Modifier.height(24.dp))
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+            Box(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
-                contentPadding = PaddingValues(bottom = 16.dp)
+                    .fillMaxWidth()
             ) {
-                items(permissions) { card ->
-                    PermissionCard(state = card)
+                if (activeFocus != null) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.Top
+                    ) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        if (!activeFocus.emphasis.isNullOrBlank()) {
+                            Text(
+                                text = activeFocus.emphasis,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color(0xFFFCD34D),
+                                modifier = Modifier.align(Alignment.Start)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                        PermissionCard(state = activeFocus)
+                    }
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        items(permissions) { card ->
+                            PermissionCard(state = card)
+                        }
+                    }
                 }
             }
             if (!manualHelp.isNullOrBlank()) {
@@ -345,6 +374,13 @@ private fun PermissionCard(state: OnboardingPermissionState) {
                     text = if (state.granted) "Granted" else "Pending",
                     style = MaterialTheme.typography.labelSmall,
                     color = statusColor
+                )
+            }
+            if (!state.emphasis.isNullOrBlank() && !state.granted) {
+                Text(
+                    text = state.emphasis,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFF87171)
                 )
             }
             if (!state.granted && state.actionLabel != null && state.onAction != null) {
