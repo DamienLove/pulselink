@@ -126,7 +126,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 13
-        versionName = "13.0.0"
+        versionName = "13"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -153,7 +153,6 @@ android {
         create("free") {
             dimension = "tier"
             applicationId = "com.free.pulselink"
-            versionNameSuffix = "-free"
             manifestPlaceholders += mapOf(
                 "admobAppId" to "ca-app-pub-5327057757821609~9533221188"
             )
@@ -178,7 +177,6 @@ android {
         create("pro") {
             dimension = "tier"
             applicationIdSuffix = ".pro"
-            versionNameSuffix = "-pro"
             manifestPlaceholders += mapOf(
                 "admobAppId" to ""
             )
