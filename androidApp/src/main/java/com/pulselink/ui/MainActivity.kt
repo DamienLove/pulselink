@@ -376,7 +376,7 @@ class MainActivity : AppCompatActivity() {
                             onToggleMode = loginViewModel::toggleMode,
                             onForgotPassword = loginViewModel::sendPasswordReset,
                             onGoogleSignInClick = { googleLauncher.launch(googleClient.signInIntent) },
-                            onAppleSignInClick = { loginViewModel.signInWithApple(componentActivity) },
+                            onSmsOnlyClick = loginViewModel::signInSmsOnly,
                             onMessageConsumed = loginViewModel::clearTransientMessages
                         )
                         LaunchedEffect(authState, state.onboardingComplete) {
