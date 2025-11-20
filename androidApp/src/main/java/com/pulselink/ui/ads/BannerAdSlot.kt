@@ -70,7 +70,6 @@ fun BannerAdSlot(
         adView.adListener = listener
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
-            adView.adListener = null
             lifecycleOwner.lifecycle.removeObserver(observer)
             adView.destroy()
         }
