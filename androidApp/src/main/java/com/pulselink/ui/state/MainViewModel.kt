@@ -513,7 +513,7 @@ class MainViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "MainViewModel"
-        private const val BUG_REPORT_PAGE_URL = "https://DamienLove.github.io/PulseLink/bug-report/"
+        private const val BUG_REPORT_PAGE_URL = "https://damienlove.github.io/pulselink/"
         const val BETA_AGREEMENT_VERSION = "2025-11-13"
         private const val REMOTE_BETA_AGREEMENT_TIMEOUT_MS = 10_000L
     }
