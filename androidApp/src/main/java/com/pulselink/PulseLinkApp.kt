@@ -33,7 +33,6 @@ class PulseLinkApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         FirebaseApp.initializeApp(this)
-        firebaseAuthManager.ensureSignedIn()
         CoroutineScope(Dispatchers.IO).launch {
             remoteConfigService.fetchAndActivate()
         }

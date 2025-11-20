@@ -19,6 +19,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
@@ -38,6 +39,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.PackageManagerCompat
 import androidx.core.content.UnusedAppRestrictionsConstants
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,8 +49,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import com.google.firebase.crashlytics.ktx.crashlytics
 import com.google.firebase.ktx.Firebase
+import com.pulselink.auth.AuthState
 import com.pulselink.data.ads.AppOpenAdController
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ManualMessageResult
@@ -64,16 +70,19 @@ import com.pulselink.ui.screens.BetaAgreementFullScreen
 import com.pulselink.ui.screens.BetaAgreementScreen
 import com.pulselink.ui.screens.ContactDetailScreen
 import com.pulselink.ui.screens.ContactConversationScreen
+import com.pulselink.ui.screens.LoginScreen
 import com.pulselink.ui.screens.OnboardingScreen
 import com.pulselink.ui.screens.OnboardingIntroScreen
 import com.pulselink.ui.screens.SettingsHelpScreen
 import com.pulselink.ui.screens.SettingsScreen
 import com.pulselink.ui.screens.SplashScreen
 import com.pulselink.ui.screens.OnboardingPermissionState
+import com.pulselink.ui.state.LoginViewModel
 import com.pulselink.ui.state.MainViewModel
 import com.pulselink.ui.state.MainViewModel.CallInitiationResult
 import com.pulselink.ui.theme.PulseLinkTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
@@ -103,6 +112,7 @@ class MainActivity : AppCompatActivity() {
             PulseLinkTheme {
                 val context = LocalContext.current
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
+                val authState by viewModel.authState.collectAsStateWithLifecycle()
                 val navController = rememberNavController()
                 val notificationManager = ContextCompat.getSystemService(context, NotificationManager::class.java)
                 val ownerName = state.settings.ownerName
@@ -316,10 +326,65 @@ class MainActivity : AppCompatActivity() {
 
                 NavHost(navController = navController, startDestination = "splash") {
                     composable("splash") {
-                        SplashScreen {
-                            val destination = if (state.onboardingComplete) "home" else "onboarding_intro"
+                        SplashScreen()
+                        LaunchedEffect(authState, state.onboardingComplete) {
+                            if (authState is AuthState.Loading) return@LaunchedEffect
+                            delay(1200)
+                            val destination = when (authState) {
+                                is AuthState.Authenticated -> if (state.onboardingComplete) "home" else "onboarding_intro"
+                                else -> "login"
+                            }
                             navController.navigate(destination) {
                                 popUpTo("splash") { inclusive = true }
+                            }
+                        }
+                    }
+                    composable("login") {
+                        val loginViewModel: LoginViewModel = hiltViewModel()
+                        val loginUiState by loginViewModel.uiState.collectAsStateWithLifecycle()
+                        val componentActivity = LocalContext.current as ComponentActivity
+                        val googleClient = remember(componentActivity) {
+                            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                                .requestIdToken(componentActivity.getString(R.string.google_web_client_id))
+                                .requestEmail()
+                                .build()
+                            GoogleSignIn.getClient(componentActivity, gso)
+                        }
+                        val googleLauncher = rememberLauncherForActivityResult(
+                            ActivityResultContracts.StartActivityForResult()
+                        ) { result ->
+                            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+                            try {
+                                val account = task.getResult(ApiException::class.java)
+                                val token = account?.idToken
+                                if (token != null) {
+                                    loginViewModel.handleGoogleIdToken(token)
+                                } else {
+                                    loginViewModel.reportExternalError()
+                                }
+                            } catch (error: ApiException) {
+                                Log.w("MainActivity", "Google sign-in failed", error)
+                                loginViewModel.reportExternalError()
+                            }
+                        }
+                        LoginScreen(
+                            state = loginUiState,
+                            onEmailChange = loginViewModel::updateEmail,
+                            onPasswordChange = loginViewModel::updatePassword,
+                            onConfirmPasswordChange = loginViewModel::updateConfirmPassword,
+                            onSubmit = loginViewModel::submit,
+                            onToggleMode = loginViewModel::toggleMode,
+                            onForgotPassword = loginViewModel::sendPasswordReset,
+                            onGoogleSignInClick = { googleLauncher.launch(googleClient.signInIntent) },
+                            onAppleSignInClick = { loginViewModel.signInWithApple(componentActivity) },
+                            onMessageConsumed = loginViewModel::clearTransientMessages
+                        )
+                        LaunchedEffect(authState, state.onboardingComplete) {
+                            if (authState is AuthState.Authenticated) {
+                                val destination = if (state.onboardingComplete) "home" else "onboarding_intro"
+                                navController.navigate(destination) {
+                                    popUpTo("login") { inclusive = true }
+                                }
                             }
                         }
                     }

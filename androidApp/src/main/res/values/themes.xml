@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Theme.PulseLink" parent="Theme.Material3.Dark.NoActionBar">
+    <style name="Base.Theme.PulseLink" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@color/pulse_primary</item>
         <item name="colorSecondary">@color/pulse_secondary</item>
         <item name="android:statusBarColor" tools:targetApi="l">@android:color/transparent</item>
         <item name="android:navigationBarColor" tools:targetApi="l">@android:color/black</item>
     </style>
+
+    <style name="Theme.PulseLink" parent="Base.Theme.PulseLink" />
 
     <style name="Theme.PulseLink.Transparent" parent="Theme.Material3.DayNight.Dialog">
         <item name="android:windowIsTranslucent">true</item>

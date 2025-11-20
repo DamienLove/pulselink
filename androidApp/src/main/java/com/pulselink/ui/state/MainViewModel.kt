@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pulselink.BuildConfig
 import com.pulselink.R
+import com.pulselink.auth.AuthState
 import com.pulselink.auth.FirebaseAuthManager
 import com.pulselink.data.alert.AlertDispatcher.AlertResult
 import com.pulselink.data.assistant.NaturalLanguageCommandProcessor
@@ -67,6 +68,7 @@ class MainViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(PulseLinkUiState())
     val uiState: StateFlow<PulseLinkUiState> = _uiState
+    val authState: StateFlow<AuthState> = firebaseAuthManager.authState
 
     init {
         viewModelScope.launch {

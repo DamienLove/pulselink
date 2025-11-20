@@ -47,8 +47,10 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.WifiTethering
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -872,6 +874,7 @@ private fun ContactRow(
         LinkStatus.INBOUND_REQUEST -> MaterialTheme.colorScheme.tertiary
         LinkStatus.LINKED -> MaterialTheme.colorScheme.secondary
     }
+    val hasSmsFallback = contact.phoneNumber.any { it.isDigit() }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -906,6 +909,10 @@ private fun ContactRow(
                         text = contact.phoneNumber,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall
+                    )
+                    ReachabilityBadge(
+                        hasSmsFallback = hasSmsFallback,
+                        modifier = Modifier.padding(top = 2.dp)
                     )
                     Text(
                         text = statusLabel,
@@ -951,6 +958,51 @@ private fun ContactRow(
                 contact = contact,
                 onSendLinkRequest = onSendLinkRequest,
                 onApproveLink = onApproveLink
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReachabilityBadge(
+    hasSmsFallback: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val label = if (hasSmsFallback) {
+        stringResource(R.string.contact_reachability_sms)
+    } else {
+        stringResource(R.string.contact_reachability_online_only)
+    }
+    val icon = if (hasSmsFallback) Icons.Filled.Sms else Icons.Outlined.WifiTethering
+    val containerColor = if (hasSmsFallback) {
+        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.32f)
+    } else {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.32f)
+    }
+    val contentColor = if (hasSmsFallback) {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    } else {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    }
+    Surface(
+        modifier = modifier,
+        color = containerColor,
+        shape = RoundedCornerShape(999.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = contentColor
+            )
+            Text(
+                text = label,
+                color = contentColor,
+                style = MaterialTheme.typography.bodySmall
             )
         }
     }

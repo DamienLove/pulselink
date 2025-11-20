@@ -39,6 +39,13 @@ androidApp: Compose UI + Hilt + Room + DataStore + WorkManager integration for l
 - PulseLinkVoiceService: SpeechRecognizer loop that feeds AlertRouter.
 - AlertRouter: Resolves phrases to escalation tiers and uses AlertDispatcher for SMS + notifications.
 
+-- 2025-11-20 Update --
+- Migrated authentication to Firebase email/password with `LoginViewModel` gating app navigation. Added Google and Apple providers plus an SMS-only anonymous fallback for users stuck on text-only connections.
+- Refreshed Compose login UI to match `PulseLink-ui-mockup/login.png`: hero logo, concise form, wide “Create account” button, Google/Apple icon buttons, SMS-only helper text, and progress feedback. Strings cover helper copy and web client IDs.
+- Surfaced SMS fallback status per contact (badge + icon) so senders know who can receive high-priority texts versus data-only alerts.
+- Rebuilt splash experience using Android 12+ splash attributes with flavor-specific vector logos (blue free, gold pro) and background colors; removed the circular white placeholder.
+- Updated `google-services.json` with the latest OAuth client IDs (free/pro, debug/release) and AdMob App ID; Google sign-in now uses the shared web client ID in strings.
+
 -- Permissions --
 App requests microphone, SMS (send/receive), notification, and location access. Behaviors degrade gracefully when any permission is denied.
 -- 2025-11-03 Update --
