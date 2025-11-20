@@ -146,6 +146,20 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    fun signInSmsOnly() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessageRes = null, userMessageRes = null) }
+            val result = authManager.signInSmsOnly()
+            _uiState.update {
+                val loginError = result.exceptionOrNull()?.toLoginError()
+                it.copy(
+                    isLoading = false,
+                    errorMessageRes = loginError?.messageRes
+                )
+            }
+        }
+    }
+
     private fun Throwable.toLoginError(): LoginError {
         val normalized = message.orEmpty()
         return when {

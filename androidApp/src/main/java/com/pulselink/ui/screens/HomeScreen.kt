@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -118,6 +119,8 @@ fun HomeScreen(
     isCancelingEmergency: Boolean = false,
     onAlertsClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
+    showAddLoginPrompt: Boolean = false,
+    onAddLoginClick: () -> Unit = {},
     onUpgradeClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -169,6 +172,12 @@ fun HomeScreen(
                 onSettingsClick = onSettingsClick,
                 onUpgradeClick = onUpgradeClick
             )
+            if (showAddLoginPrompt) {
+                AddLoginCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    onAddLoginClick = onAddLoginClick
+                )
+            }
             QuickActionsRow(
                 onTriggerEmergency = onTriggerEmergency,
                 onSendCheckInAll = onSendCheckIn,
@@ -292,6 +301,58 @@ private fun HeaderSection(
                     onUpgradeClick = onUpgradeClick,
                     onDismiss = onDismissAssistantShortcuts
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddLoginCard(
+    modifier: Modifier = Modifier,
+    onAddLoginClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        tonalElevation = 2.dp,
+        color = MaterialTheme.colorScheme.secondaryContainer
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Lock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = stringResource(id = R.string.home_add_login_title),
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Text(
+                        text = stringResource(id = R.string.home_add_login_body),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                    )
+                }
+            }
+            Button(
+                onClick = onAddLoginClick,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary
+                )
+            ) {
+                Text(text = stringResource(id = R.string.home_add_login_cta))
             }
         }
     }

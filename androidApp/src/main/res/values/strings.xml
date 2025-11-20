@@ -313,6 +313,8 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="login_continue_with_label">or continue with</string>
     <string name="login_continue_with_google">Continue with Google</string>
     <string name="login_continue_with_apple">Continue with Apple</string>
+    <string name="login_sms_only_helper">Skip account setup and use SMS-only. You can add a login later.</string>
+    <string name="login_sms_only_cta">Continue with SMS only</string>
     <string name="google_web_client_id">156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com</string>
     <string name="login_error_missing_email">Enter an email to continue.</string>
     <string name="login_error_short_password">Password needs at least 8 characters.</string>
@@ -322,6 +324,9 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="login_error_generic">We could not complete that request. Try again shortly.</string>
     <string name="login_message_reset_sent">Password reset email sent. Check your inbox.</string>
     <string name="login_message_account_created">Account created. You are good to go.</string>
+    <string name="home_add_login_title">Add a login to back up SMS alerts</string>
+    <string name="home_add_login_body">Create an email or Google login so you can restore your links if you switch phones.</string>
+    <string name="home_add_login_cta">Add login</string>
     <string name="contact_reachability_sms">SMS backup available</string>
     <string name="contact_reachability_online_only">Internet only</string>
 </resources>

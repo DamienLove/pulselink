@@ -380,7 +380,9 @@ class MainActivity : AppCompatActivity() {
                             onMessageConsumed = loginViewModel::clearTransientMessages
                         )
                         LaunchedEffect(authState, state.onboardingComplete) {
-                            if (authState is AuthState.Authenticated) {
+                            val currentUser = (authState as? AuthState.Authenticated)?.user
+                            val isFullyAuthenticated = currentUser?.isAnonymous == false
+                            if (isFullyAuthenticated) {
                                 val destination = if (state.onboardingComplete) "home" else "onboarding_intro"
                                 navController.navigate(destination) {
                                     popUpTo("login") { inclusive = true }
@@ -593,6 +595,7 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                     composable("home") {
+                        val isSmsOnlyUser = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true
                         HomeScreen(
                             state = state,
                             onDismissAssistantShortcuts = viewModel::dismissAssistantHint,
@@ -609,6 +612,12 @@ class MainActivity : AppCompatActivity() {
                             onRequestCancelEmergency = cancelEmergencyHandler,
                             isCancelingEmergency = isCancelingEmergency,
                             onAlertsClick = { navController.navigate("alert_history") },
+                            showAddLoginPrompt = isSmsOnlyUser,
+                            onAddLoginClick = {
+                                navController.navigate("login") {
+                                    launchSingleTop = true
+                                }
+                            },
                             onUpgradeClick = {
                                 val playStoreIntent = Intent(Intent.ACTION_VIEW).apply {
                                     data = Uri.parse("market://details?id=com.pulselink.pro")

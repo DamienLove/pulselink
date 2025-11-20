@@ -41,6 +41,14 @@ class FirebaseAuthManager @Inject constructor(
         _authState.filterIsInstance<AuthState.Authenticated>().first()
     }
 
+    suspend fun signInSmsOnly(): Result<FirebaseUser> {
+        return runCatching {
+            auth.signInAnonymously().await().user ?: error("Anonymous sign-in returned no user")
+        }.onFailure { error ->
+            Log.w(TAG, "SMS-only sign-in failed", error)
+        }
+    }
+
     suspend fun signIn(email: String, password: String): Result<FirebaseUser> {
         return runCatching {
             auth.signInWithEmailAndPassword(email, password).await().user
