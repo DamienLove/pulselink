@@ -20,6 +20,7 @@ import com.pulselink.data.link.ContactLinkManager
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ContactMessage
 import com.pulselink.domain.model.EscalationTier
+import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.domain.model.SoundCategory
 import com.pulselink.domain.repository.AlertRepository
@@ -32,6 +33,10 @@ import com.pulselink.service.AlertRouter
 import com.pulselink.ui.screens.BugReportData
 import com.pulselink.ui.state.DndStatusMessage
 import com.pulselink.util.AudioOverrideManager
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.auth.FirebaseUser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -41,6 +46,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 @HiltViewModel
@@ -55,7 +61,8 @@ class MainViewModel @Inject constructor(
     private val blockedContactRepository: BlockedContactRepository,
     private val betaAgreementRepository: BetaAgreementRepository,
     private val naturalLanguageCommandProcessor: NaturalLanguageCommandProcessor,
-    private val firebaseAuthManager: FirebaseAuthManager
+    private val firebaseAuthManager: FirebaseAuthManager,
+    private val firestore: FirebaseFirestore
 ) : ViewModel() {
 
     private val dispatching = MutableStateFlow(false)
@@ -105,6 +112,17 @@ class MainViewModel @Inject constructor(
                 _uiState.value = state
             }
         }
+
+        // When a real account signs in, sync profile + contacts from cloud
+        viewModelScope.launch {
+            firebaseAuthManager.authState.collect { state ->
+                val user = (state as? AuthState.Authenticated)?.user
+                if (user != null && !user.isAnonymous) {
+                    syncProfileFromCloud(user)
+                    syncContactsFromCloud(user)
+                }
+            }
+        }
     }
 
     fun saveContact(contact: Contact) {
@@ -115,12 +133,18 @@ class MainViewModel @Inject constructor(
             } else {
                 contact.contactOrder
             }
+            val withUid = contact.ensureRemoteUid()
             val storedContact = if (isNewContact) {
-                contact.copy(contactOrder = nextOrder)
+                withUid.copy(contactOrder = nextOrder)
             } else {
-                contact
+                withUid
             }
             contactRepository.upsert(storedContact)
+
+            // Mirror to cloud for authenticated users
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                upsertContactInCloud(user, storedContact)
+            }
 
             if (isNewContact && contact.phoneNumber.isNotBlank()) {
                 runCatching {
@@ -139,6 +163,9 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             val contact = contactRepository.getContact(id)
             contact?.let {
+                (firebaseAuthManager.currentUser()?.takeIf { user -> !user.isAnonymous })?.let { user ->
+                    deleteContactInCloud(user, it.phoneNumber)
+                }
                 blockedContactRepository.block(
                     phoneNumber = it.phoneNumber,
                     linkCode = it.linkCode,
@@ -182,6 +209,9 @@ class MainViewModel @Inject constructor(
     fun setOwnerName(name: String) {
         viewModelScope.launch {
             settingsRepository.setOwnerName(name)
+            (firebaseAuthManager.currentUser()?.takeIf { user -> !user.isAnonymous })?.let { user ->
+                pushProfileToCloud(user, name)
+            }
         }
     }
 
@@ -363,6 +393,140 @@ class MainViewModel @Inject constructor(
     suspend fun processVoiceCommand(query: String): VoiceCommandResult =
         naturalLanguageCommandProcessor.handleCommand(query)
 
+    private suspend fun syncProfileFromCloud(user: FirebaseUser) {
+        runCatching {
+            val localSettings = settingsRepository.settings.first()
+            val profileRef = firestore.collection("users").document(user.uid)
+            val snapshot = profileRef.get().await()
+            val remoteName = snapshot.getString("ownerName")
+                ?: user.displayName
+            when {
+                !remoteName.isNullOrBlank() && localSettings.ownerName.isBlank() -> {
+                    settingsRepository.setOwnerName(remoteName)
+                }
+                remoteName.isNullOrBlank() && localSettings.ownerName.isNotBlank() -> {
+                    profileRef.set(mapOf("ownerName" to localSettings.ownerName), SetOptions.merge()).await()
+                }
+                remoteName.isNullOrBlank() && localSettings.ownerName.isBlank() -> {
+                    // nothing to sync yet
+                }
+                else -> Unit
+            }
+        }.onFailure { error ->
+            Log.w(TAG, "Unable to sync profile", error)
+        }
+    }
+
+    private suspend fun pushProfileToCloud(user: FirebaseUser, ownerName: String) {
+        runCatching {
+            firestore.collection("users").document(user.uid)
+                .set(mapOf("ownerName" to ownerName), SetOptions.merge())
+                .await()
+        }.onFailure { error ->
+            Log.w(TAG, "Unable to push profile name", error)
+        }
+    }
+
+    private suspend fun syncContactsFromCloud(user: FirebaseUser) {
+        runCatching {
+            val localContacts = contactRepository.getAll()
+            val snapshot = firestore.collection(COLLECTION_USERS).document(user.uid)
+                .collection(COLLECTION_TRUSTED_CONTACTS)
+                .get()
+                .await()
+            val remoteContacts = snapshot.documents.mapNotNull { doc ->
+                val name = doc.getString("displayName") ?: return@mapNotNull null
+                val phone = doc.getString("phoneNumber") ?: ""
+                val tier = doc.getString("escalationTier")?.let { EscalationTier.valueOf(it) }
+                    ?: EscalationTier.EMERGENCY
+                Contact(
+                    id = 0,
+                    displayName = name,
+                    phoneNumber = phone,
+                    escalationTier = tier,
+                    includeLocation = doc.getBoolean("includeLocation") ?: true,
+                    autoCall = doc.getBoolean("autoCall") ?: false,
+                    emergencySoundKey = doc.getString("emergencySoundKey"),
+                    checkInSoundKey = doc.getString("checkInSoundKey"),
+                    contactOrder = (doc.getLong("contactOrder") ?: 0L).toInt(),
+                    allowRemoteSoundChange = doc.getBoolean("allowRemoteSoundChange") ?: false,
+                    allowRemoteOverride = doc.getBoolean("allowRemoteOverride") ?: false,
+                    linkStatus = doc.getString("linkStatus")?.let { LinkStatus.valueOf(it) }
+                        ?: LinkStatus.NONE,
+                    linkCode = doc.getString("linkCode"),
+                    remoteDeviceId = doc.getString("remoteDeviceId"),
+                    pendingApproval = doc.getBoolean("pendingApproval") ?: false,
+                    remoteUid = doc.getString("remoteUid")
+                )
+            }
+            if (remoteContacts.isNotEmpty()) {
+                contactRepository.clear()
+                remoteContacts.sortedBy { it.contactOrder }.forEachIndexed { index, contact ->
+                    contactRepository.upsert(contact.copy(contactOrder = index))
+                }
+            } else if (localContacts.isNotEmpty()) {
+                // No cloud data yet; push local up
+                localContacts.sortedBy { it.contactOrder }.forEach { contact ->
+                    upsertContactInCloud(user, contact)
+                }
+            }
+        }.onFailure { error ->
+            Log.w(TAG, "Unable to sync contacts from cloud", error)
+        }
+    }
+
+    private fun Contact.ensureRemoteUid(): Contact {
+        // If we ever add remote UID to handshake, prefer stored value; this is a placeholder for future hook.
+        return this
+    }
+
+    private suspend fun upsertContactInCloud(user: FirebaseUser, contact: Contact) {
+        val docId = contact.phoneNumber.ifBlank {
+            contact.displayName.lowercase().replace("\\s+".toRegex(), "_")
+                .ifBlank { contact.displayName.hashCode().toString() }
+        }
+        val payload = mapOf(
+            "displayName" to contact.displayName,
+            "phoneNumber" to contact.phoneNumber,
+            "escalationTier" to contact.escalationTier.name,
+            "includeLocation" to contact.includeLocation,
+            "autoCall" to contact.autoCall,
+            "emergencySoundKey" to contact.emergencySoundKey,
+            "checkInSoundKey" to contact.checkInSoundKey,
+            "contactOrder" to contact.contactOrder,
+            "allowRemoteSoundChange" to contact.allowRemoteSoundChange,
+            "allowRemoteOverride" to contact.allowRemoteOverride,
+            "linkStatus" to contact.linkStatus.name,
+            "linkCode" to contact.linkCode,
+            "remoteDeviceId" to contact.remoteDeviceId,
+            "pendingApproval" to contact.pendingApproval,
+            "remoteUid" to contact.remoteUid,
+            "updatedAt" to FieldValue.serverTimestamp()
+        )
+        runCatching {
+            firestore.collection(COLLECTION_USERS).document(user.uid)
+                .collection(COLLECTION_TRUSTED_CONTACTS)
+                .document(docId)
+                .set(payload, SetOptions.merge())
+                .await()
+        }.onFailure { error ->
+            Log.w(TAG, "Unable to upsert contact in cloud", error)
+        }
+    }
+
+    private suspend fun deleteContactInCloud(user: FirebaseUser, phoneNumber: String) {
+        val docId = phoneNumber.ifBlank { return }
+        runCatching {
+            firestore.collection(COLLECTION_USERS).document(user.uid)
+                .collection(COLLECTION_TRUSTED_CONTACTS)
+                .document(docId)
+                .delete()
+                .await()
+        }.onFailure { error ->
+            Log.w(TAG, "Unable to delete contact in cloud", error)
+        }
+    }
+
     fun cancelEmergency(onComplete: (Boolean) -> Unit) {
         viewModelScope.launch {
             val cancelled = linkManager.cancelActiveEmergency()
@@ -521,8 +685,10 @@ class MainViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "MainViewModel"
-        // GitHub Pages bug portal (docs/bug-report/index.html)
-        private const val BUG_REPORT_PAGE_URL = "https://damienlove.github.io/pulselink/bug-report/"
+        // Public bug portal (no GitHub login required)
+        const val BUG_REPORT_PAGE_URL = "https://damiennichols.com/report-bug/"
+        private const val COLLECTION_USERS = "users"
+        private const val COLLECTION_TRUSTED_CONTACTS = "trustedContacts"
         const val BETA_AGREEMENT_VERSION = "2025-11-13"
         private const val REMOTE_BETA_AGREEMENT_TIMEOUT_MS = 10_000L
     }

@@ -4,6 +4,8 @@ local.properties
 .DS_Store
 /build/
 androidApp/build/
+androidApp/.cxx/
+androidApp/.gradle/
 gradle-8.6/
 gradle-8.6-bin.zip
 pulselink-*.json

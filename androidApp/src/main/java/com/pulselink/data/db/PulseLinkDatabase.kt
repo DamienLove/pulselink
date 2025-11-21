@@ -20,6 +20,9 @@ interface ContactDao {
     @Query("SELECT * FROM contacts ORDER BY contactOrder ASC, displayName COLLATE NOCASE")
     fun observeContacts(): Flow<List<Contact>>
 
+    @Query("SELECT * FROM contacts")
+    suspend fun getAll(): List<Contact>
+
     @Query("SELECT * FROM contacts WHERE escalationTier = :tier ORDER BY contactOrder ASC, displayName COLLATE NOCASE")
     suspend fun getByTier(tier: String): List<Contact>
 
@@ -35,11 +38,17 @@ interface ContactDao {
     @Query("SELECT * FROM contacts WHERE remoteDeviceId = :deviceId LIMIT 1")
     suspend fun getByRemoteDeviceId(deviceId: String): Contact?
 
+    @Query("SELECT * FROM contacts WHERE remoteUid = :remoteUid LIMIT 1")
+    suspend fun getByRemoteUid(remoteUid: String): Contact?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(contact: Contact)
 
     @Query("DELETE FROM contacts WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("DELETE FROM contacts")
+    suspend fun clear()
 
     @Query("UPDATE contacts SET contactOrder = :order WHERE id = :contactId")
     suspend fun updateOrder(contactId: Long, order: Int)
@@ -101,7 +110,7 @@ interface BlockedContactDao {
 
 @Database(
     entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -118,6 +127,12 @@ abstract class PulseLinkDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE alert_events ADD COLUMN contactName TEXT")
                 database.execSQL("ALTER TABLE alert_events ADD COLUMN isIncoming INTEGER NOT NULL DEFAULT 0")
                 database.execSQL("ALTER TABLE alert_events ADD COLUMN soundKey TEXT")
+            }
+        }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE contacts ADD COLUMN remoteUid TEXT")
             }
         }
     }
