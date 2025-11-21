@@ -398,12 +398,16 @@ class MainViewModel @Inject constructor(
             val profileRef = firestore.collection("users").document(user.uid)
             val snapshot = profileRef.get().await()
             val remoteName = snapshot.getString("ownerName")
+                ?: user.displayName
             when {
                 !remoteName.isNullOrBlank() && localSettings.ownerName.isBlank() -> {
                     settingsRepository.setOwnerName(remoteName)
                 }
                 remoteName.isNullOrBlank() && localSettings.ownerName.isNotBlank() -> {
                     profileRef.set(mapOf("ownerName" to localSettings.ownerName), SetOptions.merge()).await()
+                }
+                remoteName.isNullOrBlank() && localSettings.ownerName.isBlank() -> {
+                    // nothing to sync yet
                 }
                 else -> Unit
             }
@@ -424,8 +428,9 @@ class MainViewModel @Inject constructor(
 
     private suspend fun syncContactsFromCloud(user: FirebaseUser) {
         runCatching {
-            val snapshot = firestore.collection("users").document(user.uid)
-                .collection("contacts")
+            val localContacts = contactRepository.getAll()
+            val snapshot = firestore.collection(COLLECTION_USERS).document(user.uid)
+                .collection(COLLECTION_TRUSTED_CONTACTS)
                 .get()
                 .await()
             val remoteContacts = snapshot.documents.mapNotNull { doc ->
@@ -457,6 +462,11 @@ class MainViewModel @Inject constructor(
                 remoteContacts.sortedBy { it.contactOrder }.forEachIndexed { index, contact ->
                     contactRepository.upsert(contact.copy(contactOrder = index))
                 }
+            } else if (localContacts.isNotEmpty()) {
+                // No cloud data yet; push local up
+                localContacts.sortedBy { it.contactOrder }.forEach { contact ->
+                    upsertContactInCloud(user, contact)
+                }
             }
         }.onFailure { error ->
             Log.w(TAG, "Unable to sync contacts from cloud", error)
@@ -486,8 +496,8 @@ class MainViewModel @Inject constructor(
             "updatedAt" to FieldValue.serverTimestamp()
         )
         runCatching {
-            firestore.collection("users").document(user.uid)
-                .collection("contacts")
+            firestore.collection(COLLECTION_USERS).document(user.uid)
+                .collection(COLLECTION_TRUSTED_CONTACTS)
                 .document(docId)
                 .set(payload, SetOptions.merge())
                 .await()
@@ -499,8 +509,8 @@ class MainViewModel @Inject constructor(
     private suspend fun deleteContactInCloud(user: FirebaseUser, phoneNumber: String) {
         val docId = phoneNumber.ifBlank { return }
         runCatching {
-            firestore.collection("users").document(user.uid)
-                .collection("contacts")
+            firestore.collection(COLLECTION_USERS).document(user.uid)
+                .collection(COLLECTION_TRUSTED_CONTACTS)
                 .document(docId)
                 .delete()
                 .await()
@@ -669,6 +679,8 @@ class MainViewModel @Inject constructor(
         private const val TAG = "MainViewModel"
         // Public bug portal (no GitHub login required)
         private const val BUG_REPORT_PAGE_URL = "https://damiennichols.com/report-bug/"
+        private const val COLLECTION_USERS = "users"
+        private const val COLLECTION_TRUSTED_CONTACTS = "trustedContacts"
         const val BETA_AGREEMENT_VERSION = "2025-11-13"
         private const val REMOTE_BETA_AGREEMENT_TIMEOUT_MS = 10_000L
     }
