@@ -38,6 +38,9 @@ interface ContactDao {
     @Query("SELECT * FROM contacts WHERE remoteDeviceId = :deviceId LIMIT 1")
     suspend fun getByRemoteDeviceId(deviceId: String): Contact?
 
+    @Query("SELECT * FROM contacts WHERE remoteUid = :remoteUid LIMIT 1")
+    suspend fun getByRemoteUid(remoteUid: String): Contact?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(contact: Contact)
 
@@ -107,7 +110,7 @@ interface BlockedContactDao {
 
 @Database(
     entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -124,6 +127,12 @@ abstract class PulseLinkDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE alert_events ADD COLUMN contactName TEXT")
                 database.execSQL("ALTER TABLE alert_events ADD COLUMN isIncoming INTEGER NOT NULL DEFAULT 0")
                 database.execSQL("ALTER TABLE alert_events ADD COLUMN soundKey TEXT")
+            }
+        }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE contacts ADD COLUMN remoteUid TEXT")
             }
         }
     }

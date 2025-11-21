@@ -21,6 +21,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -48,17 +49,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.google.firebase.crashlytics.ktx.crashlytics
-import com.google.firebase.ktx.Firebase
 import com.pulselink.auth.AuthState
 import com.pulselink.data.ads.AppOpenAdController
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.R
 import com.pulselink.ui.screens.BetaTesterListScreen
-import com.pulselink.ui.screens.BugReportData
-import com.pulselink.ui.screens.BugReportDataSaver
-import com.pulselink.ui.screens.BugReportScreen
 import com.pulselink.ui.screens.HomeScreen
 import com.pulselink.ui.screens.AlertHistoryScreen
 import com.pulselink.ui.screens.AlertTonePickerScreen
@@ -87,12 +83,25 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TopAppBar
 import dagger.hilt.android.AndroidEntryPoint
 import com.pulselink.util.CallStateMonitor
 import javax.inject.Inject
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.viewinterop.AndroidView
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.compose.material3.ExperimentalMaterial3Api
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -153,9 +162,6 @@ class MainActivity : AppCompatActivity() {
 
                 var onboardingName by rememberSaveable { mutableStateOf("") }
                 var onboardingNameDirty by rememberSaveable { mutableStateOf(false) }
-                var bugReportDraft by rememberSaveable(stateSaver = BugReportDataSaver) {
-                    mutableStateOf(BugReportData())
-                }
                 var hasHandledOnboardingCompletionAd by rememberSaveable {
                     mutableStateOf(state.onboardingComplete)
                 }
@@ -772,45 +778,9 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                     composable("bug_report") {
-                        BugReportScreen(
-                            data = bugReportDraft,
-                            onDataChange = { bugReportDraft = it },
-                            onBack = {
-                                bugReportDraft = BugReportData()
-                                navController.popBackStack()
-                            },
-                            onSubmit = { report ->
-                                // Use Firebase Crashlytics for bug reporting
-                                val reportException = Exception(report.summary.ifBlank { "User-submitted bug report" })
-                                val crashlytics = Firebase.crashlytics
-                                crashlytics.setCustomKey("steps_to_reproduce", report.stepsToReproduce.ifBlank { "N/A" })
-                                crashlytics.setCustomKey("expected_behavior", report.expectedBehavior.ifBlank { "N/A" })
-                                crashlytics.setCustomKey("actual_behavior", report.actualBehavior)
-                                crashlytics.setCustomKey("frequency", report.frequency)
-                                crashlytics.setCustomKey("severity", report.severity)
-                                if (report.userEmail.isNotBlank()) {
-                                    crashlytics.setCustomKey("reporter_email", report.userEmail)
-                                }
-                                crashlytics.log("User Report: ${report.summary}")
-                                crashlytics.recordException(reportException)
-
-                                val bugReportUri = viewModel.buildBugReportUri(context, report)
-                                val browserIntent = Intent(Intent.ACTION_VIEW, bugReportUri)
-                                try {
-                                    context.startActivity(browserIntent)
-                                } catch (error: ActivityNotFoundException) {
-                                    Log.w("MainActivity", "Unable to open bug report URI", error)
-                                }
-
-                                Toast.makeText(
-                                    context,
-                                    activity.getString(R.string.bug_report_success),
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                                
-                                bugReportDraft = BugReportData()
-                                navController.popBackStack()
-                            }
+                        BugReportWebScreen(
+                            url = MainViewModel.BUG_REPORT_PAGE_URL,
+                            onBack = { navController.popBackStack() }
                         )
                     }
                     composable("beta_testers") {
@@ -1020,5 +990,55 @@ private fun openUnusedAppRestrictionsSettings(context: android.content.Context) 
         openAppSettings(context)
     } catch (_: SecurityException) {
         openAppSettings(context)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BugReportWebScreen(
+    url: String,
+    onBack: () -> Unit
+) {
+    val loading = remember { mutableStateOf(true) }
+    BackHandler(onBack = onBack)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(text = stringResource(id = R.string.settings_report_bug)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)) {
+            if (loading.value) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+            AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { context ->
+                    WebView(context).apply {
+                        settings.javaScriptEnabled = true
+                        webViewClient = object : WebViewClient() {
+                            override fun onPageFinished(view: WebView?, url: String?) {
+                                loading.value = false
+                            }
+                        }
+                        loadUrl(url)
+                    }
+                },
+                update = { webView ->
+                    if (webView.url != url) {
+                        loading.value = true
+                        webView.loadUrl(url)
+                    }
+                }
+            )
+        }
     }
 }

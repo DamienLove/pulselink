@@ -22,7 +22,8 @@ data class Contact(
     val remoteDeviceId: String? = null,
     val allowRemoteOverride: Boolean = false,
     val allowRemoteSoundChange: Boolean = false,
-    val pendingApproval: Boolean = false
+    val pendingApproval: Boolean = false,
+    val remoteUid: String? = null
 )
 
 @Serializable

@@ -133,10 +133,11 @@ class MainViewModel @Inject constructor(
             } else {
                 contact.contactOrder
             }
+            val withUid = contact.ensureRemoteUid()
             val storedContact = if (isNewContact) {
-                contact.copy(contactOrder = nextOrder)
+                withUid.copy(contactOrder = nextOrder)
             } else {
-                contact
+                withUid
             }
             contactRepository.upsert(storedContact)
 
@@ -454,7 +455,8 @@ class MainViewModel @Inject constructor(
                         ?: LinkStatus.NONE,
                     linkCode = doc.getString("linkCode"),
                     remoteDeviceId = doc.getString("remoteDeviceId"),
-                    pendingApproval = doc.getBoolean("pendingApproval") ?: false
+                    pendingApproval = doc.getBoolean("pendingApproval") ?: false,
+                    remoteUid = doc.getString("remoteUid")
                 )
             }
             if (remoteContacts.isNotEmpty()) {
@@ -471,6 +473,11 @@ class MainViewModel @Inject constructor(
         }.onFailure { error ->
             Log.w(TAG, "Unable to sync contacts from cloud", error)
         }
+    }
+
+    private fun Contact.ensureRemoteUid(): Contact {
+        // If we ever add remote UID to handshake, prefer stored value; this is a placeholder for future hook.
+        return this
     }
 
     private suspend fun upsertContactInCloud(user: FirebaseUser, contact: Contact) {
@@ -493,6 +500,7 @@ class MainViewModel @Inject constructor(
             "linkCode" to contact.linkCode,
             "remoteDeviceId" to contact.remoteDeviceId,
             "pendingApproval" to contact.pendingApproval,
+            "remoteUid" to contact.remoteUid,
             "updatedAt" to FieldValue.serverTimestamp()
         )
         runCatching {
@@ -678,7 +686,7 @@ class MainViewModel @Inject constructor(
     companion object {
         private const val TAG = "MainViewModel"
         // Public bug portal (no GitHub login required)
-        private const val BUG_REPORT_PAGE_URL = "https://damiennichols.com/report-bug/"
+        const val BUG_REPORT_PAGE_URL = "https://damiennichols.com/report-bug/"
         private const val COLLECTION_USERS = "users"
         private const val COLLECTION_TRUSTED_CONTACTS = "trustedContacts"
         const val BETA_AGREEMENT_VERSION = "2025-11-13"

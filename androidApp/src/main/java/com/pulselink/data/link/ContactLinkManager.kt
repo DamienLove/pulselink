@@ -32,6 +32,10 @@ import com.pulselink.util.AudioOverrideManager
 import com.pulselink.util.resolveUri
 import com.pulselink.ui.EmergencyPopupActivity
 import com.pulselink.util.CallStateMonitor
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.SetOptions
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -44,6 +48,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.tasks.await
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -60,7 +65,9 @@ class ContactLinkManager @Inject constructor(
     private val remoteActionHandler: RemoteActionHandler,
     private val messageRepository: MessageRepository,
     private val callStateMonitor: CallStateMonitor,
-    private val linkChannelService: LinkChannelService
+    private val linkChannelService: LinkChannelService,
+    private val auth: FirebaseAuth,
+    private val firestore: FirebaseFirestore
 ) {
 
     private val notificationManager by lazy { NotificationManagerCompat.from(context) }
@@ -89,6 +96,7 @@ class ContactLinkManager @Inject constructor(
             pendingApproval = true
         )
         contactRepository.upsert(updated)
+        upsertLinkDoc(code)
         val senderName = settingsRepository.settings.first().ownerName.ifBlank { contact.displayName }
         val payload = SmsCodec.encodeLinkRequest(deviceId, code, senderName)
         smsSender.sendSms(contact.phoneNumber, payload)
@@ -109,6 +117,8 @@ class ContactLinkManager @Inject constructor(
             }
         )
         contactRepository.upsert(updated)
+        upsertLinkDoc(code)
+        maybeApplyRemoteUid(code, contact.phoneNumber)
         val payload = SmsCodec.encodeLinkAccept(deviceId, code)
         smsSender.sendSms(contact.phoneNumber, payload)
     }
@@ -204,6 +214,8 @@ class ContactLinkManager @Inject constructor(
             pendingApproval = true
         )
         contactRepository.upsert(updated)
+        upsertLinkDoc(message.code)
+        maybeApplyRemoteUid(message.code, fromPhone)
         val persisted = contactRepository.getByLinkCode(message.code)
             ?: findContactByPhoneFlexible(fromPhone)
             ?: updated
@@ -229,6 +241,8 @@ class ContactLinkManager @Inject constructor(
                 allowRemoteOverride = allowOverride
             )
             contactRepository.upsert(linked)
+            upsertLinkDoc(message.code)
+            maybeApplyRemoteUid(message.code, fromPhone)
             notifyLinked(linked)
         }
     }
@@ -350,6 +364,7 @@ class ContactLinkManager @Inject constructor(
         try {
             val persisted = resolveContactForManualMessage(message, fromPhone) ?: return
             deliverManualMessage(persisted, message.body, overrideApplied = true)
+            maybeApplyRemoteUid(message.code, fromPhone)
         } catch (error: Exception) {
             Log.e(TAG, "Failed to process manual message from $fromPhone", error)
         }
@@ -362,8 +377,39 @@ class ContactLinkManager @Inject constructor(
                 ?: payload.phoneNumber?.takeIf { it.isNotBlank() }?.let { contactRepository.getByPhone(it) }
                 ?: return
             deliverManualMessage(contact, payload.body, overrideApplied = true)
+            payload.linkCode?.let { maybeApplyRemoteUid(it, contact.phoneNumber) }
         } catch (error: Exception) {
             Log.e(TAG, "Failed to process realtime message ${payload.id}", error)
+        }
+    }
+
+    private suspend fun upsertLinkDoc(code: String) {
+        val uid = auth.currentUser?.uid ?: return
+        runCatching {
+            firestore.collection(COLLECTION_LINKS)
+                .document(code)
+                .set(mapOf("uids" to FieldValue.arrayUnion(uid)), SetOptions.merge())
+                .await()
+        }.onFailure { error ->
+            Log.w(TAG, "Unable to upsert link doc for $code", error)
+        }
+    }
+
+    private suspend fun maybeApplyRemoteUid(code: String, phone: String) {
+        val uid = auth.currentUser?.uid ?: return
+        runCatching {
+            val snapshot = firestore.collection(COLLECTION_LINKS).document(code).get().await()
+            val uids = snapshot.get("uids") as? List<*>
+            val remoteUid = uids?.mapNotNull { it as? String }?.firstOrNull { it != uid }
+            if (!remoteUid.isNullOrBlank()) {
+                val contact = contactRepository.getByLinkCode(code)
+                    ?: contactRepository.getByPhone(phone)
+                if (contact != null && contact.remoteUid != remoteUid) {
+                    contactRepository.upsert(contact.copy(remoteUid = remoteUid))
+                }
+            }
+        }.onFailure { error ->
+            Log.w(TAG, "Unable to resolve remoteUid for link $code", error)
         }
     }
 
@@ -733,8 +779,9 @@ class ContactLinkManager @Inject constructor(
         const val CONFIG_REMOTE_SOUND = "ALLOW_SOUND"
         const val CONFIG_REMOTE_OVERRIDE = "ALLOW_OVERRIDE"
         private const val PREPARE_TIMEOUT_MS = 10_000L
-        private const val REMOTE_ALERT_DEDUP_WINDOW_MS = 120_000L
-        private const val REMOTE_ALERT_DEDUP_MAX = 64
+        private const val COLLECTION_LINKS = "links"
+        private const val REMOTE_ALERT_DEDUP_WINDOW_MS = 15_000L
+        private const val REMOTE_ALERT_DEDUP_MAX = 50
     }
 }
 
