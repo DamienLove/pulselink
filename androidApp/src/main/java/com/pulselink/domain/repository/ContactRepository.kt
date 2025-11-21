@@ -14,4 +14,6 @@ interface ContactRepository {
     suspend fun getByPhone(phone: String): Contact?
     suspend fun getByRemoteDeviceId(deviceId: String): Contact?
     suspend fun updateOrder(contactIds: List<Long>)
+    suspend fun getAll(): List<Contact>
+    suspend fun clear()
 }

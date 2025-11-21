@@ -20,6 +20,9 @@ interface ContactDao {
     @Query("SELECT * FROM contacts ORDER BY contactOrder ASC, displayName COLLATE NOCASE")
     fun observeContacts(): Flow<List<Contact>>
 
+    @Query("SELECT * FROM contacts")
+    suspend fun getAll(): List<Contact>
+
     @Query("SELECT * FROM contacts WHERE escalationTier = :tier ORDER BY contactOrder ASC, displayName COLLATE NOCASE")
     suspend fun getByTier(tier: String): List<Contact>
 
@@ -40,6 +43,9 @@ interface ContactDao {
 
     @Query("DELETE FROM contacts WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("DELETE FROM contacts")
+    suspend fun clear()
 
     @Query("UPDATE contacts SET contactOrder = :order WHERE id = :contactId")
     suspend fun updateOrder(contactId: Long, order: Int)

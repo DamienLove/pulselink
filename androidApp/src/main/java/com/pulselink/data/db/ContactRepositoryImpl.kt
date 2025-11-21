@@ -42,4 +42,10 @@ class ContactRepositoryImpl @Inject constructor(
             contactDao.updateOrder(id, index)
         }
     }
+
+    override suspend fun getAll(): List<Contact> = contactDao.getAll()
+
+    override suspend fun clear() {
+        contactDao.clear()
+    }
 }
