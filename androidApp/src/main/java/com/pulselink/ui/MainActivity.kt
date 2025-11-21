@@ -163,7 +163,7 @@ class MainActivity : AppCompatActivity() {
                 LaunchedEffect(authState) {
                     if (authState is AuthState.Unauthenticated) {
                         navController.navigate("login") {
-                            popUpTo("splash") { inclusive = true }
+                            popUpTo(0) { inclusive = true }
                             launchSingleTop = true
                         }
                     }
@@ -297,7 +297,7 @@ class MainActivity : AppCompatActivity() {
                 LaunchedEffect(state.onboardingComplete) {
                     if (state.onboardingComplete) {
                         navController.navigate("home") {
-                            popUpTo("splash") { inclusive = true }
+                            popUpTo(0) { inclusive = true }
                             launchSingleTop = true
                         }
                     }
@@ -340,7 +340,8 @@ class MainActivity : AppCompatActivity() {
                                 else -> "login"
                             }
                             navController.navigate(destination) {
-                                popUpTo("splash") { inclusive = true }
+                                popUpTo(0) { inclusive = true }
+                                launchSingleTop = true
                             }
                         }
                     }
@@ -364,7 +365,8 @@ class MainActivity : AppCompatActivity() {
                             if (isFullyAuthenticated) {
                                 val destination = if (state.onboardingComplete) "home" else "onboarding_intro"
                                 navController.navigate(destination) {
-                                    popUpTo("login") { inclusive = true }
+                                    popUpTo(0) { inclusive = true }
+                                    launchSingleTop = true
                                 }
                             }
                         }
