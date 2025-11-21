@@ -3,15 +3,18 @@ package com.pulselink.ui.screens
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -40,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -48,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import com.pulselink.R
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.LinkStatus
+import com.pulselink.domain.model.RemotePresence
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -163,6 +168,12 @@ private fun Header(contact: Contact) {
         Spacer(modifier = Modifier.height(12.dp))
         Text(text = contact.displayName, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
         Text(text = contact.phoneNumber, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (contact.linkStatus == LinkStatus.LINKED) {
+            Spacer(modifier = Modifier.height(8.dp))
+            PresenceBadge(
+                presence = contact.remotePresence
+            )
+        }
     }
 }
 
@@ -333,5 +344,31 @@ private fun ActionRow(title: String, subtitle: String, onClick: () -> Unit) {
     ) {
         Text(text = title, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
         Text(text = subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+private fun PresenceBadge(presence: RemotePresence) {
+    val (label, dotColor) = when (presence) {
+        RemotePresence.ONLINE -> stringResource(id = R.string.presence_online) to Color(0xFF12C26B)
+        RemotePresence.RECENT -> stringResource(id = R.string.presence_recent) to Color(0xFFF59E0B)
+        RemotePresence.OFFLINE -> stringResource(id = R.string.presence_offline) to Color(0xFFEF4444)
+        RemotePresence.STALE -> stringResource(id = R.string.presence_stale) to MaterialTheme.colorScheme.outline
+        RemotePresence.UNKNOWN -> stringResource(id = R.string.presence_unknown) to MaterialTheme.colorScheme.outlineVariant
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .background(dotColor, shape = androidx.compose.foundation.shape.CircleShape)
+        )
+        Text(
+            text = label,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall
+        )
     }
 }
