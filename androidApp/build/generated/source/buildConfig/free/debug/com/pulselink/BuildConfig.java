@@ -8,8 +8,8 @@ public final class BuildConfig {
   public static final String APPLICATION_ID = "com.free.pulselink.debug";
   public static final String BUILD_TYPE = "debug";
   public static final String FLAVOR = "free";
-  public static final int VERSION_CODE = 12;
-  public static final String VERSION_NAME = "11.1.0-free-debug";
+  public static final int VERSION_CODE = 13;
+  public static final String VERSION_NAME = "13-debug";
   // Field from product flavor: free
   public static final boolean ADS_ENABLED = true;
   // Field from product flavor: free

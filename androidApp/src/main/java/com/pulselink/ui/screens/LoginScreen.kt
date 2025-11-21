@@ -1,13 +1,9 @@
 package com.pulselink.ui.screens
 
-import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,7 +18,6 @@ import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -61,7 +56,6 @@ fun LoginScreen(
     onSubmit: () -> Unit,
     onToggleMode: () -> Unit,
     onForgotPassword: () -> Unit,
-    onGoogleSignInClick: () -> Unit,
     onSmsOnlyClick: () -> Unit,
     onMessageConsumed: () -> Unit,
     modifier: Modifier = Modifier
@@ -249,18 +243,6 @@ fun LoginScreen(
             ) {
                 Text(text = stringResource(R.string.login_forgot_password))
             }
-            AuthDivider()
-            SocialButton(
-                iconRes = R.drawable.ic_google_logo,
-                label = stringResource(R.string.login_continue_with_google),
-                onClick = {
-                    focusManager.clearFocus()
-                    onGoogleSignInClick()
-                },
-                enabled = !primaryLoading,
-                showProgress = state.isSocialLoading,
-                showLabel = false
-            )
             Text(
                 text = stringResource(R.string.login_sms_only_helper),
                 style = MaterialTheme.typography.bodySmall,
@@ -284,75 +266,6 @@ fun LoginScreen(
                     modifier = Modifier.padding(end = 8.dp)
                 )
                 Text(text = stringResource(R.string.login_sms_only_cta))
-            }
-        }
-    }
-}
-
-@Composable
-private fun AuthDivider() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        HorizontalDivider()
-        Text(
-            text = stringResource(R.string.login_continue_with_label),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 10.dp)
-        )
-    }
-}
-
-@Composable
-private fun SocialButton(
-    @DrawableRes iconRes: Int,
-    label: String,
-    onClick: () -> Unit,
-    enabled: Boolean,
-    showProgress: Boolean,
-    showLabel: Boolean = true
-) {
-    OutlinedButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp)
-    ) {
-        if (showProgress) {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
-                    strokeWidth = 2.dp
-                )
-            }
-        } else {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = if (showLabel) {
-                    Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)
-                } else {
-                    Arrangement.Center
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Image(
-                    painter = painterResource(id = iconRes),
-                    contentDescription = label,
-                    modifier = Modifier.size(22.dp)
-                )
-                if (showLabel) {
-                    Text(text = label, fontWeight = FontWeight.SemiBold)
-                }
             }
         }
     }

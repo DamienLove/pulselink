@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:ns1="http://schemas.android.com/tools">
+    <string-array name="cancelSynonyms">
+        <item>stop</item>
+        <item>abort</item>
+    </string-array>
+    <string-array name="emergencySynonyms">
+        <item>help</item>
+        <item>sos</item>
+    </string-array>
+    <color name="ic_launcher_background">#121212</color>
+    <color name="pulse_error">#FF5252</color>
+    <color name="pulse_on_surface">#E8EAFF</color>
+    <color name="pulse_primary">#1A237E</color>
+    <color name="pulse_secondary">#FFEA00</color>
+    <color name="pulse_surface">#12131F</color>
+    <color name="splash_background">#05060A</color>
+    <string name="action_back">Back</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="alert_history_contacts_notified">%1$d contacts notified</string>
+    <string name="alert_history_empty_message">Your emergency alerts and check-ins will appear here</string>
+    <string name="alert_history_empty_title">No alerts yet</string>
+    <string name="alert_history_incoming">Received from</string>
+    <string name="alert_history_location_shared">Location shared</string>
+    <string name="alert_history_outgoing">Sent to</string>
+    <string name="alert_history_section_older">Older</string>
+    <string name="alert_history_section_this_week">This Week</string>
+    <string name="alert_history_section_today">Today</string>
+    <string name="alert_history_section_yesterday">Yesterday</string>
+    <string name="alert_history_sound_used">Sound: %1$s</string>
+    <string name="alert_history_title">Alert History</string>
+    <string name="alert_history_you">You</string>
+    <string name="app_name" translatable="false">PulseLink Pro</string>
+    <string name="assistant_hint_dismiss">Hide voice tips</string>
+    <string name="assistant_hint_examples">• "Hey Google, have PulseLink send an emergency alert"\n• "Hey Google, have PulseLink message mom I\'m safe"\n• "Hey Google, have PulseLink cancel my alert"</string>
+    <string name="assistant_hint_examples_title">Try saying:</string>
+    <string name="assistant_hint_ready_state">Gemini voice commands are ready.</string>
+    <string name="assistant_hint_subtitle">Say "Hey Google" or "Hey Google, talk to Gemini" and ask PulseLink for help.</string>
+    <string name="assistant_hint_title">Voice commands, no setup</string>
+    <string name="assistant_hint_upgrade_action">See Pro features</string>
+    <string name="assistant_hint_upgrade_badge">Pro exclusive</string>
+    <string name="assistant_hint_upgrade_copy">Gemini-powered natural language commands unlock with PulseLink Pro.</string>
+    <string name="assistant_shortcut_check_in_long">Send a PulseLink check-in</string>
+    <string name="assistant_shortcut_check_in_short">PulseLink check-in</string>
+    <string name="assistant_shortcut_emergency_long">Send a PulseLink emergency alert</string>
+    <string name="assistant_shortcut_emergency_short">PulseLink emergency</string>
+    <string name="assistant_shortcut_help_gemini">In Gemini, open Profile -> Settings -> Google Assistant features in Gemini -> Shortcuts.</string>
+    <string name="assistant_shortcut_help_generic">Follow your assistant\'s instructions on the next screen to enable the PulseLink shortcuts.</string>
+    <string name="assistant_shortcut_help_google">In the Google app, tap your profile photo -> Settings -> Shortcuts to finish setup.</string>
+    <string name="assistant_shortcut_missing">No Assistant or Gemini app found. Install the Google app or Gemini to enable hands-free shortcuts.</string>
+    <string name="assistant_trigger_check_in">Check-in sent via Google Assistant.</string>
+    <string name="assistant_trigger_emergency">Emergency alert sent via Google Assistant.</string>
+    <string name="audio_override_failed">Unable to override audio settings. Check Do Not Disturb permissions.</string>
+    <string name="audio_override_partial">Android limited the Do Not Disturb override. Verify PulseLink\'s notification channels can bypass DND.</string>
+    <string name="audio_override_permission_missing">PulseLink can\'t override Do Not Disturb without notification policy access. Grant the permission in system settings.</string>
+    <string name="beta_agreement_agree_button">I Agree</string>
+    <string name="beta_agreement_agree_error">Unable to record your agreement. Check your connection and try again.</string>
+    <string name="beta_agreement_agree_success">Thanks for accepting the PulseLink beta agreement.</string>
+    <string name="beta_agreement_full_text"><![CDATA[PULSELINK BETA TESTER AGREEMENT
+
+This Beta Tester Agreement ("Agreement") governs your use of the pre-release, beta version of the PulseLink mobile application (the "App"). The App is published on the Google Play Store under the developer name "Damien Nichols." For legal purposes, the App is owned and operated by Holldasa LLC, a California limited liability company ("Developer").
+
+By tapping "I Agree", installing, or using the App, you ("Tester") agree to be bound by this Agreement with Developer.
+
+Nature of the Beta; No Emergency Reliance
+1.1 The App is a beta, pre-release product and is provided solely for testing, evaluation, and feedback. It may be incomplete, unstable, or contain defects, including but not limited to crashes, data loss, false alerts, missed alerts, inaccurate or delayed location information, and failure to override device settings.
+
+1.2 Tester understands and expressly agrees that the App must not be relied upon as the sole or primary means of contacting emergency services, requesting help, or protecting life, health, or property. Tester remains fully responsible for maintaining direct access to emergency services (such as dialing 911) and any other safety measures.
+
+License and Use Restrictions
+2.1 Subject to this Agreement, Developer grants Tester a limited, personal, revocable, non-exclusive, non-transferable license to install and use the App only for internal testing and evaluation.
+
+2.2 Tester shall not, and shall not permit any third party to: (a) copy, distribute, sell, sublicense, or publicly make available the App or any part of it; (b) reverse engineer, decompile, disassemble, or attempt to derive the source code of the App, except where such restriction is prohibited by law; (c) modify, adapt, translate, or create derivative works based on the App; or (d) circumvent any technical protection measures or access controls used by the App.
+
+2.3 Developer may modify, suspend, or discontinue the App, or terminate Tester’s access, at any time, with or without notice, and without liability.
+
+Data Collection and Processing
+3.1 To operate, test, and improve the App, Developer may collect, store, and process information including, but not limited to:
+• Device and technical data: device model, operating system version, app version, performance metrics, crash logs, and diagnostic information.
+• Usage data: screens visited, features used, approximate frequency and duration of sessions, and interaction patterns.
+• Communication-related data, to the extent required for the App’s intended functionality, such as access to Tester-selected contacts, limited SMS and call-related metadata, and automated messaging required for alert workflows.
+• Location data, including approximate or precise location when the App is triggered or as configured in the App’s settings.
+
+3.2 Developer will use such data for purposes including operation of the App, debugging, analytics, safety testing, and product improvement. Developer will take reasonable measures to protect such data against unauthorized access or disclosure; however, Tester acknowledges that no system is entirely risk-free, particularly in a beta environment.
+
+3.3 By using the App and tapping "I Agree", Tester consents to this data collection and use as described in this Section 3 and in any applicable privacy notice presented within the App or on Developer’s website.
+
+Confidentiality
+4.1 The App, its design, features, interfaces, behavior, documentation, roadmap, and any non-public information relating to Developer or the App (collectively, "Confidential Information") are confidential and proprietary to Developer.
+
+4.2 Tester shall: (a) keep Confidential Information strictly confidential; (b) not disclose Confidential Information to any third party without Developer’s prior written consent; and (c) not publicly post, publish, or share screenshots, videos, or descriptions of unreleased features, performance, or behavior of the App without Developer’s permission.
+
+4.3 The confidentiality obligations do not apply to information that: (i) becomes publicly available through no breach by Tester; (ii) was lawfully known to Tester before use of the App; or (iii) must be disclosed under applicable law or court order, provided that Tester, where legally permissible, gives Developer prompt notice of such requirement.
+
+Feedback
+5.1 Tester may provide Developer with comments, suggestions, bug reports, ideas, or other feedback relating to the App ("Feedback").
+
+5.2 Tester agrees that Developer may freely use, copy, modify, adapt, publish, or otherwise exploit such Feedback for any purpose (including developing and improving products and services) without any obligation, compensation, or attribution to Tester. To the maximum extent permitted by law, Tester hereby assigns to Developer all rights, title, and interest in and to the Feedback.
+
+Ownership
+6.1 The App is licensed, not sold. Developer and its licensors retain all rights, title, and interest in and to the App, including all associated intellectual property rights.
+
+6.2 No rights or licenses are granted to Tester except as expressly set forth in this Agreement.
+
+Disclaimers
+7.1 THE APP IS PROVIDED "AS IS" AND "AS AVAILABLE", WITH ALL FAULTS, DEFECTS, ERRORS, AND BUGS. IT IS A BETA PRODUCT.
+
+7.2 TO THE MAXIMUM EXTENT PERMITTED BY LAW, DEVELOPER DISCLAIMS ALL WARRANTIES, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, INCLUDING ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT, AND ANY WARRANTIES ARISING FROM COURSE OF DEALING OR USAGE OF TRADE.
+
+7.3 WITHOUT LIMITING THE FOREGOING, DEVELOPER DOES NOT WARRANT THAT THE APP WILL BE UNINTERRUPTED, SECURE, OR ERROR-FREE, OR THAT IT WILL OPERATE CORRECTLY IN ANY PARTICULAR EMERGENCY SCENARIO OR ENVIRONMENT.
+
+Limitation of Liability
+8.1 TO THE MAXIMUM EXTENT PERMITTED BY LAW, DEVELOPER SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, CONSEQUENTIAL, SPECIAL, EXEMPLARY, OR PUNITIVE DAMAGES, OR FOR ANY LOSS OF DATA, LOSS OF PROFITS, LOSS OF OPPORTUNITIES, OR LOSS RELATING TO PERSONAL SAFETY OR PROPERTY, ARISING OUT OF OR IN CONNECTION WITH THE APP OR THIS AGREEMENT, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+8.2 TO THE MAXIMUM EXTENT PERMITTED BY LAW, DEVELOPER’S TOTAL CUMULATIVE LIABILITY ARISING OUT OF OR RELATING TO THE APP OR THIS AGREEMENT SHALL NOT EXCEED ONE HUNDRED U.S. DOLLARS (US $100) (OR, IF REQUIRED BY LAW, THE MINIMUM GREATER AMOUNT MANDATED BY SUCH LAW).
+
+8.3 THE ABOVE LIMITATIONS SHALL APPLY REGARDLESS OF THE THEORY OF LIABILITY (CONTRACT, TORT, NEGLIGENCE, STRICT LIABILITY, OR OTHERWISE) AND EVEN IF ANY REMEDY FAILS OF ITS ESSENTIAL PURPOSE.
+
+Term and Termination
+9.1 This Agreement becomes effective when Tester installs or uses the App or taps "I Agree" and continues until terminated in accordance with this Section.
+
+9.2 Developer may terminate this Agreement, and/or suspend or revoke Tester’s access to the App, at any time and for any reason, with or without notice.
+
+9.3 Upon termination, Tester shall immediately cease all use of the App and uninstall it from all devices. Sections relating to confidentiality, ownership, Feedback, disclaimers, limitations of liability, and any other provisions which by their nature should survive, shall survive termination.
+
+Governing Law and Jurisdiction
+This Agreement shall be governed by and construed in accordance with the laws of the State of California, without regard to its conflict of laws principles. Any dispute arising out of or relating to this Agreement or the App shall be subject to the exclusive jurisdiction of the state or federal courts located in Los Angeles County, California, and Tester hereby consents to such jurisdiction and venue.
+
+Entire Agreement; Changes
+This Agreement constitutes the entire agreement between Tester and Developer regarding the beta testing of the App and supersedes all prior or contemporaneous understandings on this subject. Developer may update this Agreement from time to time; material changes for existing users may be communicated through the App or by other reasonable means. If Tester continues to use the App after such changes become effective, Tester is deemed to accept the updated Agreement.
+
+BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE TO BE BOUND BY THIS AGREEMENT WITH HOLLDASA LLC.]]></string>
+    <string name="beta_agreement_full_title">Full In-App Beta Tester Agreement</string>
+    <string name="beta_agreement_summary_body">You are about to use a beta, pre-release version of PulseLink. It is experimental software. It may crash, fail to send alerts, report incorrect locations, or behave unpredictably.</string>
+    <string name="beta_agreement_summary_footer">Please read the full legal Agreement below carefully. If you do not agree, do not use PulseLink.</string>
+    <string name="beta_agreement_summary_points">By tapping "I Agree", you confirm that:\n– you are using PulseLink for testing and evaluation only,\n– you understand it must not be relied on as your only way to get help in an emergency,\n– you consent to our collection of technical, usage, limited communications-related, and location data as described in the Agreement below, solely to operate, test, and improve the app, and\n– you will keep unreleased features and non-public information about PulseLink confidential.</string>
+    <string name="beta_agreement_summary_title">PulseLink Beta Agreement – Summary</string>
+    <string name="beta_agreement_tester_default">PulseLink Tester</string>
+    <string name="beta_agreement_tester_label">Testing as %1$s · Agreement v%2$s</string>
+    <string name="beta_agreement_view_full">Read the full Beta Tester Agreement</string>
+    <string name="beta_tester_disabled">Beta testing is disabled</string>
+    <string name="beta_tester_enabled">You are a beta tester</string>
+    <string name="beta_tester_list_title">Beta Testers</string>
+    <string name="beta_tester_status">Beta Tester Status</string>
+    <string name="blocked_contact_attempt_body">%1$s attempted to send a message but is blocked.</string>
+    <string name="blocked_contact_attempt_title">Blocked contact tried to reach you</string>
+    <string name="bug_report_actual_hint">What actually happens</string>
+    <string name="bug_report_actual_label">Actual Behavior</string>
+    <string name="bug_report_contact_hint">For follow-up questions</string>
+    <string name="bug_report_contact_label">Your Email (Optional)</string>
+    <string name="bug_report_expected_hint">What should happen</string>
+    <string name="bug_report_expected_label">Expected Behavior</string>
+    <string name="bug_report_fields_required">Please fill in the summary and description fields</string>
+    <string name="bug_report_frequency_label">Frequency</string>
+    <string name="bug_report_portal_unavailable">Unable to open the bug portal. Install or enable a browser and try again.</string>
+    <string name="bug_report_severity_label">Severity</string>
+    <string name="bug_report_steps_hint">1. First step\n2. Second step\n3. ...</string>
+    <string name="bug_report_steps_label">Steps to Reproduce</string>
+    <string name="bug_report_submission_hint">Submitting opens the PulseLink GitHub portal so you can review and file the issue.</string>
+    <string name="bug_report_submit">Send Bug Report</string>
+    <string name="bug_report_success">Bug report portal opened. Finish submission on GitHub.</string>
+    <string name="bug_report_summary_hint">Brief description of the issue</string>
+    <string name="bug_report_summary_label">Summary</string>
+    <string name="bug_report_title">Report a Bug</string>
+    <string name="call_failed">Call failed</string>
+    <string name="call_permission_required">Phone permissions are required to place calls.</string>
+    <string name="call_preparing">Preparing call...</string>
+    <string name="call_ready">Call ready</string>
+    <string name="call_timeout">Call timed out</string>
+    <string name="cancel_emergency_biometric_unavailable">Set up a fingerprint, face, or device PIN to cancel alerts securely.</string>
+    <string name="cancel_emergency_button">Cancel emergency</string>
+    <string name="cancel_emergency_card_cta">Authenticate to cancel</string>
+    <string name="cancel_emergency_card_description">Stop sending alerts to your circle and restore your normal sound settings.</string>
+    <string name="cancel_emergency_card_secondary">Biometric confirmation required</string>
+    <string name="cancel_emergency_card_status">Emergency active</string>
+    <string name="cancel_emergency_card_title">Cancel emergency alert</string>
+    <string name="cancel_emergency_failure">Couldn\'t cancel the alert. Try again.</string>
+    <string name="cancel_emergency_prompt_subtitle">Use your fingerprint or device PIN to cancel the current alert.</string>
+    <string name="cancel_emergency_prompt_title">Verify it\'s you</string>
+    <string name="cancel_emergency_sms_body">Emergency cancelled - I am safe.</string>
+    <string name="cancel_emergency_success">Emergency cancelled. Contacts will be notified.</string>
+    <string name="channel_alerts">PulseLink Alerts</string>
+    <string name="channel_background">PulseLink Services</string>
+    <string name="channel_calls">PulseLink Call Alerts</string>
+    <string name="channel_check_ins">PulseLink Check-ins</string>
+    <string name="channel_manual_messages">PulseLink Messages</string>
+    <string name="com.google.firebase.crashlytics.mapping_file_id" ns1:ignore="UnusedResources,TypographyDashes" translatable="false">00000000000000000000000000000000</string>
+    <string name="contact_action_approve_link">Approve link</string>
+    <string name="contact_action_help_inbound_request">Approve to enable alerts and remote support.</string>
+    <string name="contact_action_help_not_linked">Send a link request so this contact can receive alerts.</string>
+    <string name="contact_action_help_outbound_pending">Waiting for their response. You can resend the invite.</string>
+    <string name="contact_action_message_pending_warning">Approval is pending. Messages may be delayed.</string>
+    <string name="contact_action_message_requires_link">Link this contact before sending messages.</string>
+    <string name="contact_action_resend_link">Resend link</string>
+    <string name="contact_action_send_link">Send link request</string>
+    <string name="contact_check_in_primary">Share "I am safe"</string>
+    <string name="contact_check_in_secondary">Reassures this contact and includes your latest location.</string>
+    <string name="contact_check_in_toast_failure">Could not send I am safe update.</string>
+    <string name="contact_check_in_toast_muted">Update sent (receiver may still be on silent).</string>
+    <string name="contact_check_in_toast_success">I am safe update sent.</string>
+    <string name="contact_detail_sound_sync_explanation">This tone will play on both your device and %1$s\'s device when you alert them</string>
+    <string name="contact_detail_sound_sync_note">Changes sync automatically between linked contacts</string>
+    <string name="contact_reachability_online_only">Internet only</string>
+    <string name="contact_reachability_sms">SMS backup available</string>
+    <string name="contact_status_inbound_request">Approve request</string>
+    <string name="contact_status_linked">Linked</string>
+    <string name="contact_status_not_linked">Not linked</string>
+    <string name="contact_status_outbound_pending">Awaiting approval</string>
+    <string name="cta_add_contact">Add trusted contact</string>
+    <string name="cta_send_check_in">Send check-in</string>
+    <string name="cta_trigger_test">Trigger test alert</string>
+    <string name="dnd_override_action_allow">Allow</string>
+    <string name="dnd_override_action_manage">Manage</string>
+    <string name="dnd_override_android15_note">On Android 15+, notification channels control Do Not Disturb bypass. Ensure the PulseLink Emergency Alerts channel is set to allow interruptions.</string>
+    <string name="dnd_override_permission_prompt">Grant access so PulseLink can break through Do Not Disturb during emergencies.</string>
+    <string name="dnd_override_ready">PulseLink can raise alarm volume and use bypass-enabled channels so emergency alerts break through Do Not Disturb.</string>
+    <string name="dnd_override_title">Do Not Disturb override</string>
+    <string name="dnd_override_troubleshooting">If alerts stay quiet, open Settings → Apps → PulseLink → Notifications and confirm the channel can override Do Not Disturb.</string>
+    <string name="emergency_alert_body">PulseLink is overriding Do Not Disturb and playing the emergency tone so you can respond immediately. If the siren stays silent, open Settings → Apps → PulseLink → Notifications and re-enable bypass.</string>
+    <string name="emergency_alert_title">%1$s triggered an emergency</string>
+    <string name="gcm_defaultSenderId" translatable="false">156950194350</string>
+    <string name="google_api_key" translatable="false">AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s</string>
+    <string name="google_app_id" translatable="false">1:156950194350:android:131cad4bd8eae76564653f-prodebug</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s</string>
+    <string name="google_storage_bucket" translatable="false">pulselink-24899.firebasestorage.app</string>
+    <string name="google_web_client_id">156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com</string>
+    <string name="home_add_login_body">Create an email login so you can restore your links if you switch phones.</string>
+    <string name="home_add_login_cta">Add login</string>
+    <string name="home_add_login_title">Add a login to back up SMS alerts</string>
+    <string name="incoming_call_alert_body">PulseLink is overriding Do Not Disturb so you don\'t miss their call. If you still can\'t hear it, confirm the Emergency Alerts notification channel can bypass DND.</string>
+    <string name="incoming_call_alert_title">%1$s is trying to reach you</string>
+    <string name="incoming_call_detected">Emergency call from %1$s</string>
+    <string name="label_alert_mode">Alert profile</string>
+    <string name="label_check_in_contacts">Check-in contacts</string>
+    <string name="label_check_in_sound">Check-in sound</string>
+    <string name="label_emergency_contacts">Emergency contacts</string>
+    <string name="label_emergency_sound">Emergency alert sound</string>
+    <string name="label_include_location">Include location when alerting</string>
+    <string name="label_phrase_primary">Primary PulseLink phrase</string>
+    <string name="label_phrase_secondary">Secondary PulseLink phrase</string>
+    <string name="link_notification_channel">PulseLink Linking</string>
+    <string name="link_request_body">%1$s wants to connect on PulseLink.</string>
+    <string name="link_request_title">Link request received</string>
+    <string name="link_success_body">You are now linked with %1$s.</string>
+    <string name="link_success_title">Contact linked</string>
+    <string name="login_confirm_password_label">Confirm password</string>
+    <string name="login_continue_with_apple">Continue with Apple</string>
+    <string name="login_continue_with_google">Continue with Google</string>
+    <string name="login_continue_with_label">or continue with</string>
+    <string name="login_cta_create_account">Create account</string>
+    <string name="login_cta_sign_in">Continue</string>
+    <string name="login_email_label">Email address</string>
+    <string name="login_error_email_in_use">That email already has an account. Try signing in.</string>
+    <string name="login_error_generic">We could not complete that request. Try again shortly.</string>
+    <string name="login_error_invalid_credentials">We could not verify that email and password. Try again.</string>
+    <string name="login_error_missing_email">Enter an email to continue.</string>
+    <string name="login_error_password_mismatch">Passwords must match.</string>
+    <string name="login_error_short_password">Password needs at least 8 characters.</string>
+    <string name="login_forgot_password">Forgot password</string>
+    <string name="login_large_toggle_create">Create a PulseLink account</string>
+    <string name="login_large_toggle_sign_in">Back to sign in</string>
+    <string name="login_message_account_created">Account created. You are good to go.</string>
+    <string name="login_message_reset_sent">Password reset email sent. Check your inbox.</string>
+    <string name="login_password_label">Password</string>
+    <string name="login_sms_only_cta">Continue with SMS only</string>
+    <string name="login_sms_only_helper">Skip account setup and use SMS-only. You can add a login later.</string>
+    <string name="login_subtitle_create_account">Securely link your identity so alerts can find you anywhere.</string>
+    <string name="login_subtitle_sign_in">Log in so your circle can reach you over data or SMS.</string>
+    <string name="login_title_create_account">Create your PulseLink account</string>
+    <string name="login_title_sign_in">Sign in to PulseLink</string>
+    <string name="login_toggle_create_account">Need an account? Create one</string>
+    <string name="login_toggle_sign_in">Already have an account? Sign in</string>
+    <string name="manual_message_title">%1$s sent a message</string>
+    <string name="notification_action_ack">Acknowledge</string>
+    <string name="notification_action_call">Call contact</string>
+    <string name="notification_body_alert">Alert dispatched to your circle.</string>
+    <string name="notification_body_check_in">Check-in sent successfully.</string>
+    <string name="notification_title_alert">PulseLink alert active</string>
+    <string name="notification_title_check_in">PulseLink check-in</string>
+    <string name="permission_call_log_description">PulseLink needs this to detect incoming calls from your linked contacts and play emergency tones.</string>
+    <string name="permission_call_log_title">Allow access to call log</string>
+    <string name="permission_location">PulseLink needs location access to share your position.</string>
+    <string name="permission_microphone">PulseLink needs microphone access for hotword detection.</string>
+    <string name="permission_sms">PulseLink needs SMS permission to contact your circle.</string>
+    <string name="permission_unused_apps_action">Turn off</string>
+    <string name="permission_unused_apps_description">Switch "Manage app if unused" to Off so Android never pauses PulseLink.</string>
+    <string name="permission_unused_apps_emphasis">Toggle "Manage app if unused" to Off. The switch should be gray before you return.</string>
+    <string name="permission_unused_apps_manual">Open the permissions screen, tap Manage app if unused, and switch it off so PulseLink stays ready.</string>
+    <string name="permission_unused_apps_title">Keep PulseLink active</string>
+    <string name="ping_received_body">They are checking in with you.</string>
+    <string name="ping_received_title">Check-in from %1$s</string>
+    <string name="placeholder_name">Contact name</string>
+    <string name="placeholder_phone">Phone number</string>
+    <string name="pro_feature_ads">Zero ads or promos anywhere in the experience.</string>
+    <string name="pro_feature_biometric_cancel">Biometric cancel flows so only you can clear an active alert.</string>
+    <string name="pro_feature_override">Priority DND/audio overrides that auto-restore your ringtone.</string>
+    <string name="pro_feature_realtime">Realtime contact link (Firestore) with SMS fallback when data drops.</string>
+    <string name="pro_feature_voice">Gemini voice commands route alerts, messages, and sirens instantly.</string>
+    <string name="pro_upgrade_active">Pro active on this device</string>
+    <string name="pro_upgrade_button_active">Pro unlocked</string>
+    <string name="pro_upgrade_cta">Unlock Pro for $5</string>
+    <string name="pro_upgrade_price_blurb">$5 one-time unlock • lifetime access</string>
+    <string name="project_id" translatable="false">pulselink-24899</string>
+    <string name="pulselink_contact_import_failed">PulseLink couldn\'t load that contact. Check contact permissions and try again.</string>
+    <string name="quick_action_checkin_description">Send a calm update with GPS.</string>
+    <string name="quick_action_checkin_label">I am safe</string>
+    <string name="quick_action_emergency_description">Loud siren and shares your location.</string>
+    <string name="quick_action_emergency_label">Emergency alert</string>
+    <string name="quick_action_location_primary">Emergency and I am safe share your location.</string>
+    <string name="quick_action_location_secondary">Calls and manual messages stay private.</string>
+    <string name="quick_action_scroll_hint">Scroll down for contacts and tools</string>
+    <string name="settings_beta_testers">Beta Testers</string>
+    <string name="settings_call_tone_subtitle">Customize the sound PulseLink plays when a linked contact calls you.</string>
+    <string name="settings_call_tone_title">Call alert tone</string>
+    <string name="settings_help_action">Open safety help</string>
+    <string name="settings_help_dnd_body">Grant PulseLink permission to override Do Not Disturb so emergencies can break through silenced modes. You can always manage or revoke the override from Android settings.</string>
+    <string name="settings_help_dnd_title">Do Not Disturb overrides</string>
+    <string name="settings_help_location_body">Include your latest GPS fix when sending emergency or check-in alerts so your circle can find you quickly. PulseLink only attaches that location to your outgoing alerts.</string>
+    <string name="settings_help_location_title">Location sharing</string>
+    <string name="settings_help_remote_body">When auto-allow is enabled, newly linked contacts can update tones used on your device. Turn it off if you prefer to approve changes manually from the contact screen.</string>
+    <string name="settings_help_remote_title">Remote tone control</string>
+    <string name="settings_help_support_body">Use Report a bug to send logs and context to the PulseLink team, or open the Beta testers panel to manage preview builds and feature flags.</string>
+    <string name="settings_help_support_title">Support &amp; feedback</string>
+    <string name="settings_help_title">Safety help</string>
+    <string name="settings_help_tone_body">Customize the siren that plays for emergencies, the chime for check-ins, and the ringtone override for incoming escalation calls to make sure every signal stands out.</string>
+    <string name="settings_help_tone_title">Alert tones</string>
+    <string name="settings_report_bug">Report a Bug</string>
+    <string name="settings_sign_out_action">Sign out</string>
+    <string name="settings_sign_out_subtitle">Return to the login screen and keep using SMS-only if needed.</string>
+    <string name="settings_sign_out_title">Sign out</string>
+    <string name="shortcut_check_in_long">Send PulseLink check-in</string>
+    <string name="shortcut_check_in_short">Send check-in</string>
+    <string name="sound_option_call_variant">PulseLink tone – %1$s</string>
+    <string name="sound_option_phone_default_notification">Phone default (notification)</string>
+    <string name="sound_option_phone_default_ringtone">Phone default (ringtone)</string>
+    <string name="title_contacts">Support Circle</string>
+    <string name="title_settings">Safety Settings</string>
+    <string name="upgrade_card_active_copy">PulseLink Pro is active. Hands-free commands and realtime messaging are standing by.</string>
+    <string name="upgrade_card_cta">See why Pro is different</string>
+    <string name="upgrade_card_pitch">Unlock Gemini voice commands, realtime contact messaging, biometric cancel safeguards, and remove every ad.</string>
+    <string name="voice_command_cancel_failed">Couldn\'t cancel the alert.</string>
+    <string name="voice_command_contact_missing">I couldn\'t find that contact.</string>
+    <string name="voice_command_default_message">I\'m checking in via PulseLink.</string>
+    <string name="voice_command_emergency_cancelled">Emergency cancelled and contacts notified.</string>
+    <string name="voice_command_emergency_sent">Emergency alert dispatched.</string>
+    <string name="voice_command_error_network">Assistant request failed. Check your connection.</string>
+    <string name="voice_command_error_unknown">I couldn\'t understand that command.</string>
+    <string name="voice_command_message_failed">Couldn\'t send that message.</string>
+    <string name="voice_command_message_sent">Message sent to %1$s.</string>
+    <string name="voice_command_no_recognizer">Voice recognition isn\'t available on this device.</string>
+    <string name="voice_command_prompt">Tell PulseLink what you need…</string>
+    <string name="voice_command_siren_failed">Couldn\'t reach that contact.</string>
+    <string name="voice_command_siren_triggered">Raised %1$s\'s siren.</string>
+    <string name="voice_command_trigger_reason">Assistant command: %1$s</string>
+    <string name="voice_command_upgrade_required">Hands-free commands are a PulseLink Pro feature. Upgrade to unlock them.</string>
+    <style name="Base.Theme.PulseLink" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/pulse_primary</item>
+        <item name="colorSecondary">@color/pulse_secondary</item>
+        <item name="android:statusBarColor" ns1:targetApi="l">@android:color/transparent</item>
+        <item name="android:navigationBarColor" ns1:targetApi="l">@android:color/black</item>
+    </style>
+    <style name="Theme.PulseLink" parent="Base.Theme.PulseLink"/>
+    <style name="Theme.PulseLink.Transparent" parent="Theme.Material3.DayNight.Dialog">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackgroundCacheHint">@null</item>
+    </style>
+</resources>

@@ -14,6 +14,8 @@
     <color name="pulse_primary">#1A237E</color>
     <color name="pulse_secondary">#FFEA00</color>
     <color name="pulse_surface">#12131F</color>
+    <color name="splash_background">#05060A</color>
+    <string name="action_back">Back</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_save">Save</string>
     <string name="alert_history_contacts_notified">%1$d contacts notified</string>
@@ -199,6 +201,8 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="contact_check_in_toast_success">I am safe update sent.</string>
     <string name="contact_detail_sound_sync_explanation">This tone will play on both your device and %1$s\'s device when you alert them</string>
     <string name="contact_detail_sound_sync_note">Changes sync automatically between linked contacts</string>
+    <string name="contact_reachability_online_only">Internet only</string>
+    <string name="contact_reachability_sms">SMS backup available</string>
     <string name="contact_status_inbound_request">Approve request</string>
     <string name="contact_status_linked">Linked</string>
     <string name="contact_status_not_linked">Not linked</string>
@@ -220,6 +224,10 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="google_app_id" translatable="false">1:156950194350:android:131cad4bd8eae76564653f-debug</string>
     <string name="google_crash_reporting_api_key" translatable="false">AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s</string>
     <string name="google_storage_bucket" translatable="false">pulselink-24899.firebasestorage.app</string>
+    <string name="google_web_client_id">156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com</string>
+    <string name="home_add_login_body">Create an email login so you can restore your links if you switch phones.</string>
+    <string name="home_add_login_cta">Add login</string>
+    <string name="home_add_login_title">Add a login to back up SMS alerts</string>
     <string name="incoming_call_alert_body">PulseLink is overriding Do Not Disturb so you don\'t miss their call. If you still can\'t hear it, confirm the Emergency Alerts notification channel can bypass DND.</string>
     <string name="incoming_call_alert_title">%1$s is trying to reach you</string>
     <string name="incoming_call_detected">Emergency call from %1$s</string>
@@ -236,6 +244,33 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="link_request_title">Link request received</string>
     <string name="link_success_body">You are now linked with %1$s.</string>
     <string name="link_success_title">Contact linked</string>
+    <string name="login_confirm_password_label">Confirm password</string>
+    <string name="login_continue_with_apple">Continue with Apple</string>
+    <string name="login_continue_with_google">Continue with Google</string>
+    <string name="login_continue_with_label">or continue with</string>
+    <string name="login_cta_create_account">Create account</string>
+    <string name="login_cta_sign_in">Continue</string>
+    <string name="login_email_label">Email address</string>
+    <string name="login_error_email_in_use">That email already has an account. Try signing in.</string>
+    <string name="login_error_generic">We could not complete that request. Try again shortly.</string>
+    <string name="login_error_invalid_credentials">We could not verify that email and password. Try again.</string>
+    <string name="login_error_missing_email">Enter an email to continue.</string>
+    <string name="login_error_password_mismatch">Passwords must match.</string>
+    <string name="login_error_short_password">Password needs at least 8 characters.</string>
+    <string name="login_forgot_password">Forgot password</string>
+    <string name="login_large_toggle_create">Create a PulseLink account</string>
+    <string name="login_large_toggle_sign_in">Back to sign in</string>
+    <string name="login_message_account_created">Account created. You are good to go.</string>
+    <string name="login_message_reset_sent">Password reset email sent. Check your inbox.</string>
+    <string name="login_password_label">Password</string>
+    <string name="login_sms_only_cta">Continue with SMS only</string>
+    <string name="login_sms_only_helper">Skip account setup and use SMS-only. You can add a login later.</string>
+    <string name="login_subtitle_create_account">Securely link your identity so alerts can find you anywhere.</string>
+    <string name="login_subtitle_sign_in">Log in so your circle can reach you over data or SMS.</string>
+    <string name="login_title_create_account">Create your PulseLink account</string>
+    <string name="login_title_sign_in">Sign in to PulseLink</string>
+    <string name="login_toggle_create_account">Need an account? Create one</string>
+    <string name="login_toggle_sign_in">Already have an account? Sign in</string>
     <string name="manual_message_title">%1$s sent a message</string>
     <string name="notification_action_ack">Acknowledge</string>
     <string name="notification_action_call">Call contact</string>
@@ -248,8 +283,9 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="permission_location">PulseLink needs location access to share your position.</string>
     <string name="permission_microphone">PulseLink needs microphone access for hotword detection.</string>
     <string name="permission_sms">PulseLink needs SMS permission to contact your circle.</string>
-    <string name="permission_unused_apps_action">Manage</string>
-    <string name="permission_unused_apps_description">Turn off unused-app management to keep permissions intact.</string>
+    <string name="permission_unused_apps_action">Turn off</string>
+    <string name="permission_unused_apps_description">Switch "Manage app if unused" to Off so Android never pauses PulseLink.</string>
+    <string name="permission_unused_apps_emphasis">Toggle "Manage app if unused" to Off. The switch should be gray before you return.</string>
     <string name="permission_unused_apps_manual">Open the permissions screen, tap Manage app if unused, and switch it off so PulseLink stays ready.</string>
     <string name="permission_unused_apps_title">Keep PulseLink active</string>
     <string name="ping_received_body">They are checking in with you.</string>
@@ -277,7 +313,22 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="settings_beta_testers">Beta Testers</string>
     <string name="settings_call_tone_subtitle">Customize the sound PulseLink plays when a linked contact calls you.</string>
     <string name="settings_call_tone_title">Call alert tone</string>
+    <string name="settings_help_action">Open safety help</string>
+    <string name="settings_help_dnd_body">Grant PulseLink permission to override Do Not Disturb so emergencies can break through silenced modes. You can always manage or revoke the override from Android settings.</string>
+    <string name="settings_help_dnd_title">Do Not Disturb overrides</string>
+    <string name="settings_help_location_body">Include your latest GPS fix when sending emergency or check-in alerts so your circle can find you quickly. PulseLink only attaches that location to your outgoing alerts.</string>
+    <string name="settings_help_location_title">Location sharing</string>
+    <string name="settings_help_remote_body">When auto-allow is enabled, newly linked contacts can update tones used on your device. Turn it off if you prefer to approve changes manually from the contact screen.</string>
+    <string name="settings_help_remote_title">Remote tone control</string>
+    <string name="settings_help_support_body">Use Report a bug to send logs and context to the PulseLink team, or open the Beta testers panel to manage preview builds and feature flags.</string>
+    <string name="settings_help_support_title">Support &amp; feedback</string>
+    <string name="settings_help_title">Safety help</string>
+    <string name="settings_help_tone_body">Customize the siren that plays for emergencies, the chime for check-ins, and the ringtone override for incoming escalation calls to make sure every signal stands out.</string>
+    <string name="settings_help_tone_title">Alert tones</string>
     <string name="settings_report_bug">Report a Bug</string>
+    <string name="settings_sign_out_action">Sign out</string>
+    <string name="settings_sign_out_subtitle">Return to the login screen and keep using SMS-only if needed.</string>
+    <string name="settings_sign_out_title">Sign out</string>
     <string name="shortcut_check_in_long">Send PulseLink check-in</string>
     <string name="shortcut_check_in_short">Send check-in</string>
     <string name="sound_option_call_variant">PulseLink tone – %1$s</string>
@@ -303,12 +354,13 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="voice_command_siren_triggered">Raised %1$s\'s siren.</string>
     <string name="voice_command_trigger_reason">Assistant command: %1$s</string>
     <string name="voice_command_upgrade_required">Hands-free commands are a PulseLink Pro feature. Upgrade to unlock them.</string>
-    <style name="Theme.PulseLink" parent="Theme.Material3.Dark.NoActionBar">
+    <style name="Base.Theme.PulseLink" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@color/pulse_primary</item>
         <item name="colorSecondary">@color/pulse_secondary</item>
         <item name="android:statusBarColor" ns1:targetApi="l">@android:color/transparent</item>
         <item name="android:navigationBarColor" ns1:targetApi="l">@android:color/black</item>
     </style>
+    <style name="Theme.PulseLink" parent="Base.Theme.PulseLink"/>
     <style name="Theme.PulseLink.Transparent" parent="Theme.Material3.DayNight.Dialog">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>

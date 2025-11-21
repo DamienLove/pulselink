@@ -19,7 +19,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
@@ -49,9 +48,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
 import com.google.firebase.crashlytics.ktx.crashlytics
 import com.google.firebase.ktx.Firebase
 import com.pulselink.auth.AuthState
@@ -162,6 +158,15 @@ class MainActivity : AppCompatActivity() {
                 }
                 var hasHandledOnboardingCompletionAd by rememberSaveable {
                     mutableStateOf(state.onboardingComplete)
+                }
+
+                LaunchedEffect(authState) {
+                    if (authState is AuthState.Unauthenticated) {
+                        navController.navigate("login") {
+                            popUpTo("splash") { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
                 }
 
                 LaunchedEffect(ownerName) {
@@ -342,31 +347,6 @@ class MainActivity : AppCompatActivity() {
                     composable("login") {
                         val loginViewModel: LoginViewModel = hiltViewModel()
                         val loginUiState by loginViewModel.uiState.collectAsStateWithLifecycle()
-                        val componentActivity = LocalContext.current as ComponentActivity
-                        val googleClient = remember(componentActivity) {
-                            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                                .requestIdToken(componentActivity.getString(R.string.google_web_client_id))
-                                .requestEmail()
-                                .build()
-                            GoogleSignIn.getClient(componentActivity, gso)
-                        }
-                        val googleLauncher = rememberLauncherForActivityResult(
-                            ActivityResultContracts.StartActivityForResult()
-                        ) { result ->
-                            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-                            try {
-                                val account = task.getResult(ApiException::class.java)
-                                val token = account?.idToken
-                                if (token != null) {
-                                    loginViewModel.handleGoogleIdToken(token)
-                                } else {
-                                    loginViewModel.reportExternalError()
-                                }
-                            } catch (error: ApiException) {
-                                Log.w("MainActivity", "Google sign-in failed", error)
-                                loginViewModel.reportExternalError()
-                            }
-                        }
                         LoginScreen(
                             state = loginUiState,
                             onEmailChange = loginViewModel::updateEmail,
@@ -375,7 +355,6 @@ class MainActivity : AppCompatActivity() {
                             onSubmit = loginViewModel::submit,
                             onToggleMode = loginViewModel::toggleMode,
                             onForgotPassword = loginViewModel::sendPasswordReset,
-                            onGoogleSignInClick = { googleLauncher.launch(googleClient.signInIntent) },
                             onSmsOnlyClick = loginViewModel::signInSmsOnly,
                             onMessageConsumed = loginViewModel::clearTransientMessages
                         )
@@ -779,6 +758,9 @@ class MainActivity : AppCompatActivity() {
                             onReportBug = { navController.navigate("bug_report") },
                             onBetaTesters = { navController.navigate("beta_testers") },
                             onOpenHelp = { navController.navigate("settings_help") },
+                            onSignOut = {
+                                viewModel.signOut()
+                            },
                             onBack = { navController.popBackStack() }
                         )
                     }

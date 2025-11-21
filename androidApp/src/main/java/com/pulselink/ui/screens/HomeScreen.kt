@@ -273,7 +273,7 @@ private fun HeaderSection(
                 Image(
                     painter = painterResource(id = R.drawable.ic_logo),
                     contentDescription = "PulseLink logo",
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(56.dp)
                 )
                 Text(
                     text = stringResource(id = R.string.app_name),

@@ -11,8 +11,8 @@
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 8,
-      "versionName": "8.0.0-pro-debug",
+      "versionCode": 13,
+      "versionName": "13-debug",
       "outputFile": "androidApp-pro-debug.apk"
     }
   ],

@@ -108,6 +108,9 @@
     <string name="settings_report_bug">Report a Bug</string>
     <string name="settings_beta_testers">Beta Testers</string>
     <string name="settings_help_action">Open safety help</string>
+    <string name="settings_sign_out_title">Sign out</string>
+    <string name="settings_sign_out_subtitle">Return to the login screen and keep using SMS-only if needed.</string>
+    <string name="settings_sign_out_action">Sign out</string>
     <string name="settings_help_title">Safety help</string>
     <string name="settings_help_location_title">Location sharing</string>
     <string name="settings_help_location_body">Include your latest GPS fix when sending emergency or check-in alerts so your circle can find you quickly. PulseLink only attaches that location to your outgoing alerts.</string>
@@ -325,7 +328,7 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="login_message_reset_sent">Password reset email sent. Check your inbox.</string>
     <string name="login_message_account_created">Account created. You are good to go.</string>
     <string name="home_add_login_title">Add a login to back up SMS alerts</string>
-    <string name="home_add_login_body">Create an email or Google login so you can restore your links if you switch phones.</string>
+    <string name="home_add_login_body">Create an email login so you can restore your links if you switch phones.</string>
     <string name="home_add_login_cta">Add login</string>
     <string name="contact_reachability_sms">SMS backup available</string>
     <string name="contact_reachability_online_only">Internet only</string>

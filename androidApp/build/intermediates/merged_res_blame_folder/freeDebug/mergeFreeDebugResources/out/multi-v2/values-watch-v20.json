@@ -4,7 +4,7 @@
             "outputFile": "com.pulselink.androidApp-mergeFreeDebugResources-4:/values-watch-v20/values-watch-v20.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\me\\.gradle\\caches\\transforms-4\\c5d47f8beee6850faabd256a9acfa3e1\\transformed\\play-services-auth-20.7.0\\res\\values-watch-v20\\values.xml",
+                    "source": "C:\\Users\\me\\.gradle\\caches\\transforms-4\\9d5c0e6390e888743c7002c4668e61ca\\transformed\\play-services-auth-21.1.0\\res\\values-watch-v20\\values.xml",
                     "from": {
                         "startLines": "4,5,6,7,8,9,10,11",
                         "startColumns": "0,0,0,0,0,0,0,0",

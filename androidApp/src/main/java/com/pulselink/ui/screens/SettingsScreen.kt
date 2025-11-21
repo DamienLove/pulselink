@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -52,6 +53,7 @@ fun SettingsScreen(
     onReportBug: () -> Unit,
     onBetaTesters: () -> Unit,
     onOpenHelp: () -> Unit,
+    onSignOut: () -> Unit,
     onBack: () -> Unit
 ) {
     Scaffold(
@@ -140,6 +142,13 @@ fun SettingsScreen(
                 actionLabel = "Manage",
                 onAction = onBetaTesters,
                 leadingIcon = Icons.Filled.Science
+            )
+            SettingsActionRow(
+                title = stringResource(id = R.string.settings_sign_out_title),
+                subtitle = stringResource(id = R.string.settings_sign_out_subtitle),
+                actionLabel = stringResource(id = R.string.settings_sign_out_action),
+                onAction = onSignOut,
+                leadingIcon = Icons.Filled.PowerSettingsNew
             )
         }
     }

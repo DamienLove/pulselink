@@ -159,6 +159,12 @@ class MainViewModel @Inject constructor(
         dispatch(EscalationTier.CHECK_IN, "PulseLink check-in")
     }
 
+    fun signOut() {
+        viewModelScope.launch {
+            firebaseAuthManager.signOut()
+        }
+    }
+
     fun reorderContacts(contactIds: List<Long>) {
         viewModelScope.launch {
             contactRepository.updateOrder(contactIds)

@@ -11,8 +11,8 @@
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 12,
-      "versionName": "11.1.0-free-debug",
+      "versionCode": 13,
+      "versionName": "13-debug",
       "outputFile": "androidApp-free-debug.apk"
     }
   ],

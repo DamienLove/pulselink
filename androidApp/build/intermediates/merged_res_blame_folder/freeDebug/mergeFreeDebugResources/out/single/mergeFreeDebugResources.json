@@ -1,5 +1,9 @@
 [
     {
+        "merged": "com.pulselink.androidApp-freeDebug-6:/drawable_splash_logo.xml.flat",
+        "source": "com.pulselink.androidApp-free-8:/drawable/splash_logo.xml"
+    },
+    {
         "merged": "com.pulselink.androidApp-freeDebug-6:/raw_alert_siren_random_alarm.mp3.flat",
         "source": "com.pulselink.androidApp-main-10:/raw/alert_siren_random_alarm.mp3"
     },
@@ -30,6 +34,10 @@
     {
         "merged": "com.pulselink.androidApp-freeDebug-6:/raw_alert_siren_red_alert_nuclear_buzzer.mp3.flat",
         "source": "com.pulselink.androidApp-main-10:/raw/alert_siren_red_alert_nuclear_buzzer.mp3"
+    },
+    {
+        "merged": "com.pulselink.androidApp-freeDebug-6:/drawable_ic_apple_logo.xml.flat",
+        "source": "com.pulselink.androidApp-main-10:/drawable/ic_apple_logo.xml"
     },
     {
         "merged": "com.pulselink.androidApp-freeDebug-6:/raw_alert_siren_alert.mp3.flat",
@@ -70,6 +78,10 @@
     {
         "merged": "com.pulselink.androidApp-freeDebug-6:/xml_remote_config_defaults.xml.flat",
         "source": "com.pulselink.androidApp-main-10:/xml/remote_config_defaults.xml"
+    },
+    {
+        "merged": "com.pulselink.androidApp-freeDebug-6:/drawable_ic_google_logo.xml.flat",
+        "source": "com.pulselink.androidApp-main-10:/drawable/ic_google_logo.xml"
     },
     {
         "merged": "com.pulselink.androidApp-freeDebug-6:/raw_alert_chime.mp3.flat",
