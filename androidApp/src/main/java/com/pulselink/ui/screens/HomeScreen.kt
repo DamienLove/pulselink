@@ -999,6 +999,7 @@ private fun ContactRow(
                         PresenceBadge(
                             label = presenceLabel,
                             color = presenceColor,
+                            lastSeen = contact.remoteLastSeen,
                             modifier = Modifier.padding(top = 4.dp)
                         )
                     }
@@ -1095,6 +1096,7 @@ private fun ReachabilityBadge(
 private fun PresenceBadge(
     label: String,
     color: Color,
+    lastSeen: Long?,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -1113,11 +1115,26 @@ private fun PresenceBadge(
                     .clip(CircleShape)
                     .background(color)
             )
-            Text(
-                text = label,
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.bodySmall
-            )
+            Column {
+                Text(
+                    text = label,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                lastSeen?.let {
+                    val relative = android.text.format.DateUtils.getRelativeTimeSpanString(
+                        it,
+                        System.currentTimeMillis(),
+                        android.text.format.DateUtils.MINUTE_IN_MILLIS,
+                        android.text.format.DateUtils.FORMAT_ABBREV_RELATIVE
+                    ).toString()
+                    Text(
+                        text = "Last active $relative",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+            }
         }
     }
 }
