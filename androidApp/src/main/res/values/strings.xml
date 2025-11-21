@@ -78,6 +78,11 @@
     <string name="contact_action_resend_link">Resend link</string>
     <string name="contact_action_help_inbound_request">Approve to enable alerts and remote support.</string>
     <string name="contact_action_approve_link">Approve link</string>
+    <string name="presence_online">Online</string>
+    <string name="presence_recent">Active recently</string>
+    <string name="presence_offline">Offline</string>
+    <string name="presence_stale">Unreachable</string>
+    <string name="presence_unknown">Presence unknown</string>
     <string name="contact_check_in_primary">Share &quot;I am safe&quot;</string>
     <string name="contact_check_in_secondary">Reassures this contact and includes your latest location.</string>
     <string name="contact_check_in_toast_success">I am safe update sent.</string>

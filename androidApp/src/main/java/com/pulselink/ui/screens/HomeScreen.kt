@@ -93,6 +93,7 @@ import androidx.compose.ui.unit.dp
 import com.pulselink.R
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.LinkStatus
+import com.pulselink.domain.model.RemotePresence
 import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.ads.NativeAdCard
 import com.pulselink.ui.state.PulseLinkUiState
@@ -935,6 +936,20 @@ private fun ContactRow(
         LinkStatus.INBOUND_REQUEST -> MaterialTheme.colorScheme.tertiary
         LinkStatus.LINKED -> MaterialTheme.colorScheme.secondary
     }
+    val presenceLabel = when (contact.remotePresence) {
+        RemotePresence.ONLINE -> stringResource(R.string.presence_online)
+        RemotePresence.RECENT -> stringResource(R.string.presence_recent)
+        RemotePresence.OFFLINE -> stringResource(R.string.presence_offline)
+        RemotePresence.STALE -> stringResource(R.string.presence_stale)
+        RemotePresence.UNKNOWN -> stringResource(R.string.presence_unknown)
+    }
+    val presenceColor = when (contact.remotePresence) {
+        RemotePresence.ONLINE -> Color(0xFF12C26B)
+        RemotePresence.RECENT -> Color(0xFFf59e0b)
+        RemotePresence.OFFLINE -> Color(0xFFef4444)
+        RemotePresence.STALE -> MaterialTheme.colorScheme.outline
+        RemotePresence.UNKNOWN -> MaterialTheme.colorScheme.outlineVariant
+    }
     val hasSmsFallback = contact.phoneNumber.any { it.isDigit() }
     Card(
         modifier = Modifier
@@ -980,6 +995,13 @@ private fun ContactRow(
                         color = statusColor,
                         style = MaterialTheme.typography.bodySmall
                     )
+                    if (contact.linkStatus == LinkStatus.LINKED) {
+                        PresenceBadge(
+                            label = presenceLabel,
+                            color = presenceColor,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onCall) {
@@ -1063,6 +1085,37 @@ private fun ReachabilityBadge(
             Text(
                 text = label,
                 color = contentColor,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+@Composable
+private fun PresenceBadge(
+    label: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(999.dp),
+        color = color.copy(alpha = 0.12f)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(color)
+            )
+            Text(
+                text = label,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodySmall
             )
         }
