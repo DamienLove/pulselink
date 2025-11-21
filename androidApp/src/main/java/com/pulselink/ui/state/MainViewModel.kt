@@ -22,6 +22,7 @@ import com.pulselink.domain.model.ContactMessage
 import com.pulselink.domain.model.EscalationTier
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.ManualMessageResult
+import com.pulselink.domain.model.RemotePresence
 import com.pulselink.domain.model.SoundCategory
 import com.pulselink.domain.repository.AlertRepository
 import com.pulselink.domain.repository.BetaAgreementRepository
@@ -460,9 +461,16 @@ class MainViewModel @Inject constructor(
                     remoteUid = doc.getString("remoteUid")
                 )
             }
-            if (remoteContacts.isNotEmpty()) {
+            val enriched = remoteContacts.map { contact ->
+                if (contact.linkCode.isNullOrBlank()) {
+                    contact
+                } else {
+                    resolveLinkFromDoc(contact, contact.linkCode, user.uid)
+                }
+            }
+            if (enriched.isNotEmpty()) {
                 contactRepository.clear()
-                remoteContacts.sortedBy { it.contactOrder }.forEachIndexed { index, contact ->
+                enriched.sortedBy { it.contactOrder }.forEachIndexed { index, contact ->
                     contactRepository.upsert(contact.copy(contactOrder = index))
                 }
             } else if (localContacts.isNotEmpty()) {
@@ -473,6 +481,44 @@ class MainViewModel @Inject constructor(
             }
         }.onFailure { error ->
             Log.w(TAG, "Unable to sync contacts from cloud", error)
+        }
+    }
+
+    private fun presenceFrom(lastSeen: Long?): RemotePresence {
+        return lastSeen?.let {
+            val age = System.currentTimeMillis() - it
+            when {
+                age < 3 * 60 * 1000L -> RemotePresence.ONLINE
+                age < 60 * 60 * 1000L -> RemotePresence.RECENT
+                age < 24 * 60 * 60 * 1000L -> RemotePresence.OFFLINE
+                else -> RemotePresence.STALE
+            }
+        } ?: RemotePresence.STALE
+    }
+
+    private suspend fun resolveLinkFromDoc(contact: Contact, code: String, uid: String): Contact {
+        return runCatching {
+            val doc = firestore.collection(ContactLinkManager.COLLECTION_LINKS).document(code).get().await()
+            val uids = (doc.get("uids") as? List<*>)?.mapNotNull { it as? String }.orEmpty()
+            val remoteUid = uids.firstOrNull { it != uid }
+            if (remoteUid == null) return contact
+            val lastSeenMap = doc.get("lastSeen") as? Map<*, *>
+            val remoteLastSeen = (lastSeenMap?.get(remoteUid) as? com.google.firebase.Timestamp)
+                ?.toDate()
+                ?.time
+            val phones = doc.get("phones") as? Map<*, *>
+            val remotePhone = phones?.get(remoteUid) as? String
+            contact.copy(
+                remoteUid = remoteUid,
+                remoteLastSeen = remoteLastSeen,
+                remotePresence = presenceFrom(remoteLastSeen),
+                linkStatus = LinkStatus.LINKED,
+                phoneNumber = if (!remotePhone.isNullOrBlank()) remotePhone else contact.phoneNumber,
+                linkCode = contact.linkCode ?: code
+            )
+        }.getOrElse {
+            Log.w(TAG, "Unable to resolve link doc for $code", it)
+            contact
         }
     }
 
