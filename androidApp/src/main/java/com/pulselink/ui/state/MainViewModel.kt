@@ -120,6 +120,7 @@ class MainViewModel @Inject constructor(
                 if (user != null && !user.isAnonymous) {
                     syncProfileFromCloud(user)
                     syncContactsFromCloud(user)
+                    linkManager.syncLinksOnLogin()
                 }
             }
         }

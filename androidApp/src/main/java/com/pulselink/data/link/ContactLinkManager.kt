@@ -21,6 +21,7 @@ import com.pulselink.domain.model.EscalationTier
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.domain.model.MessageDirection
+import com.pulselink.domain.model.RemotePresence
 import com.pulselink.domain.model.SoundCategory
 import com.pulselink.domain.repository.AlertRepository
 import com.pulselink.domain.repository.BlockedContactRepository
@@ -36,6 +37,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.Timestamp
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -385,10 +387,18 @@ class ContactLinkManager @Inject constructor(
 
     private suspend fun upsertLinkDoc(code: String) {
         val uid = auth.currentUser?.uid ?: return
+        val phone = auth.currentUser?.phoneNumber
+        val updates = buildMap<String, Any> {
+            put("uids", FieldValue.arrayUnion(uid))
+            put("lastSeen.$uid", FieldValue.serverTimestamp())
+            if (!phone.isNullOrBlank()) {
+                put("phones.$uid", phone)
+            }
+        }
         runCatching {
             firestore.collection(COLLECTION_LINKS)
                 .document(code)
-                .set(mapOf("uids" to FieldValue.arrayUnion(uid)), SetOptions.merge())
+                .set(updates, SetOptions.merge())
                 .await()
         }.onFailure { error ->
             Log.w(TAG, "Unable to upsert link doc for $code", error)
@@ -401,11 +411,20 @@ class ContactLinkManager @Inject constructor(
             val snapshot = firestore.collection(COLLECTION_LINKS).document(code).get().await()
             val uids = snapshot.get("uids") as? List<*>
             val remoteUid = uids?.mapNotNull { it as? String }?.firstOrNull { it != uid }
+            val lastSeenMap = snapshot.get("lastSeen") as? Map<*, *>
+            val remoteLastSeen = (lastSeenMap?.get(remoteUid) as? Timestamp)?.toDate()?.time
+            val presence = remoteLastSeen?.let { presenceFrom(it) } ?: RemotePresence.UNKNOWN
             if (!remoteUid.isNullOrBlank()) {
                 val contact = contactRepository.getByLinkCode(code)
                     ?: contactRepository.getByPhone(phone)
                 if (contact != null && contact.remoteUid != remoteUid) {
-                    contactRepository.upsert(contact.copy(remoteUid = remoteUid))
+                    contactRepository.upsert(
+                        contact.copy(
+                            remoteUid = remoteUid,
+                            remoteLastSeen = remoteLastSeen,
+                            remotePresence = presence
+                        )
+                    )
                 }
             }
         }.onFailure { error ->
@@ -770,6 +789,67 @@ class ContactLinkManager @Inject constructor(
             RemoteAlertResult(contact.id, contact.displayName, RemoteAlertStatus.SUCCESS, tier)
         } else {
             RemoteAlertResult(contact.id, contact.displayName, RemoteAlertStatus.SMS_FAILED, tier)
+        }
+    }
+
+    suspend fun syncLinksOnLogin() {
+        val uid = auth.currentUser?.uid ?: return
+        val phone = auth.currentUser?.phoneNumber
+        val linkCollection = firestore.collection(COLLECTION_LINKS)
+        val snapshot = runCatching { linkCollection.whereArrayContains("uids", uid).get().await() }
+            .getOrElse { error ->
+                Log.w(TAG, "Unable to fetch link docs for presence sync", error)
+                return
+            }
+        snapshot.documents.forEach { doc ->
+            val code = doc.id
+            val updates = buildMap<String, Any> {
+                put("uids", FieldValue.arrayUnion(uid))
+                put("lastSeen.$uid", FieldValue.serverTimestamp())
+                if (!phone.isNullOrBlank()) put("phones.$uid", phone)
+            }
+            runCatching {
+                linkCollection.document(code).set(updates, SetOptions.merge()).await()
+            }.onFailure { error ->
+                Log.w(TAG, "Unable to update presence for link $code", error)
+            }
+
+            val uids = (doc.get("uids") as? List<*>)?.mapNotNull { it as? String }.orEmpty()
+            val remoteUid = uids.firstOrNull { it != uid }
+            val phones = doc.get("phones") as? Map<*, *>
+            val remotePhone = remoteUid?.let { ru -> phones?.get(ru) as? String }
+            val lastSeenMap = doc.get("lastSeen") as? Map<*, *>
+            val remoteLastSeen = remoteUid?.let { ru ->
+                (lastSeenMap?.get(ru) as? Timestamp)?.toDate()?.time
+            }
+            val presence = remoteLastSeen?.let { presenceFrom(it) } ?: RemotePresence.UNKNOWN
+
+            if (remoteUid != null) {
+                val contact = contactRepository.getByRemoteUid(remoteUid)
+                    ?: contactRepository.getByLinkCode(code)
+                    ?: remotePhone?.let { contactRepository.getByPhone(it) }
+                contact?.let {
+                    val updated = it.copy(
+                        remoteUid = remoteUid,
+                        linkStatus = LinkStatus.LINKED,
+                        linkCode = it.linkCode ?: code,
+                        phoneNumber = if (!remotePhone.isNullOrBlank()) remotePhone else it.phoneNumber,
+                        remoteLastSeen = remoteLastSeen,
+                        remotePresence = presence
+                    )
+                    contactRepository.upsert(updated)
+                }
+            }
+        }
+    }
+
+    private fun presenceFrom(lastSeenMillis: Long): RemotePresence {
+        val age = System.currentTimeMillis() - lastSeenMillis
+        return when {
+            age < 3 * 60 * 1000L -> RemotePresence.ONLINE
+            age < 60 * 60 * 1000L -> RemotePresence.RECENT
+            age < 24 * 60 * 60 * 1000L -> RemotePresence.OFFLINE
+            else -> RemotePresence.STALE
         }
     }
 

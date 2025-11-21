@@ -78,7 +78,8 @@ object DatabaseModule {
         Room.databaseBuilder(context, PulseLinkDatabase::class.java, "pulselink.db")
             .addMigrations(
                 PulseLinkDatabase.MIGRATION_3_4,
-                PulseLinkDatabase.MIGRATION_4_5
+                PulseLinkDatabase.MIGRATION_4_5,
+                PulseLinkDatabase.MIGRATION_5_6
             )
             .fallbackToDestructiveMigration()
             .build()

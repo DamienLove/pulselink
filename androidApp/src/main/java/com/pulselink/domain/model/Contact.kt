@@ -23,8 +23,13 @@ data class Contact(
     val allowRemoteOverride: Boolean = false,
     val allowRemoteSoundChange: Boolean = false,
     val pendingApproval: Boolean = false,
-    val remoteUid: String? = null
+    val remoteUid: String? = null,
+    val remoteLastSeen: Long? = null,
+    val remotePresence: RemotePresence = RemotePresence.UNKNOWN
 )
 
 @Serializable
 enum class EscalationTier { EMERGENCY, CHECK_IN }
+
+@Serializable
+enum class RemotePresence { ONLINE, RECENT, OFFLINE, STALE, UNKNOWN }
