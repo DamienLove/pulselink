@@ -171,7 +171,8 @@ private fun Header(contact: Contact) {
         if (contact.linkStatus == LinkStatus.LINKED) {
             Spacer(modifier = Modifier.height(8.dp))
             PresenceBadge(
-                presence = contact.remotePresence
+                presence = contact.remotePresence,
+                lastSeen = contact.remoteLastSeen
             )
         }
     }
@@ -348,13 +349,21 @@ private fun ActionRow(title: String, subtitle: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun PresenceBadge(presence: RemotePresence) {
+private fun PresenceBadge(presence: RemotePresence, lastSeen: Long?) {
     val (label, dotColor) = when (presence) {
         RemotePresence.ONLINE -> stringResource(id = R.string.presence_online) to Color(0xFF12C26B)
         RemotePresence.RECENT -> stringResource(id = R.string.presence_recent) to Color(0xFFF59E0B)
         RemotePresence.OFFLINE -> stringResource(id = R.string.presence_offline) to Color(0xFFEF4444)
         RemotePresence.STALE -> stringResource(id = R.string.presence_stale) to MaterialTheme.colorScheme.outline
         RemotePresence.UNKNOWN -> stringResource(id = R.string.presence_unknown) to MaterialTheme.colorScheme.outlineVariant
+    }
+    val lastActive = lastSeen?.let {
+        android.text.format.DateUtils.getRelativeTimeSpanString(
+            it,
+            System.currentTimeMillis(),
+            android.text.format.DateUtils.MINUTE_IN_MILLIS,
+            android.text.format.DateUtils.FORMAT_ABBREV_RELATIVE
+        ).toString()
     }
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -365,10 +374,19 @@ private fun PresenceBadge(presence: RemotePresence) {
                 .size(10.dp)
                 .background(dotColor, shape = androidx.compose.foundation.shape.CircleShape)
         )
-        Text(
-            text = label,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall
-        )
+        Column {
+            Text(
+                text = label,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall
+            )
+            lastActive?.let {
+                Text(
+                    text = "Last active $it",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+        }
     }
 }
