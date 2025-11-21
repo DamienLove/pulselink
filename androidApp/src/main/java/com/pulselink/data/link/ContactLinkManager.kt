@@ -413,16 +413,21 @@ class ContactLinkManager @Inject constructor(
             val remoteUid = uids?.mapNotNull { it as? String }?.firstOrNull { it != uid }
             val lastSeenMap = snapshot.get("lastSeen") as? Map<*, *>
             val remoteLastSeen = (lastSeenMap?.get(remoteUid) as? Timestamp)?.toDate()?.time
-            val presence = remoteLastSeen?.let { presenceFrom(it) } ?: RemotePresence.UNKNOWN
+            val presence = presenceFromNullable(remoteLastSeen)
             if (!remoteUid.isNullOrBlank()) {
                 val contact = contactRepository.getByLinkCode(code)
                     ?: contactRepository.getByPhone(phone)
-                if (contact != null && contact.remoteUid != remoteUid) {
+                if (contact != null &&
+                    (contact.remoteUid != remoteUid ||
+                        contact.remoteLastSeen != remoteLastSeen ||
+                        contact.remotePresence != presence)
+                ) {
                     contactRepository.upsert(
                         contact.copy(
                             remoteUid = remoteUid,
                             remoteLastSeen = remoteLastSeen,
-                            remotePresence = presence
+                            remotePresence = presence,
+                            linkStatus = LinkStatus.LINKED
                         )
                     )
                 }
@@ -822,7 +827,7 @@ class ContactLinkManager @Inject constructor(
             val remoteLastSeen = remoteUid?.let { ru ->
                 (lastSeenMap?.get(ru) as? Timestamp)?.toDate()?.time
             }
-            val presence = remoteLastSeen?.let { presenceFrom(it) } ?: RemotePresence.UNKNOWN
+            val presence = presenceFromNullable(remoteLastSeen)
 
             if (remoteUid != null) {
                 val contact = contactRepository.getByRemoteUid(remoteUid)
@@ -853,13 +858,17 @@ class ContactLinkManager @Inject constructor(
         }
     }
 
+    private fun presenceFromNullable(lastSeenMillis: Long?): RemotePresence {
+        return lastSeenMillis?.let { presenceFrom(it) } ?: RemotePresence.STALE
+    }
+
     companion object {
         private const val TAG = "ContactLinkManager"
         private const val CHANNEL_ID = "pulselink_link_channel"
         const val CONFIG_REMOTE_SOUND = "ALLOW_SOUND"
         const val CONFIG_REMOTE_OVERRIDE = "ALLOW_OVERRIDE"
         private const val PREPARE_TIMEOUT_MS = 10_000L
-        private const val COLLECTION_LINKS = "links"
+        const val COLLECTION_LINKS = "links"
         private const val REMOTE_ALERT_DEDUP_WINDOW_MS = 15_000L
         private const val REMOTE_ALERT_DEDUP_MAX = 50
     }
