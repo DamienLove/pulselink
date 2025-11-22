@@ -131,6 +131,7 @@ fun HomeScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var newContactName by remember { mutableStateOf(TextFieldValue()) }
     var newContactPhone by remember { mutableStateOf(TextFieldValue()) }
+    var newContactEmail by remember { mutableStateOf(TextFieldValue()) }
     var allowRemoteSound by remember { mutableStateOf(false) }
     var searchValue by remember { mutableStateOf(TextFieldValue()) }
 
@@ -149,6 +150,7 @@ fun HomeScreen(
         if (showAddDialog) {
             newContactName = TextFieldValue()
             newContactPhone = TextFieldValue()
+            newContactEmail = TextFieldValue()
             allowRemoteSound = false
         }
     }
@@ -219,6 +221,8 @@ fun HomeScreen(
             onNameChange = { newContactName = it },
             phone = newContactPhone,
             onPhoneChange = { newContactPhone = it },
+            email = newContactEmail,
+            onEmailChange = { newContactEmail = it },
             allowRemoteSound = allowRemoteSound,
             onAllowRemoteSoundChange = { allowRemoteSound = it },
             onImport = { contactPicker.launch(null) },
@@ -226,17 +230,19 @@ fun HomeScreen(
             onSave = {
                 val name = newContactName.text.trim()
                 val phone = newContactPhone.text.trim()
-                if (name.isNotEmpty() && phone.isNotEmpty()) {
+                val email = newContactEmail.text.trim()
+                if (name.isNotEmpty() && (phone.isNotEmpty() || email.isNotEmpty())) {
                     onAddContact(
                         Contact(
                             displayName = name,
                             phoneNumber = phone,
+                            email = email.ifBlank { null },
                             allowRemoteSoundChange = allowRemoteSound
                         )
                     )
                     showAddDialog = false
                 } else {
-                    Toast.makeText(context, "Name and phone are required", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Name and a phone or email are required", Toast.LENGTH_SHORT).show()
                 }
             }
         )
@@ -936,13 +942,6 @@ private fun ContactRow(
         LinkStatus.INBOUND_REQUEST -> MaterialTheme.colorScheme.tertiary
         LinkStatus.LINKED -> MaterialTheme.colorScheme.secondary
     }
-    val presenceLabel = when (contact.remotePresence) {
-        RemotePresence.ONLINE -> stringResource(R.string.presence_online)
-        RemotePresence.RECENT -> stringResource(R.string.presence_recent)
-        RemotePresence.OFFLINE -> stringResource(R.string.presence_offline)
-        RemotePresence.STALE -> stringResource(R.string.presence_stale)
-        RemotePresence.UNKNOWN -> stringResource(R.string.presence_unknown)
-    }
     val presenceColor = when (contact.remotePresence) {
         RemotePresence.ONLINE -> Color(0xFF12C26B)
         RemotePresence.RECENT -> Color(0xFFf59e0b)
@@ -950,7 +949,8 @@ private fun ContactRow(
         RemotePresence.STALE -> MaterialTheme.colorScheme.outline
         RemotePresence.UNKNOWN -> MaterialTheme.colorScheme.outlineVariant
     }
-    val hasSmsFallback = contact.phoneNumber.any { it.isDigit() }
+    val phone = contact.phoneNumber.orEmpty()
+    val hasSmsFallback = phone.isNotBlank()
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -986,21 +986,70 @@ private fun ContactRow(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall
                     )
-                    ReachabilityBadge(
-                        hasSmsFallback = hasSmsFallback,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-                    Text(
-                        text = statusLabel,
-                        color = statusColor,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    if (contact.linkStatus == LinkStatus.LINKED) {
-                        PresenceBadge(
-                            label = presenceLabel,
-                            color = presenceColor,
-                            lastSeen = contact.remoteLastSeen,
-                            modifier = Modifier.padding(top = 4.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(presenceColor)
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = contact.displayName,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = when {
+                                    phone.isNotBlank() -> phone
+                                    contact.email?.isNotBlank() == true -> contact.email
+                                    else -> stringResource(id = R.string.contact_no_reachability)
+                                },
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(top = 6.dp)
+                    ) {
+                        Surface(
+                            color = if (hasSmsFallback) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.28f)
+                            else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f),
+                            shape = RoundedCornerShape(999.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (hasSmsFallback) Icons.Filled.Sms else Icons.Outlined.WifiTethering,
+                                    contentDescription = if (hasSmsFallback) stringResource(R.string.contact_reachability_sms) else stringResource(
+                                        R.string.contact_reachability_online_only
+                                    ),
+                                    tint = if (hasSmsFallback) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = if (hasSmsFallback) stringResource(R.string.contact_reachability_sms) else stringResource(
+                                        R.string.contact_reachability_online_only
+                                    ),
+                                    color = if (hasSmsFallback) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
+                        Text(
+                            text = statusLabel,
+                            color = statusColor,
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
                 }
@@ -1013,8 +1062,9 @@ private fun ContactRow(
                         )
                     }
                     IconButton(onClick = onOpenMessages) {
+                        val msgIcon = if (hasSmsFallback) Icons.Filled.Sms else Icons.AutoMirrored.Filled.Send
                         Icon(
-                            Icons.AutoMirrored.Filled.Send,
+                            msgIcon,
                             contentDescription = "Open conversation",
                             tint = MaterialTheme.colorScheme.primary
                         )
@@ -1292,6 +1342,8 @@ private fun AddContactDialog(
     onNameChange: (TextFieldValue) -> Unit,
     phone: TextFieldValue,
     onPhoneChange: (TextFieldValue) -> Unit,
+    email: TextFieldValue,
+    onEmailChange: (TextFieldValue) -> Unit,
     allowRemoteSound: Boolean,
     onAllowRemoteSoundChange: (Boolean) -> Unit,
     onImport: () -> Unit,
@@ -1313,6 +1365,12 @@ private fun AddContactDialog(
                     value = phone,
                     onValueChange = onPhoneChange,
                     label = { Text("Phone") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = onEmailChange,
+                    label = { Text("Email (optional)") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(

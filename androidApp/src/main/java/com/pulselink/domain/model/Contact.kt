@@ -9,7 +9,8 @@ import kotlinx.serialization.Serializable
 data class Contact(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val displayName: String,
-    val phoneNumber: String,
+    val phoneNumber: String = "",
+    val email: String? = null,
     val escalationTier: EscalationTier = EscalationTier.EMERGENCY,
     val includeLocation: Boolean = true,
     val autoCall: Boolean = false,

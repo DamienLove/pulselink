@@ -79,7 +79,8 @@ object DatabaseModule {
             .addMigrations(
                 PulseLinkDatabase.MIGRATION_3_4,
                 PulseLinkDatabase.MIGRATION_4_5,
-                PulseLinkDatabase.MIGRATION_5_6
+                PulseLinkDatabase.MIGRATION_5_6,
+                PulseLinkDatabase.MIGRATION_6_7
             )
             .fallbackToDestructiveMigration()
             .build()

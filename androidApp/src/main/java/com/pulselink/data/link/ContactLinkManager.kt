@@ -655,11 +655,11 @@ class ContactLinkManager @Inject constructor(
     }
 
         suspend fun sendManualMessage(contactId: Long, message: String): ManualMessageResult {
-        Log.d(TAG, "sendManualMessage: START for contactId=$contactId")
-        val contact = contactRepository.getContact(contactId)
-            ?: return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.CONTACT_MISSING)
-        val code = contact.linkCode
-        if (code.isNullOrBlank()) {
+            Log.d(TAG, "sendManualMessage: START for contactId=$contactId")
+            val contact = contactRepository.getContact(contactId)
+                ?: return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.CONTACT_MISSING)
+            val code = contact.linkCode
+            if (code.isNullOrBlank()) {
             Log.w(TAG, "sendManualMessage: FAILED. Reason: NOT_LINKED for contactId=$contactId")
             return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.NOT_LINKED)
         }
@@ -683,7 +683,11 @@ class ContactLinkManager @Inject constructor(
             }
             val deviceId = settingsRepository.ensureDeviceId()
             val payload = SmsCodec.encodeManualMessage(deviceId, code, message)
-            val smsSent = smsSender.sendSms(contact.phoneNumber, payload)
+            val smsSent = if (contact.phoneNumber.isNotBlank()) {
+                smsSender.sendSms(contact.phoneNumber, payload)
+            } else {
+                false
+            }
 
             val overallSuccess = realtimeSent || smsSent
             if (overallSuccess) {
@@ -1188,6 +1192,7 @@ class RemoteActionHandler @Inject constructor(
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     suspend fun finishCall(contact: Contact, callDuration: Long) {
         withContext(Dispatchers.Main) {
             audioOverrideManager.cancelScheduledRestore()
