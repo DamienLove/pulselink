@@ -112,6 +112,9 @@
     <string name="beta_tester_disabled">Beta testing is disabled</string>
     <string name="settings_report_bug">Report a Bug</string>
     <string name="settings_beta_testers">Beta Testers</string>
+    <string name="settings_sync_contacts_title">Sync contacts to Firebase</string>
+    <string name="settings_sync_contacts_subtitle">Push local contacts and pull cloud updates to keep links in step.</string>
+    <string name="settings_sync_action">Sync now</string>
     <string name="settings_help_action">Open safety help</string>
     <string name="settings_sign_out_title">Sign out</string>
     <string name="settings_sign_out_subtitle">Return to the login screen and keep using SMS-only if needed.</string>

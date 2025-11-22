@@ -773,6 +773,7 @@ class MainActivity : AppCompatActivity() {
                             onToggleIncludeLocation = viewModel::setIncludeLocation,
                             onRequestDndAccess = { openDndSettings(context) },
                             onToggleAutoAllowRemoteSoundChange = viewModel::setAutoAllowRemoteSoundChange,
+                            onSyncNow = viewModel::syncContactsNow,
                             onEditEmergencyTone = { navController.navigate("alerts/default/emergency") },
                             onEditCheckInTone = { navController.navigate("alerts/default/checkin") },
                             onEditCallTone = { navController.navigate("alerts/default/call") },

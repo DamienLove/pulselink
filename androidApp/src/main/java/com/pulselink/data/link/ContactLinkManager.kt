@@ -203,6 +203,7 @@ class ContactLinkManager @Inject constructor(
             Log.i(TAG, "Ignoring link request from blocked sender: $fromPhone")
             return
         }
+        val now = System.currentTimeMillis()
         val existing = contactRepository.getByLinkCode(message.code)
             ?: findContactByPhoneFlexible(fromPhone)
         val base = existing ?: Contact(
@@ -213,9 +214,12 @@ class ContactLinkManager @Inject constructor(
             linkStatus = LinkStatus.INBOUND_REQUEST,
             linkCode = message.code,
             remoteDeviceId = message.senderId,
-            pendingApproval = true
+            pendingApproval = true,
+            remoteLastSeen = now,
+            remotePresence = presenceFrom(now)
         )
         contactRepository.upsert(updated)
+        mirrorContactToCloud(updated)
         upsertLinkDoc(message.code)
         maybeApplyRemoteUid(message.code, fromPhone)
         val persisted = contactRepository.getByLinkCode(message.code)
@@ -229,28 +233,38 @@ class ContactLinkManager @Inject constructor(
             Log.i(TAG, "Ignoring link accept from blocked sender: $fromPhone")
             return
         }
+        val now = System.currentTimeMillis()
         val base = contactRepository.getByLinkCode(message.code) ?: findContactByPhoneFlexible(fromPhone)
-        base?.let {
-            val allowOverride = if (it.linkStatus == LinkStatus.LINKED) {
-                it.allowRemoteOverride
-            } else {
-                true
-            }
-            val linked = it.copy(
-                linkStatus = LinkStatus.LINKED,
-                remoteDeviceId = message.senderId,
-                pendingApproval = false,
-                allowRemoteOverride = allowOverride
-            )
-            contactRepository.upsert(linked)
-            upsertLinkDoc(message.code)
-            maybeApplyRemoteUid(message.code, fromPhone)
-            notifyLinked(linked)
+        val resolved = base ?: Contact(
+            displayName = fromPhone.ifBlank { context.getString(R.string.app_name) },
+            phoneNumber = fromPhone,
+            linkCode = message.code,
+            remoteDeviceId = message.senderId,
+            linkStatus = LinkStatus.NONE
+        )
+        val allowOverride = if (resolved.linkStatus == LinkStatus.LINKED) {
+            resolved.allowRemoteOverride
+        } else {
+            true
         }
+        val linked = resolved.copy(
+            linkStatus = LinkStatus.LINKED,
+            remoteDeviceId = message.senderId,
+            pendingApproval = false,
+            allowRemoteOverride = allowOverride,
+            remoteLastSeen = now,
+            remotePresence = presenceFrom(now)
+        )
+        contactRepository.upsert(linked)
+        mirrorContactToCloud(linked)
+        upsertLinkDoc(message.code)
+        maybeApplyRemoteUid(message.code, fromPhone)
+        notifyLinked(linked)
     }
 
     private suspend fun handlePing(message: PulseLinkMessage.Ping) {
         val contact = contactRepository.getByLinkCode(message.code) ?: return
+        markPresence(contact)
         val title = context.getString(R.string.ping_received_title, contact.displayName)
         val body = context.getString(R.string.ping_received_body)
         remoteActionHandler.playAttentionTone(
@@ -268,6 +282,7 @@ class ContactLinkManager @Inject constructor(
             return
         }
         val contact = contactRepository.getByLinkCode(message.code) ?: return
+        markPresence(contact)
         val settings = settingsRepository.settings.first()
         val resolvedSoundKey = when (message.tier) {
             EscalationTier.EMERGENCY -> contact.emergencySoundKey ?: settings.emergencyProfile.soundKey
@@ -313,6 +328,7 @@ class ContactLinkManager @Inject constructor(
 
     private suspend fun handleAlertPrepare(message: PulseLinkMessage.AlertPrepare) {
         val contact = contactRepository.getByLinkCode(message.code) ?: return
+        markPresence(contact)
         val overrideResult = remoteActionHandler.prepareForAlert(contact, message.reason)
         val overrideApplied = overrideResult.state != AudioOverrideManager.OverrideResult.State.FAILURE &&
             overrideResult.state != AudioOverrideManager.OverrideResult.State.SKIPPED
@@ -353,18 +369,20 @@ class ContactLinkManager @Inject constructor(
 
     private suspend fun handleSoundOverride(message: PulseLinkMessage.SoundOverride) {
         val contact = contactRepository.getByLinkCode(message.code) ?: return
-        if (!contact.allowRemoteSoundChange) return
+        val freshContact = markPresence(contact)
+        if (!freshContact.allowRemoteSoundChange) return
         val updated = when (message.tier) {
-            EscalationTier.EMERGENCY -> contact.copy(emergencySoundKey = message.soundKey)
-            EscalationTier.CHECK_IN -> contact.copy(checkInSoundKey = message.soundKey)
+            EscalationTier.EMERGENCY -> freshContact.copy(emergencySoundKey = message.soundKey)
+            EscalationTier.CHECK_IN -> freshContact.copy(checkInSoundKey = message.soundKey)
         }
         contactRepository.upsert(updated)
-        Log.d(TAG, "Applied remote sound override for ${contact.displayName} tier=${message.tier} key=${message.soundKey}")
+        Log.d(TAG, "Applied remote sound override for ${freshContact.displayName} tier=${message.tier} key=${message.soundKey}")
     }
 
     private suspend fun handleManualMessage(message: PulseLinkMessage.ManualMessage, fromPhone: String) {
         try {
             val persisted = resolveContactForManualMessage(message, fromPhone) ?: return
+            markPresence(persisted)
             deliverManualMessage(persisted, message.body, overrideApplied = true)
             maybeApplyRemoteUid(message.code, fromPhone)
         } catch (error: Exception) {
@@ -378,6 +396,7 @@ class ContactLinkManager @Inject constructor(
                 ?: contactRepository.getByRemoteDeviceId(payload.senderId)
                 ?: payload.phoneNumber?.takeIf { it.isNotBlank() }?.let { contactRepository.getByPhone(it) }
                 ?: return
+            markPresence(contact, payload.timestamp)
             deliverManualMessage(contact, payload.body, overrideApplied = true)
             payload.linkCode?.let { maybeApplyRemoteUid(it, contact.phoneNumber) }
         } catch (error: Exception) {
@@ -501,6 +520,7 @@ class ContactLinkManager @Inject constructor(
 
     private suspend fun handleCallEnded(message: PulseLinkMessage.CallEnded) {
         val contact = contactRepository.getByLinkCode(message.code) ?: return
+        markPresence(contact)
         remoteActionHandler.finishCall(contact, message.callDuration)
     }
 
@@ -547,14 +567,15 @@ class ContactLinkManager @Inject constructor(
 
     private suspend fun handleConfigUpdate(message: PulseLinkMessage.ConfigUpdate) {
         val contact = contactRepository.getByLinkCode(message.code) ?: return
+        val freshContact = markPresence(contact)
         when (message.key) {
             CONFIG_REMOTE_SOUND -> {
                 val allow = message.value == "1"
-                contactRepository.upsert(contact.copy(allowRemoteSoundChange = allow))
+                contactRepository.upsert(freshContact.copy(allowRemoteSoundChange = allow))
             }
             CONFIG_REMOTE_OVERRIDE -> {
                 val allow = message.value == "1"
-                contactRepository.upsert(contact.copy(allowRemoteOverride = allow))
+                contactRepository.upsert(freshContact.copy(allowRemoteOverride = allow))
             }
         }
     }
@@ -860,6 +881,54 @@ class ContactLinkManager @Inject constructor(
 
     private fun presenceFromNullable(lastSeenMillis: Long?): RemotePresence {
         return lastSeenMillis?.let { presenceFrom(it) } ?: RemotePresence.STALE
+    }
+
+    private suspend fun markPresence(contact: Contact, observedAt: Long = System.currentTimeMillis()): Contact {
+        val latest = maxOf(contact.remoteLastSeen ?: 0L, observedAt)
+        val presence = presenceFrom(latest)
+        if (contact.remoteLastSeen == latest && contact.remotePresence == presence) return contact
+        val updated = contact.copy(
+            remoteLastSeen = latest,
+            remotePresence = presence
+        )
+        contactRepository.upsert(updated)
+        return updated
+    }
+
+    private suspend fun mirrorContactToCloud(contact: Contact) {
+        val user = auth.currentUser ?: return
+        if (user.isAnonymous) return
+        val docId = contact.phoneNumber.ifBlank {
+            contact.displayName.lowercase().replace("\\s+".toRegex(), "_")
+                .ifBlank { contact.displayName.hashCode().toString() }
+        }
+        val payload = mapOf(
+            "displayName" to contact.displayName,
+            "phoneNumber" to contact.phoneNumber,
+            "escalationTier" to contact.escalationTier.name,
+            "includeLocation" to contact.includeLocation,
+            "autoCall" to contact.autoCall,
+            "emergencySoundKey" to contact.emergencySoundKey,
+            "checkInSoundKey" to contact.checkInSoundKey,
+            "contactOrder" to contact.contactOrder,
+            "allowRemoteSoundChange" to contact.allowRemoteSoundChange,
+            "allowRemoteOverride" to contact.allowRemoteOverride,
+            "linkStatus" to contact.linkStatus.name,
+            "linkCode" to contact.linkCode,
+            "remoteDeviceId" to contact.remoteDeviceId,
+            "pendingApproval" to contact.pendingApproval,
+            "remoteUid" to contact.remoteUid,
+            "updatedAt" to FieldValue.serverTimestamp()
+        )
+        runCatching {
+            firestore.collection("users").document(user.uid)
+                .collection("trustedContacts")
+                .document(docId)
+                .set(payload, SetOptions.merge())
+                .await()
+        }.onFailure { error ->
+            Log.w(TAG, "Unable to mirror contact to cloud", error)
+        }
     }
 
     companion object {

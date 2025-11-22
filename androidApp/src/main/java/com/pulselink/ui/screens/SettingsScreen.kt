@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,6 +48,7 @@ fun SettingsScreen(
     onToggleIncludeLocation: (Boolean) -> Unit,
     onRequestDndAccess: () -> Unit,
     onToggleAutoAllowRemoteSoundChange: (Boolean) -> Unit,
+    onSyncNow: () -> Unit,
     onEditEmergencyTone: () -> Unit,
     onEditCheckInTone: () -> Unit,
     onEditCallTone: () -> Unit,
@@ -115,6 +117,13 @@ fun SettingsScreen(
                 subtitle = "Automatically approve tone overrides from new links.",
                 checked = settings.autoAllowRemoteSoundChange,
                 onCheckedChange = onToggleAutoAllowRemoteSoundChange
+            )
+            SettingsActionRow(
+                title = stringResource(id = R.string.settings_sync_contacts_title),
+                subtitle = stringResource(id = R.string.settings_sync_contacts_subtitle),
+                actionLabel = stringResource(id = R.string.settings_sync_action),
+                onAction = onSyncNow,
+                leadingIcon = Icons.Filled.Sync
             )
             SettingsActionRow(
                 title = "Emergency alert tone",

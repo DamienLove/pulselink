@@ -194,6 +194,18 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun syncContactsNow() {
+        viewModelScope.launch {
+            val user = firebaseAuthManager.currentUser()
+            if (user == null || user.isAnonymous) {
+                Log.i(TAG, "Manual sync skipped: no signed-in user")
+                return@launch
+            }
+            syncContactsFromCloud(user, forcePushLocal = true)
+            linkManager.syncLinksOnLogin()
+        }
+    }
+
     fun reorderContacts(contactIds: List<Long>) {
         viewModelScope.launch {
             contactRepository.updateOrder(contactIds)
@@ -429,7 +441,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private suspend fun syncContactsFromCloud(user: FirebaseUser) {
+    private suspend fun syncContactsFromCloud(user: FirebaseUser, forcePushLocal: Boolean = false) {
         runCatching {
             val localContacts = contactRepository.getAll()
             val snapshot = firestore.collection(COLLECTION_USERS).document(user.uid)
@@ -461,28 +473,102 @@ class MainViewModel @Inject constructor(
                     remoteUid = doc.getString("remoteUid")
                 )
             }
-            val enriched = remoteContacts.map { contact ->
+            val enrichedRemote = remoteContacts.map { contact ->
                 if (contact.linkCode.isNullOrBlank()) {
                     contact
                 } else {
                     resolveLinkFromDoc(contact, contact.linkCode, user.uid)
                 }
             }
-            if (enriched.isNotEmpty()) {
-                contactRepository.clear()
-                enriched.sortedBy { it.contactOrder }.forEachIndexed { index, contact ->
-                    contactRepository.upsert(contact.copy(contactOrder = index))
-                }
-            } else if (localContacts.isNotEmpty()) {
-                // No cloud data yet; push local up
-                localContacts.sortedBy { it.contactOrder }.forEach { contact ->
-                    upsertContactInCloud(user, contact)
-                }
+
+            if (enrichedRemote.isEmpty() && localContacts.isEmpty()) {
+                return@runCatching
             }
+
+            val merged = if (enrichedRemote.isEmpty()) {
+                localContacts
+            } else {
+                mergeContacts(localContacts, enrichedRemote)
+            }
+
+            val remoteKeys = enrichedRemote.map { contactSyncKey(it) }.toSet()
+            val localOnlyKeys = localContacts
+                .filterNot { remoteKeys.contains(contactSyncKey(it)) }
+                .map { contactSyncKey(it) }
+                .toSet()
+
+            contactRepository.clear()
+            merged.sortedBy { it.contactOrder }
+                .forEachIndexed { index, contact ->
+                    val normalized = contact.copy(contactOrder = index)
+                    contactRepository.upsert(normalized)
+                    if (forcePushLocal || enrichedRemote.isEmpty() || localOnlyKeys.contains(contactSyncKey(contact))) {
+                        upsertContactInCloud(user, normalized)
+                    }
+                }
         }.onFailure { error ->
             Log.w(TAG, "Unable to sync contacts from cloud", error)
         }
     }
+
+    private fun mergeContacts(local: List<Contact>, remote: List<Contact>): List<Contact> {
+        val localByKey = local.associateBy { contactSyncKey(it) }
+        val remoteByKey = remote.associateBy { contactSyncKey(it) }
+        val merged = remote.map { remoteContact ->
+            mergeContact(localByKey[contactSyncKey(remoteContact)], remoteContact)
+        }.toMutableList()
+        val localOnly = local.filterNot { remoteByKey.containsKey(contactSyncKey(it)) }
+        merged.addAll(localOnly)
+        return merged
+    }
+
+    private fun mergeContact(local: Contact?, remote: Contact): Contact {
+        if (local == null) return remote
+        val latestLastSeen = when {
+            remote.remoteLastSeen != null && local.remoteLastSeen != null -> maxOf(remote.remoteLastSeen, local.remoteLastSeen)
+            remote.remoteLastSeen != null -> remote.remoteLastSeen
+            else -> local.remoteLastSeen
+        }
+        val presence = latestLastSeen?.let { presenceFrom(it) }
+            ?: if (remote.remotePresence != RemotePresence.UNKNOWN) remote.remotePresence else local.remotePresence
+        val resolvedLinkStatus = if (remote.linkStatus == LinkStatus.NONE && local.linkStatus != LinkStatus.NONE) {
+            local.linkStatus
+        } else {
+            remote.linkStatus
+        }
+        return remote.copy(
+            id = local.id,
+            contactOrder = if (remote.contactOrder != 0 || local.contactOrder == 0) remote.contactOrder else local.contactOrder,
+            remoteLastSeen = latestLastSeen,
+            remotePresence = presence,
+            remoteUid = remote.remoteUid ?: local.remoteUid,
+            remoteDeviceId = remote.remoteDeviceId ?: local.remoteDeviceId,
+            linkCode = remote.linkCode ?: local.linkCode,
+            linkStatus = resolvedLinkStatus,
+            emergencySoundKey = remote.emergencySoundKey ?: local.emergencySoundKey,
+            checkInSoundKey = remote.checkInSoundKey ?: local.checkInSoundKey,
+            allowRemoteOverride = remote.allowRemoteOverride || local.allowRemoteOverride,
+            allowRemoteSoundChange = remote.allowRemoteSoundChange || local.allowRemoteSoundChange,
+            pendingApproval = remote.pendingApproval || local.pendingApproval,
+            includeLocation = remote.includeLocation,
+            autoCall = remote.autoCall,
+            displayName = remote.displayName.ifBlank { local.displayName },
+            phoneNumber = remote.phoneNumber.ifBlank { local.phoneNumber }
+        )
+    }
+
+    private fun contactSyncKey(contact: Contact): String {
+        val normalizedPhone = normalizePhone(contact.phoneNumber)
+        return when {
+            normalizedPhone.isNotBlank() -> "phone:$normalizedPhone"
+            !contact.linkCode.isNullOrBlank() -> "link:${contact.linkCode}"
+            !contact.remoteUid.isNullOrBlank() -> "uid:${contact.remoteUid}"
+            else -> "name:${contact.displayName.lowercase().trim()}"
+        }
+    }
+
+    private fun normalizePhone(input: String): String =
+        input.filter { it.isDigit() || it == '+' }
 
     private fun presenceFrom(lastSeen: Long?): RemotePresence {
         return lastSeen?.let {
