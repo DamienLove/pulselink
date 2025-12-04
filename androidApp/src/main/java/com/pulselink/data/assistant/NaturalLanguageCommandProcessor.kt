@@ -10,8 +10,6 @@ import com.pulselink.data.link.ContactLinkManager
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.EscalationTier
 import com.pulselink.domain.model.ManualMessageResult
-import com.pulselink.domain.model.MessageUrgency
-import com.pulselink.domain.model.VolumeHint
 import com.pulselink.domain.repository.ContactRepository
 import com.pulselink.service.AlertRouter
 import javax.inject.Inject
@@ -48,11 +46,7 @@ class NaturalLanguageCommandProcessor @Inject constructor(
         )
         val intent = (data["intent"] as? String)?.lowercase()?.trim().orEmpty()
         val entitiesRaw = data["entities"] as? Map<*, *> ?: emptyMap<Any?, Any?>()
-        val entities: Map<String, String> = entitiesRaw.entries
-            .mapNotNull { entry ->
-                (entry.key as? String)?.let { key -> key to entry.value?.toString().orEmpty() }
-            }
-            .toMap()
+        val entities = entitiesRaw.filterKeys { it is String }.mapValues { it.value?.toString().orEmpty() }
 
         when (intent) {
             "send_emergency_alert" -> {
@@ -70,11 +64,7 @@ class NaturalLanguageCommandProcessor @Inject constructor(
                     )
                 val body = entities["messageBody"].takeUnless { it.isNullOrBlank() }
                     ?: context.getString(R.string.voice_command_default_message)
-
-                val urgency = resolveUrgency(intent, body, query)
-                val volumeHint = resolveVolumeHint(entities, query, urgency)
-
-                val result = linkManager.sendManualMessage(contact.id, body, urgency, volumeHint)
+                val result = linkManager.sendManualMessage(contact.id, body)
                 return@withContext if (result is ManualMessageResult.Success) {
                     VoiceCommandResult.Success(
                         context.getString(R.string.voice_command_message_sent, contact.displayName)
@@ -125,35 +115,6 @@ class NaturalLanguageCommandProcessor @Inject constructor(
         val contacts = contactRepository.observeContacts().first()
         return contacts.firstOrNull { it.displayName.lowercase() == normalized }
             ?: contacts.firstOrNull { it.displayName.lowercase().contains(normalized) }
-    }
-
-    private fun resolveUrgency(intent: String, body: String, fullQuery: String): MessageUrgency {
-        val haystack = listOf(intent, body, fullQuery).joinToString(" ").lowercase()
-        return when {
-            "emergency" in haystack -> MessageUrgency.EMERGENCY
-            "urgent" in haystack || "asap" in haystack || "immediately" in haystack -> MessageUrgency.URGENT
-            else -> MessageUrgency.STANDARD
-        }
-    }
-
-    private fun resolveVolumeHint(
-        entities: Map<String, String>,
-        fullQuery: String,
-        urgency: MessageUrgency
-    ): VolumeHint? {
-        val raw = entities["volume"] ?: entities["volumeLevel"] ?: entities["loudness"]
-        val haystack = listOfNotNull(raw, fullQuery).joinToString(" ").lowercase()
-        val hint = when {
-            "low" in haystack || "quiet" in haystack || "half" in haystack -> VolumeHint.LOW
-            "medium" in haystack || "mid" in haystack || "normal" in haystack -> VolumeHint.MEDIUM
-            "high" in haystack || "loud" in haystack || "max" in haystack || "maximum" in haystack -> VolumeHint.HIGH
-            else -> null
-        }
-        return hint ?: when (urgency) {
-            MessageUrgency.EMERGENCY -> VolumeHint.MAX
-            MessageUrgency.URGENT -> VolumeHint.HIGH
-            MessageUrgency.STANDARD -> VolumeHint.MEDIUM
-        }
     }
 }
 

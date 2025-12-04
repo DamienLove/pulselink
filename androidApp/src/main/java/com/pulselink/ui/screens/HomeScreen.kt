@@ -130,8 +130,8 @@ fun HomeScreen(
 
     var showAddDialog by remember { mutableStateOf(false) }
     var newContactName by remember { mutableStateOf(TextFieldValue()) }
-    // Single handle: phone or email
-    var newContactHandle by remember { mutableStateOf(TextFieldValue()) }
+    var newContactPhone by remember { mutableStateOf(TextFieldValue()) }
+    var newContactEmail by remember { mutableStateOf(TextFieldValue()) }
     var allowRemoteSound by remember { mutableStateOf(false) }
     var searchValue by remember { mutableStateOf(TextFieldValue()) }
 
@@ -140,7 +140,7 @@ fun HomeScreen(
             resolveContact(context, uri)?.let { (name, number) ->
                 newContactName = TextFieldValue(name)
                 if (number.isNotBlank()) {
-                    newContactHandle = TextFieldValue(number)
+                    newContactPhone = TextFieldValue(number)
                 }
             }
         }
@@ -149,7 +149,8 @@ fun HomeScreen(
     LaunchedEffect(showAddDialog) {
         if (showAddDialog) {
             newContactName = TextFieldValue()
-            newContactHandle = TextFieldValue()
+            newContactPhone = TextFieldValue()
+            newContactEmail = TextFieldValue()
             allowRemoteSound = false
         }
     }
@@ -218,24 +219,24 @@ fun HomeScreen(
         AddContactDialog(
             name = newContactName,
             onNameChange = { newContactName = it },
-            handle = newContactHandle,
-            onHandleChange = { newContactHandle = it },
+            phone = newContactPhone,
+            onPhoneChange = { newContactPhone = it },
+            email = newContactEmail,
+            onEmailChange = { newContactEmail = it },
             allowRemoteSound = allowRemoteSound,
             onAllowRemoteSoundChange = { allowRemoteSound = it },
             onImport = { contactPicker.launch(null) },
             onDismiss = { showAddDialog = false },
             onSave = {
                 val name = newContactName.text.trim()
-                val handle = newContactHandle.text.trim()
-                if (name.isNotEmpty() && handle.isNotEmpty()) {
-                    val isEmail = handle.contains("@")
+                val phone = newContactPhone.text.trim()
+                val email = newContactEmail.text.trim()
+                if (name.isNotEmpty() && (phone.isNotEmpty() || email.isNotEmpty())) {
                     onAddContact(
                         Contact(
                             displayName = name,
-                            phoneNumber = if (isEmail) "" else handle,
-                            email = if (isEmail) handle else null,
-                            additionalPhones = emptyList(),
-                            additionalEmails = emptyList(),
+                            phoneNumber = phone,
+                            email = email.ifBlank { null },
                             allowRemoteSoundChange = allowRemoteSound
                         )
                     )
@@ -298,6 +299,14 @@ private fun HeaderSection(
                     onSettingsClick = onSettingsClick,
                     onUpgradeClick = onUpgradeClick,
                     isProUser = state.isProUser
+                )
+            }
+            if (!state.settings.assistantShortcutsDismissed) {
+                VoiceTipsCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    isProUser = state.isProUser,
+                    onUpgradeClick = onUpgradeClick,
+                    onDismiss = onDismissAssistantShortcuts
                 )
             }
         }
@@ -940,7 +949,7 @@ private fun ContactRow(
         RemotePresence.STALE -> MaterialTheme.colorScheme.outline
         RemotePresence.UNKNOWN -> MaterialTheme.colorScheme.outlineVariant
     }
-    val phone = (listOf(contact.phoneNumber) + contact.additionalPhones).firstOrNull { it.isNotBlank() }.orEmpty()
+    val phone = contact.phoneNumber.orEmpty()
     val hasSmsFallback = phone.isNotBlank()
     Card(
         modifier = Modifier
@@ -981,7 +990,6 @@ private fun ContactRow(
                         text = when {
                             phone.isNotBlank() -> phone
                             contact.email?.isNotBlank() == true -> contact.email
-                            contact.additionalEmails.firstOrNull { it.isNotBlank() } != null -> contact.additionalEmails.first { it.isNotBlank() }
                             else -> stringResource(id = R.string.contact_no_reachability)
                         },
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -994,14 +1002,11 @@ private fun ContactRow(
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    val callEnabled = phone.isNotBlank()
-                    IconButton(onClick = onCall, enabled = callEnabled) {
+                    IconButton(onClick = onCall) {
                         Icon(
                             Icons.Filled.Call,
                             contentDescription = "Call contact",
-                            tint = if (callEnabled) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                alpha = 0.4f
-                            )
+                            tint = MaterialTheme.colorScheme.secondary
                         )
                     }
                     IconButton(onClick = onOpenMessages) {
@@ -1283,8 +1288,10 @@ private fun UpgradeCard(isPro: Boolean, onUpgradeClick: () -> Unit) {
 private fun AddContactDialog(
     name: TextFieldValue,
     onNameChange: (TextFieldValue) -> Unit,
-    handle: TextFieldValue,
-    onHandleChange: (TextFieldValue) -> Unit,
+    phone: TextFieldValue,
+    onPhoneChange: (TextFieldValue) -> Unit,
+    email: TextFieldValue,
+    onEmailChange: (TextFieldValue) -> Unit,
     allowRemoteSound: Boolean,
     onAllowRemoteSoundChange: (Boolean) -> Unit,
     onImport: () -> Unit,
@@ -1303,9 +1310,15 @@ private fun AddContactDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
-                    value = handle,
-                    onValueChange = onHandleChange,
-                    label = { Text("Phone or email") },
+                    value = phone,
+                    onValueChange = onPhoneChange,
+                    label = { Text("Phone") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = onEmailChange,
+                    label = { Text("Email (optional)") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(

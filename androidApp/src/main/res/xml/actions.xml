@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <actions>
-    <!-- Generic feature toggle used for simple deep links (emergency / cancel / check-in) -->
     <action intentName="actions.intent.OPEN_APP_FEATURE">
         <fulfillment urlTemplate="pulselink://assistant/{feature}">
             <parameter-mapping
@@ -13,62 +12,6 @@
         </parameter>
     </action>
 
-    <!-- Send standard / non-urgent message -->
-    <action intentName="actions.intent.SEND_MESSAGE">
-        <fulfillment urlTemplate="pulselink://assistant/message?contact={recipient.name}&amp;text={text}">
-            <parameter-mapping intentParameter="text" urlParameter="text" />
-            <parameter-mapping intentParameter="recipient.name" urlParameter="contact" />
-        </fulfillment>
-        <parameter name="text">
-            <entity-set-reference entitySetId="message_entity_set" />
-        </parameter>
-        <parameter name="recipient">
-            <entity-set-reference entitySetId="person_entity_set" />
-        </parameter>
-    </action>
-
-    <!-- Send urgent / emergency message -->
-    <action intentName="actions.intent.SEND_MESSAGE">
-        <fulfillment urlTemplate="pulselink://assistant/urgent?contact={recipient.name}&amp;text={text}">
-            <parameter-mapping intentParameter="text" urlParameter="text" />
-            <parameter-mapping intentParameter="recipient.name" urlParameter="contact" />
-        </fulfillment>
-        <parameter name="text">
-            <entity-set-reference entitySetId="message_entity_set" />
-        </parameter>
-        <parameter name="recipient">
-            <entity-set-reference entitySetId="person_entity_set" />
-        </parameter>
-    </action>
-
-    <!-- Send explicit non-urgent with volume -->
-    <action intentName="actions.intent.SEND_MESSAGE">
-        <fulfillment urlTemplate="pulselink://assistant/nonurgent?contact={recipient.name}&amp;text={text}&amp;volume={level}">
-            <parameter-mapping intentParameter="text" urlParameter="text" />
-            <parameter-mapping intentParameter="recipient.name" urlParameter="contact" />
-            <parameter-mapping intentParameter="level" urlParameter="volume" />
-        </fulfillment>
-        <parameter name="text">
-            <entity-set-reference entitySetId="message_entity_set" />
-        </parameter>
-        <parameter name="recipient">
-            <entity-set-reference entitySetId="person_entity_set" />
-        </parameter>
-        <parameter name="level">
-            <entity-set-reference entitySetId="volume_entity_set" />
-        </parameter>
-    </action>
-
-    <!-- Emergency call request -->
-    <action intentName="actions.intent.CALL">
-        <fulfillment urlTemplate="pulselink://assistant/call?contact={recipient.name}">
-            <parameter-mapping intentParameter="recipient.name" urlParameter="contact" />
-        </fulfillment>
-        <parameter name="recipient">
-            <entity-set-reference entitySetId="person_entity_set" />
-        </parameter>
-    </action>
-
     <entity-set entitySetId="featureParam">
         <entity
             identifier="emergency"
@@ -78,9 +21,5 @@
             identifier="cancel"
             name="Cancel"
             alternateName="@array/cancelSynonyms" />
-        <entity
-            identifier="checkin"
-            name="Check-in"
-            alternateName="@array/checkInSynonyms" />
     </entity-set>
 </actions>

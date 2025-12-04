@@ -1,52 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Query patterns for custom App Actions -->
-    <string-array name="send_urgent_query_patterns">
-        <item>send an urgent message to $contact with pulselink saying $text</item>
-        <item>send an emergency message to $contact with pulselink saying $text</item>
-        <item>send a pulselink alert to $contact that says $text</item>
-    </string-array>
-    <string-array name="send_non_urgent_query_patterns">
-        <item>send a non-urgent message to $contact with pulselink at $volume saying $text</item>
-        <item>send a pulselink message to $contact at $volume saying $text</item>
-    </string-array>
-
-    <!-- Dummy data to help Google Assistant understand the type of entities expected -->
-    <string-array name="person_entity_set">
-        <item>Mom</item>
-        <item>Dad</item>
-        <item>Jane</item>
-    </string-array>
-    <string-array name="message_entity_set">
-        <item>I need help</item>
-        <item>Come get me</item>
-    </string-array>
-    <string-array name="volume_entity_set">
-        <item>low volume</item>
-        <item>half volume</item>
-        <item>medium volume</item>
-        <item>loud</item>
-        <item>full volume</item>
-    </string-array>
-
-    <!-- Legacy assistant shortcut synonyms used by App Actions -->
     <string-array name="emergencySynonyms">
         <item>help</item>
-        <item>panic</item>
-        <item>emergency</item>
-        <item>urgent</item>
         <item>sos</item>
     </string-array>
     <string-array name="cancelSynonyms">
-        <item>cancel</item>
         <item>stop</item>
         <item>abort</item>
-        <item>dismiss</item>
-    </string-array>
-    <string-array name="checkInSynonyms">
-        <item>check in</item>
-        <item>status</item>
-        <item>pulse</item>
-        <item>safe check</item>
     </string-array>
 </resources>

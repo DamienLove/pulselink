@@ -21,8 +21,6 @@ import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,27 +38,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.pulselink.BuildConfig
 import com.pulselink.R
 import com.pulselink.domain.model.PulseLinkSettings
-import com.pulselink.ui.ads.BannerAdSlot
-import com.pulselink.ui.state.ProfileUpdateUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     settings: PulseLinkSettings,
     hasDndAccess: Boolean,
-    showAds: Boolean,
     onToggleIncludeLocation: (Boolean) -> Unit,
     onRequestDndAccess: () -> Unit,
     onRequestBatteryOpt: () -> Unit,
     onRequestUnusedApps: () -> Unit,
     onToggleAutoAllowRemoteSoundChange: (Boolean) -> Unit,
-    onToggleAutoUpdateContactInfo: (Boolean) -> Unit,
     onSyncNow: () -> Unit,
-    profileUpdateState: ProfileUpdateUiState,
-    onBroadcastProfileUpdate: () -> Unit,
     onEditEmergencyTone: () -> Unit,
     onEditCheckInTone: () -> Unit,
     onEditCallTone: () -> Unit,
@@ -90,12 +81,6 @@ fun SettingsScreen(
             )
         },
         contentWindowInsets = WindowInsets.safeDrawing
-        ,
-        bottomBar = {
-            if (BuildConfig.ADS_ENABLED && showAds && !settings.proUnlocked) {
-                BannerAdSlot(enabled = true, modifier = Modifier.fillMaxWidth())
-            }
-        }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -151,12 +136,6 @@ fun SettingsScreen(
                 checked = settings.autoAllowRemoteSoundChange,
                 onCheckedChange = onToggleAutoAllowRemoteSoundChange
             )
-            SettingsToggleRow(
-                title = stringResource(id = R.string.settings_auto_update_contact_title),
-                subtitle = stringResource(id = R.string.settings_auto_update_contact_subtitle),
-                checked = settings.autoUpdateContactInfo,
-                onCheckedChange = onToggleAutoUpdateContactInfo
-            )
             SettingsActionRow(
                 title = stringResource(id = R.string.settings_sync_contacts_title),
                 subtitle = stringResource(id = R.string.settings_sync_contacts_subtitle),
@@ -164,31 +143,6 @@ fun SettingsScreen(
                 onAction = onSyncNow,
                 leadingIcon = Icons.Filled.Sync
             )
-            SettingsActionRow(
-                title = stringResource(id = R.string.profile_update_button),
-                subtitle = stringResource(id = R.string.profile_update_subtitle),
-                actionLabel = if (profileUpdateState.inProgress) {
-                    stringResource(id = R.string.profile_update_sending)
-                } else {
-                    stringResource(id = R.string.profile_update_button)
-                },
-                onAction = onBroadcastProfileUpdate,
-                leadingIcon = Icons.Filled.Sync
-            )
-            profileUpdateState.resultCount?.let { count ->
-                Text(
-                    text = stringResource(id = R.string.profile_update_success, count),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            profileUpdateState.error?.let { error ->
-                Text(
-                    text = error,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
             SettingsActionRow(
                 title = "Emergency alert tone",
                 actionLabel = "Edit",
@@ -203,10 +157,6 @@ fun SettingsScreen(
                 title = stringResource(R.string.settings_call_tone_title),
                 actionLabel = "Edit",
                 onAction = onEditCallTone
-            )
-            AssistantCommandsCard(
-                proEnabled = !BuildConfig.ADS_ENABLED || settings.proUnlocked,
-                onOpenHelp = onOpenHelp
             )
             SettingsActionRow(
                 title = stringResource(id = R.string.settings_report_bug),
@@ -226,14 +176,6 @@ fun SettingsScreen(
                 actionLabel = stringResource(id = R.string.settings_sign_out_action),
                 onAction = onSignOut,
                 leadingIcon = Icons.Filled.PowerSettingsNew
-            )
-            Text(
-                text = "Link ID: ${settings.deviceId}",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp, start = 4.dp, end = 4.dp, bottom = 4.dp)
             )
         }
     }
@@ -327,49 +269,6 @@ private fun SettingsActionRow(
             }
             TextButton(onClick = onAction) {
                 Text(text = actionLabel)
-            }
-        }
-    }
-}
-
-@Composable
-private fun AssistantCommandsCard(
-    proEnabled: Boolean,
-    onOpenHelp: () -> Unit
-) {
-    val title = if (proEnabled) {
-        stringResource(R.string.assistant_commands_title)
-    } else {
-        stringResource(R.string.assistant_commands_title_free)
-    }
-    val body = if (proEnabled) {
-        stringResource(R.string.assistant_commands_body_pro)
-    } else {
-        stringResource(R.string.assistant_commands_body_free)
-    }
-    val bullets = stringResource(R.string.assistant_commands_examples)
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
-        ),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(bullets, style = MaterialTheme.typography.bodySmall)
-            TextButton(onClick = onOpenHelp) {
-                Text(
-                    text = if (proEnabled) {
-                        stringResource(R.string.assistant_commands_manage)
-                    } else {
-                        stringResource(R.string.assistant_commands_learn)
-                    }
-                )
             }
         }
     }

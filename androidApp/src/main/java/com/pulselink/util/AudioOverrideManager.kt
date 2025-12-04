@@ -20,7 +20,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 @Singleton
 class AudioOverrideManager @Inject constructor(
@@ -38,17 +37,14 @@ class AudioOverrideManager @Inject constructor(
     private val mediaLock = Any()
     @Volatile private var currentFocusRequest: AudioFocusRequest? = null
 
-    fun overrideForAlert(
-        requestDndBypass: Boolean,
-        volumeHint: com.pulselink.domain.model.VolumeHint? = null
-    ): OverrideResult {
+    fun overrideForAlert(requestDndBypass: Boolean): OverrideResult {
         val audio = audioManager ?: return OverrideResult.failure(
             OverrideResult.FailureReason.AUDIO_SERVICE_UNAVAILABLE,
             "Audio service unavailable"
         )
         Log.d(
             TAG,
-            "overrideForAlert(requestDndBypass=$requestDndBypass, volumeHint=$volumeHint, sdk=${Build.VERSION.SDK_INT})"
+            "overrideForAlert(requestDndBypass=$requestDndBypass, sdk=${Build.VERSION.SDK_INT})"
         )
         if (!prefs.getBoolean(KEY_ACTIVE, false)) {
             val currentVolume = audio.getStreamVolume(AudioManager.STREAM_RING)
@@ -68,18 +64,12 @@ class AudioOverrideManager @Inject constructor(
             }
         }
 
-        val fraction = when (volumeHint) {
-            com.pulselink.domain.model.VolumeHint.LOW -> 0.35f
-            com.pulselink.domain.model.VolumeHint.MEDIUM -> 0.6f
-            com.pulselink.domain.model.VolumeHint.HIGH -> 0.85f
-            com.pulselink.domain.model.VolumeHint.MAX, null -> 1.0f
-        }
         val maxVolume = audio.getStreamMaxVolume(AudioManager.STREAM_RING)
-        audio.setStreamVolume(AudioManager.STREAM_RING, (maxVolume * fraction).roundToInt().coerceAtLeast(1), 0)
+        audio.setStreamVolume(AudioManager.STREAM_RING, maxVolume, 0)
         val maxNotificationVolume = audio.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION)
-        audio.setStreamVolume(AudioManager.STREAM_NOTIFICATION, (maxNotificationVolume * fraction).roundToInt().coerceAtLeast(1), 0)
+        audio.setStreamVolume(AudioManager.STREAM_NOTIFICATION, maxNotificationVolume, 0)
         val maxAlarmVolume = audio.getStreamMaxVolume(AudioManager.STREAM_ALARM)
-        audio.setStreamVolume(AudioManager.STREAM_ALARM, (maxAlarmVolume * fraction).roundToInt().coerceAtLeast(1), 0)
+        audio.setStreamVolume(AudioManager.STREAM_ALARM, maxAlarmVolume, 0)
         waitForVolumePropagation()
         audio.ringerMode = AudioManager.RINGER_MODE_NORMAL
 

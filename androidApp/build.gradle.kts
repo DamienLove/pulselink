@@ -2,8 +2,6 @@ import java.io.File
 import java.util.Locale
 import java.util.Properties
 import org.gradle.api.Project
-import org.gradle.api.tasks.Copy
-import com.google.gms.googleservices.GoogleServicesTask
 
 plugins {
     id("com.android.application")
@@ -127,8 +125,8 @@ android {
         applicationId = "com.pulselink"
         minSdk = 26
         targetSdk = 35
-        versionCode = 28
-        versionName = "28"
+        versionCode = 19
+        versionName = "19"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -160,7 +158,6 @@ android {
             )
             buildConfigField("boolean", "ADS_ENABLED", "true")
             buildConfigField("boolean", "PRO_FEATURES", "false")
-            buildConfigField("String", "ALERT_RELAY_BASE_URL", "\"https://us-central1-pulselink-prod.cloudfunctions.net\"")
             buildConfigField("String", "AD_APP_ID", "\"ca-app-pub-5327057757821609~9533221188\"")
             buildConfigField("String", "AD_UNIT_BANNER", "\"ca-app-pub-5327057757821609/3955684775\"")
             buildConfigField("String", "AD_UNIT_INTERSTITIAL", "\"ca-app-pub-5327057757821609/3170992810\"")
@@ -185,7 +182,6 @@ android {
             )
             buildConfigField("boolean", "ADS_ENABLED", "false")
             buildConfigField("boolean", "PRO_FEATURES", "true")
-            buildConfigField("String", "ALERT_RELAY_BASE_URL", "\"https://us-central1-pulselink-prod.cloudfunctions.net\"")
             buildConfigField("String", "AD_APP_ID", "\"\"")
             buildConfigField("String", "AD_UNIT_BANNER", "\"\"")
             buildConfigField("String", "AD_UNIT_INTERSTITIAL", "\"\"")
@@ -234,38 +230,12 @@ android {
     }
 }
 
-// Automatically copy per-flavor google-services.json from secure folders if present.
-listOf(
-    "free" to rootProject.file("Free-Certs/google-services.json"),
-    "pro" to rootProject.file("PRO-CERTS/google-services.json")
-).forEach { (flavor, sourceFile) ->
-    tasks.register("sync${flavor.replaceFirstChar { it.titlecase(Locale.US) }}GoogleServices", Copy::class) {
-        onlyIf { sourceFile.exists() }
-        from(sourceFile)
-        into(file("src/$flavor"))
-        rename { "google-services.json" }
-    }
-}
-
-tasks.matching { it.name == "preBuild" }.configureEach {
-    dependsOn("syncFreeGoogleServices", "syncProGoogleServices")
-}
-
-tasks.withType(GoogleServicesTask::class.java).configureEach {
-    dependsOn("syncFreeGoogleServices", "syncProGoogleServices")
-}
-
 kapt {
     correctErrorTypes = true
 }
 
-    dependencies {
-        implementation(project(":shared"))
-        implementation(platform("androidx.compose:compose-bom:2024.04.01"))
-        implementation("com.google.firebase:firebase-auth:23.0.0")
-        implementation("androidx.credentials:credentials:1.5.0")
-    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
-    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+dependencies {
+    implementation(platform("androidx.compose:compose-bom:2024.04.01"))
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.04.01"))
 
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
@@ -315,7 +285,7 @@ kapt {
     implementation("com.google.android.gms:play-services-wearable:18.2.0")
     implementation("com.google.firebase:firebase-crashlytics-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation("com.google.firebase:firebase-auth-ktx:23.0.0")
+    implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-functions-ktx")
     implementation("com.google.firebase:firebase-config-ktx")
     implementation("com.google.assistant.appactions:suggestions:1.0.0")

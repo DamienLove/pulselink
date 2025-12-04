@@ -67,14 +67,12 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.foundation.layout.widthIn
 import com.pulselink.R
-import com.pulselink.BuildConfig
 import com.pulselink.data.assistant.VoiceCommandResult
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ContactMessage
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.domain.model.MessageDirection
-import com.pulselink.ui.ads.BannerAdSlot
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -83,7 +81,6 @@ fun ContactConversationScreen(
     contact: Contact?,
     messages: List<ContactMessage>,
     isProUser: Boolean,
-    showAds: Boolean,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
     onCallContact: suspend (Contact) -> Unit,
@@ -108,7 +105,6 @@ fun ContactConversationScreen(
                 contact = contact,
                 messages = messages,
                 isProUser = isProUser,
-                showAds = showAds,
                 onBack = onBack,
                 onOpenSettings = onOpenSettings,
                 onCallContact = onCallContact,
@@ -141,7 +137,6 @@ private fun ConversationBody(
     contact: Contact,
     messages: List<ContactMessage>,
     isProUser: Boolean,
-    showAds: Boolean,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
     onCallContact: suspend (Contact) -> Unit,
@@ -195,14 +190,13 @@ private fun ConversationBody(
                 )
             }
             Row {
-                val hasPhone = (listOf(contact.phoneNumber) + contact.additionalPhones).any { it.isNotBlank() }
                 IconButton(onClick = {
                     scope.launch { onCallContact(contact) }
-                }, enabled = hasPhone) {
+                }) {
                     Icon(
                         imageVector = Icons.Filled.Call,
                         contentDescription = "Call contact",
-                        tint = if (hasPhone) Color(0xFF34D399) else Color.White.copy(alpha = 0.3f)
+                        tint = Color(0xFF34D399)
                     )
                 }
                 IconButton(onClick = onOpenSettings) {
@@ -349,9 +343,6 @@ private fun ConversationBody(
                 voiceLauncher.launch(intent)
             }
         )
-        if (BuildConfig.ADS_ENABLED && showAds) {
-            BannerAdSlot(enabled = true, modifier = Modifier.fillMaxWidth())
-        }
     }
 }
 

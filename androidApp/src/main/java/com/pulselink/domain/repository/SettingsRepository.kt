@@ -18,9 +18,4 @@ interface SettingsRepository {
     suspend fun updateLastWidgetCheckTimestamp(timestamp: Long)
     suspend fun setEmergencyActive(active: Boolean)
     suspend fun isEmergencyActive(): Boolean
-    suspend fun setLastKnownPhone(phone: String?)
-    suspend fun getLastKnownPhone(): String?
-    suspend fun setLastKnownEmail(email: String?)
-    suspend fun getLastKnownEmail(): String?
-    suspend fun setAutoUpdateContactInfo(enabled: Boolean)
 }

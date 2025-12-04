@@ -42,20 +42,8 @@ object SmsCodec {
     fun encodeAlertReady(senderId: String, code: String, ready: Boolean): String =
         build(Type.ALERT_READY, senderId, code, if (ready) "1" else "0")
 
-    fun encodeManualMessage(
-        senderId: String,
-        code: String,
-        body: String,
-        urgency: com.pulselink.domain.model.MessageUrgency,
-        volumeHint: com.pulselink.domain.model.VolumeHint?
-    ): String = build(
-        Type.MESSAGE,
-        senderId,
-        code,
-        Uri.encode(body),
-        urgency.name,
-        volumeHint?.name.orEmpty()
-    )
+    fun encodeManualMessage(senderId: String, code: String, body: String): String =
+        build(Type.MESSAGE, senderId, code, Uri.encode(body))
 
     fun encodeSoundOverride(
         senderId: String,
@@ -108,17 +96,7 @@ object SmsCodec {
             }
             Type.MESSAGE.wire -> {
                 val body = tokens.getOrNull(4)?.let { Uri.decode(it) } ?: ""
-                val urgencyToken = tokens.getOrNull(5)
-                val urgency = runCatching {
-                    com.pulselink.domain.model.MessageUrgency.valueOf(urgencyToken.orEmpty())
-                }.getOrDefault(com.pulselink.domain.model.MessageUrgency.STANDARD)
-                val volumeToken = tokens.getOrNull(6)
-                val volume = volumeToken
-                    ?.takeIf { it.isNotBlank() }
-                    ?.let {
-                        runCatching { com.pulselink.domain.model.VolumeHint.valueOf(it) }.getOrNull()
-                    }
-                PulseLinkMessage.ManualMessage(senderId, code, body, urgency, volume)
+                PulseLinkMessage.ManualMessage(senderId, code, body)
             }
             Type.SOUND_OVERRIDE.wire -> {
                 val tierToken = tokens.getOrNull(4) ?: return null

@@ -21,7 +21,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -36,17 +35,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,22 +49,18 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.pulselink.BuildConfig
 import com.pulselink.R
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.RemotePresence
-import com.pulselink.ui.ads.BannerAdSlot
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactDetailScreen(
     contact: Contact?,
-    showAds: Boolean,
     onBack: () -> Unit,
     onCallContact: suspend (Contact) -> Unit,
-    onEditContact: (String, String, String?) -> Unit,
     onEditEmergencyAlert: () -> Unit,
     onEditCheckInAlert: () -> Unit,
     onToggleLocation: (Boolean) -> Unit,
@@ -86,7 +75,6 @@ fun ContactDetailScreen(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
-    var showEditDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -99,29 +87,18 @@ fun ContactDetailScreen(
                 },
                 actions = {
                     contact?.let { target ->
-                        if (target.phoneNumber.isNotBlank()) {
-                            IconButton(onClick = {
-                                coroutineScope.launch {
-                                    onCallContact(target)
-                                }
-                            }) {
-                                Icon(Icons.Filled.Call, contentDescription = "Call contact")
+                        IconButton(onClick = {
+                            coroutineScope.launch {
+                                onCallContact(target)
                             }
-                        }
-                        IconButton(onClick = { showEditDialog = true }) {
-                            Icon(Icons.Filled.Edit, contentDescription = "Edit contact")
+                        }) {
+                            Icon(Icons.Filled.Call, contentDescription = "Call contact")
                         }
                     }
                 }
             )
         },
         contentWindowInsets = WindowInsets.safeDrawing
-        ,
-        bottomBar = {
-            if (BuildConfig.ADS_ENABLED && showAds) {
-                BannerAdSlot(enabled = true, modifier = Modifier.fillMaxWidth())
-            }
-        }
     ) { padding ->
         if (contact == null) {
             Column(
@@ -178,23 +155,10 @@ fun ContactDetailScreen(
             }
         }
     }
-
-    if (showEditDialog && contact != null) {
-        EditContactDialog(
-            contact = contact,
-            onDismiss = { showEditDialog = false },
-            onSave = { name, phone, email ->
-                onEditContact(name, phone, email)
-                showEditDialog = false
-            }
-        )
-    }
 }
 
 @Composable
 private fun Header(contact: Contact) {
-    val primaryPhone = (listOf(contact.phoneNumber) + contact.additionalPhones).firstOrNull { it.isNotBlank() }
-    val primaryEmail = contact.email?.takeIf { it.isNotBlank() } ?: contact.additionalEmails.firstOrNull { it.isNotBlank() }
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         Image(
             painter = painterResource(id = R.drawable.ic_logo),
@@ -203,20 +167,7 @@ private fun Header(contact: Contact) {
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(text = contact.displayName, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
-        if (!primaryPhone.isNullOrBlank()) {
-            Text(
-                text = primaryPhone,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        primaryEmail?.let { email ->
-            Text(
-                text = email,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        Text(text = contact.phoneNumber, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (contact.linkStatus == LinkStatus.LINKED) {
             Spacer(modifier = Modifier.height(8.dp))
             PresenceBadge(
@@ -235,14 +186,13 @@ private fun LinkStatusSection(
     onToggleRemoteSound: (Boolean) -> Unit,
     onPing: () -> Unit
 ) {
-    val canSendLink = contact.phoneNumber.isNotBlank() || contact.email?.isNotBlank() == true
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(text = "Link status", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
             when (contact.linkStatus) {
                 LinkStatus.NONE -> {
                     Text(text = "This contact is not linked yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Button(onClick = onSendLink, enabled = canSendLink, modifier = Modifier.fillMaxWidth()) {
+                    Button(onClick = onSendLink, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Filled.Link, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Send link request")
@@ -250,7 +200,7 @@ private fun LinkStatusSection(
                 }
                 LinkStatus.OUTBOUND_PENDING -> {
                     Text(text = "Awaiting their approval.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Button(onClick = onSendLink, enabled = canSendLink, modifier = Modifier.fillMaxWidth()) {
+                    Button(onClick = onSendLink, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Filled.Send, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Resend link request")
@@ -356,58 +306,6 @@ private fun SettingsCard(
             }
         }
     }
-}
-
-@Composable
-private fun EditContactDialog(
-    contact: Contact,
-    onDismiss: () -> Unit,
-    onSave: (String, String, String?) -> Unit
-) {
-    var name by remember { mutableStateOf(contact.displayName) }
-    var phone by remember { mutableStateOf(contact.phoneNumber) }
-    var email by remember { mutableStateOf(contact.email.orEmpty()) }
-    val canSave = name.isNotBlank() && (phone.isNotBlank() || email.isNotBlank())
-
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = "Edit contact") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Name") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = phone,
-                    onValueChange = { phone = it },
-                    label = { Text("Phone (preferred)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = { Text("Email (optional)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onSave(name.trim(), phone.trim(), email.trim().ifBlank { null })
-                },
-                enabled = canSave
-            ) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
 }
 
 @Composable

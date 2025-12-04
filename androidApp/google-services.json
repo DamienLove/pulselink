@@ -45,25 +45,12 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:156950194350:android:74ee92d7f70fbcd564653f",
+        "mobilesdk_app_id": "1:156950194350:android:131cad4bd8eae76564653f-debug",
         "android_client_info": {
           "package_name": "com.free.pulselink.debug"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "156950194350-qjrvvhqt62tmacnt2tj57fo1c6vdpeok.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.free.pulselink.debug",
-            "certificate_hash": "d0beb205d18f46cb17354bc41b4673a59cbaa9c8"
-          }
-        },
-        {
-          "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
           "current_key": "AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s"
@@ -71,12 +58,7 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     },
@@ -119,17 +101,12 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:156950194350:android:aa290ad37a8e593164653f",
+        "mobilesdk_app_id": "1:156950194350:android:131cad4bd8eae76564653f-prodebug",
         "android_client_info": {
           "package_name": "com.pulselink.pro.debug"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
           "current_key": "AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s"
@@ -137,41 +114,7 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:156950194350:android:279197fc58c0b82c64653f",
-        "android_client_info": {
-          "package_name": "com.pulselink.wear.debug"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }

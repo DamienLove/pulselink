@@ -125,17 +125,10 @@
     <string name="settings_sync_contacts_title">Sync contacts to Firebase</string>
     <string name="settings_sync_contacts_subtitle">Push local contacts and pull cloud updates to keep links in step.</string>
     <string name="settings_sync_action">Sync now</string>
-    <string name="profile_update_button">Update profile to contacts</string>
-    <string name="profile_update_subtitle">Send your current phone number and email to linked contacts.</string>
-    <string name="profile_update_success">Profile updated for %1$d contacts.</string>
-    <string name="profile_update_failed">Could not update your contacts. Try again.</string>
-    <string name="profile_update_sending">Sending...</string>
     <string name="settings_help_action">Open safety help</string>
     <string name="settings_sign_out_title">Sign out</string>
     <string name="settings_sign_out_subtitle">Return to the login screen and keep using SMS-only if needed.</string>
     <string name="settings_sign_out_action">Sign out</string>
-    <string name="settings_auto_update_contact_title">Auto-update contact info</string>
-    <string name="settings_auto_update_contact_subtitle">Keep phone numbers and emails in sync for linked contacts.</string>
     <string name="settings_help_title">Safety help</string>
     <string name="settings_help_location_title">Location sharing</string>
     <string name="settings_help_location_body">Include your latest GPS fix when sending emergency or check-in alerts so your circle can find you quickly. PulseLink only attaches that location to your outgoing alerts.</string>
@@ -151,7 +144,9 @@
     <string name="emergency_alert_body">PulseLink is overriding Do Not Disturb and playing the emergency tone so you can respond immediately. If the siren stays silent, open Settings → Apps → PulseLink → Notifications and re-enable bypass.</string>
     <string name="assistant_trigger_emergency">Emergency alert sent via Google Assistant.</string>
     <string name="assistant_trigger_check_in">Check-in sent via Google Assistant.</string>
+    <string name="assistant_shortcut_emergency_short">PulseLink emergency</string>
     <string name="assistant_shortcut_emergency_long">Send a PulseLink emergency alert</string>
+    <string name="assistant_shortcut_check_in_short">PulseLink check-in</string>
     <string name="assistant_shortcut_check_in_long">Send a PulseLink check-in</string>
     <string name="assistant_hint_title">Voice commands, no setup</string>
     <string name="assistant_hint_subtitle">Say "Hey Google" or "Hey Google, talk to Gemini" and ask PulseLink for help.</string>
@@ -169,13 +164,6 @@
     <string name="assistant_shortcut_help_gemini">In Gemini, open Profile -> Settings -> Google Assistant features in Gemini -> Shortcuts.</string>
     <string name="assistant_shortcut_help_generic">Follow your assistant\'s instructions on the next screen to enable the PulseLink shortcuts.</string>
     <string name="assistant_shortcut_missing">No Assistant or Gemini app found. Install the Google app or Gemini to enable hands-free shortcuts.</string>
-    <string name="assistant_commands_title">Voice commands</string>
-    <string name="assistant_commands_title_free">Voice commands (Pro)</string>
-    <string name="assistant_commands_body_pro">Use Google Assistant or Gemini to trigger PulseLink instantly.</string>
-    <string name="assistant_commands_body_free">Hands-free alerts, cancel, and urgent messages are a PulseLink Pro feature. Upgrade to unlock them.</string>
-    <string name="assistant_commands_examples">• "Send a PulseLink emergency"\n• "Cancel my PulseLink alert" (biometric required)\n• "Send an urgent check-in to Mom"\n• "Send a non-urgent PulseLink to Alex at half volume"\n• "Make an urgent PulseLink call to Sam"</string>
-    <string name="assistant_commands_manage">Manage assistant tips</string>
-    <string name="assistant_commands_learn">Learn how</string>
     <string name="blocked_contact_attempt_title">Blocked contact tried to reach you</string>
     <string name="blocked_contact_attempt_body">%1$s attempted to send a message but is blocked.</string>
     <string name="dnd_override_title">Do Not Disturb override</string>
@@ -198,15 +186,8 @@
       <string name="cancel_emergency_card_title">Cancel emergency alert</string>
       <string name="cancel_emergency_card_status">Emergency active</string>
       <string name="cancel_emergency_card_description">Stop sending alerts to your circle and restore your normal sound settings.</string>
-    <string name="cancel_emergency_card_cta">Authenticate to cancel</string>
-    <string name="cancel_emergency_card_secondary">Biometric confirmation required</string>
-    <string name="link_request_sent_sms">Link request sent via SMS</string>
-    <string name="link_request_sent_cloud">Link request sent via cloud</string>
-    <string name="link_invite_email_subject">%1$s wants to connect on PulseLink</string>
-    <string name="link_invite_email_body">Hi %1$s,\n\n%2$s invited you to connect on PulseLink. Download the app to accept their request:\n%3$s\n\nAfter installing, open PulseLink and approve the link.</string>
-    <string name="link_invite_email_chooser">Send invite with</string>
-    <string name="link_invite_no_email_app">No email app found to send invite.</string>
-    <string name="link_invite_missing_contact_info">Add a phone or email to send an invite.</string>
+      <string name="cancel_emergency_card_cta">Authenticate to cancel</string>
+      <string name="cancel_emergency_card_secondary">Biometric confirmation required</string>
     <string name="voice_command_trigger_reason">Assistant command: %1$s</string>
     <string name="voice_command_emergency_sent">Emergency alert dispatched.</string>
     <string name="voice_command_contact_missing">I couldn\'t find that contact.</string>
@@ -284,7 +265,7 @@ Disclaimers
 Limitation of Liability
 8.1 TO THE MAXIMUM EXTENT PERMITTED BY LAW, DEVELOPER SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, CONSEQUENTIAL, SPECIAL, EXEMPLARY, OR PUNITIVE DAMAGES, OR FOR ANY LOSS OF DATA, LOSS OF PROFITS, LOSS OF OPPORTUNITIES, OR LOSS RELATING TO PERSONAL SAFETY OR PROPERTY, ARISING OUT OF OR IN CONNECTION WITH THE APP OR THIS AGREEMENT, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
-8.2 TO THE MAXIMUM EXTENT PERMITTED BY LAW, DEVELOPER’S TOTAL CUMULATIVE LIABILITY ARISING OUT of OR RELATING TO THE APP OR THIS AGREEMENT SHALL NOT EXCEED ONE HUNDRED U.S. DOLLARS (US $100) (OR, IF REQUIRED BY LAW, THE MINIMUM GREATER AMOUNT MANDATED BY SUCH LAW).
+8.2 TO THE MAXIMUM EXTENT PERMITTED BY LAW, DEVELOPER’S TOTAL CUMULATIVE LIABILITY ARISING OUT OF OR RELATING TO THE APP OR THIS AGREEMENT SHALL NOT EXCEED ONE HUNDRED U.S. DOLLARS (US $100) (OR, IF REQUIRED BY LAW, THE MINIMUM GREATER AMOUNT MANDATED BY SUCH LAW).
 
 8.3 THE ABOVE LIMITATIONS SHALL APPLY REGARDLESS OF THE THEORY OF LIABILITY (CONTRACT, TORT, NEGLIGENCE, STRICT LIABILITY, OR OTHERWISE) AND EVEN IF ANY REMEDY FAILS OF ITS ESSENTIAL PURPOSE.
 
@@ -355,6 +336,7 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="login_continue_with_apple">Continue with Apple</string>
     <string name="login_sms_only_helper">Skip account setup and use SMS-only. You can add a login later.</string>
     <string name="login_sms_only_cta">Continue with SMS only</string>
+    <string name="google_web_client_id">156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com</string>
     <string name="login_error_missing_email">Enter an email to continue.</string>
     <string name="login_error_short_password">Password needs at least 8 characters.</string>
     <string name="login_error_password_mismatch">Passwords must match.</string>
@@ -388,17 +370,4 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="widget_role_emergency">Emergency contact</string>
     <string name="widget_role_checkin">Check-in contact</string>
     <string name="widget_role_unknown">Contact</string>
-
-    <!-- Assistant Strings -->
-    <string name="assistant_shortcut_emergency_short">PulseLink emergency</string>
-    <string name="assistant_shortcut_cancel_short">Cancel alert</string>
-    <string name="assistant_shortcut_check_in_short">PulseLink check-in</string>
-    <string name="assistant_shortcut_urgent_message_short">Send urgent message</string>
-    <string name="assistant_shortcut_non_urgent_message_short">Send non-urgent message</string>
-    <string name="assistant_contact_not_found">Couldn\'t find %1$s in your PulseLink contacts.</string>
-    <string name="assistant_message_sent">Message sent to %1$s.</string>
-    <string name="assistant_message_failed">Failed to send message to %1$s.</string>
-    <string name="assistant_urgent_message_sent">Urgent alert sent to %1$s.</string>
-    <string name="assistant_urgent_message_failed">Failed to send urgent alert to %1$s.</string>
-    <string name="assistant_non_urgent_sent">Non-urgent message sent to %1$s at %2$s volume.</string>
 </resources>

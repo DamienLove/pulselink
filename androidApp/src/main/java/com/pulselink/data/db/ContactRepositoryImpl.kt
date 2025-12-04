@@ -42,8 +42,6 @@ class ContactRepositoryImpl @Inject constructor(
     override suspend fun getByRemoteUid(remoteUid: String): Contact? =
         contactDao.getByRemoteUid(remoteUid)
 
-    override suspend fun getLinkedContacts(): List<Contact> = contactDao.getLinkedContacts()
-
     override suspend fun updateOrder(contactIds: List<Long>) {
         contactIds.forEachIndexed { index, id ->
             contactDao.updateOrder(id, index)

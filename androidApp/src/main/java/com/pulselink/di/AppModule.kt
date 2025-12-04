@@ -10,7 +10,6 @@ import androidx.room.Room
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
-import com.pulselink.BuildConfig
 import com.pulselink.data.alert.AlertDispatcher
 import com.pulselink.data.alert.NotificationRegistrar
 import com.pulselink.data.alert.SoundCatalog
@@ -32,8 +31,6 @@ import com.pulselink.domain.repository.BlockedContactRepository
 import com.pulselink.domain.repository.ContactRepository
 import com.pulselink.domain.repository.MessageRepository
 import com.pulselink.domain.repository.SettingsRepository
-import com.pulselink.shared.alert.AlertRelay
-import com.pulselink.shared.alert.AlertRelayClient
 import com.pulselink.util.AudioOverrideManager
 import dagger.Binds
 import dagger.Module
@@ -83,8 +80,7 @@ object DatabaseModule {
                 PulseLinkDatabase.MIGRATION_3_4,
                 PulseLinkDatabase.MIGRATION_4_5,
                 PulseLinkDatabase.MIGRATION_5_6,
-                PulseLinkDatabase.MIGRATION_6_7,
-                PulseLinkDatabase.MIGRATION_7_8
+                PulseLinkDatabase.MIGRATION_6_7
             )
             .fallbackToDestructiveMigration()
             .build()
@@ -157,12 +153,10 @@ object DatabaseModule {
     @Singleton
     fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
 
-    @Provides
-    @Singleton
-    fun provideFirebaseFunctions(): FirebaseFunctions = FirebaseFunctions.getInstance()
+            @Provides
 
-    @Provides
-    @Singleton
-    fun provideAlertRelayClient(): AlertRelayClient =
-        AlertRelay.create(BuildConfig.ALERT_RELAY_BASE_URL)
-}
+            @Singleton
+
+            fun provideFirebaseFunctions(): FirebaseFunctions = FirebaseFunctions.getInstance()
+
+        }

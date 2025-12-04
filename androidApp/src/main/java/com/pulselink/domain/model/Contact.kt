@@ -11,8 +11,6 @@ data class Contact(
     val displayName: String,
     val phoneNumber: String = "",
     val email: String? = null,
-    val additionalPhones: List<String> = emptyList(),
-    val additionalEmails: List<String> = emptyList(),
     val escalationTier: EscalationTier = EscalationTier.EMERGENCY,
     val includeLocation: Boolean = true,
     val autoCall: Boolean = false,

@@ -31,8 +31,7 @@ data class PulseLinkSettings(
     val onboardingComplete: Boolean = false,
     val deviceId: String = "",
     val isBetaTester: Boolean = false,
-    val ownerName: String = "",
-    val autoUpdateContactInfo: Boolean = true
+    val ownerName: String = ""
 ) {
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)
         .map { it.trim().lowercase() }

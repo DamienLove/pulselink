@@ -1,7 +1,6 @@
 package com.pulselink.ui
 
 import android.Manifest
-import android.app.Activity
 import android.app.NotificationManager
 import android.app.PictureInPictureParams
 import android.content.ActivityNotFoundException
@@ -54,9 +53,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
 import com.pulselink.auth.AuthState
 import com.pulselink.data.ads.AppOpenAdController
 import com.pulselink.domain.model.Contact
@@ -110,7 +106,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.material3.ExperimentalMaterial3Api
-import com.pulselink.BuildConfig
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -238,24 +233,18 @@ class MainActivity : AppCompatActivity() {
                     pendingPermissionCheck = true
                 }
 
-                val callContactHandler: suspend (Contact) -> Unit = handler@ { contact ->
+                val callContactHandler: suspend (Contact) -> Unit = { contact ->
                     isPreparingCall = true
                     Toast.makeText(context, context.getString(R.string.call_preparing), Toast.LENGTH_SHORT).show()
-                    val targetPhone = contact.primaryPhone()
-                    if (targetPhone.isNullOrBlank()) {
-                        isPreparingCall = false
-                        Toast.makeText(context, context.getString(R.string.call_failed), Toast.LENGTH_SHORT).show()
-                        return@handler
-                    }
                     val result = try {
-                        viewModel.initiateCall(contact.id, targetPhone)
+                        viewModel.initiateCall(contact.id, contact.phoneNumber)
                     } finally {
                         isPreparingCall = false
                     }
                     when (result) {
                         CallInitiationResult.Ready -> {
                             Toast.makeText(context, context.getString(R.string.call_ready), Toast.LENGTH_SHORT).show()
-                            val placed = placeCall(activity, contact, targetPhone, callStateMonitor) { duration ->
+                            val placed = placeCall(activity, contact, callStateMonitor) { duration ->
                                 viewModel.notifyCallEnded(contact.id, duration)
                             }
                             if (!placed) {
@@ -264,7 +253,7 @@ class MainActivity : AppCompatActivity() {
                         }
                         CallInitiationResult.Timeout -> {
                             Toast.makeText(context, context.getString(R.string.call_timeout), Toast.LENGTH_SHORT).show()
-                            val placed = placeCall(activity, contact, targetPhone, callStateMonitor) { duration ->
+                            val placed = placeCall(activity, contact, callStateMonitor) { duration ->
                                 viewModel.notifyCallEnded(contact.id, duration)
                             }
                             if (!placed) {
@@ -378,37 +367,6 @@ class MainActivity : AppCompatActivity() {
                     composable("login") {
                         val loginViewModel: LoginViewModel = hiltViewModel()
                         val loginUiState by loginViewModel.uiState.collectAsStateWithLifecycle()
-                        val activity = LocalContext.current as? MainActivity
-                        val googleClient = remember {
-                                GoogleSignIn.getClient(
-                                    activity!!,
-                                    GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                                        .requestIdToken(getString(R.string.default_web_client_id))
-                                        .requestEmail()
-                                        .build()
-                                )
-                        }
-                        val googleLauncher = rememberLauncherForActivityResult(
-                            contract = ActivityResultContracts.StartActivityForResult()
-                        ) { result ->
-                            if (result.resultCode != RESULT_OK) {
-                                loginViewModel.reportExternalError()
-                                return@rememberLauncherForActivityResult
-                            }
-                            try {
-                                val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-                                val account = task.getResult(ApiException::class.java)
-                                val idToken = account?.idToken
-                                if (idToken != null) {
-                                    loginViewModel.handleGoogleIdToken(idToken)
-                                } else {
-                                    loginViewModel.reportExternalError()
-                                }
-                            } catch (e: Exception) {
-                                loginViewModel.reportExternalError()
-                            }
-                        }
-
                         LoginScreen(
                             state = loginUiState,
                             onEmailChange = loginViewModel::updateEmail,
@@ -418,11 +376,12 @@ class MainActivity : AppCompatActivity() {
                             onToggleMode = loginViewModel::toggleMode,
                             onForgotPassword = loginViewModel::sendPasswordReset,
                             onSmsOnlyClick = loginViewModel::signInSmsOnly,
-                            onGoogleClick = { googleLauncher.launch(googleClient.signInIntent) },
                             onMessageConsumed = loginViewModel::clearTransientMessages
                         )
                         LaunchedEffect(authState, state.onboardingComplete) {
-                            if (authState is AuthState.Authenticated) {
+                            val currentUser = (authState as? AuthState.Authenticated)?.user
+                            val isFullyAuthenticated = currentUser?.isAnonymous == false
+                            if (isFullyAuthenticated) {
                                 val destination = if (state.onboardingComplete) "home" else "onboarding_intro"
                                 navController.navigate(destination) {
                                     popUpTo(0) { inclusive = true }
@@ -640,9 +599,7 @@ class MainActivity : AppCompatActivity() {
                             onAddContact = viewModel::saveContact,
                             onContactSelected = { contactId -> navController.navigate("contact/$contactId") },
                             onContactSettings = { contactId -> navController.navigate("contact/$contactId/settings") },
-                            onSendLink = { contactId ->
-                                state.contacts.firstOrNull { it.id == contactId }?.let { sendLinkOrInvite(it) }
-                            },
+                            onSendLink = viewModel::sendLinkRequest,
                             onApproveLink = viewModel::approveLink,
                             onCallContact = callContactHandler,
                             onReorderContacts = viewModel::reorderContacts,
@@ -675,7 +632,6 @@ class MainActivity : AppCompatActivity() {
                         AlertHistoryScreen(
                             alerts = state.recentEvents,
                             contacts = state.contacts,
-                            showAds = state.showAds,
                             onBack = { navController.popBackStack() },
                             onContactClick = { contactId -> navController.navigate("contact/$contactId") }
                         )
@@ -691,7 +647,6 @@ class MainActivity : AppCompatActivity() {
                             contact = contact,
                             messages = messages,
                             isProUser = state.isProUser,
-                            showAds = state.showAds,
                             onBack = { navController.popBackStack() },
                             onOpenSettings = { navController.navigate("contact/$contactId/settings") },
                             onCallContact = callContactHandler,
@@ -722,19 +677,8 @@ class MainActivity : AppCompatActivity() {
                         val contact = state.contacts.firstOrNull { it.id == contactId }
                         ContactDetailScreen(
                             contact = contact,
-                            showAds = state.showAds,
                             onBack = { navController.popBackStack() },
                             onCallContact = callContactHandler,
-                            onEditContact = { newName, newPhone, newEmail ->
-                                contact?.let {
-                                    val updated = it.copy(
-                                        displayName = newName,
-                                        phoneNumber = newPhone,
-                                        email = newEmail
-                                    )
-                                    viewModel.saveContact(updated)
-                                }
-                            },
                             onEditEmergencyAlert = { navController.navigate("alerts/contact/$contactId/emergency") },
                             onEditCheckInAlert = { navController.navigate("alerts/contact/$contactId/checkin") },
                             onToggleLocation = { enabled -> contact?.let { viewModel.updateContact(it.copy(includeLocation = enabled)) } },
@@ -742,9 +686,7 @@ class MainActivity : AppCompatActivity() {
                             onToggleAutoCall = { enabled -> contact?.let { viewModel.updateContact(it.copy(autoCall = enabled)) } },
                             onToggleRemoteOverride = { allow -> viewModel.setRemoteOverridePermission(contactId, allow) },
                             onToggleRemoteSound = { allow -> viewModel.setRemoteSoundPermission(contactId, allow) },
-                            onSendLink = {
-                                contact?.let { sendLinkOrInvite(it) }
-                            },
+                            onSendLink = { viewModel.sendLinkRequest(contactId) },
                             onApproveLink = { viewModel.approveLink(contactId) },
                             onPing = { viewModel.sendPing(contactId) },
                             onDelete = {
@@ -822,16 +764,12 @@ class MainActivity : AppCompatActivity() {
                         SettingsScreen(
                             settings = state.settings,
                             hasDndAccess = hasDndAccess,
-                            showAds = state.showAds,
                             onToggleIncludeLocation = viewModel::setIncludeLocation,
                             onRequestDndAccess = { openDndSettings(context) },
                             onRequestBatteryOpt = { openBatteryOptimizationSettings(context) },
                             onRequestUnusedApps = { openUnusedAppRestrictionsSettings(context) },
                             onToggleAutoAllowRemoteSoundChange = viewModel::setAutoAllowRemoteSoundChange,
-                            onToggleAutoUpdateContactInfo = viewModel::setAutoUpdateContactInfo,
                             onSyncNow = viewModel::syncContactsNow,
-                            profileUpdateState = state.profileUpdate,
-                            onBroadcastProfileUpdate = viewModel::broadcastProfileToContacts,
                             onEditEmergencyTone = { navController.navigate("alerts/default/emergency") },
                             onEditCheckInTone = { navController.navigate("alerts/default/checkin") },
                             onEditCallTone = { navController.navigate("alerts/default/call") },
@@ -869,20 +807,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-    }
-
-    private fun sendLinkOrInvite(contact: Contact) {
-        if (contact.phoneNumber.isNotBlank()) {
-            viewModel.sendLinkRequest(contact.id)
-            Toast.makeText(this, getString(R.string.link_request_sent_sms), Toast.LENGTH_SHORT).show()
-            return
-        }
-        if (!contact.email.isNullOrBlank()) {
-            viewModel.sendLinkRequest(contact.id)
-            Toast.makeText(this, getString(R.string.link_request_sent_cloud), Toast.LENGTH_SHORT).show()
-            return
-        }
-        Toast.makeText(this, getString(R.string.link_invite_missing_contact_info), Toast.LENGTH_SHORT).show()
     }
 
     override fun onResume() {
@@ -959,13 +883,9 @@ private fun rememberCancelEmergencyLauncher(
 private const val CANCEL_EMERGENCY_AUTHENTICATORS =
     BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
 
-private fun Contact.primaryPhone(): String? =
-    (listOf(phoneNumber) + additionalPhones).firstOrNull { it.isNotBlank() }
-
 private fun placeCall(
     activity: MainActivity,
     contact: Contact,
-    phoneNumber: String,
     monitor: CallStateMonitor,
     onCallEnded: (Long) -> Unit
 ): Boolean {
@@ -997,7 +917,7 @@ private fun placeCall(
     } else {
         monitor.cancel()
     }
-    val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$phoneNumber"))
+    val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:${contact.phoneNumber}"))
     return try {
         activity.startActivity(intent)
         true

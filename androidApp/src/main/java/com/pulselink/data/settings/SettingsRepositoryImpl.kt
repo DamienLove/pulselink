@@ -40,9 +40,6 @@ private val OWNER_NAME = stringPreferencesKey("owner_name")
 private val IS_BETA_TESTER = booleanPreferencesKey("is_beta_tester")
 private val WIDGET_LAST_CHECK_TIMESTAMP = androidx.datastore.preferences.core.longPreferencesKey("widget_last_check_timestamp")
 private val EMERGENCY_ACTIVE = booleanPreferencesKey("emergency_active")
-private val LAST_KNOWN_PHONE = stringPreferencesKey("last_known_phone")
-private val LAST_KNOWN_EMAIL = stringPreferencesKey("last_known_email")
-private val AUTO_UPDATE_CONTACT_INFO = booleanPreferencesKey("auto_update_contact_info")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -74,7 +71,6 @@ class SettingsRepositoryImpl @Inject constructor(
             deviceId = prefs[DEVICE_ID] ?: PulseLinkSettings().deviceId,
             ownerName = prefs[OWNER_NAME] ?: PulseLinkSettings().ownerName,
             isBetaTester = prefs[IS_BETA_TESTER] ?: PulseLinkSettings().isBetaTester
-            , autoUpdateContactInfo = prefs[AUTO_UPDATE_CONTACT_INFO] ?: PulseLinkSettings().autoUpdateContactInfo
         )
     }
 
@@ -98,7 +94,6 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[DEVICE_ID] = updated.deviceId
             prefs[OWNER_NAME] = updated.ownerName
             prefs[IS_BETA_TESTER] = updated.isBetaTester
-            prefs[AUTO_UPDATE_CONTACT_INFO] = updated.autoUpdateContactInfo
         }
     }
 
@@ -173,32 +168,6 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun isEmergencyActive(): Boolean {
         return dataStore.data.map { it[EMERGENCY_ACTIVE] ?: false }.first()
-    }
-
-    override suspend fun setLastKnownPhone(phone: String?) {
-        dataStore.edit { prefs ->
-            phone?.let { prefs[LAST_KNOWN_PHONE] = it } ?: prefs.remove(LAST_KNOWN_PHONE)
-        }
-    }
-
-    override suspend fun getLastKnownPhone(): String? {
-        return dataStore.data.map { it[LAST_KNOWN_PHONE] }.first()
-    }
-
-    override suspend fun setLastKnownEmail(email: String?) {
-        dataStore.edit { prefs ->
-            email?.let { prefs[LAST_KNOWN_EMAIL] = it } ?: prefs.remove(LAST_KNOWN_EMAIL)
-        }
-    }
-
-    override suspend fun getLastKnownEmail(): String? {
-        return dataStore.data.map { it[LAST_KNOWN_EMAIL] }.first()
-    }
-
-    override suspend fun setAutoUpdateContactInfo(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[AUTO_UPDATE_CONTACT_INFO] = enabled
-        }
     }
 
     private fun settingsValue(prefs: Preferences): PulseLinkSettings {

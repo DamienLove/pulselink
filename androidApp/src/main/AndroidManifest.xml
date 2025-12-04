@@ -41,12 +41,12 @@
         </activity>
 
         <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="${admobAppId}" />
-
-        <meta-data
             android:name="com.google.android.actions"
             android:resource="@xml/actions" />
+
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
 
         <receiver
             android:name=".receiver.PulseLinkSmsReceiver"
@@ -130,18 +130,6 @@
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/pulselink/action" />
             </intent-filter>
         </service>
-
-        <!-- Home screen widget (available in all flavors, incl. Pro) -->
-        <receiver
-            android:name=".widget.PulseLinkWidgetProvider"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_info" />
-        </receiver>
 
     </application>
 </manifest>

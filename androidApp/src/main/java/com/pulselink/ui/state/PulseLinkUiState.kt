@@ -20,17 +20,9 @@ data class PulseLinkUiState(
     val adsAvailable: Boolean = false,
     val onboardingComplete: Boolean = false,
     val dndStatus: DndStatusMessage? = null,
-    val isEmergencyActive: Boolean = false,
-    val autoUpdateContactInfo: Boolean = true,
-    val profileUpdate: ProfileUpdateUiState = ProfileUpdateUiState()
+    val isEmergencyActive: Boolean = false
 )
 
 data class DndStatusMessage(
     @StringRes val messageResId: Int
-)
-
-data class ProfileUpdateUiState(
-    val inProgress: Boolean = false,
-    val resultCount: Int? = null,
-    val error: String? = null
 )

@@ -9,12 +9,4 @@ class Converters {
 
     @TypeConverter
     fun toDirection(value: String): MessageDirection = MessageDirection.valueOf(value)
-
-    @TypeConverter
-    fun fromStringList(list: List<String>?): String? =
-        list?.joinToString("||")
-
-    @TypeConverter
-    fun toStringList(value: String?): List<String> =
-        value?.split("||")?.filter { it.isNotBlank() } ?: emptyList()
 }
