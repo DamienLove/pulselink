@@ -8,9 +8,12 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build.VERSION
+import android.os.Build.VERSION_CODES
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.provider.Telephony
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -111,6 +114,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.pulselink.BuildConfig
+import android.app.role.RoleManager
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -530,6 +534,9 @@ class MainActivity : AppCompatActivity() {
                             ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED &&
                                     (!BuildConfig.ALLOW_SMS_INBOX || ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED)
                         } else true
+                        val defaultSmsGranted = if (BuildConfig.ALLOW_SMS_INBOX) {
+                            Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
+                        } else true
                         val callPermissionGranted = if (BuildConfig.ALLOW_CALL_MONITOR) {
                             ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED &&
                                     ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
@@ -560,6 +567,21 @@ class MainActivity : AppCompatActivity() {
                         )
 
                         val permissionCards = buildList {
+                            if (BuildConfig.ALLOW_SMS_INBOX) {
+                                OnboardingPermissionState(
+                                    icon = Icons.Filled.Call,
+                                    title = "Set as default SMS app",
+                                    description = "Needed so PulseLink can auto-send and receive alert codes.",
+                                    granted = defaultSmsGranted,
+                                    actionLabel = if (defaultSmsGranted) null else "Set",
+                                    onAction = {
+                                        requestDefaultSmsRole(context as Activity)
+                                    },
+                                    manualHelp = if (!defaultSmsGranted) {
+                                        "Tap Set, choose PulseLink, and confirm to make it your SMS app."
+                                    } else null
+                                ).also { add(it) }
+                            }
                             OnboardingPermissionState(
                                 icon = Icons.Filled.Call,
                                 title = "SMS & Call",
@@ -1064,6 +1086,21 @@ private fun CallPreparationDialog() {
 private const val REQUEST_CALL_PERMISSIONS = 2001
 private const val NOTIFICATION_POLICY_DETAIL_ACTION =
     "android.settings.NOTIFICATION_POLICY_ACCESS_DETAIL_SETTINGS"
+
+private fun requestDefaultSmsRole(activity: Activity) {
+    if (!BuildConfig.ALLOW_SMS_INBOX) return
+    val roleManager = activity.getSystemService(RoleManager::class.java)
+    if (VERSION.SDK_INT >= VERSION_CODES.Q && roleManager?.isRoleAvailable(RoleManager.ROLE_SMS) == true) {
+        if (roleManager.isRoleHeld(RoleManager.ROLE_SMS)) return
+        val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_SMS)
+        activity.startActivity(intent)
+    } else {
+        val intent = Intent(Telephony.Sms.Intents.ACTION_CHANGE_DEFAULT).apply {
+            putExtra(Telephony.Sms.Intents.EXTRA_PACKAGE_NAME, activity.packageName)
+        }
+        activity.startActivity(intent)
+    }
+}
 
 private fun openAppSettings(context: android.content.Context) {
     val intent = Intent(
