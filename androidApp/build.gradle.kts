@@ -127,8 +127,8 @@ android {
         applicationId = "com.pulselink"
         minSdk = 26
         targetSdk = 35
-        versionCode = 28
-        versionName = "28"
+        versionCode = 29
+        versionName = "29"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -167,6 +167,15 @@ android {
             buildConfigField("String", "AD_UNIT_REWARDED_INTERSTITIAL", "\"ca-app-pub-5327057757821609/8428571815\"")
             buildConfigField("String", "AD_UNIT_NATIVE_ADVANCED", "\"ca-app-pub-5327057757821609/2153424615\"")
             buildConfigField("String", "AD_UNIT_APP_OPEN", "\"ca-app-pub-5327057757821609/4210125201\"")
+            // Feature monetization flags for clean-app-group default SMS experience
+            buildConfigField("String", "FEATURE_CALLER_ID_PLAN", "\"ads\"")
+            buildConfigField("String", "FEATURE_ACTION_SENDTO_PLAN", "\"free\"")
+            buildConfigField("String", "FEATURE_ESCALATION_PLAN", "\"subscription\"")
+            buildConfigField("String", "FEATURE_AI_SUMMARY_PLAN", "\"subscription\"")
+            buildConfigField("String", "FEATURE_EMERGENCY_WIDGET_PLAN", "\"one_time\"")
+            buildConfigField("boolean", "ALLOW_DIRECT_SMS", "true")
+            buildConfigField("boolean", "ALLOW_SMS_INBOX", "true")
+            buildConfigField("boolean", "ALLOW_CALL_MONITOR", "true")
             resValue("string", "app_name", "PulseLink")
             val targetSigning = when {
                 freeSigningSpec.isConfigured -> freeReleaseConfig
@@ -192,6 +201,14 @@ android {
             buildConfigField("String", "AD_UNIT_REWARDED_INTERSTITIAL", "\"\"")
             buildConfigField("String", "AD_UNIT_NATIVE_ADVANCED", "\"\"")
             buildConfigField("String", "AD_UNIT_APP_OPEN", "\"\"")
+            buildConfigField("String", "FEATURE_CALLER_ID_PLAN", "\"subscription\"")
+            buildConfigField("String", "FEATURE_ACTION_SENDTO_PLAN", "\"free\"")
+            buildConfigField("String", "FEATURE_ESCALATION_PLAN", "\"subscription\"")
+            buildConfigField("String", "FEATURE_AI_SUMMARY_PLAN", "\"subscription\"")
+            buildConfigField("String", "FEATURE_EMERGENCY_WIDGET_PLAN", "\"included\"")
+            buildConfigField("boolean", "ALLOW_DIRECT_SMS", "true")
+            buildConfigField("boolean", "ALLOW_SMS_INBOX", "true")
+            buildConfigField("boolean", "ALLOW_CALL_MONITOR", "true")
             resValue("string", "app_name", "PulseLink Pro")
             val targetSigning = when {
                 proSigningSpec.isConfigured -> proReleaseConfig

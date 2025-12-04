@@ -4,13 +4,17 @@ import android.Manifest
 import android.app.Activity
 import android.app.NotificationManager
 import android.app.PictureInPictureParams
+import android.app.role.RoleManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build.VERSION
+import android.os.Build.VERSION_CODES
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.provider.Telephony
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -209,9 +213,12 @@ class MainActivity : AppCompatActivity() {
                     buildList {
                         add(Manifest.permission.SEND_SMS)
                         add(Manifest.permission.RECEIVE_SMS)
+                        add(Manifest.permission.READ_SMS)
+                        add(Manifest.permission.RECEIVE_MMS)
                         add(Manifest.permission.CALL_PHONE)
-                        add(Manifest.permission.READ_CONTACTS)
+                        add(Manifest.permission.READ_PHONE_STATE)
                         add(Manifest.permission.READ_CALL_LOG)
+                        add(Manifest.permission.READ_CONTACTS)
                         add(Manifest.permission.ACCESS_COARSE_LOCATION)
                         add(Manifest.permission.ACCESS_FINE_LOCATION)
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -521,9 +528,12 @@ class MainActivity : AppCompatActivity() {
 
                         val smsGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED &&
-                                    ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED &&
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
+                        val defaultSmsGranted = Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
                         val callPermissionGranted =
-                            ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED &&
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
                         val locationGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                                     ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -549,6 +559,17 @@ class MainActivity : AppCompatActivity() {
                         )
 
                         val permissionCards = buildList {
+                            OnboardingPermissionState(
+                                icon = Icons.Filled.Call,
+                                title = "Set as default SMS app",
+                                description = "Needed so PulseLink can send/receive texts and alerts automatically.",
+                                granted = defaultSmsGranted,
+                                actionLabel = if (defaultSmsGranted) null else "Set",
+                                onAction = { requestDefaultSmsRole(context as Activity) },
+                                manualHelp = if (!defaultSmsGranted) {
+                                    "Tap Set, choose PulseLink, and confirm."
+                                } else null
+                            ).also { add(it) }
                             OnboardingPermissionState(
                                 icon = Icons.Filled.Call,
                                 title = "SMS & Call",
@@ -1027,6 +1048,20 @@ private fun CallPreparationDialog() {
 private const val REQUEST_CALL_PERMISSIONS = 2001
 private const val NOTIFICATION_POLICY_DETAIL_ACTION =
     "android.settings.NOTIFICATION_POLICY_ACCESS_DETAIL_SETTINGS"
+
+private fun requestDefaultSmsRole(activity: Activity) {
+    val roleManager = activity.getSystemService(RoleManager::class.java)
+    if (VERSION.SDK_INT >= VERSION_CODES.Q && roleManager?.isRoleAvailable(RoleManager.ROLE_SMS) == true) {
+        if (roleManager.isRoleHeld(RoleManager.ROLE_SMS)) return
+        val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_SMS)
+        activity.startActivity(intent)
+    } else {
+        val intent = Intent(Telephony.Sms.Intents.ACTION_CHANGE_DEFAULT).apply {
+            putExtra(Telephony.Sms.Intents.EXTRA_PACKAGE_NAME, activity.packageName)
+        }
+        activity.startActivity(intent)
+    }
+}
 
 private fun openAppSettings(context: android.content.Context) {
     val intent = Intent(
