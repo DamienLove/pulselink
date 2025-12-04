@@ -1,12 +1,12 @@
 package com.pulselink.data.sms
 
-import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.telephony.SmsManager
 import android.util.Log
-import androidx.annotation.RequiresPermission
+import com.pulselink.BuildConfig
 import com.pulselink.domain.model.Contact
 import com.pulselink.receiver.SmsSendReceiver
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -26,7 +26,6 @@ class SmsSender @Inject constructor(
 
     private val pendingRequests = ConcurrentHashMap<String, CompletableDeferred<Boolean>>()
 
-    @RequiresPermission(allOf = [Manifest.permission.SEND_SMS])
     suspend fun sendAlert(
         message: String,
         contacts: List<Contact>,
@@ -44,13 +43,26 @@ class SmsSender @Inject constructor(
         return count
     }
 
-    @RequiresPermission(Manifest.permission.SEND_SMS)
     suspend fun sendSms(
         phoneNumber: String,
         message: String,
         timeoutMillis: Long = DEFAULT_TIMEOUT_MS,
         awaitResult: Boolean = true
     ): Boolean {
+        if (!BuildConfig.ALLOW_DIRECT_SMS) {
+            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.parse("smsto:${Uri.encode(phoneNumber)}")
+                putExtra("sms_body", message)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            return runCatching {
+                context.startActivity(intent)
+                true
+            }.onFailure { error ->
+                Log.e(TAG, "Fallback SMS intent failed for $phoneNumber", error)
+            }.getOrDefault(false)
+        }
+
         val requestId = UUID.randomUUID().toString()
         var deferred: CompletableDeferred<Boolean>? = null
         if (awaitResult) {

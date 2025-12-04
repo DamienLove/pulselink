@@ -112,6 +112,7 @@ android {
     ndkVersion = "28.0.12433562"
 
     flavorDimensions += "tier"
+    flavorDimensions += "experiment"
 
     signingConfigs {
         create("release") { applySpec(releaseSigningSpec, "release", logger) }
@@ -201,6 +202,28 @@ android {
             if (targetSigning != null) {
                 signingConfig = targetSigning
             }
+        }
+
+        create("groupA") {
+            dimension = "experiment"
+            buildConfigField("boolean", "ALLOW_DIRECT_SMS", "false")
+            buildConfigField("boolean", "ALLOW_SMS_INBOX", "false")
+            buildConfigField("boolean", "ALLOW_CALL_MONITOR", "false")
+            buildConfigField("String", "EXPERIMENT_GROUP", "\"A\"")
+        }
+        create("groupB") {
+            dimension = "experiment"
+            buildConfigField("boolean", "ALLOW_DIRECT_SMS", "true")
+            buildConfigField("boolean", "ALLOW_SMS_INBOX", "true")
+            buildConfigField("boolean", "ALLOW_CALL_MONITOR", "true")
+            buildConfigField("String", "EXPERIMENT_GROUP", "\"B\"")
+        }
+        create("groupEsc") {
+            dimension = "experiment"
+            buildConfigField("boolean", "ALLOW_DIRECT_SMS", "true")
+            buildConfigField("boolean", "ALLOW_SMS_INBOX", "false")
+            buildConfigField("boolean", "ALLOW_CALL_MONITOR", "false")
+            buildConfigField("String", "EXPERIMENT_GROUP", "\"Esc\"")
         }
     }
 

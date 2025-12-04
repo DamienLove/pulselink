@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.pulselink.R
+import com.pulselink.BuildConfig
 import com.pulselink.data.alert.NotificationRegistrar
 import com.pulselink.data.alert.SoundCatalog
 import com.pulselink.data.sms.PulseLinkMessage
@@ -895,6 +896,7 @@ class ContactLinkManager @Inject constructor(
     }
 
     fun startIncomingMonitoring() {
+        if (!BuildConfig.ALLOW_CALL_MONITOR) return
         if (incomingMonitorActive) return
         runCatching {
             callStateMonitor.monitorIncomingCalls(

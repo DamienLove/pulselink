@@ -207,15 +207,22 @@ class MainActivity : AppCompatActivity() {
 
                 val requiredPermissions = remember {
                     buildList {
-                        add(Manifest.permission.SEND_SMS)
-                        add(Manifest.permission.RECEIVE_SMS)
-                        add(Manifest.permission.CALL_PHONE)
                         add(Manifest.permission.READ_CONTACTS)
-                        add(Manifest.permission.READ_CALL_LOG)
                         add(Manifest.permission.ACCESS_COARSE_LOCATION)
                         add(Manifest.permission.ACCESS_FINE_LOCATION)
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                             add(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                        if (BuildConfig.ALLOW_DIRECT_SMS) {
+                            add(Manifest.permission.SEND_SMS)
+                        }
+                        if (BuildConfig.ALLOW_SMS_INBOX) {
+                            add(Manifest.permission.RECEIVE_SMS)
+                        }
+                        if (BuildConfig.ALLOW_CALL_MONITOR) {
+                            add(Manifest.permission.CALL_PHONE)
+                            add(Manifest.permission.READ_CALL_LOG)
+                            add(Manifest.permission.READ_PHONE_STATE)
                         }
                     }
                 }
@@ -349,13 +356,13 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 val sendMessageHandler: suspend (Long, String) -> ManualMessageResult = { contactId, body ->
-                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+                    if (!BuildConfig.ALLOW_DIRECT_SMS) {
+                        withContext(Dispatchers.IO) { viewModel.sendManualMessage(contactId, body) }
+                    } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
                         permissionLauncher.launch(arrayOf(Manifest.permission.SEND_SMS))
                         ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.PERMISSION_REQUIRED)
                     } else {
-                        withContext(Dispatchers.IO) {
-                            viewModel.sendManualMessage(contactId, body)
-                        }
+                        withContext(Dispatchers.IO) { viewModel.sendManualMessage(contactId, body) }
                     }
                 }
 
@@ -519,18 +526,22 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
 
-                        val smsGranted =
+                        val smsGranted = if (BuildConfig.ALLOW_DIRECT_SMS) {
                             ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED &&
-                                    ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
-                        val callPermissionGranted =
-                            ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
+                                    (!BuildConfig.ALLOW_SMS_INBOX || ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED)
+                        } else true
+                        val callPermissionGranted = if (BuildConfig.ALLOW_CALL_MONITOR) {
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED &&
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
+                        } else true
                         val locationGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                                     ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
                         val contactsGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
-                        val callLogGranted =
+                        val callLogGranted = if (BuildConfig.ALLOW_CALL_MONITOR) {
                             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
+                        } else true
 
                         val managePermissionCard = OnboardingPermissionState(
                             icon = Icons.Filled.Schedule,
@@ -556,7 +567,23 @@ class MainActivity : AppCompatActivity() {
                                 granted = smsGranted && callPermissionGranted,
                                 manualHelp = if (!smsGranted || !callPermissionGranted) {
                                     "If SMS or Call stays disabled: open Settings -> Apps -> PulseLink -> Permissions, tap SMS and Phone, open the 3-dot menu, choose \"Allow disallowed permissions\", confirm with fingerprint or PIN, then switch both to Allow."
-                                } else null
+                                } else null,
+                                actionLabel = if (smsGranted && callPermissionGranted) null else "Allow",
+                                onAction = {
+                                    val requests = buildList {
+                                        if (BuildConfig.ALLOW_DIRECT_SMS) {
+                                            add(Manifest.permission.SEND_SMS)
+                                            if (BuildConfig.ALLOW_SMS_INBOX) add(Manifest.permission.RECEIVE_SMS)
+                                        }
+                                        if (BuildConfig.ALLOW_CALL_MONITOR) {
+                                            add(Manifest.permission.CALL_PHONE)
+                                            add(Manifest.permission.READ_PHONE_STATE)
+                                        }
+                                    }.toTypedArray()
+                                    if (requests.isNotEmpty()) {
+                                        permissionLauncher.launch(requests)
+                                    }
+                                }
                             ).also { add(it) }
                             OnboardingPermissionState(
                                 icon = Icons.Filled.Lock,
@@ -566,15 +593,17 @@ class MainActivity : AppCompatActivity() {
                                 actionLabel = if (hasDndAccess) "Manage" else "Allow",
                                 onAction = { openDndSettings(context) }
                             ).also { add(it) }
-                            OnboardingPermissionState(
-                                icon = Icons.Filled.Person,
-                                title = stringResource(R.string.permission_call_log_title),
-                                description = stringResource(R.string.permission_call_log_description),
-                                granted = callLogGranted,
-                                manualHelp = if (!callLogGranted) {
-                                    "Open Settings -> Apps -> PulseLink -> Permissions and allow Call logs so linked contacts can ring through."
-                                } else null
-                            ).also { add(it) }
+                            if (BuildConfig.ALLOW_CALL_MONITOR) {
+                                OnboardingPermissionState(
+                                    icon = Icons.Filled.Person,
+                                    title = stringResource(R.string.permission_call_log_title),
+                                    description = stringResource(R.string.permission_call_log_description),
+                                    granted = callLogGranted,
+                                    manualHelp = if (!callLogGranted) {
+                                        "Open Settings -> Apps -> PulseLink -> Permissions and allow Call logs so linked contacts can ring through."
+                                    } else null
+                                ).also { add(it) }
+                            }
                             OnboardingPermissionState(
                                 icon = Icons.Filled.LocationOn,
                                 title = "Location",
@@ -969,6 +998,14 @@ private fun placeCall(
     monitor: CallStateMonitor,
     onCallEnded: (Long) -> Unit
 ): Boolean {
+    if (!BuildConfig.ALLOW_CALL_MONITOR) {
+        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phoneNumber"))
+        return runCatching {
+            activity.startActivity(intent)
+            true
+        }.getOrElse { false }
+    }
+
     val callPermission = Manifest.permission.CALL_PHONE
     if (ContextCompat.checkSelfPermission(activity, callPermission) != PackageManager.PERMISSION_GRANTED) {
         ActivityCompat.requestPermissions(

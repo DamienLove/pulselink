@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Escalation group: outbound SMS/call only -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+
+    <application>
+        <receiver
+            android:name=".receiver.SmsSendReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.pulselink.SMS_SENT" />
+                <action android:name="com.pulselink.SMS_DELIVERED" />
+            </intent-filter>
+        </receiver>
+    </application>
+
+</manifest>
