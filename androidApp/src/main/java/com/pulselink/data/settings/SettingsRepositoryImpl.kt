@@ -43,6 +43,8 @@ private val EMERGENCY_ACTIVE = booleanPreferencesKey("emergency_active")
 private val LAST_KNOWN_PHONE = stringPreferencesKey("last_known_phone")
 private val LAST_KNOWN_EMAIL = stringPreferencesKey("last_known_email")
 private val AUTO_UPDATE_CONTACT_INFO = booleanPreferencesKey("auto_update_contact_info")
+private val SMS_FALLBACK_ENABLED = booleanPreferencesKey("sms_fallback_enabled")
+private val SMS_INBOUND_ENABLED = booleanPreferencesKey("sms_inbound_enabled")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -75,6 +77,8 @@ class SettingsRepositoryImpl @Inject constructor(
             ownerName = prefs[OWNER_NAME] ?: PulseLinkSettings().ownerName,
             isBetaTester = prefs[IS_BETA_TESTER] ?: PulseLinkSettings().isBetaTester
             , autoUpdateContactInfo = prefs[AUTO_UPDATE_CONTACT_INFO] ?: PulseLinkSettings().autoUpdateContactInfo
+            , smsFallbackEnabled = prefs[SMS_FALLBACK_ENABLED] ?: PulseLinkSettings().smsFallbackEnabled
+            , smsInboundEnabled = prefs[SMS_INBOUND_ENABLED] ?: PulseLinkSettings().smsInboundEnabled
         )
     }
 
@@ -99,6 +103,8 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[OWNER_NAME] = updated.ownerName
             prefs[IS_BETA_TESTER] = updated.isBetaTester
             prefs[AUTO_UPDATE_CONTACT_INFO] = updated.autoUpdateContactInfo
+            prefs[SMS_FALLBACK_ENABLED] = updated.smsFallbackEnabled
+            prefs[SMS_INBOUND_ENABLED] = updated.smsInboundEnabled
         }
     }
 
@@ -201,6 +207,18 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun setSmsFallbackEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[SMS_FALLBACK_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setSmsInboundEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[SMS_INBOUND_ENABLED] = enabled
+        }
+    }
+
     private fun settingsValue(prefs: Preferences): PulseLinkSettings {
         return PulseLinkSettings(
             primaryPhrase = prefs[PRIMARY_PHRASE] ?: PulseLinkSettings().primaryPhrase,
@@ -223,6 +241,9 @@ class SettingsRepositoryImpl @Inject constructor(
             deviceId = prefs[DEVICE_ID] ?: PulseLinkSettings().deviceId,
             ownerName = prefs[OWNER_NAME] ?: PulseLinkSettings().ownerName,
             isBetaTester = prefs[IS_BETA_TESTER] ?: PulseLinkSettings().isBetaTester
+            , autoUpdateContactInfo = prefs[AUTO_UPDATE_CONTACT_INFO] ?: PulseLinkSettings().autoUpdateContactInfo
+            , smsFallbackEnabled = prefs[SMS_FALLBACK_ENABLED] ?: PulseLinkSettings().smsFallbackEnabled
+            , smsInboundEnabled = prefs[SMS_INBOUND_ENABLED] ?: PulseLinkSettings().smsInboundEnabled
         )
     }
 }

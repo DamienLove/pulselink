@@ -207,11 +207,7 @@ class MainActivity : AppCompatActivity() {
 
                 val requiredPermissions = remember {
                     buildList {
-                        add(Manifest.permission.SEND_SMS)
-                        add(Manifest.permission.RECEIVE_SMS)
-                        add(Manifest.permission.CALL_PHONE)
                         add(Manifest.permission.READ_CONTACTS)
-                        add(Manifest.permission.READ_CALL_LOG)
                         add(Manifest.permission.ACCESS_COARSE_LOCATION)
                         add(Manifest.permission.ACCESS_FINE_LOCATION)
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -349,14 +345,23 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 val sendMessageHandler: suspend (Long, String) -> ManualMessageResult = { contactId, body ->
-                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
-                        permissionLauncher.launch(arrayOf(Manifest.permission.SEND_SMS))
-                        ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.PERMISSION_REQUIRED)
-                    } else {
-                        withContext(Dispatchers.IO) {
-                            viewModel.sendManualMessage(contactId, body)
-                        }
+                    val result = withContext(Dispatchers.IO) {
+                        viewModel.sendManualMessage(contactId, body)
                     }
+                    when (result) {
+                        is ManualMessageResult.Failure -> when (result.reason) {
+                            ManualMessageResult.Failure.Reason.SMS_OPT_IN_REQUIRED -> {
+                                viewModel.setSmsFallbackEnabled(true)
+                                permissionLauncher.launch(arrayOf(Manifest.permission.SEND_SMS))
+                            }
+                            ManualMessageResult.Failure.Reason.PERMISSION_REQUIRED -> {
+                                permissionLauncher.launch(arrayOf(Manifest.permission.SEND_SMS))
+                            }
+                            else -> Unit
+                        }
+                        else -> Unit
+                    }
+                    result
                 }
 
                 NavHost(navController = navController, startDestination = "splash") {
@@ -519,9 +524,9 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
 
+                        val smsFallbackEnabled = state.settings.smsFallbackEnabled
                         val smsGranted =
-                            ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED &&
-                                    ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED
                         val callPermissionGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
                         val locationGranted =
@@ -529,9 +534,6 @@ class MainActivity : AppCompatActivity() {
                                     ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
                         val contactsGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
-                        val callLogGranted =
-                            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
-
                         val managePermissionCard = OnboardingPermissionState(
                             icon = Icons.Filled.Schedule,
                             title = stringResource(R.string.permission_unused_apps_title),
@@ -551,12 +553,25 @@ class MainActivity : AppCompatActivity() {
                         val permissionCards = buildList {
                             OnboardingPermissionState(
                                 icon = Icons.Filled.Call,
-                                title = "SMS & Call",
-                                description = "Allow PulseLink to send emergency messages and place calls.",
-                                granted = smsGranted && callPermissionGranted,
-                                manualHelp = if (!smsGranted || !callPermissionGranted) {
-                                    "If SMS or Call stays disabled: open Settings -> Apps -> PulseLink -> Permissions, tap SMS and Phone, open the 3-dot menu, choose \"Allow disallowed permissions\", confirm with fingerprint or PIN, then switch both to Allow."
+                                title = "SMS fallback (optional)",
+                                description = "Let PulseLink ask to send an alert via SMS if cloud delivery isn't available.",
+                                granted = smsFallbackEnabled && smsGranted,
+                                actionLabel = if (smsFallbackEnabled && smsGranted) null else "Enable",
+                                onAction = {
+                                    viewModel.setSmsFallbackEnabled(true)
+                                    permissionLauncher.launch(arrayOf(Manifest.permission.SEND_SMS))
+                                },
+                                manualHelp = if (!smsGranted) {
+                                    "Open Settings -> Apps -> PulseLink -> Permissions -> SMS, then allow."
                                 } else null
+                            ).also { add(it) }
+                            OnboardingPermissionState(
+                                icon = Icons.Filled.Call,
+                                title = "Place calls",
+                                description = "Allow PulseLink to dial your trusted contacts from alerts.",
+                                granted = callPermissionGranted,
+                                actionLabel = if (callPermissionGranted) null else "Allow",
+                                onAction = { permissionLauncher.launch(arrayOf(Manifest.permission.CALL_PHONE)) }
                             ).also { add(it) }
                             OnboardingPermissionState(
                                 icon = Icons.Filled.Lock,

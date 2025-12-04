@@ -23,4 +23,6 @@ interface SettingsRepository {
     suspend fun setLastKnownEmail(email: String?)
     suspend fun getLastKnownEmail(): String?
     suspend fun setAutoUpdateContactInfo(enabled: Boolean)
+    suspend fun setSmsFallbackEnabled(enabled: Boolean)
+    suspend fun setSmsInboundEnabled(enabled: Boolean)
 }

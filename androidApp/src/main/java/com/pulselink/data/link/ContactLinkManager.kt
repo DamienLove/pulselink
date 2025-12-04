@@ -795,6 +795,7 @@ class ContactLinkManager @Inject constructor(
         volumeHint: com.pulselink.domain.model.VolumeHint? = null
     ): ManualMessageResult {
         Log.d(TAG, "sendManualMessage: START for contactId=$contactId")
+        val settings = settingsRepository.settings.first()
         var contact = contactRepository.getContact(contactId)
             ?: return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.CONTACT_MISSING)
 
@@ -807,9 +808,13 @@ class ContactLinkManager @Inject constructor(
         }
 
         val hasRealtimeChannel = contact.linkStatus == LinkStatus.LINKED && !contact.remoteDeviceId.isNullOrBlank()
-        val hasSmsMirror = (contact.primaryPhone()?.isNotBlank() == true) && !contact.linkCode.isNullOrBlank()
+        val hasSmsPath = (contact.primaryPhone()?.isNotBlank() == true) && !contact.linkCode.isNullOrBlank()
+        val hasSmsMirror = settings.smsFallbackEnabled && hasSmsPath
 
         if (!hasRealtimeChannel && !hasSmsMirror) {
+            if (hasSmsPath && !settings.smsFallbackEnabled) {
+                return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.SMS_OPT_IN_REQUIRED)
+            }
             Log.w(TAG, "sendManualMessage: FAILED. Reason: NOT_LINKED for contactId=$contactId")
             return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.NOT_LINKED)
         }
@@ -838,6 +843,10 @@ class ContactLinkManager @Inject constructor(
 
             val deviceId = settingsRepository.ensureDeviceId()
             val smsSent = if (hasSmsMirror) {
+                val permissionGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED
+                if (!permissionGranted) {
+                    return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.PERMISSION_REQUIRED)
+                }
                 val payload = SmsCodec.encodeManualMessage(deviceId, contact.linkCode!!, message, urgency, volumeHint)
                 contact.primaryPhone()?.let { smsSender.sendSms(it, payload) } ?: false
             } else {
@@ -865,7 +874,13 @@ class ContactLinkManager @Inject constructor(
                     }
                     ManualMessageResult.Success(overrideApplied = ready)
                 }
-                else -> ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.SMS_FAILED)
+                else -> {
+                    if (hasSmsPath && !settings.smsFallbackEnabled) {
+                        ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.SMS_OPT_IN_REQUIRED)
+                    } else {
+                        ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.SMS_FAILED)
+                    }
+                }
             }
         } catch (error: Exception) {
             Log.e(TAG, "Unable to send manual message for contactId=$contactId", error)

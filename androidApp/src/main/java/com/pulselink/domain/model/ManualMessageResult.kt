@@ -11,6 +11,7 @@ sealed class ManualMessageResult {
             NOT_LINKED,
             SMS_FAILED,
             PERMISSION_REQUIRED,
+            SMS_OPT_IN_REQUIRED,
             UNKNOWN
         }
     }

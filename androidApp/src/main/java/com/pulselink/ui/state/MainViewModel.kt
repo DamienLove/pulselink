@@ -275,6 +275,18 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setSmsFallbackEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setSmsFallbackEnabled(enabled)
+        }
+    }
+
+    fun setSmsInboundEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setSmsInboundEnabled(enabled)
+        }
+    }
+
     fun acceptBetaAgreement(onResult: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
             val name = runCatching { settingsRepository.settings.first().ownerName }

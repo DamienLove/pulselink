@@ -316,6 +316,7 @@ private fun ConversationBody(
                                     ManualMessageResult.Failure.Reason.NOT_LINKED -> "Link this contact before messaging"
                                     ManualMessageResult.Failure.Reason.SMS_FAILED -> "Message failed to send"
                                     ManualMessageResult.Failure.Reason.PERMISSION_REQUIRED -> context.getString(R.string.permission_sms)
+                                    ManualMessageResult.Failure.Reason.SMS_OPT_IN_REQUIRED -> "Enable SMS fallback to reach this contact"
                                     ManualMessageResult.Failure.Reason.UNKNOWN -> "Message failed to send"
                                 }
                             }
