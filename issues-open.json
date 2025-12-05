@@ -1,13 +1,17 @@
 ﻿{
     "repo":  "DamienLove/pulselink",
-    "fetchedAt":  "2025-12-02T15:16:02",
+    "fetchedAt":  "2025-12-05T08:46:01",
     "total_open_issues":  29,
-    "local_updates": [
-        {
-            "on": "2025-12-05",
-            "note": "Beacon UI implemented (inbox/chat/edit-contact), unread/read filtering, trusted badge link path, initials avatars; crash fixed caused by rememberSaveable SnapshotStateList."
-        }
-    ],
+    "local_updates":  [
+                          {
+                              "on":  "2025-12-05",
+                              "note":  "Beacon UI implemented (inbox/chat/edit-contact), unread/read filtering, trusted badge link path, initials avatars; crash fixed caused by rememberSaveable SnapshotStateList."
+                          },
+                          {
+                              "on":  "2025-12-05T08:51:42",
+                              "note":  "Docs: Updated README donation links (GitHub Sponsors) and verified iOS roadmap references to address GitHub issue #70."
+                          }
+                      ],
     "groups":  {
                    "enhancement":  [
                                        {
