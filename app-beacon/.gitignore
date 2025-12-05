@@ -1,0 +1,13 @@
+# Gradle files
+/build
+
+# Local config
+/local.properties
+
+# IntelliJ/Android Studio
+/.idea
+/*.iml
+
+# Generated
+/captures
+/outputs
