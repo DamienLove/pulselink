@@ -30,3 +30,11 @@ Current ad behavior in app:
  - Banners shown only on Home, Settings, Contact Detail, Contact Conversation, and Alert History screens; not globally pinned.
  - App-open ad loads when ads are allowed; shown after onboarding completes and whenever the app resumes (no emergency-aware gating yet).
  - No interstitial/rewarded interstitial display logic is implemented; only the IDs are configured.
+
+Play Console submission notes (v28 user-initiated SMS path):
+ - Permissions: declare SEND/RECEIVE/READ_SMS under "User-initiated communication" (NOT default SMS/assistant/phone); text: "User taps to send/receive alert texts between trusted contacts; app is not a default SMS/Assistant/Phone app."
+ - CALL_PHONE / READ_PHONE_STATE / READ_CALL_LOG: only if kept; declare as call-related, text: "Used to place/track calls to trusted contacts when user initiates an alert call; not a default phone app."
+ - Data Safety: mark SMS as optional data shared; only when user chooses SMS.
+ - Store short description: "Alerts with location to trusted contacts; SMS send/receive optional."
+ - Store full description: "PulseLink sends alerts over secure cloud first. If offline or a contact is SMS-only, PulseLink can send/receive alert texts between trusted contacts (user initiated)." Append "Shows ads" for Free, "No ads" for Pro.
+ - Release notes v28: "Added optional SMS send/receive path for trusted alerts; cloud remains primary."
