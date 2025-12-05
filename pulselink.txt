@@ -30,3 +30,10 @@ Current ad behavior in app:
  - Banners shown only on Home, Settings, Contact Detail, Contact Conversation, and Alert History screens; not globally pinned.
  - App-open ad loads when ads are allowed; shown after onboarding completes and whenever the app resumes (no emergency-aware gating yet).
  - No interstitial/rewarded interstitial display logic is implemented; only the IDs are configured.
+
+Beacon status (2025-12-05):
+ - New modules added: :app-beacon and :core; UI aligned to mockups (inbox, chat, edit contact).
+ - Inbox: row tap opens chat; swipe archive/delete visuals; tabs filter unread/read; trusted badge and avatar open edit-contact; settings cog wired.
+ - Avatars: initials with deterministic colors when no photo; branding icon used for launcher.
+ - Crash fixed (rememberSaveable SnapshotStateList); build succeeds.
+ - Branch for Beacon work: app-beacon-main (pushed).
