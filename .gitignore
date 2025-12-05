@@ -19,6 +19,8 @@ PulseLink/.expo/
 PulseLink/.expo-shared/
 PulseLink/dist/
 PulseLink/.cache/
+!app-beacon/src/main/java/com/pulselink/**
+!app-beacon/src/main/java/com/pulselink/
 
 # Sensitive signing material (must never be deleted manually)
 *.pem
