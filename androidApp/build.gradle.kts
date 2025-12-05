@@ -259,9 +259,10 @@ kapt {
     correctErrorTypes = true
 }
 
-    dependencies {
-        implementation(project(":shared"))
-        implementation(platform("androidx.compose:compose-bom:2024.04.01"))
+dependencies {
+    implementation(project(":shared"))
+    implementation(project(":core"))
+    implementation(platform("androidx.compose:compose-bom:2024.04.01"))
         implementation("com.google.firebase:firebase-auth:23.0.0")
         implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
