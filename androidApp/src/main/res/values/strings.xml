@@ -53,10 +53,10 @@
     <string name="permission_call_log_title">Allow access to call log</string>
     <string name="permission_call_log_description">PulseLink needs this to detect incoming calls from your linked contacts and play emergency tones.</string>
     <string name="permission_battery_opt_title">Battery optimization</string>
-    <string name="permission_battery_opt_description">Allow PulseLink to run unrestricted so alerts work in the background.</string>
+    <string name="permission_battery_opt_description">Allow PulseLink to run unrestricted for reliable alerts.</string>
     <string name="permission_battery_opt_action">Allow</string>
     <string name="permission_unused_apps_title">Keep PulseLink active</string>
-    <string name="permission_unused_apps_description">Switch &quot;Manage app if unused&quot; to Off so Android never pauses PulseLink.</string>
+    <string name="permission_unused_apps_description">Turn off &quot;Manage app if unused&quot; so Android never pauses PulseLink.</string>
     <string name="permission_unused_apps_action">Turn off</string>
     <string name="permission_unused_apps_manual">Open the permissions screen, tap Manage app if unused, and switch it off so PulseLink stays ready.</string>
     <string name="permission_unused_apps_emphasis">Toggle &quot;Manage app if unused&quot; to Off. The switch should be gray before you return.</string>
@@ -135,7 +135,7 @@
     <string name="settings_sign_out_subtitle">Return to the login screen and keep using SMS-only if needed.</string>
     <string name="settings_sign_out_action">Sign out</string>
     <string name="settings_auto_update_contact_title">Auto-update contact info</string>
-    <string name="settings_auto_update_contact_subtitle">Keep phone numbers and emails in sync for linked contacts.</string>
+    <string name="settings_auto_update_contact_subtitle">Keep linked contacts’ phone and email up to date.</string>
     <string name="settings_help_title">Safety help</string>
     <string name="settings_help_location_title">Location sharing</string>
     <string name="settings_help_location_body">Include your latest GPS fix when sending emergency or check-in alerts so your circle can find you quickly. PulseLink only attaches that location to your outgoing alerts.</string>

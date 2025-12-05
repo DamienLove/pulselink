@@ -15,6 +15,7 @@ import com.pulselink.beacon.ui.InboxScreen
 import com.pulselink.beacon.ui.contact.EditContactScreen
 import com.pulselink.beacon.ui.message.ChatScreen
 import com.pulselink.beacon.ui.settings.SettingsScreen
+import com.pulselink.beacon.ui.settings.SettingsHelpScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,11 +53,21 @@ class MainActivity : ComponentActivity() {
                             members = listOf("Anna", "Luca", "Mia", "Ivy"),
                             messages = messages,
                             onBack = { navController.popBackStack() },
-                            onSettings = {}
+                            onSettings = { navController.navigate("settings") }
                         )
                     }
                     composable("settings") {
-                        SettingsScreen(onBack = { navController.popBackStack() })
+                        SettingsScreen(
+                            onBack = { navController.popBackStack() },
+                            onOpenHelp = { navController.navigate("settings/help") },
+                            onOpenFavorites = {
+                                val firstId = sampleThreads.firstOrNull()?.id ?: "me"
+                                navController.navigate("edit/$firstId")
+                            }
+                        )
+                    }
+                    composable("settings/help") {
+                        SettingsHelpScreen(onBack = { navController.popBackStack() })
                     }
                     composable(
                         route = "edit/{threadId}",
