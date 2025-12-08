@@ -83,6 +83,9 @@ interface ContactMessageDao {
     @Query("DELETE FROM contact_messages WHERE contactId = :contactId")
     suspend fun clear(contactId: Long)
 
+    @Query("DELETE FROM contact_messages")
+    suspend fun clearAll()
+
     @Query("SELECT COUNT(*) FROM contact_messages WHERE contactId IN (:contactIds) AND direction = 'INBOUND' AND timestamp > :since")
     suspend fun getUnreadEmergencyCount(contactIds: List<Long>, since: Long): Int
 }

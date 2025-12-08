@@ -224,7 +224,18 @@ class MainViewModel @Inject constructor(
 
     fun signOut() {
         viewModelScope.launch {
-            firebaseAuthManager.signOut()
+            val result = firebaseAuthManager.signOut()
+            if (result.isSuccess) {
+                contactRepository.clear()
+                messageRepository.clearAll()
+                settingsRepository.setLastKnownPhone(null)
+                settingsRepository.setLastKnownEmail(null)
+                lastKnownPhone = null
+                lastKnownEmail = null
+                widgetStateManager.requestWidgetUpdate()
+            } else {
+                Log.w(TAG, "Sign-out failed", result.exceptionOrNull())
+            }
         }
     }
 

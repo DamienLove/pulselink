@@ -118,6 +118,7 @@ class MainActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()
     @Inject lateinit var appOpenAdController: AppOpenAdController
     @Inject lateinit var callStateMonitor: CallStateMonitor
+    private val deepLinkUri: String? by lazy { intent?.getStringExtra(DeepLinkActivity.EXTRA_DEEP_LINK_URI) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -362,9 +363,10 @@ class MainActivity : AppCompatActivity() {
                 NavHost(navController = navController, startDestination = "splash") {
                     composable("splash") {
                         SplashScreen()
-                        LaunchedEffect(authState, state.onboardingComplete) {
+                        LaunchedEffect(authState, state.onboardingComplete, deepLinkUri) {
                             if (authState is AuthState.Loading) return@LaunchedEffect
                             delay(1200)
+                            val deepLink = deepLinkUri // track for future routing
                             val destination = when (authState) {
                                 is AuthState.Authenticated -> if (state.onboardingComplete) "home" else "onboarding_intro"
                                 else -> "login"
@@ -422,7 +424,8 @@ class MainActivity : AppCompatActivity() {
                             onMessageConsumed = loginViewModel::clearTransientMessages
                         )
                         LaunchedEffect(authState, state.onboardingComplete) {
-                            if (authState is AuthState.Authenticated) {
+                            val authedUser = (authState as? AuthState.Authenticated)?.user
+                            if (authedUser != null && !authedUser.isAnonymous) {
                                 val destination = if (state.onboardingComplete) "home" else "onboarding_intro"
                                 navController.navigate(destination) {
                                     popUpTo(0) { inclusive = true }

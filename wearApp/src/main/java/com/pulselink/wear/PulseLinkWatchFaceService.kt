@@ -152,6 +152,7 @@ private class PulseLinkRenderer(
     private val markerTeal = Color.parseColor("#00C7B1")
     private val markerRed = Color.parseColor("#E45757")
     private val markerWhite = Color.parseColor("#ECE7D5")
+    private val markerOutline = Color.parseColor("#C7A45A")
     private val handHour = Color.parseColor("#D8B063")
     private val handMinute = Color.parseColor("#EDE4CE")
     private val glowCenter = Color.parseColor("#55FFC300")
@@ -245,7 +246,7 @@ private class PulseLinkRenderer(
             markerTeal,
             markerWhite
         )
-        val size = radius * 0.08f
+        val size = radius * 0.075f
         paint.style = Paint.Style.FILL
         paint.shader = null
         pattern.forEachIndexed { idx, color ->
@@ -258,8 +259,14 @@ private class PulseLinkRenderer(
             markerPath.lineTo(x, y + size / 2)
             markerPath.lineTo(x - size / 2, y)
             markerPath.close()
-            paint.color = if (ambient) color.desaturate(0.4f) else color
+            val fill = if (ambient) color.desaturate(0.4f) else color
+            paint.color = fill
             canvas.drawPath(markerPath, paint)
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = size * 0.12f
+            paint.color = if (ambient) markerOutline.desaturate(0.5f) else markerOutline
+            canvas.drawPath(markerPath, paint)
+            paint.style = Paint.Style.FILL
         }
     }
 
@@ -294,7 +301,7 @@ private class PulseLinkRenderer(
     }
 
     private fun drawShield(canvas: Canvas, ambient: Boolean) {
-        val size = (radius * 0.55f).toInt()
+        val size = (radius * 0.50f).toInt()
         val left = (cx - size / 2).toInt()
         val top = (cy - size / 2).toInt()
         paint.alpha = if (ambient) 180 else 255
@@ -303,13 +310,13 @@ private class PulseLinkRenderer(
     }
 
     private fun drawCheckIn(canvas: Canvas, ambient: Boolean) {
-        val pillWidth = radius * 0.9f
-        val pillHeight = radius * 0.16f
+        val pillWidth = radius * 0.78f
+        val pillHeight = radius * 0.14f
         checkInRect = RectF(
             cx - pillWidth / 2,
-            cy + radius * 0.35f,
+            cy + radius * 0.52f,
             cx + pillWidth / 2,
-            cy + radius * 0.35f + pillHeight
+            cy + radius * 0.52f + pillHeight
         )
 
         paint.shader = null
@@ -324,13 +331,27 @@ private class PulseLinkRenderer(
         paint.alpha = if (ambient) 150 else 255
         canvas.drawRoundRect(checkInRect, pillHeight / 2, pillHeight / 2, paint)
 
+        // Check icon
+        val iconX = checkInRect.left + pillHeight * 0.75f
+        val iconY = checkInRect.centerY()
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = pillHeight * 0.12f
+        paint.color = Color.parseColor("#D6B060")
+        paint.strokeCap = Paint.Cap.ROUND
+        val tick = Path().apply {
+            moveTo(iconX - pillHeight * 0.20f, iconY)
+            lineTo(iconX - pillHeight * 0.04f, iconY + pillHeight * 0.20f)
+            lineTo(iconX + pillHeight * 0.22f, iconY - pillHeight * 0.18f)
+        }
+        canvas.drawPath(tick, paint)
+
         paint.style = Paint.Style.FILL
         paint.textAlign = Paint.Align.CENTER
         paint.typeface = Typeface.DEFAULT_BOLD
-        paint.textSize = radius * 0.07f
+        paint.textSize = radius * 0.065f
         paint.color = Color.parseColor("#D6B060")
         val textY = checkInRect.centerY() - (paint.descent() + paint.ascent()) / 2
-        canvas.drawText("CHECK IN", checkInRect.centerX(), textY, paint)
+        canvas.drawText("CHECK IN", checkInRect.centerX() + pillHeight * 0.25f, textY, paint)
     }
 
     fun hitTest(x: Float, y: Float): HitRegion {
