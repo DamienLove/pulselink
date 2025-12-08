@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PictureInPictureParams
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -118,6 +119,9 @@ class MainActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()
     @Inject lateinit var appOpenAdController: AppOpenAdController
     @Inject lateinit var callStateMonitor: CallStateMonitor
+    private var onShake: (() -> Unit)? = null
+    private var shakeDetector: com.pulselink.util.ShakeDetector? = null
+    private var sensorManager: android.hardware.SensorManager? = null
     private val deepLinkUri: String? by lazy { intent?.getStringExtra(DeepLinkActivity.EXTRA_DEEP_LINK_URI) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -143,6 +147,9 @@ class MainActivity : AppCompatActivity() {
                 var isPreparingCall by remember { mutableStateOf(false) }
                 val activity = this@MainActivity
                 var isCancelingEmergency by remember { mutableStateOf(false) }
+                LaunchedEffect(Unit) {
+                    sensorManager = getSystemService(Context.SENSOR_SERVICE) as? android.hardware.SensorManager
+                }
                 val cancelEmergencyLauncher = rememberCancelEmergencyLauncher(
                     activity = activity,
                     onAuthenticated = {
@@ -183,6 +190,18 @@ class MainActivity : AppCompatActivity() {
                 var onboardingNameDirty by rememberSaveable { mutableStateOf(false) }
                 var hasHandledOnboardingCompletionAd by rememberSaveable {
                     mutableStateOf(state.onboardingComplete)
+                }
+
+                LaunchedEffect(navController) {
+                    onShake = {
+                        val currentRoute = navController.currentBackStackEntry?.destination?.route
+                        if (currentRoute != "bug_report") {
+                            navController.navigate("bug_report") {
+                                launchSingleTop = true
+                            }
+                            Toast.makeText(context, "Opening bug report…", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 }
 
                 LaunchedEffect(authState) {
@@ -653,6 +672,7 @@ class MainActivity : AppCompatActivity() {
                             isCancelingEmergency = isCancelingEmergency,
                             onAlertsClick = { navController.navigate("alert_history") },
                             showAddLoginPrompt = isSmsOnlyUser,
+                            showShakeHint = true,
                             onAddLoginClick = {
                                 navController.navigate("login") {
                                     launchSingleTop = true
@@ -895,11 +915,27 @@ class MainActivity : AppCompatActivity() {
         if (viewModel.uiState.value.onboardingComplete) {
             appOpenAdController.maybeShow(this)
         }
+        val accelerometer = sensorManager?.getDefaultSensor(android.hardware.Sensor.TYPE_ACCELEROMETER)
+        if (accelerometer != null) {
+            shakeDetector = com.pulselink.util.ShakeDetector(
+                onShake = { runOnUiThread { onShake?.invoke() } }
+            )
+            sensorManager?.registerListener(
+                shakeDetector,
+                accelerometer,
+                android.hardware.SensorManager.SENSOR_DELAY_UI
+            )
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         callStateMonitor.cancel()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        sensorManager?.unregisterListener(shakeDetector)
     }
 
     override fun onUserLeaveHint() {

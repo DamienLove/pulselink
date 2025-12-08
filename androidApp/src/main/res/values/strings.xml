@@ -368,6 +368,8 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="home_add_login_title">Add a login to back up SMS alerts</string>
     <string name="home_add_login_body">Create an email login so you can restore your links if you switch phones.</string>
     <string name="home_add_login_cta">Add login</string>
+    <string name="home_shake_hint_title">Shake to report a bug</string>
+    <string name="home_shake_hint_body">Shake your phone from any screen to open the bug report form.</string>
     <string name="contact_reachability_sms">SMS backup available</string>
     <string name="contact_reachability_online_only">Internet only</string>
     <!-- Widget Strings -->

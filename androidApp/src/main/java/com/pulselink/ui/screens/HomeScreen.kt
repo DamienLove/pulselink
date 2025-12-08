@@ -121,6 +121,7 @@ fun HomeScreen(
     onAlertsClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     showAddLoginPrompt: Boolean = false,
+    showShakeHint: Boolean = false,
     onAddLoginClick: () -> Unit = {},
     onUpgradeClick: () -> Unit = {}
 ) {
@@ -174,6 +175,31 @@ fun HomeScreen(
                 onSettingsClick = onSettingsClick,
                 onUpgradeClick = onUpgradeClick
             )
+            if (showShakeHint) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color(0xFF121520),
+                    tonalElevation = 1.dp,
+                    border = BorderStroke(1.dp, Color(0x3342C2FF))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.home_shake_hint_title),
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = Color.White
+                        )
+                        Text(
+                            text = stringResource(R.string.home_shake_hint_body),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFB9C2E8)
+                        )
+                    }
+                }
+            }
             if (showAddLoginPrompt) {
                 AddLoginCard(
                     modifier = Modifier.fillMaxWidth(),
