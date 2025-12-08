@@ -853,8 +853,10 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                     composable("bug_report") {
+                        val context = LocalContext.current
+                        val bugUrl = remember { viewModel.buildBugReportAutoUri(context).toString() }
                         BugReportWebScreen(
-                            url = MainViewModel.BUG_REPORT_PAGE_URL,
+                            url = bugUrl,
                             onBack = { navController.popBackStack() }
                         )
                     }

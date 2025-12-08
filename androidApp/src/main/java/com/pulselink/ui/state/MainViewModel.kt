@@ -925,6 +925,41 @@ class MainViewModel @Inject constructor(
             .build()
     }
 
+    fun buildBugReportAutoUri(context: Context): Uri {
+        val packageManager = context.packageManager
+        val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0))
+        } else {
+            @Suppress("DEPRECATION")
+            packageManager.getPackageInfo(context.packageName, 0)
+        }
+        val versionName = packageInfo.versionName ?: "unknown"
+        val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            packageInfo.longVersionCode
+        } else {
+            @Suppress("DEPRECATION")
+            packageInfo.versionCode.toLong()
+        }
+        val buildFlavor = if (BuildConfig.ADS_ENABLED) "free" else "pro"
+        val manufacturer = Build.MANUFACTURER.orEmpty()
+        val model = Build.MODEL.orEmpty()
+        val osVersion = Build.VERSION.RELEASE ?: "unknown"
+
+        val builder = Uri.parse(BUG_REPORT_PAGE_URL).buildUpon()
+            .appendQueryParameter("version_name", versionName)
+            .appendQueryParameter("version_code", versionCode.toString())
+            .appendQueryParameter("build_flavor", buildFlavor)
+            .appendQueryParameter("package", context.packageName)
+            .appendQueryParameter("device", "$manufacturer $model")
+            .appendQueryParameter("os_version", "Android $osVersion (API ${Build.VERSION.SDK_INT})")
+
+        firebaseAuthManager.currentUser()?.email?.let { email ->
+            builder.appendQueryParameter("reporter", email)
+        }
+
+        return builder.build()
+    }
+
     private fun ensureSoundDefaults(settings: com.pulselink.domain.model.PulseLinkSettings): com.pulselink.domain.model.PulseLinkSettings {
         var updatedSettings = settings
         if (settings.emergencyProfile.soundKey == null) {
