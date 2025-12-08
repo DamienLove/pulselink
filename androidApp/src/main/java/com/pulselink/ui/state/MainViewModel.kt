@@ -960,6 +960,36 @@ class MainViewModel @Inject constructor(
         return builder.build()
     }
 
+    fun buildBugReportGoogleFormUri(context: Context): Uri {
+        val packageManager = context.packageManager
+        val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0))
+        } else {
+            @Suppress("DEPRECATION")
+            packageManager.getPackageInfo(context.packageName, 0)
+        }
+        val versionName = packageInfo.versionName ?: "unknown"
+        val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            packageInfo.longVersionCode
+        } else {
+            @Suppress("DEPRECATION")
+            packageInfo.versionCode.toLong()
+        }
+        val buildFlavor = if (BuildConfig.ADS_ENABLED) "PRO" else "FREE"
+        val manufacturer = Build.MANUFACTURER.orEmpty()
+        val model = Build.MODEL.orEmpty()
+        val osVersion = Build.VERSION.RELEASE ?: "unknown"
+        val deviceString = "$manufacturer $model / Android $osVersion (API ${Build.VERSION.SDK_INT})"
+        val versionString = "$versionName ($versionCode)"
+
+        return Uri.parse(GOOGLE_FORM_BASE).buildUpon()
+            .appendQueryParameter("usp", "pp_url")
+            .appendQueryParameter(ENTRY_VERSION, versionString)
+            .appendQueryParameter(ENTRY_DEVICE, deviceString)
+            .appendQueryParameter(ENTRY_FLAVOR, buildFlavor)
+            .build()
+    }
+
     private fun ensureSoundDefaults(settings: com.pulselink.domain.model.PulseLinkSettings): com.pulselink.domain.model.PulseLinkSettings {
         var updatedSettings = settings
         if (settings.emergencyProfile.soundKey == null) {
@@ -1034,6 +1064,10 @@ class MainViewModel @Inject constructor(
         private const val TAG = "MainViewModel"
         // Public bug portal (no GitHub login required)
         const val BUG_REPORT_PAGE_URL = "https://damiennichols.com/report-bug/"
+        private const val GOOGLE_FORM_BASE = "https://docs.google.com/forms/d/e/1FAIpQLSfo_Y1zppa4Bza7-piAPB1emNasAnWq4zmxqECVuFp7OLPmgQ/viewform"
+        private const val ENTRY_VERSION = "entry.1071567583"
+        private const val ENTRY_DEVICE = "entry.736364424"
+        private const val ENTRY_FLAVOR = "entry.555050188"
         private const val COLLECTION_USERS = "users"
         private const val COLLECTION_TRUSTED_CONTACTS = "trustedContacts"
         const val BETA_AGREEMENT_VERSION = "2025-11-13"

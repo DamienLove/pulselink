@@ -874,7 +874,7 @@ class MainActivity : AppCompatActivity() {
                     }
                     composable("bug_report") {
                         val context = LocalContext.current
-                        val bugUrl = remember { viewModel.buildBugReportAutoUri(context).toString() }
+                        val bugUrl = remember { viewModel.buildBugReportGoogleFormUri(context).toString() }
                         BugReportWebScreen(
                             url = bugUrl,
                             onBack = { navController.popBackStack() }
