@@ -830,14 +830,16 @@ class ContactLinkManager @Inject constructor(
             } else {
                 false
             }
+
+            val deviceId = settingsRepository.ensureDeviceId()
+            val shouldUseSms = !realtimeSent && hasSmsMirror
             if (!realtimeSent && hasSmsMirror) {
                 Log.d(TAG, "sendManualMessage: Realtime send failed, falling back to SMS for contactId=$contactId.")
             } else if (realtimeSent && hasSmsMirror) {
-                Log.d(TAG, "sendManualMessage: Realtime send succeeded; mirroring via SMS for contactId=$contactId.")
+                Log.d(TAG, "sendManualMessage: Realtime send succeeded; skipping SMS mirror for contactId=$contactId.")
             }
 
-            val deviceId = settingsRepository.ensureDeviceId()
-            val smsSent = if (hasSmsMirror) {
+            val smsSent = if (shouldUseSms) {
                 val payload = SmsCodec.encodeManualMessage(deviceId, contact.linkCode!!, message, urgency, volumeHint)
                 contact.primaryPhone()?.let { smsSender.sendSms(it, payload) } ?: false
             } else {
