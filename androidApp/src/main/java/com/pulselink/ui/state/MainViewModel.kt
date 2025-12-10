@@ -17,6 +17,7 @@ import com.pulselink.data.assistant.NaturalLanguageCommandProcessor
 import com.pulselink.data.assistant.VoiceCommandResult
 import com.pulselink.data.alert.SoundCatalog
 import com.pulselink.data.link.ContactLinkManager
+import com.pulselink.data.remoteconfig.RemoteConfigService
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ContactMessage
 import com.pulselink.domain.model.EscalationTier
@@ -65,6 +66,7 @@ class MainViewModel @Inject constructor(
     private val naturalLanguageCommandProcessor: NaturalLanguageCommandProcessor,
     private val firebaseAuthManager: FirebaseAuthManager,
     private val firestore: FirebaseFirestore,
+    private val remoteConfigService: RemoteConfigService,
     private val widgetStateManager: WidgetStateManager
 ) : ViewModel() {
 
@@ -76,6 +78,7 @@ class MainViewModel @Inject constructor(
     private val checkInSounds = soundCatalog.checkInOptions()
     private val callSounds = soundCatalog.callOptions()
     private val profileUpdate = MutableStateFlow(ProfileUpdateUiState())
+    private val remoteRealtimeEnabled = MutableStateFlow(false)
     private var lastKnownPhone: String? = null
     private var lastKnownEmail: String? = null
 
@@ -85,6 +88,17 @@ class MainViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            settingsRepository.settings.collect { settings ->
+                linkManager.setRealtimeEnabled(settings.realtimeEnabled && remoteRealtimeEnabled.value)
+            }
+        }
+        viewModelScope.launch {
+            remoteConfigService.fetchAndActivate()
+            remoteRealtimeEnabled.value = remoteConfigService.isRealtimeEnabled()
+            val settings = settingsRepository.settings.first()
+            linkManager.setRealtimeEnabled(settings.realtimeEnabled && remoteRealtimeEnabled.value)
+        }
+        viewModelScope.launch {
             lastKnownPhone = settingsRepository.getLastKnownPhone()
             lastKnownEmail = settingsRepository.getLastKnownEmail()
         }
@@ -92,7 +106,7 @@ class MainViewModel @Inject constructor(
             pruneLocalUnreachable()
         }
         viewModelScope.launch {
-            val baseState = combine(
+            val baseStateNoAuth = combine(
                 settingsRepository.settings,
                 contactRepository.observeContacts(),
                 alertRepository.observeRecent(10),
@@ -103,7 +117,6 @@ class MainViewModel @Inject constructor(
                 val adsAvailable = BuildConfig.ADS_ENABLED
                 val showAds = adsAvailable && !normalizedSettings.proUnlocked
                 val isProUser = normalizedSettings.proUnlocked || !adsAvailable
-
                 PulseLinkUiState(
                     settings = normalizedSettings,
                     contacts = contacts,
@@ -117,8 +130,13 @@ class MainViewModel @Inject constructor(
                     isProUser = isProUser,
                     adsAvailable = adsAvailable,
                     onboardingComplete = normalizedSettings.onboardingComplete,
-                    autoUpdateContactInfo = normalizedSettings.autoUpdateContactInfo
+                    autoUpdateContactInfo = normalizedSettings.autoUpdateContactInfo,
+                    userEmail = lastKnownEmail
                 )
+            }
+            val baseState = combine(baseStateNoAuth, firebaseAuthManager.authState) { state, auth ->
+                val email = (auth as? AuthState.Authenticated)?.user?.email ?: lastKnownEmail
+                state.copy(userEmail = email)
             }
             val withProfile = combine(baseState, profileUpdate) { state, profile ->
                 state.copy(profileUpdate = profile)
@@ -248,6 +266,7 @@ class MainViewModel @Inject constructor(
             }
             syncContactsFromCloud(user, forcePushLocal = true)
             linkManager.syncLinksOnLogin()
+            linkManager.checkPendingWrites()
         }
     }
 
@@ -283,6 +302,13 @@ class MainViewModel @Inject constructor(
     fun setAutoUpdateContactInfo(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setAutoUpdateContactInfo(enabled)
+        }
+    }
+
+    fun setRealtimeMessagingEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setRealtimeEnabled(enabled)
+            linkManager.setRealtimeEnabled(enabled && remoteRealtimeEnabled.value)
         }
     }
 
@@ -527,6 +553,11 @@ class MainViewModel @Inject constructor(
                     ).await()
                 }
             }
+            // Sync phone number
+            val remotePhone = snapshot.getString("phoneNumber")
+            if (remotePhone.isNullOrBlank() && !user.phoneNumber.isNullOrBlank()) {
+                profileRef.set(mapOf("phoneNumber" to user.phoneNumber), SetOptions.merge()).await()
+            }
             if (remoteDeviceId.isNullOrBlank() || remoteDeviceId != deviceId) {
                 profileRef.set(mapOf("deviceId" to deviceId), SetOptions.merge()).await()
             }
@@ -545,6 +576,9 @@ class MainViewModel @Inject constructor(
             user.email?.let { email ->
                 payload["email"] = email
                 payload["emailLowercase"] = email.lowercase()
+            }
+            user.phoneNumber?.let { phone ->
+                payload["phoneNumber"] = phone
             }
             firestore.collection("users").document(user.uid)
                 .set(payload, SetOptions.merge())
@@ -594,13 +628,14 @@ class MainViewModel @Inject constructor(
                     remoteUid = doc.getString("remoteUid")
                 )
             }
-            val enrichedRemote = remoteContacts.map { contact ->
-                if (contact.linkCode.isNullOrBlank()) {
-                    contact
-                } else {
-                    resolveLinkFromDoc(contact, contact.linkCode, user.uid)
+                val enrichedRemote = remoteContacts.map { contact ->
+                    val preferredCode = contact.linkCode ?: normalizeEmail(contact.email)
+                    if (preferredCode.isNullOrBlank()) {
+                        contact
+                    } else {
+                        resolveLinkFromDoc(contact, preferredCode, user.uid)
+                    }
                 }
-            }
 
             if (enrichedRemote.isEmpty() && localContacts.isEmpty()) {
                 return@runCatching

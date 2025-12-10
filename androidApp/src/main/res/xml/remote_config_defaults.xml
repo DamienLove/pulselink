@@ -4,4 +4,8 @@
         <key>example_feature_enabled</key>
         <value>false</value>
     </entry>
+    <entry>
+        <key>realtime_enabled</key>
+        <value>false</value>
+    </entry>
 </defaultsMap>

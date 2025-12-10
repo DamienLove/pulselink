@@ -122,7 +122,7 @@ interface BlockedContactDao {
 
 @Database(
     entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -165,6 +165,90 @@ abstract class PulseLinkDatabase : RoomDatabase() {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE contacts ADD COLUMN additionalPhones TEXT")
                 database.execSQL("ALTER TABLE contacts ADD COLUMN additionalEmails TEXT")
+            }
+        }
+
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Rebuild contacts table to ensure all columns exist with correct defaults.
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS contacts_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        displayName TEXT NOT NULL,
+                        phoneNumber TEXT NOT NULL DEFAULT '',
+                        email TEXT,
+                        additionalPhones TEXT NOT NULL DEFAULT '',
+                        additionalEmails TEXT NOT NULL DEFAULT '',
+                        escalationTier TEXT NOT NULL DEFAULT 'EMERGENCY',
+                        includeLocation INTEGER NOT NULL DEFAULT 1,
+                        autoCall INTEGER NOT NULL DEFAULT 0,
+                        emergencySoundKey TEXT,
+                        checkInSoundKey TEXT,
+                        cameraEnabled INTEGER NOT NULL DEFAULT 0,
+                        contactOrder INTEGER NOT NULL DEFAULT 0,
+                        linkStatus TEXT NOT NULL DEFAULT 'NONE',
+                        linkCode TEXT,
+                        remoteDeviceId TEXT,
+                        allowRemoteOverride INTEGER NOT NULL DEFAULT 0,
+                        allowRemoteSoundChange INTEGER NOT NULL DEFAULT 0,
+                        pendingApproval INTEGER NOT NULL DEFAULT 0,
+                        remoteUid TEXT,
+                        remoteLastSeen INTEGER,
+                        remotePresence TEXT NOT NULL DEFAULT 'UNKNOWN'
+                    )
+                    """.trimIndent()
+                )
+
+                val existingColumns = buildSet<String> {
+                    database.query("PRAGMA table_info(contacts)").use { cursor ->
+                        val nameIndex = cursor.getColumnIndex("name")
+                        while (cursor.moveToNext()) {
+                            if (nameIndex >= 0) add(cursor.getString(nameIndex))
+                        }
+                    }
+                }
+
+                fun expr(column: String, defaultValue: String): String =
+                    if (existingColumns.contains(column)) column else defaultValue
+
+                val insertSql = """
+                    INSERT INTO contacts_new (
+                        id, displayName, phoneNumber, email, additionalPhones, additionalEmails,
+                        escalationTier, includeLocation, autoCall, emergencySoundKey, checkInSoundKey,
+                        cameraEnabled, contactOrder, linkStatus, linkCode, remoteDeviceId,
+                        allowRemoteOverride, allowRemoteSoundChange, pendingApproval, remoteUid,
+                        remoteLastSeen, remotePresence
+                    )
+                    SELECT
+                        ${expr("id", "NULL")},
+                        ${expr("displayName", "''")},
+                        ${expr("phoneNumber", "''")},
+                        ${expr("email", "NULL")},
+                        ${expr("additionalPhones", "''")},
+                        ${expr("additionalEmails", "''")},
+                        ${expr("escalationTier", "'EMERGENCY'")},
+                        ${expr("includeLocation", "1")},
+                        ${expr("autoCall", "0")},
+                        ${expr("emergencySoundKey", "NULL")},
+                        ${expr("checkInSoundKey", "NULL")},
+                        ${expr("cameraEnabled", "0")},
+                        ${expr("contactOrder", "0")},
+                        ${expr("linkStatus", "'NONE'")},
+                        ${expr("linkCode", "NULL")},
+                        ${expr("remoteDeviceId", "NULL")},
+                        ${expr("allowRemoteOverride", "0")},
+                        ${expr("allowRemoteSoundChange", "0")},
+                        ${expr("pendingApproval", "0")},
+                        ${expr("remoteUid", "NULL")},
+                        ${expr("remoteLastSeen", "NULL")},
+                        ${expr("remotePresence", "'UNKNOWN'")}
+                    FROM contacts
+                """.trimIndent()
+
+                database.execSQL(insertSql)
+                database.execSQL("DROP TABLE contacts")
+                database.execSQL("ALTER TABLE contacts_new RENAME TO contacts")
             }
         }
     }

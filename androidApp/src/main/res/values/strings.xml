@@ -135,7 +135,9 @@
     <string name="settings_sign_out_subtitle">Return to the login screen and keep using SMS-only if needed.</string>
     <string name="settings_sign_out_action">Sign out</string>
     <string name="settings_auto_update_contact_title">Auto-update contact info</string>
-    <string name="settings_auto_update_contact_subtitle">Keep linked contacts’ phone and email up to date.</string>
+    <string name="settings_auto_update_contact_subtitle">Keep linked contacts\' phone and email up to date.</string>
+    <string name="settings_realtime_title">Use Firebase realtime (beta)</string>
+    <string name="settings_realtime_subtitle">Send links, messages, and call prep over data when available. Turn off to force SMS fallback.</string>
     <string name="settings_help_title">Safety help</string>
     <string name="settings_help_location_title">Location sharing</string>
     <string name="settings_help_location_body">Include your latest GPS fix when sending emergency or check-in alerts so your circle can find you quickly. PulseLink only attaches that location to your outgoing alerts.</string>

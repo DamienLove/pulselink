@@ -30,11 +30,14 @@ class RemoteConfigService @Inject constructor() {
         }
     }
 
-    fun isExampleFeatureEnabled(): Boolean {
-        return remoteConfig.getBoolean("example_feature_enabled")
-    }
+    fun isExampleFeatureEnabled(): Boolean =
+        remoteConfig.getBoolean("example_feature_enabled")
+
+    fun isRealtimeEnabled(): Boolean =
+        remoteConfig.getBoolean(PARAM_REALTIME_ENABLED)
 
     companion object {
         private const val TAG = "RemoteConfigService"
+        private const val PARAM_REALTIME_ENABLED = "realtime_enabled"
     }
 }

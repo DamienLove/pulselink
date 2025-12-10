@@ -58,6 +58,7 @@ fun SettingsScreen(
     onRequestUnusedApps: () -> Unit,
     onToggleAutoAllowRemoteSoundChange: (Boolean) -> Unit,
     onToggleAutoUpdateContactInfo: (Boolean) -> Unit,
+    onToggleRealtime: (Boolean) -> Unit,
     onSyncNow: () -> Unit,
     profileUpdateState: ProfileUpdateUiState,
     onBroadcastProfileUpdate: () -> Unit,
@@ -157,6 +158,12 @@ fun SettingsScreen(
                 checked = settings.autoUpdateContactInfo,
                 onCheckedChange = onToggleAutoUpdateContactInfo
             )
+            SettingsToggleRow(
+                title = stringResource(id = R.string.settings_realtime_title),
+                subtitle = stringResource(id = R.string.settings_realtime_subtitle),
+                checked = settings.realtimeEnabled,
+                onCheckedChange = onToggleRealtime
+            )
             SettingsActionRow(
                 title = stringResource(id = R.string.settings_sync_contacts_title),
                 subtitle = stringResource(id = R.string.settings_sync_contacts_subtitle),
@@ -234,6 +241,15 @@ fun SettingsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp, start = 4.dp, end = 4.dp, bottom = 4.dp)
+            )
+            Text(
+                text = "Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp, start = 4.dp, end = 4.dp, bottom = 8.dp),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
         }
     }

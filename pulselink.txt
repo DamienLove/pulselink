@@ -1,39 +1,39 @@
-Branch: feature/kmp-ios-backend-relay (based on Beta)
-Recent builds (this branch):
+Branch: bugfix/app-beacon-qa (based on Beta); Play target v36 (v28 currently in store)
+Recent builds:
+ - 2025-12-10: .\gradlew bundleFreeRelease bundleProRelease (versionCode 36 / versionName 36). Realtime toggle now visible in release; default off; requires Remote Config realtime_enabled=true + in-app toggle to use Firebase, otherwise SMS fallback.
+ - 2025-12-08: ./gradlew :androidApp:compileFreeDebugKotlin ?
  - 2025-12-02: .\gradlew bundleFreeRelease bundleProRelease (versionCode 26 / versionName 26) using updated google-services.json from Free-Certs and PRO-CERTS; AlertRelayClient Ktor isSuccess import fixed.
- - .\gradlew assembleFreeDebug ✅ (KMP shared module + Android build still green)
-CI setup:
- - Added codemagic.yaml (workflow: ios-simulator-kmp). Steps: KMP podspec, XcodeGen, pod install, xcodebuild for simulator, zip artifact.
- - XcodeGen spec at iosApp/project.yml; Info.plist scaffolded under iosApp/PulseLinkiOS.
- - Latest fixes: chmod gradlew; allow project repos; add Kotlin native repo; Cocoapods podspec name/version; syncFramework (iphonesimulator/arm64 Debug) before pod install; workspace path now PulseLinkiOS.xcworkspace (cd iosApp); scheme is PulseLinkiOS.
-  - Simulator packaging uses derivedData at $CM_BUILD_DIR/derivedData; looks for PulseLinkiOS.app there.
-  - Shared client now tolerates non-2xx and mock baseUrl; default iOS status shows error instead of crash.
-  - Podfile removes [CP-User] Build Shared phase; CI prebuilds via :shared:syncFramework (iphonesimulator/arm64 Debug) before pod install so Xcode doesn’t call Gradle.
-  - Codemagic steps (current): chmod + symlink gradlew; :shared:podspec; :shared:generateDummyFramework; XcodeGen; pod install (with build phase removed); xcodebuild Debug iphonesim (derivedData=$CM_BUILD_DIR/derivedData); zip PulseLinkiOS.app.
 
-Ad configuration (free flavor):
+CI setup (Codemagic iOS KMP):
+ - Workflow ios-simulator-kmp: chmod/symlink gradlew → :shared:podspec → :shared:generateDummyFramework → XcodeGen (iosApp/project.yml) → pod install (CP-User build phase removed) → xcodebuild Debug iphonesim (derivedData=/derivedData) → zip PulseLinkiOS.app.
+ - Workspace: iosApp/PulseLinkiOS.xcworkspace; scheme PulseLinkiOS; Info.plist scaffolded. Shared client now tolerates non-2xx and mock baseUrl.
+
+Ads (free flavor):
  - AdMob app id: ca-app-pub-5327057757821609~9533221188
- - Banner unit: ca-app-pub-5327057757821609/3955684775
- - Interstitial unit: ca-app-pub-5327057757821609/3170992810
- - Rewarded interstitial unit: ca-app-pub-5327057757821609/8428571815
- - Native advanced unit: ca-app-pub-5327057757821609/2153424615
- - App open unit: ca-app-pub-5327057757821609/4210125201
- - Ads disabled for pro flavor (MobileAdsInitProvider removed; build config ADS_ENABLED=false).
-
-Ad units quick list (free):
- - native-advanced = ca-app-pub-5327057757821609/2153424615
- - rewards-interstitual = ca-app-pub-5327057757821609/8428571815
- - banner = ca-app-pub-5327057757821609/3955684775
- - app-open = ca-app-pub-5327057757821609/4210125201
-
-Current ad behavior in app:
- - Banners shown only on Home, Settings, Contact Detail, Contact Conversation, and Alert History screens; not globally pinned.
- - App-open ad loads when ads are allowed; shown after onboarding completes and whenever the app resumes (no emergency-aware gating yet).
- - No interstitial/rewarded interstitial display logic is implemented; only the IDs are configured.
+ - Banner: ca-app-pub-5327057757821609/3955684775
+ - Interstitial: ca-app-pub-5327057757821609/3170992810
+ - Rewarded interstitial: ca-app-pub-5327057757821609/8428571815
+ - Native advanced: ca-app-pub-5327057757821609/2153424615
+ - App open: ca-app-pub-5327057757821609/4210125201
+ - Ads disabled for pro flavor (ADS_ENABLED=false; MobileAdsInitProvider removed).
+Current behavior: banners only on Home/Settings/Contact Detail/Conversation/Alert History; app-open ad after onboarding + on resume; no interstitial/rewarded logic implemented yet.
 
 Beacon status (2025-12-05):
- - New modules added: :app-beacon and :core; UI aligned to mockups (inbox, chat, edit contact).
- - Inbox: row tap opens chat; swipe archive/delete visuals; tabs filter unread/read; trusted badge and avatar open edit-contact; settings cog wired.
- - Avatars: initials with deterministic colors when no photo; branding icon used for launcher.
- - Crash fixed (rememberSaveable SnapshotStateList); build succeeds.
- - Branch for Beacon work: app-beacon-main (pushed).
+ - Modules: :app-beacon, :core; inbox/chat/edit contact match mockups; swipe archive/delete visuals; tabs filter unread/read; trusted badge + avatar tap to edit; settings cog wired.
+ - Avatars: deterministic initials colors; branding icon for launcher.
+ - Crash fixed (rememberSaveable SnapshotStateList); builds green. Branch app-beacon-main (pushed).
+
+Realtime comms (2025-12-10):
+ - Toggle in Settings (all builds) controls realtime; Remote Config flag realtime_enabled must also be true. If either is false, app forces SMS.
+ - LinkChannelService can stop listeners entirely when realtime is off (avoids PERMISSION_DENIED spam during rule hardening).
+ - Firestore rules required: auth read/write /linkChannels/{channelId}/messages, /links/{code}, /linkEmailInvites/{docId}; auth read owner-write /users/{uid} and /users/{uid}/trustedContacts/{contactId}; allow queries on users by emailLowercase/phoneNumber for linking.
+ - v36 keeps SMS fallback for link requests/messages/call prep so users aren’t blocked while realtime rolls out.
+
+Bug reporting:
+ - Shake-to-report enabled (MainActivity + util/ShakeDetector); hint card on Home. Opens Google Form prefilled with build/device/flavor.
+
+Deep links / domains:
+ - App links configured for pulselink.damiennichols.com and pulselink.page.link. pulselink.app is unrelated.
+
+Widget:
+ - Home widget temporarily disabled in manifest to avoid "can't load widget" while watch UI is reworked.

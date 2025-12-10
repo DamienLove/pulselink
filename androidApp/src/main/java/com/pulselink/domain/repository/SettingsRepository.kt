@@ -23,4 +23,5 @@ interface SettingsRepository {
     suspend fun setLastKnownEmail(email: String?)
     suspend fun getLastKnownEmail(): String?
     suspend fun setAutoUpdateContactInfo(enabled: Boolean)
+    suspend fun setRealtimeEnabled(enabled: Boolean)
 }

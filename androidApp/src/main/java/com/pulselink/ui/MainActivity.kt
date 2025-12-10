@@ -852,6 +852,7 @@ class MainActivity : AppCompatActivity() {
                             onRequestUnusedApps = { openUnusedAppRestrictionsSettings(context) },
                             onToggleAutoAllowRemoteSoundChange = viewModel::setAutoAllowRemoteSoundChange,
                             onToggleAutoUpdateContactInfo = viewModel::setAutoUpdateContactInfo,
+                            onToggleRealtime = viewModel::setRealtimeMessagingEnabled,
                             onSyncNow = viewModel::syncContactsNow,
                             profileUpdateState = state.profileUpdate,
                             onBroadcastProfileUpdate = viewModel::broadcastProfileToContacts,
