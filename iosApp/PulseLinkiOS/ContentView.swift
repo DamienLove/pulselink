@@ -313,9 +313,7 @@ private struct SettingsTab: View {
     var body: some View {
         Form {
             Section("Relay") {
-                TextField("Relay base URL", text: $baseUrlDraft, prompt: Text("https://example.com"))
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
+                TextField("Relay base URL", text: $baseUrlDraft)
                 Button("Apply URL") {
                     let trimmed = baseUrlDraft.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !trimmed.isEmpty {
