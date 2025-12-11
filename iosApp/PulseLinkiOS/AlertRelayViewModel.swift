@@ -48,11 +48,14 @@ final class AlertRelayViewModel: ObservableObject {
 @Published var overrideDND: Bool = true
 @Published var maxVolumeOnUrgent: Bool = true
 @Published var baseUrl: String
+    @Published var triggerPin: String {
+        didSet { UserDefaults.standard.set(triggerPin, forKey: Self.pinDefaultsKey) }
+    }
 
     private let client: AlertRelayClient
     private let conversationProvider: ConversationProvider
     private var armingTask: Task<Void, Never>?
-    private let pinCode = "1234" // demo PIN; replace with secure storage
+    private static let pinDefaultsKey = "pulselink.triggerPin"
 
     init(baseUrl: String = AlertRelay.shared.DEFAULT_BASE_URL) {
         self.baseUrl = baseUrl
@@ -71,6 +74,7 @@ final class AlertRelayViewModel: ObservableObject {
         } else {
             conversationProvider = InMemoryConversationProvider()
         }
+        triggerPin = UserDefaults.standard.string(forKey: Self.pinDefaultsKey) ?? "1234"
         seedSampleData()
         Task { await loadConversations() }
     }
@@ -126,11 +130,17 @@ final class AlertRelayViewModel: ObservableObject {
 
     func cancelEmergency(withPin pin: String) -> Bool {
         guard emergencyState != .idle else { return true }
-        guard pin == pinCode else { return false }
+        guard pin == triggerPin else { return false }
         armingTask?.cancel()
         emergencyState = .idle
         statusText = "Emergency canceled"
         return true
+    }
+
+    func updateTriggerPin(_ newPin: String) {
+        let trimmed = newPin.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        triggerPin = trimmed
     }
 
     func cancelEmergencyBypassPin() {

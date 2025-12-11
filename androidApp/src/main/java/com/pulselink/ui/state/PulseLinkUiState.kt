@@ -22,7 +22,8 @@ data class PulseLinkUiState(
     val dndStatus: DndStatusMessage? = null,
     val isEmergencyActive: Boolean = false,
     val autoUpdateContactInfo: Boolean = true,
-    val profileUpdate: ProfileUpdateUiState = ProfileUpdateUiState()
+    val profileUpdate: ProfileUpdateUiState = ProfileUpdateUiState(),
+    val userEmail: String? = null
 )
 
 data class DndStatusMessage(

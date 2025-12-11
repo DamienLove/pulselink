@@ -308,23 +308,37 @@ private struct ConversationView: View {
 private struct SettingsTab: View {
     @ObservedObject var viewModel: AlertRelayViewModel
     @State private var baseUrlDraft: String = ""
+    @State private var pinDraft: String = ""
 
     var body: some View {
         Form {
             Section("Relay") {
-                TextField("Relay base URL", text: Binding(
-                    get: { baseUrlDraft.isEmpty ? viewModel.baseUrl : baseUrlDraft },
-                    set: { baseUrlDraft = $0 }
-                ), prompt: Text("https://example.com"))
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
+                TextField("Relay base URL", text: $baseUrlDraft)
                 Button("Apply URL") {
-                    viewModel.baseUrl = baseUrlDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let trimmed = baseUrlDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        viewModel.baseUrl = trimmed
+                    } else {
+                        baseUrlDraft = viewModel.baseUrl
+                    }
                 }
             }
             Section("Alerts") {
                 Toggle("Override Do Not Disturb", isOn: $viewModel.overrideDND)
                 Toggle("Max volume on urgent", isOn: $viewModel.maxVolumeOnUrgent)
+            }
+            Section("Trigger PIN") {
+                SecureField("PIN used to cancel/trigger", text: $pinDraft)
+                Button("Save PIN") {
+                    let trimmed = pinDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        viewModel.updateTriggerPin(trimmed)
+                        pinDraft = ""
+                    }
+                }
+                Text("Share this PIN with trusted contacts. On Android, they can text \"pulselink <PIN>\" to trigger; iOS cannot read SMS, but this PIN cancels active alerts in-app.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
             Section("About") {
                 Label("Matches Android experience: emergency, trusted contacts, urgent chat", systemImage: "arrow.left.arrow.right")
@@ -333,6 +347,10 @@ private struct SettingsTab: View {
             }
         }
         .navigationTitle("Settings")
+        .onAppear {
+            baseUrlDraft = viewModel.baseUrl
+            pinDraft = viewModel.triggerPin
+        }
     }
 }
 

@@ -1,11 +1,16 @@
 package com.pulselink.auth
 
+import android.content.Context
 import android.util.Log
 import androidx.activity.ComponentActivity
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.OAuthProvider
+import com.pulselink.R
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +22,8 @@ import kotlinx.coroutines.tasks.await
 
 @Singleton
 class FirebaseAuthManager @Inject constructor(
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    @ApplicationContext private val context: Context
 ) {
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Loading)
@@ -111,7 +117,15 @@ class FirebaseAuthManager @Inject constructor(
     }
 
     suspend fun signOut(): Result<Unit> {
-        return runCatching { auth.signOut() }
+        return runCatching {
+            auth.signOut()
+            val googleClient = GoogleSignIn.getClient(context, googleSignInOptions())
+            runCatching { googleClient.signOut().await() }
+                .onFailure { error -> Log.w(TAG, "Google sign-out failed", error) }
+            runCatching { googleClient.revokeAccess().await() }
+                .onFailure { error -> Log.w(TAG, "Google revokeAccess failed", error) }
+            Unit
+        }
     }
 
     fun currentUser(): FirebaseUser? = auth.currentUser
@@ -124,4 +138,10 @@ class FirebaseAuthManager @Inject constructor(
     companion object {
         private const val TAG = "FirebaseAuthManager/Auth"
     }
+
+    private fun googleSignInOptions(): GoogleSignInOptions =
+        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(context.getString(R.string.default_web_client_id))
+            .requestEmail()
+            .build()
 }

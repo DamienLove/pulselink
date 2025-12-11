@@ -17,6 +17,7 @@ import com.pulselink.data.assistant.NaturalLanguageCommandProcessor
 import com.pulselink.data.assistant.VoiceCommandResult
 import com.pulselink.data.alert.SoundCatalog
 import com.pulselink.data.link.ContactLinkManager
+import com.pulselink.data.remoteconfig.RemoteConfigService
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ContactMessage
 import com.pulselink.domain.model.EscalationTier
@@ -65,6 +66,7 @@ class MainViewModel @Inject constructor(
     private val naturalLanguageCommandProcessor: NaturalLanguageCommandProcessor,
     private val firebaseAuthManager: FirebaseAuthManager,
     private val firestore: FirebaseFirestore,
+    private val remoteConfigService: RemoteConfigService,
     private val widgetStateManager: WidgetStateManager
 ) : ViewModel() {
 
@@ -76,6 +78,7 @@ class MainViewModel @Inject constructor(
     private val checkInSounds = soundCatalog.checkInOptions()
     private val callSounds = soundCatalog.callOptions()
     private val profileUpdate = MutableStateFlow(ProfileUpdateUiState())
+    private val remoteRealtimeEnabled = MutableStateFlow(false)
     private var lastKnownPhone: String? = null
     private var lastKnownEmail: String? = null
 
@@ -85,6 +88,17 @@ class MainViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            settingsRepository.settings.collect { settings ->
+                linkManager.setRealtimeEnabled(settings.realtimeEnabled && remoteRealtimeEnabled.value)
+            }
+        }
+        viewModelScope.launch {
+            remoteConfigService.fetchAndActivate()
+            remoteRealtimeEnabled.value = remoteConfigService.isRealtimeEnabled()
+            val settings = settingsRepository.settings.first()
+            linkManager.setRealtimeEnabled(settings.realtimeEnabled && remoteRealtimeEnabled.value)
+        }
+        viewModelScope.launch {
             lastKnownPhone = settingsRepository.getLastKnownPhone()
             lastKnownEmail = settingsRepository.getLastKnownEmail()
         }
@@ -92,7 +106,7 @@ class MainViewModel @Inject constructor(
             pruneLocalUnreachable()
         }
         viewModelScope.launch {
-            val baseState = combine(
+            val baseStateNoAuth = combine(
                 settingsRepository.settings,
                 contactRepository.observeContacts(),
                 alertRepository.observeRecent(10),
@@ -103,7 +117,6 @@ class MainViewModel @Inject constructor(
                 val adsAvailable = BuildConfig.ADS_ENABLED
                 val showAds = adsAvailable && !normalizedSettings.proUnlocked
                 val isProUser = normalizedSettings.proUnlocked || !adsAvailable
-
                 PulseLinkUiState(
                     settings = normalizedSettings,
                     contacts = contacts,
@@ -117,8 +130,13 @@ class MainViewModel @Inject constructor(
                     isProUser = isProUser,
                     adsAvailable = adsAvailable,
                     onboardingComplete = normalizedSettings.onboardingComplete,
-                    autoUpdateContactInfo = normalizedSettings.autoUpdateContactInfo
+                    autoUpdateContactInfo = normalizedSettings.autoUpdateContactInfo,
+                    userEmail = lastKnownEmail
                 )
+            }
+            val baseState = combine(baseStateNoAuth, firebaseAuthManager.authState) { state, auth ->
+                val email = (auth as? AuthState.Authenticated)?.user?.email ?: lastKnownEmail
+                state.copy(userEmail = email)
             }
             val withProfile = combine(baseState, profileUpdate) { state, profile ->
                 state.copy(profileUpdate = profile)
@@ -224,7 +242,18 @@ class MainViewModel @Inject constructor(
 
     fun signOut() {
         viewModelScope.launch {
-            firebaseAuthManager.signOut()
+            val result = firebaseAuthManager.signOut()
+            if (result.isSuccess) {
+                contactRepository.clear()
+                messageRepository.clearAll()
+                settingsRepository.setLastKnownPhone(null)
+                settingsRepository.setLastKnownEmail(null)
+                lastKnownPhone = null
+                lastKnownEmail = null
+                widgetStateManager.requestWidgetUpdate()
+            } else {
+                Log.w(TAG, "Sign-out failed", result.exceptionOrNull())
+            }
         }
     }
 
@@ -237,6 +266,7 @@ class MainViewModel @Inject constructor(
             }
             syncContactsFromCloud(user, forcePushLocal = true)
             linkManager.syncLinksOnLogin()
+            linkManager.checkPendingWrites()
         }
     }
 
@@ -272,6 +302,13 @@ class MainViewModel @Inject constructor(
     fun setAutoUpdateContactInfo(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setAutoUpdateContactInfo(enabled)
+        }
+    }
+
+    fun setRealtimeMessagingEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setRealtimeEnabled(enabled)
+            linkManager.setRealtimeEnabled(enabled && remoteRealtimeEnabled.value)
         }
     }
 
@@ -516,6 +553,11 @@ class MainViewModel @Inject constructor(
                     ).await()
                 }
             }
+            // Sync phone number
+            val remotePhone = snapshot.getString("phoneNumber")
+            if (remotePhone.isNullOrBlank() && !user.phoneNumber.isNullOrBlank()) {
+                profileRef.set(mapOf("phoneNumber" to user.phoneNumber), SetOptions.merge()).await()
+            }
             if (remoteDeviceId.isNullOrBlank() || remoteDeviceId != deviceId) {
                 profileRef.set(mapOf("deviceId" to deviceId), SetOptions.merge()).await()
             }
@@ -534,6 +576,9 @@ class MainViewModel @Inject constructor(
             user.email?.let { email ->
                 payload["email"] = email
                 payload["emailLowercase"] = email.lowercase()
+            }
+            user.phoneNumber?.let { phone ->
+                payload["phoneNumber"] = phone
             }
             firestore.collection("users").document(user.uid)
                 .set(payload, SetOptions.merge())
@@ -560,6 +605,7 @@ class MainViewModel @Inject constructor(
                     ?.filter { it.isNotBlank() } ?: emptyList()
                 val tier = doc.getString("escalationTier")?.let { EscalationTier.valueOf(it) }
                     ?: EscalationTier.EMERGENCY
+                val remoteTriggerPin = doc.getString("remoteTriggerPin").orEmpty()
                 Contact(
                     id = 0,
                     displayName = name,
@@ -579,17 +625,19 @@ class MainViewModel @Inject constructor(
                         ?: LinkStatus.NONE,
                     linkCode = doc.getString("linkCode"),
                     remoteDeviceId = doc.getString("remoteDeviceId"),
+                    remoteTriggerPin = remoteTriggerPin,
                     pendingApproval = doc.getBoolean("pendingApproval") ?: false,
                     remoteUid = doc.getString("remoteUid")
                 )
             }
-            val enrichedRemote = remoteContacts.map { contact ->
-                if (contact.linkCode.isNullOrBlank()) {
-                    contact
-                } else {
-                    resolveLinkFromDoc(contact, contact.linkCode, user.uid)
+                val enrichedRemote = remoteContacts.map { contact ->
+                    val preferredCode = contact.linkCode ?: normalizeEmail(contact.email)
+                    if (preferredCode.isNullOrBlank()) {
+                        contact
+                    } else {
+                        resolveLinkFromDoc(contact, preferredCode, user.uid)
+                    }
                 }
-            }
 
             if (enrichedRemote.isEmpty() && localContacts.isEmpty()) {
                 return@runCatching
@@ -664,6 +712,7 @@ class MainViewModel @Inject constructor(
             pendingApproval = remote.pendingApproval || local.pendingApproval,
             includeLocation = remote.includeLocation,
             autoCall = remote.autoCall,
+            remoteTriggerPin = if (remote.remoteTriggerPin.isNotBlank()) remote.remoteTriggerPin else local.remoteTriggerPin,
             displayName = remote.displayName.ifBlank { local.displayName },
             phoneNumber = remote.phoneNumber.ifBlank { local.phoneNumber },
             email = remote.email ?: local.email,
@@ -796,6 +845,7 @@ class MainViewModel @Inject constructor(
             "linkStatus" to contact.linkStatus.name,
             "linkCode" to contact.linkCode,
             "remoteDeviceId" to contact.remoteDeviceId,
+            "remoteTriggerPin" to contact.remoteTriggerPin,
             "pendingApproval" to contact.pendingApproval,
             "remoteUid" to contact.remoteUid,
             "updatedAt" to FieldValue.serverTimestamp()
@@ -914,6 +964,71 @@ class MainViewModel @Inject constructor(
             .build()
     }
 
+    fun buildBugReportAutoUri(context: Context): Uri {
+        val packageManager = context.packageManager
+        val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0))
+        } else {
+            @Suppress("DEPRECATION")
+            packageManager.getPackageInfo(context.packageName, 0)
+        }
+        val versionName = packageInfo.versionName ?: "unknown"
+        val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            packageInfo.longVersionCode
+        } else {
+            @Suppress("DEPRECATION")
+            packageInfo.versionCode.toLong()
+        }
+        val buildFlavor = if (BuildConfig.ADS_ENABLED) "free" else "pro"
+        val manufacturer = Build.MANUFACTURER.orEmpty()
+        val model = Build.MODEL.orEmpty()
+        val osVersion = Build.VERSION.RELEASE ?: "unknown"
+
+        val builder = Uri.parse(BUG_REPORT_PAGE_URL).buildUpon()
+            .appendQueryParameter("version_name", versionName)
+            .appendQueryParameter("version_code", versionCode.toString())
+            .appendQueryParameter("build_flavor", buildFlavor)
+            .appendQueryParameter("package", context.packageName)
+            .appendQueryParameter("device", "$manufacturer $model")
+            .appendQueryParameter("os_version", "Android $osVersion (API ${Build.VERSION.SDK_INT})")
+
+        firebaseAuthManager.currentUser()?.email?.let { email ->
+            builder.appendQueryParameter("reporter", email)
+        }
+
+        return builder.build()
+    }
+
+    fun buildBugReportGoogleFormUri(context: Context): Uri {
+        val packageManager = context.packageManager
+        val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0))
+        } else {
+            @Suppress("DEPRECATION")
+            packageManager.getPackageInfo(context.packageName, 0)
+        }
+        val versionName = packageInfo.versionName ?: "unknown"
+        val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            packageInfo.longVersionCode
+        } else {
+            @Suppress("DEPRECATION")
+            packageInfo.versionCode.toLong()
+        }
+        val buildFlavor = if (BuildConfig.ADS_ENABLED) "PRO" else "FREE"
+        val manufacturer = Build.MANUFACTURER.orEmpty()
+        val model = Build.MODEL.orEmpty()
+        val osVersion = Build.VERSION.RELEASE ?: "unknown"
+        val deviceString = "$manufacturer $model / Android $osVersion (API ${Build.VERSION.SDK_INT})"
+        val versionString = "$versionName ($versionCode)"
+
+        return Uri.parse(GOOGLE_FORM_BASE).buildUpon()
+            .appendQueryParameter("usp", "pp_url")
+            .appendQueryParameter(ENTRY_VERSION, versionString)
+            .appendQueryParameter(ENTRY_DEVICE, deviceString)
+            .appendQueryParameter(ENTRY_FLAVOR, buildFlavor)
+            .build()
+    }
+
     private fun ensureSoundDefaults(settings: com.pulselink.domain.model.PulseLinkSettings): com.pulselink.domain.model.PulseLinkSettings {
         var updatedSettings = settings
         if (settings.emergencyProfile.soundKey == null) {
@@ -988,6 +1103,10 @@ class MainViewModel @Inject constructor(
         private const val TAG = "MainViewModel"
         // Public bug portal (no GitHub login required)
         const val BUG_REPORT_PAGE_URL = "https://damiennichols.com/report-bug/"
+        private const val GOOGLE_FORM_BASE = "https://docs.google.com/forms/d/e/1FAIpQLSfo_Y1zppa4Bza7-piAPB1emNasAnWq4zmxqECVuFp7OLPmgQ/viewform"
+        private const val ENTRY_VERSION = "entry.1071567583"
+        private const val ENTRY_DEVICE = "entry.736364424"
+        private const val ENTRY_FLAVOR = "entry.555050188"
         private const val COLLECTION_USERS = "users"
         private const val COLLECTION_TRUSTED_CONTACTS = "trustedContacts"
         const val BETA_AGREEMENT_VERSION = "2025-11-13"

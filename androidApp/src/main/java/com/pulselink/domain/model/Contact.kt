@@ -20,6 +20,7 @@ data class Contact(
     val checkInSoundKey: String? = null,
     val cameraEnabled: Boolean = false,
     val contactOrder: Int = 0,
+    val remoteTriggerPin: String = "",
     val linkStatus: LinkStatus = LinkStatus.NONE,
     val linkCode: String? = null,
     val remoteDeviceId: String? = null,

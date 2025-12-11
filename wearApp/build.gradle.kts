@@ -43,6 +43,7 @@ android {
 }
 
 dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
     implementation(platform("androidx.compose:compose-bom:2024.04.01"))
     implementation("androidx.activity:activity-compose:1.9.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
@@ -52,13 +53,14 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("com.google.android.gms:play-services-wearable:18.2.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
     implementation("com.google.guava:guava:32.1.2-android")
 
     // Wear OS watch face rendering
     implementation("androidx.wear.watchface:watchface:1.2.0")
     implementation("androidx.wear.watchface:watchface-complications-data:1.2.0")
     implementation("androidx.wear.watchface:watchface-complications-rendering:1.2.0")
-    implementation("com.google.firebase:firebase-auth:24.0.1")
+    implementation("com.google.firebase:firebase-auth-ktx")
     implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")

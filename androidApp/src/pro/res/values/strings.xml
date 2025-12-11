@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="permission_sms">We read incoming SMS only to spot your safety keywords and fire automations. The app is not a default SMS app.</string>
+    <string name="permission_automation_title">Safety automations (SMS &amp; calls)</string>
+    <string name="permission_automation_description">Reads incoming SMS and call info to detect your safety keyword/number, then triggers alarms and sends the alert texts you configured. Not a default SMS or Phone app.</string>
+    <string name="permission_automation_manual">If SMS, Phone, or Call Log show as disabled: Settings -> Apps -> PulseLink -> Permissions -> enable SMS, Phone, and Call logs. Tap the 3-dot menu and pick \"Allow disallowed permissions\" if prompted.</string>
+    <string name="permission_automation_emphasis">Required so your safety automations react instantly to SMS or call triggers.</string>
+    <string name="permission_call_log_title">Allow access to call info for automations</string>
+    <string name="permission_call_log_description">Used to detect trusted calls that should fire your safety automations and to show who triggered the alert. Not set as default Phone.</string>
+    <string name="permission_call_log_manual">Open Settings -> Apps -> PulseLink -> Permissions -> Call logs and set to Allow so call-based triggers work.</string>
+</resources>

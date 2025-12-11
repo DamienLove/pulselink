@@ -71,7 +71,7 @@ fun ContactDetailScreen(
     showAds: Boolean,
     onBack: () -> Unit,
     onCallContact: suspend (Contact) -> Unit,
-    onEditContact: (String, String, String?) -> Unit,
+    onEditContact: (String, String, String?, String) -> Unit,
     onEditEmergencyAlert: () -> Unit,
     onEditCheckInAlert: () -> Unit,
     onToggleLocation: (Boolean) -> Unit,
@@ -183,8 +183,8 @@ fun ContactDetailScreen(
         EditContactDialog(
             contact = contact,
             onDismiss = { showEditDialog = false },
-            onSave = { name, phone, email ->
-                onEditContact(name, phone, email)
+            onSave = { name, phone, email, pin ->
+                onEditContact(name, phone, email, pin)
                 showEditDialog = false
             }
         )
@@ -330,6 +330,24 @@ private fun SettingsCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = stringResource(R.string.contact_pin_label),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = contact.remoteTriggerPin.ifBlank { stringResource(R.string.contact_pin_unset) },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = stringResource(R.string.contact_pin_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             ToggleRow(title = "Camera enable", subtitle = "Capture short evidence clip", checked = contact.cameraEnabled, onCheckedChange = onToggleCamera)
             ToggleRow(title = "Auto call after alert", subtitle = "Call after sending SMS", checked = contact.autoCall, onCheckedChange = onToggleAutoCall)
             ToggleRow(
@@ -362,11 +380,12 @@ private fun SettingsCard(
 private fun EditContactDialog(
     contact: Contact,
     onDismiss: () -> Unit,
-    onSave: (String, String, String?) -> Unit
+    onSave: (String, String, String?, String) -> Unit
 ) {
     var name by remember { mutableStateOf(contact.displayName) }
     var phone by remember { mutableStateOf(contact.phoneNumber) }
     var email by remember { mutableStateOf(contact.email.orEmpty()) }
+    var pin by remember { mutableStateOf(contact.remoteTriggerPin) }
     val canSave = name.isNotBlank() && (phone.isNotBlank() || email.isNotBlank())
 
     androidx.compose.material3.AlertDialog(
@@ -392,12 +411,19 @@ private fun EditContactDialog(
                     label = { Text("Email (optional)") },
                     modifier = Modifier.fillMaxWidth()
                 )
+                OutlinedTextField(
+                    value = pin,
+                    onValueChange = { pin = it },
+                    label = { Text(stringResource(R.string.contact_pin_label)) },
+                    supportingText = { Text(stringResource(R.string.contact_pin_helper)) },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    onSave(name.trim(), phone.trim(), email.trim().ifBlank { null })
+                    onSave(name.trim(), phone.trim(), email.trim().ifBlank { null }, pin.trim())
                 },
                 enabled = canSave
             ) {

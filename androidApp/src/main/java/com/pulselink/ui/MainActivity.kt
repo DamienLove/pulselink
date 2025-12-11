@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PictureInPictureParams
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -118,6 +119,10 @@ class MainActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()
     @Inject lateinit var appOpenAdController: AppOpenAdController
     @Inject lateinit var callStateMonitor: CallStateMonitor
+    private var onShake: (() -> Unit)? = null
+    private var shakeDetector: com.pulselink.util.ShakeDetector? = null
+    private var sensorManager: android.hardware.SensorManager? = null
+    private val deepLinkUri: String? by lazy { intent?.getStringExtra(DeepLinkActivity.EXTRA_DEEP_LINK_URI) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -142,6 +147,9 @@ class MainActivity : AppCompatActivity() {
                 var isPreparingCall by remember { mutableStateOf(false) }
                 val activity = this@MainActivity
                 var isCancelingEmergency by remember { mutableStateOf(false) }
+                LaunchedEffect(Unit) {
+                    sensorManager = getSystemService(Context.SENSOR_SERVICE) as? android.hardware.SensorManager
+                }
                 val cancelEmergencyLauncher = rememberCancelEmergencyLauncher(
                     activity = activity,
                     onAuthenticated = {
@@ -184,6 +192,18 @@ class MainActivity : AppCompatActivity() {
                     mutableStateOf(state.onboardingComplete)
                 }
 
+                LaunchedEffect(navController) {
+                    onShake = {
+                        val currentRoute = navController.currentBackStackEntry?.destination?.route
+                        if (currentRoute != "bug_report") {
+                            navController.navigate("bug_report") {
+                                launchSingleTop = true
+                            }
+                            Toast.makeText(context, "Opening bug report…", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+
                 LaunchedEffect(authState) {
                     if (authState is AuthState.Unauthenticated) {
                         navController.navigate("login") {
@@ -209,6 +229,7 @@ class MainActivity : AppCompatActivity() {
                     buildList {
                         add(Manifest.permission.SEND_SMS)
                         add(Manifest.permission.RECEIVE_SMS)
+                        add(Manifest.permission.READ_SMS)
                         add(Manifest.permission.CALL_PHONE)
                         add(Manifest.permission.READ_CONTACTS)
                         add(Manifest.permission.READ_CALL_LOG)
@@ -362,9 +383,10 @@ class MainActivity : AppCompatActivity() {
                 NavHost(navController = navController, startDestination = "splash") {
                     composable("splash") {
                         SplashScreen()
-                        LaunchedEffect(authState, state.onboardingComplete) {
+                        LaunchedEffect(authState, state.onboardingComplete, deepLinkUri) {
                             if (authState is AuthState.Loading) return@LaunchedEffect
                             delay(1200)
+                            val deepLink = deepLinkUri // track for future routing
                             val destination = when (authState) {
                                 is AuthState.Authenticated -> if (state.onboardingComplete) "home" else "onboarding_intro"
                                 else -> "login"
@@ -422,7 +444,8 @@ class MainActivity : AppCompatActivity() {
                             onMessageConsumed = loginViewModel::clearTransientMessages
                         )
                         LaunchedEffect(authState, state.onboardingComplete) {
-                            if (authState is AuthState.Authenticated) {
+                            val authedUser = (authState as? AuthState.Authenticated)?.user
+                            if (authedUser != null && !authedUser.isAnonymous) {
                                 val destination = if (state.onboardingComplete) "home" else "onboarding_intro"
                                 navController.navigate(destination) {
                                     popUpTo(0) { inclusive = true }
@@ -521,7 +544,8 @@ class MainActivity : AppCompatActivity() {
 
                         val smsGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED &&
-                                    ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED &&
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
                         val callPermissionGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
                         val locationGranted =
@@ -551,11 +575,14 @@ class MainActivity : AppCompatActivity() {
                         val permissionCards = buildList {
                             OnboardingPermissionState(
                                 icon = Icons.Filled.Call,
-                                title = "SMS & Call",
-                                description = "Allow PulseLink to send emergency messages and place calls.",
+                                title = stringResource(R.string.permission_automation_title),
+                                description = stringResource(R.string.permission_automation_description),
                                 granted = smsGranted && callPermissionGranted,
                                 manualHelp = if (!smsGranted || !callPermissionGranted) {
-                                    "If SMS or Call stays disabled: open Settings -> Apps -> PulseLink -> Permissions, tap SMS and Phone, open the 3-dot menu, choose \"Allow disallowed permissions\", confirm with fingerprint or PIN, then switch both to Allow."
+                                    stringResource(R.string.permission_automation_manual)
+                                } else null,
+                                emphasis = if (!smsGranted || !callPermissionGranted) {
+                                    stringResource(R.string.permission_automation_emphasis)
                                 } else null
                             ).also { add(it) }
                             OnboardingPermissionState(
@@ -572,7 +599,7 @@ class MainActivity : AppCompatActivity() {
                                 description = stringResource(R.string.permission_call_log_description),
                                 granted = callLogGranted,
                                 manualHelp = if (!callLogGranted) {
-                                    "Open Settings -> Apps -> PulseLink -> Permissions and allow Call logs so linked contacts can ring through."
+                                    stringResource(R.string.permission_call_log_manual)
                                 } else null
                             ).also { add(it) }
                             OnboardingPermissionState(
@@ -650,6 +677,7 @@ class MainActivity : AppCompatActivity() {
                             isCancelingEmergency = isCancelingEmergency,
                             onAlertsClick = { navController.navigate("alert_history") },
                             showAddLoginPrompt = isSmsOnlyUser,
+                            showShakeHint = true,
                             onAddLoginClick = {
                                 navController.navigate("login") {
                                     launchSingleTop = true
@@ -725,12 +753,13 @@ class MainActivity : AppCompatActivity() {
                             showAds = state.showAds,
                             onBack = { navController.popBackStack() },
                             onCallContact = callContactHandler,
-                            onEditContact = { newName, newPhone, newEmail ->
+                            onEditContact = { newName, newPhone, newEmail, newPin ->
                                 contact?.let {
                                     val updated = it.copy(
                                         displayName = newName,
                                         phoneNumber = newPhone,
-                                        email = newEmail
+                                        email = newEmail,
+                                        remoteTriggerPin = newPin
                                     )
                                     viewModel.saveContact(updated)
                                 }
@@ -829,6 +858,7 @@ class MainActivity : AppCompatActivity() {
                             onRequestUnusedApps = { openUnusedAppRestrictionsSettings(context) },
                             onToggleAutoAllowRemoteSoundChange = viewModel::setAutoAllowRemoteSoundChange,
                             onToggleAutoUpdateContactInfo = viewModel::setAutoUpdateContactInfo,
+                            onToggleRealtime = viewModel::setRealtimeMessagingEnabled,
                             onSyncNow = viewModel::syncContactsNow,
                             profileUpdateState = state.profileUpdate,
                             onBroadcastProfileUpdate = viewModel::broadcastProfileToContacts,
@@ -850,8 +880,10 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                     composable("bug_report") {
+                        val context = LocalContext.current
+                        val bugUrl = remember { viewModel.buildBugReportGoogleFormUri(context).toString() }
                         BugReportWebScreen(
-                            url = MainViewModel.BUG_REPORT_PAGE_URL,
+                            url = bugUrl,
                             onBack = { navController.popBackStack() }
                         )
                     }
@@ -890,11 +922,27 @@ class MainActivity : AppCompatActivity() {
         if (viewModel.uiState.value.onboardingComplete) {
             appOpenAdController.maybeShow(this)
         }
+        val accelerometer = sensorManager?.getDefaultSensor(android.hardware.Sensor.TYPE_ACCELEROMETER)
+        if (accelerometer != null) {
+            shakeDetector = com.pulselink.util.ShakeDetector(
+                onShake = { runOnUiThread { onShake?.invoke() } }
+            )
+            sensorManager?.registerListener(
+                shakeDetector,
+                accelerometer,
+                android.hardware.SensorManager.SENSOR_DELAY_UI
+            )
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         callStateMonitor.cancel()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        sensorManager?.unregisterListener(shakeDetector)
     }
 
     override fun onUserLeaveHint() {

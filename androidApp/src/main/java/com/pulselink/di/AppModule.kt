@@ -84,7 +84,9 @@ object DatabaseModule {
                 PulseLinkDatabase.MIGRATION_4_5,
                 PulseLinkDatabase.MIGRATION_5_6,
                 PulseLinkDatabase.MIGRATION_6_7,
-                PulseLinkDatabase.MIGRATION_7_8
+                PulseLinkDatabase.MIGRATION_7_8,
+                PulseLinkDatabase.MIGRATION_8_9,
+                PulseLinkDatabase.MIGRATION_9_10
             )
             .fallbackToDestructiveMigration()
             .build()
