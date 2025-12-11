@@ -1,0 +1,44 @@
+PulseLink tester brief (v37)
+Last updated: 2025-12-11
+
+Builds and tracks
+- Internal test: v37 (Pro) — use for full feature verification.
+- Closed track: currently v19; will be updated to v37 after sign-off.
+- Open track: v28 (no new automation/SMS changes yet).
+- iOS: version 37.0 (sim build via Codemagic or TestFlight once uploaded).
+
+What’s new in v37 (Android Pro)
+- Device Automation permission story: clear in-app copy; READ_SMS added to runtime request bundle.
+- Per-contact Trigger PIN: set in contact settings; shows helper text.
+- Inbound SMS trigger: from a trusted number, texting “pulselink <PIN>” starts an emergency, plays siren, and breaks through silent/DND; “pulselink cancel <PIN>” stops it.
+- Emergency cancel now records inbound cancel events and clears emergency-active flag.
+- Store/Play declaration alignment: automation wording for SMS/Call Log.
+
+What’s new in v37 (iOS shell)
+- Version raised to 37/37.0 for parity.
+- Settings exposes “Trigger PIN” (stored in UserDefaults); cancel sheet respects this PIN.
+- Note: iOS cannot read SMS, so triggers are manual/in-app only until a push/URL hook is added.
+
+How to test (Android Pro v37, internal)
+1) Install v37; confirm version in App Info shows 37.
+2) Onboarding: grant SMS/Call/Call Log; strings mention automations (not default handler).
+3) Set a Trigger PIN for a contact with a real phone number.
+4) From that number, send: “pulselink <PIN>”.
+   - Expect siren + DND override locally, alert cards populated, emergency flag active.
+5) From same number, send: “pulselink cancel <PIN>”.
+   - Expect emergency cleared, log entry recorded, no further siren.
+6) Revoke SMS/Call Log and try again: app should show pending permissions and not trigger.
+7) Regression: manual emergency/check-in still deliver; caller-ID/spam wording unaffected.
+
+How to test (iOS 37.0)
+1) Build/run via Codemagic or Xcode; confirm version 37.0 in Settings > General > About (app).
+2) Settings -> Trigger PIN: change PIN, then start an emergency and cancel with the new PIN in the sheet.
+3) Verify override toggles (DND/volume) still apply to local alerts.
+
+Major changes by version
+- v37: SMS Trigger PIN, inbound SMS automation, permission copy revamp, DB schema v10 (adds remoteTriggerPin), iOS version bump + PIN UI.
+- v28 (open track): earlier safety UI + ad-free tweaks, no SMS automation.
+- v19 (old closed): legacy alert flows before automation PIN or schema v10.
+
+Access notes
+- Internal testers should use v37 (Pro). Closed track will be updated to v37 after this round. Open track remains at v28.
