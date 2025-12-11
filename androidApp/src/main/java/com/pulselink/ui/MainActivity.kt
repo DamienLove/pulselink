@@ -229,6 +229,7 @@ class MainActivity : AppCompatActivity() {
                     buildList {
                         add(Manifest.permission.SEND_SMS)
                         add(Manifest.permission.RECEIVE_SMS)
+                        add(Manifest.permission.READ_SMS)
                         add(Manifest.permission.CALL_PHONE)
                         add(Manifest.permission.READ_CONTACTS)
                         add(Manifest.permission.READ_CALL_LOG)
@@ -543,7 +544,8 @@ class MainActivity : AppCompatActivity() {
 
                         val smsGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED &&
-                                    ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED &&
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
                         val callPermissionGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
                         val locationGranted =
@@ -573,11 +575,14 @@ class MainActivity : AppCompatActivity() {
                         val permissionCards = buildList {
                             OnboardingPermissionState(
                                 icon = Icons.Filled.Call,
-                                title = "SMS & Call",
-                                description = "Allow PulseLink to send emergency messages and place calls.",
+                                title = stringResource(R.string.permission_automation_title),
+                                description = stringResource(R.string.permission_automation_description),
                                 granted = smsGranted && callPermissionGranted,
                                 manualHelp = if (!smsGranted || !callPermissionGranted) {
-                                    "If SMS or Call stays disabled: open Settings -> Apps -> PulseLink -> Permissions, tap SMS and Phone, open the 3-dot menu, choose \"Allow disallowed permissions\", confirm with fingerprint or PIN, then switch both to Allow."
+                                    stringResource(R.string.permission_automation_manual)
+                                } else null,
+                                emphasis = if (!smsGranted || !callPermissionGranted) {
+                                    stringResource(R.string.permission_automation_emphasis)
                                 } else null
                             ).also { add(it) }
                             OnboardingPermissionState(
@@ -594,7 +599,7 @@ class MainActivity : AppCompatActivity() {
                                 description = stringResource(R.string.permission_call_log_description),
                                 granted = callLogGranted,
                                 manualHelp = if (!callLogGranted) {
-                                    "Open Settings -> Apps -> PulseLink -> Permissions and allow Call logs so linked contacts can ring through."
+                                    stringResource(R.string.permission_call_log_manual)
                                 } else null
                             ).also { add(it) }
                             OnboardingPermissionState(
@@ -748,12 +753,13 @@ class MainActivity : AppCompatActivity() {
                             showAds = state.showAds,
                             onBack = { navController.popBackStack() },
                             onCallContact = callContactHandler,
-                            onEditContact = { newName, newPhone, newEmail ->
+                            onEditContact = { newName, newPhone, newEmail, newPin ->
                                 contact?.let {
                                     val updated = it.copy(
                                         displayName = newName,
                                         phoneNumber = newPhone,
-                                        email = newEmail
+                                        email = newEmail,
+                                        remoteTriggerPin = newPin
                                     )
                                     viewModel.saveContact(updated)
                                 }

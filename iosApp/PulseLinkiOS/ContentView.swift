@@ -308,6 +308,7 @@ private struct ConversationView: View {
 private struct SettingsTab: View {
     @ObservedObject var viewModel: AlertRelayViewModel
     @State private var baseUrlDraft: String = ""
+    @State private var pinDraft: String = ""
 
     var body: some View {
         Form {
@@ -325,6 +326,19 @@ private struct SettingsTab: View {
             Section("Alerts") {
                 Toggle("Override Do Not Disturb", isOn: $viewModel.overrideDND)
                 Toggle("Max volume on urgent", isOn: $viewModel.maxVolumeOnUrgent)
+            }
+            Section("Trigger PIN") {
+                SecureField("PIN used to cancel/trigger", text: Binding(
+                    get: { pinDraft.isEmpty ? viewModel.triggerPin : pinDraft },
+                    set: { pinDraft = $0 }
+                ))
+                Button("Save PIN") {
+                    viewModel.updateTriggerPin(pinDraft.isEmpty ? viewModel.triggerPin : pinDraft)
+                    pinDraft = ""
+                }
+                Text("Share this PIN with trusted contacts. On Android, they can text \"pulselink <PIN>\" to trigger; iOS cannot read SMS, but this PIN cancels active alerts in-app.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
             Section("About") {
                 Label("Matches Android experience: emergency, trusted contacts, urgent chat", systemImage: "arrow.left.arrow.right")

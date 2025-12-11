@@ -605,6 +605,7 @@ class MainViewModel @Inject constructor(
                     ?.filter { it.isNotBlank() } ?: emptyList()
                 val tier = doc.getString("escalationTier")?.let { EscalationTier.valueOf(it) }
                     ?: EscalationTier.EMERGENCY
+                val remoteTriggerPin = doc.getString("remoteTriggerPin").orEmpty()
                 Contact(
                     id = 0,
                     displayName = name,
@@ -624,6 +625,7 @@ class MainViewModel @Inject constructor(
                         ?: LinkStatus.NONE,
                     linkCode = doc.getString("linkCode"),
                     remoteDeviceId = doc.getString("remoteDeviceId"),
+                    remoteTriggerPin = remoteTriggerPin,
                     pendingApproval = doc.getBoolean("pendingApproval") ?: false,
                     remoteUid = doc.getString("remoteUid")
                 )
@@ -710,6 +712,7 @@ class MainViewModel @Inject constructor(
             pendingApproval = remote.pendingApproval || local.pendingApproval,
             includeLocation = remote.includeLocation,
             autoCall = remote.autoCall,
+            remoteTriggerPin = if (remote.remoteTriggerPin.isNotBlank()) remote.remoteTriggerPin else local.remoteTriggerPin,
             displayName = remote.displayName.ifBlank { local.displayName },
             phoneNumber = remote.phoneNumber.ifBlank { local.phoneNumber },
             email = remote.email ?: local.email,
@@ -842,6 +845,7 @@ class MainViewModel @Inject constructor(
             "linkStatus" to contact.linkStatus.name,
             "linkCode" to contact.linkCode,
             "remoteDeviceId" to contact.remoteDeviceId,
+            "remoteTriggerPin" to contact.remoteTriggerPin,
             "pendingApproval" to contact.pendingApproval,
             "remoteUid" to contact.remoteUid,
             "updatedAt" to FieldValue.serverTimestamp()

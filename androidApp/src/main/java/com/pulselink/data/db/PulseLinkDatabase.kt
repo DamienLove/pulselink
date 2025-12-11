@@ -122,7 +122,7 @@ interface BlockedContactDao {
 
 @Database(
     entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -190,6 +190,7 @@ abstract class PulseLinkDatabase : RoomDatabase() {
                         linkStatus TEXT NOT NULL DEFAULT 'NONE',
                         linkCode TEXT,
                         remoteDeviceId TEXT,
+                        remoteTriggerPin TEXT NOT NULL DEFAULT '',
                         allowRemoteOverride INTEGER NOT NULL DEFAULT 0,
                         allowRemoteSoundChange INTEGER NOT NULL DEFAULT 0,
                         pendingApproval INTEGER NOT NULL DEFAULT 0,
@@ -237,6 +238,7 @@ abstract class PulseLinkDatabase : RoomDatabase() {
                         ${expr("linkStatus", "'NONE'")},
                         ${expr("linkCode", "NULL")},
                         ${expr("remoteDeviceId", "NULL")},
+                        ${expr("remoteTriggerPin", "''")},
                         ${expr("allowRemoteOverride", "0")},
                         ${expr("allowRemoteSoundChange", "0")},
                         ${expr("pendingApproval", "0")},
@@ -249,6 +251,12 @@ abstract class PulseLinkDatabase : RoomDatabase() {
                 database.execSQL(insertSql)
                 database.execSQL("DROP TABLE contacts")
                 database.execSQL("ALTER TABLE contacts_new RENAME TO contacts")
+            }
+        }
+
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE contacts ADD COLUMN remoteTriggerPin TEXT NOT NULL DEFAULT ''")
             }
         }
     }

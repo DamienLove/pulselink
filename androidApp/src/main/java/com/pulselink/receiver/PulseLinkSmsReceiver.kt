@@ -37,7 +37,7 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
                     if (parsed != null) {
                         contactLinkManager.handleInbound(parsed, origin)
                     } else {
-                        alertRouter.onInboundMessage(body)
+                        alertRouter.onInboundMessage(body, origin)
                     }
                 }
                 if (completed == null) {
