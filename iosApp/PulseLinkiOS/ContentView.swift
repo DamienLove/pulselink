@@ -313,14 +313,16 @@ private struct SettingsTab: View {
     var body: some View {
         Form {
             Section("Relay") {
-                TextField("Relay base URL", text: Binding(
-                    get: { baseUrlDraft.isEmpty ? viewModel.baseUrl : baseUrlDraft },
-                    set: { baseUrlDraft = $0 }
-                ), prompt: Text("https://example.com"))
+                TextField("Relay base URL", text: $baseUrlDraft, prompt: Text("https://example.com"))
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
                 Button("Apply URL") {
-                    viewModel.baseUrl = baseUrlDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let trimmed = baseUrlDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        viewModel.baseUrl = trimmed
+                    } else {
+                        baseUrlDraft = viewModel.baseUrl
+                    }
                 }
             }
             Section("Alerts") {
@@ -328,13 +330,13 @@ private struct SettingsTab: View {
                 Toggle("Max volume on urgent", isOn: $viewModel.maxVolumeOnUrgent)
             }
             Section("Trigger PIN") {
-                SecureField("PIN used to cancel/trigger", text: Binding(
-                    get: { pinDraft.isEmpty ? viewModel.triggerPin : pinDraft },
-                    set: { pinDraft = $0 }
-                ))
+                SecureField("PIN used to cancel/trigger", text: $pinDraft)
                 Button("Save PIN") {
-                    viewModel.updateTriggerPin(pinDraft.isEmpty ? viewModel.triggerPin : pinDraft)
-                    pinDraft = ""
+                    let trimmed = pinDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        viewModel.updateTriggerPin(trimmed)
+                        pinDraft = ""
+                    }
                 }
                 Text("Share this PIN with trusted contacts. On Android, they can text \"pulselink <PIN>\" to trigger; iOS cannot read SMS, but this PIN cancels active alerts in-app.")
                     .font(.footnote)
@@ -347,6 +349,10 @@ private struct SettingsTab: View {
             }
         }
         .navigationTitle("Settings")
+        .onAppear {
+            baseUrlDraft = viewModel.baseUrl
+            pinDraft = viewModel.triggerPin
+        }
     }
 }
 
