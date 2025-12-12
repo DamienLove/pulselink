@@ -19,13 +19,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.CropSquare
 import androidx.compose.material.icons.outlined.Shield
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -110,7 +110,7 @@ fun InboxScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
                         modifier = Modifier
                             .size(28.dp)
@@ -186,7 +186,7 @@ fun InboxScreen(
                 ) {
                     Icon(Icons.Default.Menu, contentDescription = null, tint = Color.White)
                     Icon(Icons.Outlined.CropSquare, contentDescription = null, tint = Color.White)
-                    Icon(Icons.Default.ArrowForward, contentDescription = null, tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color.White)
                 }
             }
         }
@@ -240,7 +240,7 @@ fun InboxScreen(
                         )
                     }
                 )
-                Divider()
+                HorizontalDivider()
                 if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
                     LaunchedEffect(dismissState.currentValue) {
                         delay(250)
