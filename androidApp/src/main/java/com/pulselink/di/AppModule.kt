@@ -10,6 +10,7 @@ import androidx.room.Room
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.pulselink.BuildConfig
 import com.pulselink.data.alert.AlertDispatcher
 import com.pulselink.data.alert.NotificationRegistrar
@@ -35,6 +36,7 @@ import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.shared.alert.AlertRelay
 import com.pulselink.shared.alert.AlertRelayClient
 import com.pulselink.util.AudioOverrideManager
+import com.pulselink.util.DiagnosticsLogger
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -86,7 +88,8 @@ object DatabaseModule {
                 PulseLinkDatabase.MIGRATION_6_7,
                 PulseLinkDatabase.MIGRATION_7_8,
                 PulseLinkDatabase.MIGRATION_8_9,
-                PulseLinkDatabase.MIGRATION_9_10
+                PulseLinkDatabase.MIGRATION_9_10,
+                PulseLinkDatabase.MIGRATION_10_11
             )
             .fallbackToDestructiveMigration()
             .build()
@@ -162,6 +165,15 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideFirebaseFunctions(): FirebaseFunctions = FirebaseFunctions.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideFirebaseCrashlytics(): FirebaseCrashlytics = FirebaseCrashlytics.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideDiagnosticsLogger(crashlytics: FirebaseCrashlytics): DiagnosticsLogger =
+        DiagnosticsLogger(crashlytics)
 
     @Provides
     @Singleton

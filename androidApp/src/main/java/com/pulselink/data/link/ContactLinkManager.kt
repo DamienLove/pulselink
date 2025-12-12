@@ -14,6 +14,7 @@ import com.pulselink.data.alert.SoundCatalog
 import com.pulselink.data.sms.PulseLinkMessage
 import com.pulselink.data.sms.SmsCodec
 import com.pulselink.data.sms.SmsSender
+import com.pulselink.data.realtime.FcmPushClient
 import com.pulselink.domain.model.AlertEvent
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ContactMessage
@@ -30,6 +31,8 @@ import com.pulselink.domain.repository.MessageRepository
 import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.service.AlertRouter
 import com.pulselink.util.AudioOverrideManager
+import com.pulselink.util.DiagnosticsLogger
+import com.pulselink.data.webrtc.WebRtcSignaler
 import com.pulselink.util.resolveUri
 import com.pulselink.ui.EmergencyPopupActivity
 import com.pulselink.util.CallStateMonitor
@@ -69,6 +72,9 @@ class ContactLinkManager @Inject constructor(
     private val messageRepository: MessageRepository,
     private val callStateMonitor: CallStateMonitor,
     private val linkChannelService: LinkChannelService,
+    private val fcmPushClient: FcmPushClient,
+    private val diagnosticsLogger: DiagnosticsLogger,
+    private val webRtcSignaler: WebRtcSignaler,
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore,
     private val widgetStateManager: WidgetStateManager
@@ -244,7 +250,12 @@ class ContactLinkManager @Inject constructor(
         contactRepository.upsert(updated)
         upsertLinkDoc(code)
         var delivered = false
-        if (!contact.remoteDeviceId.isNullOrBlank()) {
+        delivered = sendFcmSignal(
+            contact = updated,
+            type = LinkChannelService.TYPE_LINK_ACCEPT,
+            linkCode = code
+        )
+        if (!delivered && !contact.remoteDeviceId.isNullOrBlank()) {
             delivered = linkChannelService.sendSignal(
                 contact = updated,
                 type = LinkChannelService.TYPE_LINK_ACCEPT,
@@ -266,6 +277,25 @@ class ContactLinkManager @Inject constructor(
         }
     }
 
+    suspend fun handleLocalFcmToken(token: String) {
+        settingsRepository.setFcmToken(token)
+        // Broadcast token to linked contacts so they can deliver FCM data messages without Firestore.
+        val linkedContacts = contactRepository.getLinkedContacts()
+        diagnosticsLogger.info(TAG, "Broadcasting refreshed FCM token to ${linkedContacts.size} contacts")
+        linkedContacts.forEach { contact ->
+            val code = contact.linkCode ?: return@forEach
+            val payload = SmsCodec.encodeConfig(
+                senderId = settingsRepository.ensureDeviceId(),
+                code = code,
+                key = CONFIG_FCM_TOKEN,
+                value = token
+            )
+            contact.primaryPhone()?.let { phone ->
+                smsSender.sendSms(phone, payload, awaitResult = false)
+            }
+        }
+    }
+
     suspend fun sendPing(contactId: Long): Boolean {
         val contact = contactRepository.getContact(contactId) ?: return false
         if (contact.linkStatus != LinkStatus.LINKED || contact.linkCode.isNullOrBlank()) return false
@@ -275,22 +305,37 @@ class ContactLinkManager @Inject constructor(
             reason = PulseLinkMessage.AlertPrepareReason.MESSAGE
         )
         val deviceId = settingsRepository.ensureDeviceId()
-        val realtimeSent = if (!contact.remoteDeviceId.isNullOrBlank()) {
-            linkChannelService.sendSignal(
+        val realtimeSent = when {
+            !contact.remoteFcmToken.isNullOrBlank() -> sendFcmSignal(
                 contact = contact,
                 type = LinkChannelService.TYPE_MANUAL_MESSAGE,
                 body = context.getString(R.string.ping_received_body),
                 linkCode = contact.linkCode,
                 urgency = com.pulselink.domain.model.MessageUrgency.STANDARD
             )
-        } else {
-            false
+            !contact.remoteDeviceId.isNullOrBlank() -> linkChannelService.sendSignal(
+                contact = contact,
+                type = LinkChannelService.TYPE_MANUAL_MESSAGE,
+                body = context.getString(R.string.ping_received_body),
+                linkCode = contact.linkCode,
+                urgency = com.pulselink.domain.model.MessageUrgency.STANDARD
+            )
+            else -> false
         }
         val payload = SmsCodec.encodePing(deviceId, contact.linkCode)
         if (!realtimeSent) {
             contact.primaryPhone()?.let { smsSender.sendSms(it, payload) }
         }
         return ready
+    }
+
+    suspend fun startWebRtc(contactId: Long) {
+        val contact = contactRepository.getContact(contactId) ?: return
+        if (contact.remoteFcmToken.isNullOrBlank()) {
+            diagnosticsLogger.warn(TAG, "Cannot start WebRTC; missing remote FCM token for contactId=$contactId")
+            return
+        }
+        webRtcSignaler.startSession(contact)
     }
 
     suspend fun prepareRemoteCall(contactId: Long): CallPreparationResult {
@@ -557,6 +602,10 @@ class ContactLinkManager @Inject constructor(
         }
     }
 
+    suspend fun handlePushPayload(payload: LinkChannelPayload) {
+        handleRealtimePayload(payload)
+    }
+
     private suspend fun handleRealtimePayload(payload: LinkChannelPayload) {
         when (payload.type) {
             LinkChannelService.TYPE_ALERT_PREPARE -> handleRealtimeAlertPrepare(payload)
@@ -570,10 +619,7 @@ class ContactLinkManager @Inject constructor(
 
     private suspend fun handleRealtimeManualMessage(payload: LinkChannelPayload) {
         try {
-            val contact = payload.linkCode?.takeIf { it.isNotBlank() }?.let { contactRepository.getByLinkCode(it) }
-                ?: contactRepository.getByRemoteDeviceId(payload.senderId)
-                ?: payload.phoneNumber?.takeIf { it.isNotBlank() }?.let { contactRepository.getByPhone(it) }
-                ?: return
+            val contact = resolveContactForPayload(payload) ?: return
             markPresence(contact, payload.timestamp)
             deliverManualMessage(
                 contact = contact,
@@ -586,6 +632,12 @@ class ContactLinkManager @Inject constructor(
         } catch (error: Exception) {
             Log.e(TAG, "Failed to process realtime message ${payload.id}", error)
         }
+    }
+
+    suspend fun resolveContactForPayload(payload: LinkChannelPayload): Contact? {
+        return payload.linkCode?.takeIf { it.isNotBlank() }?.let { contactRepository.getByLinkCode(it) }
+            ?: contactRepository.getByRemoteDeviceId(payload.senderId)
+            ?: payload.phoneNumber?.takeIf { it.isNotBlank() }?.let { contactRepository.getByPhone(it) }
     }
 
     private suspend fun handleRealtimeAlertPrepare(payload: LinkChannelPayload) {
@@ -602,13 +654,20 @@ class ContactLinkManager @Inject constructor(
         if (reason == PulseLinkMessage.AlertPrepareReason.CALL) {
             remoteActionHandler.notifyIncomingCall(contact, tier)
         }
-            linkChannelService.sendSignal(
-                contact = contact,
-                type = LinkChannelService.TYPE_ALERT_READY,
-                linkCode = payload.linkCode ?: contact.linkCode,
-                ready = ready,
-                tier = tier
-            )
+        val linkCode = payload.linkCode ?: contact.linkCode
+        val responded = sendFcmSignal(
+            contact = contact,
+            type = LinkChannelService.TYPE_ALERT_READY,
+            linkCode = linkCode,
+            ready = ready,
+            tier = tier
+        ) || linkChannelService.sendSignal(
+            contact = contact,
+            type = LinkChannelService.TYPE_ALERT_READY,
+            linkCode = linkCode,
+            ready = ready,
+            tier = tier
+        )
         if (reason == PulseLinkMessage.AlertPrepareReason.ALERT && ready && tier == EscalationTier.EMERGENCY) {
             settingsRepository.setEmergencyActive(true)
             widgetStateManager.requestWidgetUpdate()
@@ -919,6 +978,11 @@ class ContactLinkManager @Inject constructor(
             CONFIG_EMAIL_UPDATE -> {
                 contactRepository.upsert(freshContact.copy(email = message.value.ifBlank { null }))
             }
+            CONFIG_FCM_TOKEN -> {
+                if (message.value.isNotBlank()) {
+                    contactRepository.upsert(freshContact.copy(remoteFcmToken = message.value))
+                }
+            }
         }
     }
 
@@ -1050,7 +1114,9 @@ class ContactLinkManager @Inject constructor(
             }
         }
 
-        val hasRealtimeChannel = contact.linkStatus == LinkStatus.LINKED && !contact.remoteDeviceId.isNullOrBlank()
+        val hasFcmChannel = contact.linkStatus == LinkStatus.LINKED && !contact.remoteFcmToken.isNullOrBlank()
+        val hasFirestoreChannel = contact.linkStatus == LinkStatus.LINKED && !contact.remoteDeviceId.isNullOrBlank()
+        val hasRealtimeChannel = hasFcmChannel || hasFirestoreChannel
         val hasSmsMirror = (contact.primaryPhone()?.isNotBlank() == true) && !contact.linkCode.isNullOrBlank()
 
         if (!hasRealtimeChannel && !hasSmsMirror) {
@@ -1059,11 +1125,24 @@ class ContactLinkManager @Inject constructor(
         }
 
         return try {
-            val realtimeSent = if (hasRealtimeChannel) {
-                Log.d(TAG, "sendManualMessage: Attempting realtime send for contactId=$contactId.")
-                linkChannelService.sendManualMessage(contact, message, urgency, volumeHint)
-            } else {
-                false
+            val realtimeSent = when {
+                hasFcmChannel -> {
+                    Log.d(TAG, "sendManualMessage: Attempting FCM realtime send for contactId=$contactId.")
+                    sendFcmSignal(
+                        contact = contact,
+                        type = LinkChannelService.TYPE_MANUAL_MESSAGE,
+                        body = message,
+                        linkCode = contact.linkCode,
+                        urgency = urgency,
+                        volumeHint = volumeHint,
+                        senderName = settingsRepository.settings.first().ownerName
+                    )
+                }
+                hasFirestoreChannel -> {
+                    Log.d(TAG, "sendManualMessage: Attempting Firestore realtime send for contactId=$contactId.")
+                    linkChannelService.sendManualMessage(contact, message, urgency, volumeHint)
+                }
+                else -> false
             }
             val ready = if (hasRealtimeChannel && contact.linkCode != null) {
                 requestRemotePrepare(
@@ -1115,6 +1194,7 @@ class ContactLinkManager @Inject constructor(
             }
         } catch (error: Exception) {
             Log.e(TAG, "Unable to send manual message for contactId=$contactId", error)
+            diagnosticsLogger.error(TAG, "Manual message send failed for contactId=$contactId", error)
             ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.UNKNOWN)
         }
     }
@@ -1133,11 +1213,22 @@ class ContactLinkManager @Inject constructor(
         var ready: Boolean? = null
         var resolvedContact = contact
 
-        if (resolvedContact.remoteDeviceId.isNullOrBlank()) {
+        if (resolvedContact.remoteDeviceId.isNullOrBlank() && resolvedContact.remoteFcmToken.isNullOrBlank()) {
             resolveRemoteIdentityFromLinks(code)?.let { resolvedContact = it }
         }
 
-        if (!resolvedContact.remoteDeviceId.isNullOrBlank()) {
+        if (!resolvedContact.remoteFcmToken.isNullOrBlank()) {
+            val sent = sendFcmSignal(
+                contact = resolvedContact,
+                type = LinkChannelService.TYPE_ALERT_PREPARE,
+                linkCode = code,
+                tier = tier,
+                reason = reason
+            )
+            if (sent) {
+                ready = withTimeoutOrNull(PREPARE_TIMEOUT_MS) { deferred.await() }
+            }
+        } else if (!resolvedContact.remoteDeviceId.isNullOrBlank()) {
             val sent = linkChannelService.sendSignal(
                 contact = resolvedContact,
                 type = LinkChannelService.TYPE_ALERT_PREPARE,
@@ -1469,6 +1560,7 @@ class ContactLinkManager @Inject constructor(
             "linkStatus" to contact.linkStatus.name,
             "linkCode" to contact.linkCode,
             "remoteDeviceId" to contact.remoteDeviceId,
+            "remoteFcmToken" to contact.remoteFcmToken,
             "pendingApproval" to contact.pendingApproval,
             "remoteUid" to contact.remoteUid,
             "updatedAt" to FieldValue.serverTimestamp()
@@ -1484,6 +1576,41 @@ class ContactLinkManager @Inject constructor(
         }
     }
 
+    private suspend fun sendFcmSignal(
+        contact: Contact,
+        type: String,
+        linkCode: String? = null,
+        body: String? = null,
+        urgency: com.pulselink.domain.model.MessageUrgency? = null,
+        volumeHint: com.pulselink.domain.model.VolumeHint? = null,
+        tier: EscalationTier? = null,
+        reason: PulseLinkMessage.AlertPrepareReason? = null,
+        ready: Boolean? = null,
+        senderName: String? = null,
+        senderEmail: String? = null
+    ): Boolean {
+        val token = contact.remoteFcmToken?.takeIf { it.isNotBlank() } ?: return false
+        val deviceId = settingsRepository.ensureDeviceId()
+        val data = buildMap<String, String> {
+            put("id", UUID.randomUUID().toString())
+            put("type", type)
+            put("senderId", deviceId)
+            put("receiverId", token)
+            linkCode?.let { put("linkCode", it) }
+            put("timestamp", System.currentTimeMillis().toString())
+            body?.let { put("body", it) }
+            urgency?.let { put("urgency", it.name) }
+            volumeHint?.let { put("volumeHint", it.name) }
+            tier?.let { put("tier", it.name) }
+            reason?.let { put("reason", it.name) }
+            ready?.let { put("ready", it.toString()) }
+            contact.phoneNumber.takeIf { it.isNotBlank() }?.let { put("phoneNumber", it) }
+            senderName?.let { put("senderName", it) }
+            senderEmail?.let { put("senderEmail", it) }
+        }
+        return fcmPushClient.send(token, data)
+    }
+
     companion object {
         private const val TAG = "ContactLinkManager"
         private const val CHANNEL_ID = "pulselink_link_channel"
@@ -1491,6 +1618,7 @@ class ContactLinkManager @Inject constructor(
         const val CONFIG_REMOTE_OVERRIDE = "ALLOW_OVERRIDE"
         const val CONFIG_PHONE_UPDATE = "PHONE"
         const val CONFIG_EMAIL_UPDATE = "EMAIL"
+        const val CONFIG_FCM_TOKEN = "FCM"
         private const val PREPARE_TIMEOUT_MS = 10_000L
         const val COLLECTION_LINKS = "links"
         const val COLLECTION_EMAIL_INVITES = "linkEmailInvites"

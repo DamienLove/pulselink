@@ -93,6 +93,14 @@
             </intent-filter>
         </receiver>
 
+        <service
+            android:name="com.pulselink.receiver.PulseLinkFcmService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <activity
             android:name="com.pulselink.ui.AssistantShortcutActivity"
             android:exported="true"

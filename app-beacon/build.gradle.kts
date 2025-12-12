@@ -7,6 +7,21 @@ android {
     namespace = "com.pulselink.beacon"
     compileSdk = 35
 
+    flavorDimensions += "tier"
+
+    productFlavors {
+        create("free") {
+            dimension = "tier"
+            applicationId = "com.pulselink.beacon"
+            resValue("string", "app_name", "PulseLink Beacon")
+        }
+        create("pro") {
+            dimension = "tier"
+            applicationId = "com.pulselink.beacon.pro"
+            resValue("string", "app_name", "PulseLink Beacon Pro")
+        }
+    }
+
     defaultConfig {
         applicationId = "com.pulselink.beacon"
         minSdk = 26
@@ -30,6 +45,14 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    buildTypes.forEach { type ->
+        // Firebase manual init placeholders (override via env variables)
+        type.buildConfigField("String", "FIREBASE_API_KEY", "\"${System.getenv("BEACON_FIREBASE_API_KEY") ?: ""}\"")
+        type.buildConfigField("String", "FIREBASE_APP_ID", "\"${System.getenv("BEACON_FIREBASE_APP_ID") ?: ""}\"")
+        type.buildConfigField("String", "FIREBASE_PROJECT_ID", "\"${System.getenv("BEACON_FIREBASE_PROJECT_ID") ?: ""}\"")
+        type.buildConfigField("String", "FIREBASE_SENDER_ID", "\"${System.getenv("BEACON_FIREBASE_SENDER_ID") ?: ""}\"")
     }
 
     composeOptions {
@@ -64,6 +87,12 @@ dependencies {
 
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+
+    // Firebase (manual init via BeaconApp)
+    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+    implementation("com.google.firebase:firebase-messaging-ktx")
+    implementation("com.google.firebase:firebase-auth-ktx:23.0.0")
+    implementation("com.google.firebase:firebase-functions-ktx")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
