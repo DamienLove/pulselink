@@ -34,12 +34,15 @@ PulseLink for iOS is in active planning. See the detailed milestones, dependenci
 - PulseLink Safety: docs/safety/overview.md
 - PulseLink Beacon: docs/beacon/overview.md
 - Store listing copy (Beacon): docs/store/beacon/
+- Static website bundle to upload to pulselink.damiennichols.com: see `website/` (open `website/index.htm`).
 
 This repository publishes documentation via GitHub Pages from the `docs/` directory. Any changes pushed under `docs/**` will automatically re‑deploy the site via GitHub Actions.
 
 - Source docs: [`/docs`](docs)
 - Published site: https://damienlove.github.io/pulselink/
 - If you also use the GitHub Wiki feature, mirror or link the same content there for consistency. See `docs/docs-and-wiki.md` for tips.
+
+For a simple static site you can host anywhere (no build), upload the contents of the `website/` folder to your host so that `index.htm` is at the site root.
 
 ## Support the Project
 
@@ -59,4 +62,11 @@ Prefer to contribute code, docs, or testing? See Issues and the iOS Roadmap abov
 
 ## Status
 
-Fresh build created on November 16, 2025. Messaging pathways remain fully enabled.
+Fresh build created on December 11, 2025.
+
+Recent highlights:
+
+- FCM relay via Cloud Functions for link requests, approvals, and user messages (Wi‑Fi/no‑SIM friendly)
+- WebRTC signaling (beta) for low‑latency P2P sessions; off by default
+- Diagnostics Logger for easy log export to aid support
+- Home screen widget with Emergency / Cancel / Check‑in quick actions

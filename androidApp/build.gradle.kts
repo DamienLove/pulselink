@@ -319,9 +319,13 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx:23.0.0")
     implementation("com.google.firebase:firebase-functions-ktx")
     implementation("com.google.firebase:firebase-config-ktx")
+    implementation("com.google.firebase:firebase-messaging-ktx")
     implementation("com.google.assistant.appactions:suggestions:1.0.0")
     implementation("com.google.android.play:integrity:1.5.0")
     implementation("androidx.biometric:biometric:1.1.0")
+
+    // Peer-to-peer data channel for low-latency signaling once devices are awake.
+    implementation("com.infobip:google-webrtc:1.0.42469")
 
     implementation("com.google.dagger:hilt-android:2.51.1")
     kapt("com.google.dagger:hilt-compiler:2.51.1")

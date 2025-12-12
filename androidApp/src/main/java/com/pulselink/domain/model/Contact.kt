@@ -24,6 +24,7 @@ data class Contact(
     val linkStatus: LinkStatus = LinkStatus.NONE,
     val linkCode: String? = null,
     val remoteDeviceId: String? = null,
+    val remoteFcmToken: String? = null,
     val allowRemoteOverride: Boolean = false,
     val allowRemoteSoundChange: Boolean = false,
     val pendingApproval: Boolean = false,

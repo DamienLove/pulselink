@@ -42,24 +42,37 @@ class AlertDispatcher @Inject constructor(
     private val audioOverrideManager: AudioOverrideManager
 ) {
 
+    data class LocalSoundOverride(
+        val soundKey: String?,
+        val category: SoundCategory,
+        val profile: AlertProfile
+    )
+
     suspend fun dispatch(
         phrase: String,
         tier: EscalationTier,
         contacts: List<Contact>,
         settings: PulseLinkSettings,
         contactId: Long? = null,
-        shouldPlayLocalSound: Boolean = false
+        shouldPlayLocalSound: Boolean = false,
+        localSoundOverride: LocalSoundOverride? = null
     ): AlertResult = withContext(Dispatchers.IO) {
         registrar.ensureChannels()
 
         val locationText = if (settings.includeLocation) buildLocationText() else null
         val message = buildMessage(phrase, tier, locationText)
 
-        val (profile, soundCategory) = when (tier) {
-            EscalationTier.EMERGENCY -> settings.emergencyProfile to SoundCategory.SIREN
-            EscalationTier.CHECK_IN -> settings.checkInProfile to SoundCategory.CHIME
+        val baseProfile = when (tier) {
+            EscalationTier.EMERGENCY -> settings.emergencyProfile
+            EscalationTier.CHECK_IN -> settings.checkInProfile
         }
-        val soundOption = if (shouldPlayLocalSound) soundCatalog.resolve(profile.soundKey, soundCategory) else null
+        val profile = localSoundOverride?.profile ?: baseProfile
+        val soundCategory = localSoundOverride?.category ?: when (tier) {
+            EscalationTier.EMERGENCY -> SoundCategory.SIREN
+            EscalationTier.CHECK_IN -> SoundCategory.CHIME
+        }
+        val soundKey = localSoundOverride?.soundKey ?: profile.soundKey
+        val soundOption = if (shouldPlayLocalSound) soundCatalog.resolve(soundKey, soundCategory) else null
         val channelId = if (shouldPlayLocalSound) {
             registrar.ensureAlertChannel(soundCategory, soundOption, profile)
         } else {
@@ -120,7 +133,7 @@ class AlertDispatcher @Inject constructor(
             audioOverrideManager.scheduleRestore()
         }
 
-        val resolvedSoundKey = if (shouldPlayLocalSound) soundOption?.key ?: profile.soundKey else null
+        val resolvedSoundKey = if (shouldPlayLocalSound) soundOption?.key ?: soundKey else null
         AlertResult(
             message = message,
             notifiedContacts = smsCount,

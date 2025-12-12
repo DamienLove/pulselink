@@ -24,4 +24,6 @@ interface SettingsRepository {
     suspend fun getLastKnownEmail(): String?
     suspend fun setAutoUpdateContactInfo(enabled: Boolean)
     suspend fun setRealtimeEnabled(enabled: Boolean)
+    suspend fun setFcmToken(token: String)
+    suspend fun getFcmToken(): String?
 }

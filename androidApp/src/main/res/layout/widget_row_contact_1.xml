@@ -35,11 +35,12 @@
         android:textAllCaps="true"
         android:textSize="10sp" />
 
-    <View
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_alignParentBottom="true"
         android:layout_marginStart="20dp"
         android:layout_marginEnd="20dp"
-        android:background="@color/widget_divider" />
+        android:background="@color/widget_divider"
+        android:text="" />
 </RelativeLayout>

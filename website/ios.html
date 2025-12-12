@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PulseLink for iOS — Roadmap</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <meta name="description" content="Roadmap and milestones for PulseLink on iOS, including SwiftUI, notifications, and KMP shared core.">
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1>PulseLink for iOS</h1>
+  <p class="tag">Status: Planning/Scoping</p>
+  <nav>
+    <a href="index.htm">Home</a>
+    <a href="safety.html">Safety</a>
+    <a href="beacon.html">Beacon</a>
+    <a href="deep-links.html">Deep Links</a>
+    <a href="store.html">Store</a>
+    <a href="ios.html" class="active">iOS</a>
+    <a href="qa.html" class="cta">QA / Beta</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <section class="lead">
+    <p>PulseLink for iOS will bring discreet trigger and escalation to Apple devices. Initial focus is a reliable alert pipeline, privacy, and accessibility.</p>
+  </section>
+
+  <section>
+    <h3>Goals</h3>
+    <ul>
+      <li>SwiftUI‑first UX with VoiceOver‑friendly flows</li>
+      <li>On‑device phrase detection for discreet triggers</li>
+      <li>Alert escalation to trusted contacts with location (consent‑driven)</li>
+      <li>Do Not Disturb‑aware notifications (critical alerts where approved)</li>
+      <li>Shared business logic via Kotlin Multiplatform where practical</li>
+    </ul>
+  </section>
+
+  <section>
+    <h3>Milestones</h3>
+    <ol>
+      <li><strong>MVP (private TestFlight)</strong>: manual trigger → alert dispatch to a test contact; basic settings; analytics/crash with privacy.</li>
+      <li><strong>Beta (public TestFlight)</strong>: phrase detection prototype, read‑only trusted contacts, critical alerts, SOS silent mode.</li>
+      <li><strong>GA 1.0 (App Store)</strong>: production phrase detection, contact write flows, background resiliency, App Store privacy labels.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h3>Build & Run (dev)</h3>
+    <pre><code># From repository root
+./gradlew :shared:podspec
+cd iosApp
+pod install
+open PulseLinkiOS.xcworkspace
+# Set signing team in Xcode, run the PulseLinkiOS scheme
+</code></pre>
+  </section>
+
+  <section>
+    <h3>How you can help</h3>
+    <ul>
+      <li>iOS engineering (Swift/SwiftUI, CallKit/UserNotifications)</li>
+      <li>Audio/ML for low‑latency wake‑word or phrase detection</li>
+      <li>QA across device models and DnD configurations</li>
+      <li>Accessibility testing (VoiceOver/large text/contrast)</li>
+    </ul>
+  </section>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© PulseLink</p></div></footer>
+</body>
+</html>

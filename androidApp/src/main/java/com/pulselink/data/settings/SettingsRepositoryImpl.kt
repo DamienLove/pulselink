@@ -44,6 +44,7 @@ private val LAST_KNOWN_PHONE = stringPreferencesKey("last_known_phone")
 private val LAST_KNOWN_EMAIL = stringPreferencesKey("last_known_email")
 private val AUTO_UPDATE_CONTACT_INFO = booleanPreferencesKey("auto_update_contact_info")
 private val REALTIME_ENABLED = booleanPreferencesKey("realtime_enabled")
+private val FCM_TOKEN = stringPreferencesKey("fcm_token")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -208,6 +209,16 @@ class SettingsRepositoryImpl @Inject constructor(
         dataStore.edit { prefs ->
             prefs[REALTIME_ENABLED] = enabled
         }
+    }
+
+    override suspend fun setFcmToken(token: String) {
+        dataStore.edit { prefs ->
+            prefs[FCM_TOKEN] = token
+        }
+    }
+
+    override suspend fun getFcmToken(): String? {
+        return dataStore.data.map { it[FCM_TOKEN] }.first()
     }
 
     private fun settingsValue(prefs: Preferences): PulseLinkSettings {

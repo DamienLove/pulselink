@@ -6,6 +6,7 @@ if (admin.apps.length === 0) {
 }
 
 const db = admin.firestore();
+db.settings({ ignoreUndefinedProperties: true });
 
 interface RelayRequest {
   message: string;

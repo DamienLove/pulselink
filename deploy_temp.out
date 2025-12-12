@@ -1,0 +1,23 @@
+
+[1m[37m===[39m Deploying to 'pulselink-24899'...[22m
+
+[36m[1mi [22m[39m deploying [1mfunctions[22m
+Running command: npm --prefix "$RESOURCE_DIR" run build
+
+> build
+> tsc
+
+[32m[1m+ [22m[39m [32m[1mfunctions:[22m[39m Finished running [1mpredeploy[22m script.
+[36m[1mi  functions:[22m[39m preparing codebase [1mdefault[22m for deployment
+[36m[1mi  functions:[22m[39m ensuring required API [1mcloudfunctions.googleapis.com[22m is enabled...
+[36m[1mi  functions:[22m[39m ensuring required API [1mcloudbuild.googleapis.com[22m is enabled...
+[36m[1mi  artifactregistry:[22m[39m ensuring required API [1martifactregistry.googleapis.com[22m is enabled...
+[33m[1m! [22m[39m [1m[33mfunctions: [39m[22mpackage.json indicates an outdated version of firebase-functions. Please upgrade using [1mnpm install --save firebase-functions@latest[22m in your functions directory.
+[33m[1m! [22m[39m [1m[33mfunctions: [39m[22mPlease note that there will be breaking changes when you upgrade.
+[36m[1mi  functions:[22m[39m Loading and analyzing source code for codebase default to determine what to deploy
+Serving at port 8874
+
+[36m[1mi  extensions:[22m[39m ensuring required API [1mfirebaseextensions.googleapis.com[22m is enabled...
+[34m?[39m [1mThis secret will be stored in Cloud Secret Manager [22m
+[1m(https://cloud.google.com/secret-manager/pricing) as GOOGLE_GENAI_API_KEY. Enter[22m
+[1m a value for GOOGLE_GENAI_API_KEY:[22m [2m[input is masked][22m[?25l[2A[186G

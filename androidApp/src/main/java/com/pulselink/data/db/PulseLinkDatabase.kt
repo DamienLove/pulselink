@@ -122,7 +122,7 @@ interface BlockedContactDao {
 
 @Database(
     entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class],
-    version = 10,
+    version = 11,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -190,6 +190,7 @@ abstract class PulseLinkDatabase : RoomDatabase() {
                         linkStatus TEXT NOT NULL DEFAULT 'NONE',
                         linkCode TEXT,
                         remoteDeviceId TEXT,
+                        remoteFcmToken TEXT,
                         remoteTriggerPin TEXT NOT NULL DEFAULT '',
                         allowRemoteOverride INTEGER NOT NULL DEFAULT 0,
                         allowRemoteSoundChange INTEGER NOT NULL DEFAULT 0,
@@ -217,7 +218,7 @@ abstract class PulseLinkDatabase : RoomDatabase() {
                     INSERT INTO contacts_new (
                         id, displayName, phoneNumber, email, additionalPhones, additionalEmails,
                         escalationTier, includeLocation, autoCall, emergencySoundKey, checkInSoundKey,
-                        cameraEnabled, contactOrder, linkStatus, linkCode, remoteDeviceId,
+                        cameraEnabled, contactOrder, linkStatus, linkCode, remoteDeviceId, remoteFcmToken,
                         allowRemoteOverride, allowRemoteSoundChange, pendingApproval, remoteUid,
                         remoteLastSeen, remotePresence
                     )
@@ -238,6 +239,7 @@ abstract class PulseLinkDatabase : RoomDatabase() {
                         ${expr("linkStatus", "'NONE'")},
                         ${expr("linkCode", "NULL")},
                         ${expr("remoteDeviceId", "NULL")},
+                        ${expr("remoteFcmToken", "NULL")},
                         ${expr("remoteTriggerPin", "''")},
                         ${expr("allowRemoteOverride", "0")},
                         ${expr("allowRemoteSoundChange", "0")},
@@ -257,6 +259,12 @@ abstract class PulseLinkDatabase : RoomDatabase() {
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE contacts ADD COLUMN remoteTriggerPin TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE contacts ADD COLUMN remoteFcmToken TEXT")
             }
         }
     }

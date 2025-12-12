@@ -8,6 +8,7 @@ import com.pulselink.data.link.RemoteAlertResult
 import com.pulselink.data.link.RemoteAlertStatus
 import com.pulselink.domain.model.AlertEvent
 import com.pulselink.domain.model.EscalationTier
+import com.pulselink.domain.model.SoundCategory
 import com.pulselink.domain.repository.AlertRepository
 import com.pulselink.domain.repository.ContactRepository
 import com.pulselink.domain.repository.SettingsRepository
@@ -47,11 +48,12 @@ class AlertRouter @Inject constructor(
         tier: EscalationTier,
         trigger: String,
         excludeContactIds: Set<Long> = emptySet(),
-        playLocalSound: Boolean = false
+        playLocalSound: Boolean = false,
+        localSoundOverride: AlertDispatcher.LocalSoundOverride? = null
     ): AlertResult? {
         return mutex.withLock {
             val settings = settingsRepository.settings.first()
-            route(tier, trigger, settings, excludeContactIds, playLocalSound)
+            route(tier, trigger, settings, excludeContactIds, playLocalSound, localSoundOverride)
         }
     }
 
@@ -78,7 +80,8 @@ class AlertRouter @Inject constructor(
         trigger: String,
         settings: com.pulselink.domain.model.PulseLinkSettings,
         excludeContactIds: Set<Long>,
-        playLocalSound: Boolean
+        playLocalSound: Boolean,
+        localSoundOverride: AlertDispatcher.LocalSoundOverride? = null
     ): AlertResult? = coroutineScope {
         val contacts = when (tier) {
             EscalationTier.EMERGENCY -> contactRepository.getEmergencyContacts()
@@ -101,7 +104,8 @@ class AlertRouter @Inject constructor(
             tier = tier,
             contacts = contacts,
             settings = settings,
-            shouldPlayLocalSound = playLocalSound
+            shouldPlayLocalSound = playLocalSound,
+            localSoundOverride = localSoundOverride
         )
 
         remoteJobs.forEach { deferred ->
@@ -139,11 +143,31 @@ class AlertRouter @Inject constructor(
     private suspend fun handleAutomationTrigger(body: String, sender: String): Boolean {
         val tokens = body.trim().lowercase(Locale.US).split(Regex("\\s+")).filter { it.isNotBlank() }
         if (tokens.isEmpty() || tokens.first() != "pulselink") return false
-        val isCancel = tokens.getOrNull(1)?.equals("cancel", ignoreCase = true) == true
-        val pin = if (isCancel) tokens.getOrNull(2) else tokens.getOrNull(1)
+        val action = tokens.getOrNull(1)
+        val isCancel = action == "cancel"
+        val isEmergency = action == "emergency"
+        val pin = when {
+            isCancel || isEmergency -> tokens.getOrNull(2)
+            else -> action
+        }
         if (pin.isNullOrBlank()) return false
 
         val contact = findContactByPin(pin, sender) ?: return false
+        val settings = settingsRepository.settings.first()
+        val soundOverride = when {
+            isEmergency -> AlertDispatcher.LocalSoundOverride(
+                soundKey = contact.emergencySoundKey ?: settings.emergencyProfile.soundKey,
+                category = SoundCategory.SIREN,
+                profile = settings.emergencyProfile
+            )
+            else -> AlertDispatcher.LocalSoundOverride(
+                soundKey = contact.checkInSoundKey
+                    ?: settings.checkInProfile.soundKey
+                    ?: settings.emergencyProfile.soundKey,
+                category = SoundCategory.CHIME,
+                profile = settings.emergencyProfile
+            )
+        }
 
         return if (isCancel) {
             val cancelled = contactLinkManager.get().cancelActiveEmergency()
@@ -165,16 +189,22 @@ class AlertRouter @Inject constructor(
             }
             cancelled
         } else {
+            val triggerLabel = if (isEmergency) {
+                "SMS emergency from ${contact.displayName}"
+            } else {
+                "SMS trigger from ${contact.displayName}"
+            }
             val result = dispatchManual(
                 tier = EscalationTier.EMERGENCY,
-                trigger = "SMS trigger from ${contact.displayName}",
-                playLocalSound = true
+                trigger = triggerLabel,
+                playLocalSound = true,
+                localSoundOverride = soundOverride
             )
             settingsRepository.setEmergencyActive(true)
             alertRepository.record(
                 AlertEvent(
                     timestamp = System.currentTimeMillis(),
-                    triggeredBy = "SMS trigger from ${contact.displayName}",
+                    triggeredBy = triggerLabel,
                     tier = EscalationTier.EMERGENCY,
                     contactCount = result?.notifiedContacts ?: 0,
                     sentSms = (result?.notifiedContacts ?: 0) > 0,
@@ -182,7 +212,7 @@ class AlertRouter @Inject constructor(
                     contactId = contact.id,
                     contactName = contact.displayName,
                     isIncoming = true,
-                    soundKey = result?.soundKey
+                    soundKey = result?.soundKey ?: soundOverride.soundKey
                 )
             )
             true

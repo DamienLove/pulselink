@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PulseLink Deep Links</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <meta name="description" content="All supported PulseLink app deep links and assistant actions.">
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1>Deep Links</h1>
+  <p class="tag">Open actions directly using pulselink:// URIs</p>
+  <nav>
+    <a href="index.htm">Home</a>
+    <a href="safety.html">Safety</a>
+    <a href="beacon.html">Beacon</a>
+    <a href="deep-links.html" class="active">Deep Links</a>
+    <a href="store.html">Store</a>
+    <a href="ios.html">iOS</a>
+    <a href="qa.html" class="cta">QA / Beta</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <section class="lead">
+    <p>PulseLink registers an app URI scheme <code>pulselink://</code> for quick actions. These links open on a device with the app installed.</p>
+    <p class="notice">Note: Clicking on desktop browsers will not work. Test on an Android device with PulseLink installed.</p>
+  </section>
+
+  <section>
+    <h3>Feature toggles</h3>
+    <table>
+      <thead><tr><th>Action</th><th>Link</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Emergency</td><td><code>pulselink://assistant/emergency</code></td><td>Start emergency flow</td></tr>
+        <tr><td>Cancel</td><td><code>pulselink://assistant/cancel</code></td><td>Cancel an active emergency (may require PIN)</td></tr>
+        <tr><td>Check‑in</td><td><code>pulselink://assistant/checkin</code></td><td>Send a quick check‑in to trusted contacts</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h3>Messaging intents</h3>
+    <table>
+      <thead><tr><th>Action</th><th>Template</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Standard message</td>
+          <td><code>pulselink://assistant/message?contact={name}&amp;text={text}</code></td>
+          <td><code>pulselink://assistant/message?contact=Alex&amp;text=Running%20late</code></td>
+        </tr>
+        <tr>
+          <td>Urgent message</td>
+          <td><code>pulselink://assistant/urgent?contact={name}&amp;text={text}</code></td>
+          <td><code>pulselink://assistant/urgent?contact=Mom&amp;text=Please%20call%20me</code></td>
+        </tr>
+        <tr>
+          <td>Non‑urgent w/ volume</td>
+          <td><code>pulselink://assistant/nonurgent?contact={name}&amp;text={text}&amp;volume={level}</code></td>
+          <td><code>pulselink://assistant/nonurgent?contact=Team&amp;text=Meeting%20moved&amp;volume=3</code></td>
+        </tr>
+        <tr>
+          <td>Emergency call request</td>
+          <td><code>pulselink://assistant/call?contact={name}</code></td>
+          <td><code>pulselink://assistant/call?contact=Sarah</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h3>Assistant shortcuts</h3>
+    <p>You can also add Google Assistant shortcuts that map to the deep links above for hands‑free usage.</p>
+  </section>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© PulseLink</p></div></footer>
+</body>
+</html>

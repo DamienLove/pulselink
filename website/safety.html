@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PulseLink Safety — Features and How‑to</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <meta name="description" content="PulseLink Safety: trigger phrases, trusted contacts, emergency alerts with location, and interop with Beacon.">
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1>PulseLink Safety</h1>
+  <p class="tag">Emergency‑focused app for discreet triggers and rapid escalation</p>
+  <nav>
+    <a href="index.htm">Home</a>
+    <a href="safety.html" class="active">Safety</a>
+    <a href="beacon.html">Beacon</a>
+    <a href="deep-links.html">Deep Links</a>
+    <a href="store.html">Store</a>
+    <a href="ios.html">iOS</a>
+    <a href="qa.html" class="cta">QA / Beta</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <section class="lead">
+    <h2>What Safety does</h2>
+    <ul>
+      <li>Listens for discreet trigger phrases (wake words) to start an emergency flow.</li>
+      <li>Escalates alerts to your trusted contacts, including your live location.</li>
+      <li>Interoperates with <a href="beacon.html">PulseLink Beacon</a> to sound a remote siren on linked devices.</li>
+      <li>Delivers link requests/approvals and messages over Wi‑Fi using Firebase Cloud Messaging (no SMS required).</li>
+    </ul>
+  </section>
+
+  <section>
+    <h3>Setup</h3>
+    <ol class="list-tight">
+      <li>Add trusted contacts inside the app. Contacts are stored securely in Firebase.</li>
+      <li>Set your trigger phrases and optional cancel/check‑in phrases.</li>
+      <li>Allow microphone, location, and notification permissions.</li>
+      <li>Optional: enable <em>WebRTC signaling (beta)</em> if available on your device for low‑latency sessions.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h3>Emergency flow</h3>
+    <ol>
+      <li>You trigger Safety (voice phrase or deep link). The app starts capturing the essentials.</li>
+      <li>Safety composes an alert including a Google Maps link to your location.</li>
+      <li>Trusted contacts receive the alert via secure FCM relay; linked Beacon clients can sound the siren.</li>
+      <li>You can cancel with your cancel phrase or via the in‑app sheet (optional PIN).</li>
+    </ol>
+    <div class="notice">
+      When alerts include location, recipients get a map deeplink like: <code>https://maps.google.com/?q=LAT,LNG</code>.
+    </div>
+  </section>
+
+  <section>
+    <h3>Home screen widget</h3>
+    <p>Add the PulseLink widget for one‑tap actions: <strong>Emergency</strong>, <strong>Cancel</strong>, and <strong>Check‑in</strong>. Long‑press the home screen → Widgets → PulseLink.</p>
+  </section>
+
+  <section>
+    <h3>Hands‑free shortcuts</h3>
+    <p>Use assistant actions or deep links for quick access. See <a href="deep-links.html">Deep Links</a> for all options.</p>
+  </section>
+
+  <section>
+    <h3>Diagnostics</h3>
+    <p>If delivery seems delayed, open Settings → Diagnostics → <em>Export logs</em>. Share logs with support to help investigate FCM delivery, permissions, or network issues.</p>
+  </section>
+
+  <section>
+    <h3>Privacy</h3>
+    <ul>
+      <li>Data minimization: only what’s required for safety is sent to trusted contacts.</li>
+      <li>You control who can receive alerts and which phrases are active.</li>
+    </ul>
+  </section>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© PulseLink</p></div></footer>
+</body>
+</html>
