@@ -60,12 +60,32 @@ fun SettingsHelpScreen(onBack: () -> Unit) {
                 body = stringResource(id = R.string.settings_help_dnd_body)
             )
             HelpSection(
+                title = stringResource(id = R.string.settings_help_power_title),
+                body = stringResource(id = R.string.settings_help_power_body)
+            )
+            HelpSection(
                 title = stringResource(id = R.string.settings_help_remote_title),
                 body = stringResource(id = R.string.settings_help_remote_body)
             )
             HelpSection(
                 title = stringResource(id = R.string.settings_help_tone_title),
                 body = stringResource(id = R.string.settings_help_tone_body)
+            )
+            HelpSection(
+                title = stringResource(id = R.string.settings_help_realtime_title),
+                body = stringResource(id = R.string.settings_help_realtime_body)
+            )
+            HelpSection(
+                title = stringResource(id = R.string.settings_help_contacts_title),
+                body = stringResource(id = R.string.settings_help_contacts_body)
+            )
+            HelpSection(
+                title = stringResource(id = R.string.settings_help_profile_title),
+                body = stringResource(id = R.string.settings_help_profile_body)
+            )
+            HelpSection(
+                title = stringResource(id = R.string.settings_help_signout_title),
+                body = stringResource(id = R.string.settings_help_signout_body)
             )
             HelpSection(
                 title = stringResource(id = R.string.settings_help_support_title),
