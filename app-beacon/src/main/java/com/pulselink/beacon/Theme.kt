@@ -1,49 +1,49 @@
 package com.pulselink.beacon
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-private val BeaconBlue = Color(0xFFDCEFFF)
-private val BeaconBlueStrong = Color(0xFF6EB2FF)
-private val BeaconText = Color(0xFF1E1E1E)
-private val BeaconOnMuted = Color(0xFF5C5C5C)
-private val BeaconSurface = Color(0xFFF7F7F7)
-private val BeaconSurfaceStrong = Color(0xFFF0F0F0)
-private val BeaconAccent = Color(0xFF1E88E5)
-private val BeaconSuccess = Color(0xFF60C659)
-private val BeaconDanger = Color(0xFFF04444)
-
-private val LightColors = lightColorScheme(
-    primary = BeaconAccent,
-    onPrimary = Color.White,
-    secondary = BeaconBlueStrong,
-    onSecondary = Color.White,
-    background = Color.White,
-    onBackground = BeaconText,
-    surface = BeaconSurface,
-    onSurface = BeaconText,
-    surfaceVariant = BeaconSurfaceStrong,
-    onSurfaceVariant = BeaconOnMuted,
-    tertiary = BeaconBlue,
-    error = BeaconDanger
+// Colors matched from PulseLinkTheme.kt
+private val DarkColors = darkColorScheme(
+    primary = Color(0xFF5E6FFF),
+    secondary = Color(0xFFFFEA00),
+    surface = Color(0xFF0F101A),
+    onSurface = Color(0xFFE8EAFF),
+    background = Color(0xFF0B0E16),
+    onBackground = Color(0xFFE8EAFF),
+    surfaceVariant = Color(0xFF1C1F2B),
+    onSurfaceVariant = Color(0xFFBDC1D6),
+    error = Color(0xFFEF6666),
+    onError = Color(0xFF320000),
+    tertiary = Color(0xFF181D35) // Added for header backgrounds
 )
 
-private val DarkColors = darkColorScheme(
-    primary = BeaconAccent,
-    secondary = BeaconBlueStrong,
-    tertiary = BeaconBlue
+private val LightColors = lightColorScheme(
+    primary = Color(0xFF1A237E),
+    secondary = Color(0xFFFFEA00),
+    surface = Color(0xFFF4F4FF),
+    onSurface = Color(0xFF060713),
+    background = Color(0xFFF6F7FF),
+    onBackground = Color(0xFF111321),
+    surfaceVariant = Color(0xFFE7E9F6),
+    onSurfaceVariant = Color(0xFF444A5F),
+    error = Color(0xFFD32F2F),
+    onError = Color(0xFFFFFFFF),
+    tertiary = Color(0xFFE7E9F6) // Added for header backgrounds
 )
 
 @Composable
 fun PulseLinkBeaconTheme(
-    darkTheme: Boolean = false,
+    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
+    val colors = if (darkTheme) DarkColors else LightColors
     MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
+        colorScheme = colors,
         typography = MaterialTheme.typography,
         content = content
     )
