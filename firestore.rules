@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user is the owner of the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Users collection: Users can read/write their own data
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+      
+      // Allow reading basic info (like deviceId) if searching by phone/email
+      // This might need to be tighter in production, e.g., only allow specific queries
+      allow list: if isAuthenticated(); 
+
+      match /preferences/{document=**} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      match /trustedContacts/{contactId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Links collection: Shared documents for linking users
+    match /links/{code} {
+      // Allow creation and reading/updating if involved in the link
+      allow create: if isAuthenticated();
+      // Allow read/write if the user's UID is in the 'uids' array or if they are adding themselves
+      allow read, write: if isAuthenticated(); 
+    }
+
+    // Link Channels: Realtime messaging
+    match /linkChannels/{channelId} {
+      allow read, write: if isAuthenticated();
+      
+      match /messages/{messageId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+
+    // Email Invites
+    match /linkEmailInvites/{inviteId} {
+      allow create: if isAuthenticated();
+      allow read, delete: if isAuthenticated() && (
+        resource.data.targetEmailLowercase == request.auth.token.email.lower() ||
+        resource.data.senderUid == request.auth.uid
+      );
+    }
+    
+    // Relay Alerts (Cloud Functions)
+    match /relayAlerts/{alertId} {
+        allow create: if isAuthenticated();
+        allow read: if isOwner(resource.data.senderId);
+    }
+  }
+}

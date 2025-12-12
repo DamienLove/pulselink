@@ -40,6 +40,7 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
@@ -241,7 +242,7 @@ fun InboxScreen(
                 )
                 Divider()
                 if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
-                    scope.launch {
+                    LaunchedEffect(dismissState.currentValue) {
                         delay(250)
                         when (dismissState.currentValue) {
                             SwipeToDismissBoxValue.StartToEnd,

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PulseLink Beacon — Features and Settings</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <meta name="description" content="PulseLink Beacon: SMS/MMS with safety features like DND bypass, keyphrase alarms, and Safety interop.">
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1>PulseLink Beacon</h1>
+  <p class="tag">SMS/MMS with safety‑aware alerts and Do Not Disturb bypass</p>
+  <nav>
+    <a href="index.htm">Home</a>
+    <a href="safety.html">Safety</a>
+    <a href="beacon.html" class="active">Beacon</a>
+    <a href="deep-links.html">Deep Links</a>
+    <a href="store.html">Store</a>
+    <a href="ios.html">iOS</a>
+    <a href="qa.html" class="cta">QA / Beta</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <section class="lead">
+    <h2>Highlights</h2>
+    <ul>
+      <li><strong>Favorites break through DND</strong> — selected contacts can alert you audibly even in Do Not Disturb.</li>
+      <li><strong>Keyphrase alarm</strong> — an incoming message with your private keyphrase triggers an audible alarm.</li>
+      <li><strong>Safety interop</strong> — linked Safety alerts can trigger Beacon’s emergency siren on your device.</li>
+      <li><strong>FCM delivery</strong> — when paired with PulseLink Safety, messages and signals can route via Firebase Cloud Messaging over Wi‑Fi (no SIM required).</li>
+    </ul>
+  </section>
+
+  <section>
+    <h3>Settings</h3>
+    <div class="grid-2">
+      <div>
+        <h4>Favorites & DND</h4>
+        <ul class="list-tight">
+          <li>Grant DND override to Beacon when prompted.</li>
+          <li>Settings → Manage favorites: choose who can break through DND.</li>
+          <li>Pick an emergency siren tone for urgent cases.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Keyphrase Alarm</h4>
+        <ul class="list-tight">
+          <li>Choose a private phrase unlikely in normal conversation.</li>
+          <li>When a message contains it, Beacon plays an alarm even in DND.</li>
+          <li>Change or disable anytime in Settings.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h3>With PulseLink Safety</h3>
+    <p>If a trusted contact triggers an emergency in <a href="safety.html">Safety</a>, Beacon can sound an emergency siren for you, helping you respond faster.</p>
+  </section>
+
+  <section>
+    <h3>Tips</h3>
+    <ul>
+      <li>Keep notifications allowed for timely alerts.</li>
+      <li>Review permissions after OS upgrades.</li>
+      <li>All features are optional and can be turned off at any time.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h3>Diagnostics</h3>
+    <p>If an expected audible alert does not play, open Settings → Diagnostics → <em>Export logs</em> and share with support. This helps troubleshoot DND policy, notification channels, and FCM delivery.</p>
+  </section>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© PulseLink</p></div></footer>
+</body>
+</html>

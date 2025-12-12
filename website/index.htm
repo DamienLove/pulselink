@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PulseLink — Safety, Beacon, Docs</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <meta name="description" content="PulseLink Suite — personal safety and communication apps. Features, how‑tos, deep links, store info, iOS roadmap, and QA/beta testing guide.">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <h1>PulseLink Suite</h1>
+      <p class="tag">Personal safety and trusted communications</p>
+      <nav>
+        <a href="index.htm" class="active">Home</a>
+        <a href="safety.html">Safety</a>
+        <a href="beacon.html">Beacon</a>
+        <a href="deep-links.html">Deep Links</a>
+        <a href="store.html">Store</a>
+        <a href="ios.html">iOS</a>
+        <a href="qa.html" class="cta">QA / Beta</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="lead">
+      <h2>What is PulseLink?</h2>
+      <p>PulseLink is a 3‑part suite:</p>
+      <ul>
+        <li><strong>Core</strong>: shared engine, data models, and UI foundations.</li>
+        <li><strong>PulseLink Safety</strong>: the personal safety app that listens for discreet trigger phrases and escalates alerts with location to trusted contacts.</li>
+        <li><strong>PulseLink Beacon</strong>: a modern SMS/MMS experience with safety‑aware features. Favorites can break through Do Not Disturb with a specific tone; senders can use a keyphrase to trigger an audible alarm on a linked device.</li>
+      </ul>
+      <p>Safety and Beacon interoperate: if a linked contact triggers an emergency in Safety, Beacon can sound the emergency siren too.</p>
+    </section>
+
+    <section>
+      <h3>Quick Links</h3>
+      <div class="cards">
+        <a class="card" href="safety.html"><h4>Safety</h4><p>Features, setup, emergency flow</p></a>
+        <a class="card" href="beacon.html"><h4>Beacon</h4><p>Messaging, DND bypass, interop</p></a>
+        <a class="card" href="deep-links.html"><h4>Deep Links</h4><p>pulselink:// assistant actions</p></a>
+        <a class="card" href="store.html"><h4>Store</h4><p>Play Store copy, assets</p></a>
+        <a class="card" href="ios.html"><h4>iOS</h4><p>Roadmap and TestFlight plan</p></a>
+        <a class="card" href="qa.html"><h4>QA / Beta</h4><p>Test instructions and checklists</p></a>
+      </div>
+    </section>
+
+    <section>
+      <h3>What’s New</h3>
+      <ul>
+        <li><strong>FCM relay via Cloud Functions</strong> — user‑to‑user link requests, approvals, and messages now deliver over Wi‑Fi using Firebase Cloud Messaging (no SMS required).</li>
+        <li><strong>WebRTC signaling (beta)</strong> — experimental P2P DataChannel for low‑latency sessions; uses STUN, falls back to relay. Disabled by default unless both sides opt‑in.</li>
+        <li><strong>Diagnostics Logger</strong> — export/share lightweight logs to help debug delivery and permissions issues.</li>
+        <li><strong>Home screen widget</strong> — quick Emergency, Cancel, and Check‑in actions.</li>
+        <li>Improved trusted contact linking: clearer requests/approvals and resiliency on flaky networks.</li>
+        <li>Emergency alert routing with map deeplink and battery‑friendly background handling.</li>
+        <li>Assistant shortcuts and deep links for hands‑free actions.</li>
+        <li>Beacon DND bypass tones for favorites and emergency siren escalation.</li>
+      </ul>
+    </section>
+
+    <section class="support">
+      <h3>Support the Project</h3>
+      <p>Your help funds infrastructure, accessibility work, and iOS development.</p>
+      <p>
+        <a class="btn" href="https://github.com/sponsors/DamienLove" target="_blank" rel="noopener">GitHub Sponsors</a>
+        <a class="btn" href="https://ko-fi.com/YOUR_USERNAME" target="_blank" rel="noopener">Ko‑fi</a>
+        <a class="btn" href="https://www.paypal.com/donate?hosted_button_id=YOUR_BUTTON_ID" target="_blank" rel="noopener">PayPal</a>
+      </p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>© PulseLink. This site is a static bundle you can upload at <em>pulselink.damiennichols.com</em>.</p>
+    </div>
+  </footer>
+</body>
+<script>
+  // noop placeholder for future analytics if needed; keep static for easy upload
+</script>
+</html>

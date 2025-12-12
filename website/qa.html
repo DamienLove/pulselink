@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PulseLink — QA / Beta Test Plan</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <meta name="description" content="Step‑by‑step instructions for QA and beta testers to validate PulseLink features.">
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1>QA / Beta Testing</h1>
+  <p class="tag">End‑to‑end checks for Safety, Beacon, and Deep Links</p>
+  <nav>
+    <a href="index.htm">Home</a>
+    <a href="safety.html">Safety</a>
+    <a href="beacon.html">Beacon</a>
+    <a href="deep-links.html">Deep Links</a>
+    <a href="store.html">Store</a>
+    <a href="ios.html">iOS</a>
+    <a href="qa.html" class="cta active">QA / Beta</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <section class="lead">
+    <p>Use two Android devices if possible: one running <strong>Safety</strong>, another with <strong>Beacon</strong> (or Safety as well). Ensure notifications and location are allowed.</p>
+    <p>Report bugs with context, device model, and logs/screenshots at: <a href="https://damiennichols.com/report-bug/" target="_blank" rel="noopener">damiennichols.com/report-bug</a>.</p>
+  </section>
+
+  <section>
+    <h3>0) Install & Permissions</h3>
+    <ol class="list-tight">
+      <li>Install latest APKs from <a href="https://github.com/DamienLove/pulselink/releases" target="_blank" rel="noopener">Releases</a>.</li>
+      <li>Grant Notifications, Microphone (Safety), Location (Safety), Contacts (optional), and DND override (Beacon).</li>
+      <li>Verify app can run in background (disable battery optimizations if prompted).</li>
+    </ol>
+  </section>
+
+  <section>
+    <h3>1) Trusted Contacts, Links, Approvals</h3>
+    <ol class="list-tight">
+      <li>Add a trusted contact on Device A; accept link/approval on Device B if prompted.</li>
+      <li>Verify contact appears under Trusted Contacts on both devices after sync.</li>
+      <li>Remove and re‑add to test idempotency and rule enforcement.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h3>2) Messaging and Signals (FCM over Wi‑Fi)</h3>
+    <ol class="list-tight">
+      <li>Ensure both devices are on Wi‑Fi (SIM optional). Disable mobile data if you want to force Wi‑Fi‑only.</li>
+      <li>Send a standard message from A → B; verify receipt and notification.</li>
+      <li>Send an urgent message from A → B; verify louder tone/priority channel.</li>
+      <li>Background B and repeat; confirm delivery within 5–10 seconds via Firebase Cloud Messaging (FCM).</li>
+    </ol>
+  </section>
+
+  <section>
+    <h3>3) Emergency Flow (Safety)</h3>
+    <ol class="list-tight">
+      <li>Trigger Safety on A (voice phrase or deep link). Observe alert sheet and countdown if applicable.</li>
+      <li>Verify B receives alert with a Google Maps link. Open map shows approximate location.</li>
+      <li>Test Cancel: use cancel phrase or in‑app cancel (enter PIN if enabled). Verify B receives cancellation.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h3>4) Beacon DND Bypass</h3>
+    <ol class="list-tight">
+      <li>On B, enable DND. Mark A’s identity as Favorite in Beacon.</li>
+      <li>Send an urgent/keyword message from A → B. Verify audible alert in DND, correct siren tone.</li>
+      <li>Disable Favorite and retry; confirm no DND bypass occurs.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h3>5) Deep Links</h3>
+    <p>Test the links on device B (with app installed):</p>
+    <ul class="list-tight">
+      <li><code>pulselink://assistant/emergency</code> → starts emergency flow.</li>
+      <li><code>pulselink://assistant/cancel</code> → cancels if active.</li>
+      <li><code>pulselink://assistant/checkin</code> → sends check‑in.</li>
+      <li><code>pulselink://assistant/message?contact=Test&amp;text=Hello</code> → composes/sends message.</li>
+      <li>See <a href="deep-links.html">Deep Links</a> for full list.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h3>6) Home Screen Widget</h3>
+    <ol class="list-tight">
+      <li>Add the PulseLink widget: long‑press home screen → Widgets → PulseLink.</li>
+      <li>Tap Emergency, Cancel, and Check‑in; verify each action performs as expected and logs an entry in Diagnostics.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h3>7) WebRTC Signaling (beta, if available)</h3>
+    <ol class="list-tight">
+      <li>If a <em>WebRTC (beta)</em> toggle exists in Settings on both devices, enable it.</li>
+      <li>Initiate a session from A (e.g., from a linked contact details). Observe that B receives offer/answer and the session connects.</li>
+      <li>Background B; verify the session recovers or gracefully falls back to relay. Disable beta when finished.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h3>8) Background & Edge Cases</h3>
+    <ul class="list-tight">
+      <li>Lock screen delivery: alerts still notify within 10 seconds.</li>
+      <li>Airplane mode then Wi‑Fi only: flows still work over Wi‑Fi.</li>
+      <li>Reboot device: app resumes listeners on unlock; deep links still open.</li>
+      <li>Permissions revoked: app shows clear prompts and degrades gracefully.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h3>Pass/Fail, Diagnostics & Reporting</h3>
+    <ul>
+      <li>Mark each step pass/fail with device model and OS version.</li>
+      <li>Attach screenshots or screen recordings for failures.</li>
+      <li>Export logs from Settings → Diagnostics → <em>Export logs</em> and attach to your report.</li>
+      <li>Submit via <a href="https://damiennichols.com/report-bug/" target="_blank" rel="noopener">bug report form</a>. Include steps, expected vs. actual, logs if available.</li>
+    </ul>
+  </section>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© PulseLink</p></div></footer>
+</body>
+</html>
