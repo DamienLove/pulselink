@@ -44,7 +44,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.Alignment
@@ -58,7 +57,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.pulselink.beacon.R
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import com.pulselink.beacon.ui.colorFromName
 
 data class Sender(val initials: String, val color: Color = colorFromName(initials))
@@ -85,7 +83,6 @@ fun InboxScreen(
     val tabs = listOf("All Messages", "Read", "Unread")
     val selectedTab = rememberSaveable { mutableIntStateOf(0) }
     val items = remember { mutableStateListOf(*threads.toTypedArray()) }
-    val scope = rememberCoroutineScope()
     val filteredThreads by remember(selectedTab.intValue, items) {
         derivedStateOf {
             when (selectedTab.intValue) {
@@ -241,8 +238,8 @@ fun InboxScreen(
                     }
                 )
                 HorizontalDivider()
-                if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
-                    LaunchedEffect(dismissState.currentValue) {
+                LaunchedEffect(dismissState.currentValue) {
+                    if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
                         delay(250)
                         when (dismissState.currentValue) {
                             SwipeToDismissBoxValue.StartToEnd,
