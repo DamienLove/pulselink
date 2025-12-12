@@ -155,7 +155,7 @@
     <string name="settings_help_support_title">Support &amp; feedback</string>
     <string name="settings_help_support_body">Use Report a bug to send logs and context to the PulseLink team, or open the Beta testers panel to manage preview builds and feature flags.</string>
     <string name="settings_help_power_title">Battery &amp; standby exclusions</string>
-    <string name="settings_help_power_body">Allow PulseLink to run unrestricted and turn off \"Remove permissions and free up space\" so Android doesn't pause alerts or background messaging.</string>
+    <string name="settings_help_power_body">Allow PulseLink to run unrestricted and turn off &quot;Remove permissions and free up space&quot; so Android does not pause alerts or background messaging.</string>
     <string name="settings_help_contacts_title">Contact sync</string>
     <string name="settings_help_contacts_body">Keep linked contacts up to date: enable auto-update to accept phone/email changes, and tap Sync now to push or pull the latest details for your circle.</string>
     <string name="settings_help_realtime_title">Realtime data channel</string>

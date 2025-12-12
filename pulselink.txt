@@ -1,5 +1,6 @@
-Branch: bugfix/app-beacon-qa (based on Beta); Play target v36 (v28 currently in store)
+Branch: feature/compact-settings-help (based on Beta); Play target v36 (v28 currently in store)
 Recent builds:
+ - 2025-12-12: .\gradlew assembleFreeDebug assembleProDebug (feature/compact-settings-help) – settings screen compacted (descriptions moved to Help), settings help expanded, beacon inbox swipe fix; artifacts in androidApp/build/outputs/apk/{free,pro}/debug.
  - 2025-12-10: .\gradlew bundleFreeRelease bundleProRelease (versionCode 36 / versionName 36). Realtime toggle now visible in release; default off; requires Remote Config realtime_enabled=true + in-app toggle to use Firebase, otherwise SMS fallback.
  - 2025-12-08: ./gradlew :androidApp:compileFreeDebugKotlin ?
  - 2025-12-02: .\gradlew bundleFreeRelease bundleProRelease (versionCode 26 / versionName 26) using updated google-services.json from Free-Certs and PRO-CERTS; AlertRelayClient Ktor isSuccess import fixed.
@@ -27,7 +28,12 @@ Realtime comms (2025-12-10):
  - Toggle in Settings (all builds) controls realtime; Remote Config flag realtime_enabled must also be true. If either is false, app forces SMS.
  - LinkChannelService can stop listeners entirely when realtime is off (avoids PERMISSION_DENIED spam during rule hardening).
  - Firestore rules required: auth read/write /linkChannels/{channelId}/messages, /links/{code}, /linkEmailInvites/{docId}; auth read owner-write /users/{uid} and /users/{uid}/trustedContacts/{contactId}; allow queries on users by emailLowercase/phoneNumber for linking.
- - v36 keeps SMS fallback for link requests/messages/call prep so users aren’t blocked while realtime rolls out.
+ - v36 keeps SMS fallback for link requests/messages/call prep so users aren't blocked while realtime rolls out.
+
+Settings/help (2025-12-12):
+ - Settings screen slimmed: row subtitles removed; detailed descriptions live in Settings Help.
+ - Help screen adds sections for battery/standby, realtime data channel, contact sync, profile share, sign out.
+ - Beacon inbox swipe dismissal wrapped in LaunchedEffect to avoid coroutines during composition (app-beacon InboxScreen).
 
 Bug reporting:
  - Shake-to-report enabled (MainActivity + util/ShakeDetector); hint card on Home. Opens Google Form prefilled with build/device/flavor.
