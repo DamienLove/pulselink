@@ -154,6 +154,16 @@
     <string name="settings_help_tone_body">Customize the siren that plays for emergencies, the chime for check-ins, and the ringtone override for incoming escalation calls to make sure every signal stands out.</string>
     <string name="settings_help_support_title">Support &amp; feedback</string>
     <string name="settings_help_support_body">Use Report a bug to send logs and context to the PulseLink team, or open the Beta testers panel to manage preview builds and feature flags.</string>
+    <string name="settings_help_power_title">Battery &amp; standby exclusions</string>
+    <string name="settings_help_power_body">Allow PulseLink to run unrestricted and turn off &quot;Remove permissions and free up space&quot; so Android does not pause alerts or background messaging.</string>
+    <string name="settings_help_contacts_title">Contact sync</string>
+    <string name="settings_help_contacts_body">Keep linked contacts up to date: enable auto-update to accept phone/email changes, and tap Sync now to push or pull the latest details for your circle.</string>
+    <string name="settings_help_realtime_title">Realtime data channel</string>
+    <string name="settings_help_realtime_body">Send links, alerts, and call prep over data when available for faster delivery; PulseLink falls back to SMS when disabled or offline.</string>
+    <string name="settings_help_profile_title">Share profile</string>
+    <string name="settings_help_profile_body">Broadcast your current phone and email so trusted contacts can reach you during an alert. Use Update profile to resend anytime.</string>
+    <string name="settings_help_signout_title">Sign out</string>
+    <string name="settings_help_signout_body">Unlink this device and return to login. You can rejoin later and SMS-only alerts remain available if you need a lightweight option.</string>
     <string name="emergency_alert_title">%1$s triggered an emergency</string>
     <string name="emergency_alert_body">PulseLink is overriding Do Not Disturb and playing the emergency tone so you can respond immediately. If the siren stays silent, open Settings → Apps → PulseLink → Notifications and re-enable bypass.</string>
     <string name="assistant_trigger_emergency">Emergency alert sent via Google Assistant.</string>

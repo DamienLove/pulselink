@@ -23,17 +23,16 @@ import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.Shield
-import androidx.compose.material.icons.filled.CropSquare
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,11 +41,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.pulselink.beacon.R
 import com.pulselink.beacon.model.ContactDetails
+import com.pulselink.beacon.ui.BeaconHeader
 import com.pulselink.beacon.ui.InitialsAvatar
 import com.pulselink.beacon.ui.Sender
 import com.pulselink.beacon.ui.colorFromName
@@ -63,6 +63,10 @@ fun EditContactScreen(
     var address by rememberSaveable { mutableStateOf(contact.address) }
     var trusted by rememberSaveable { mutableStateOf(contact.trusted) }
 
+    val avatarBrush = Brush.verticalGradient(
+        colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.9f), MaterialTheme.colorScheme.primary)
+    )
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -70,65 +74,51 @@ fun EditContactScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Header
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.tertiary)
-                    .padding(top = 10.dp, bottom = 16.dp, start = 12.dp, end = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
+            BeaconHeader(
+                onBack = onBack,
+                onSettings = null, // No settings for edit contact screen
+                title = "Edit Contact",
+                centerTitle = true,
+                content = {
+                    Column(
                         modifier = Modifier
-                            .size(28.dp)
-                            .clickable { onBack() },
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Edit Contact",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                    )
-                    Spacer(modifier = Modifier.size(28.dp)) // placeholder for symmetry
-                }
-                Spacer(modifier = Modifier.height(14.dp))
-                Box(contentAlignment = Alignment.BottomEnd) {
-                    InitialsAvatar(
-                        sender = Sender(
-                            initials = contact.name.firstOrNull()?.uppercase()?.toString() ?: "?",
-                            color = colorFromName(contact.name)
-                        ),
-                        size = 120,
-                        modifier = Modifier
-                            .clip(CircleShape)
-                    )
-                    Surface(
-                        color = Color(0xFFF05454),
-                        shape = CircleShape,
-                        modifier = Modifier
-                            .padding(6.dp)
-                            .size(34.dp)
-                            .clickable { /* TODO photo picker */ },
-                        tonalElevation = 4.dp
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Edit Photo",
-                                tint = Color.White
+                        Box(contentAlignment = Alignment.BottomEnd) {
+                            InitialsAvatar(
+                                sender = Sender(
+                                    initials = contact.name.firstOrNull()?.uppercase()?.toString() ?: "?",
+                                    color = colorFromName(contact.name)
+                                ),
+                                size = 120,
+                                modifier = Modifier
+                                    .clip(CircleShape)
                             )
+                            Surface(
+                                color = MaterialTheme.colorScheme.error, // Use theme color
+                                shape = CircleShape,
+                                modifier = Modifier
+                                    .padding(6.dp)
+                                    .size(34.dp)
+                                    .clickable { /* TODO photo picker */ },
+                                tonalElevation = 4.dp
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Edit Photo",
+                                        tint = MaterialTheme.colorScheme.onError // Use theme color
+                                    )
+                                }
+                            }
                         }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(text = "Edit Photo", style = MaterialTheme.typography.bodyMedium, color = Color.White)
                     }
                 }
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(text = "Edit Photo", style = MaterialTheme.typography.bodyMedium)
-            }
+            )
 
             Column(
                 modifier = Modifier
@@ -171,7 +161,7 @@ fun EditContactScreen(
                     Icon(
                         imageVector = Icons.Outlined.Add,
                         contentDescription = "More info",
-                        tint = Color(0xFF7A7A7A),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant, // Use theme color
                         modifier = Modifier.size(28.dp)
                     )
                     Column {
@@ -191,7 +181,7 @@ fun EditContactScreen(
                     Icon(
                         imageVector = Icons.Outlined.Shield,
                         contentDescription = "Trusted",
-                        tint = Color(0xFF4F54F5),
+                        tint = MaterialTheme.colorScheme.secondary, // Use theme color (for trusted)
                         modifier = Modifier.size(30.dp)
                     )
                     Column(modifier = Modifier.weight(1f)) {
@@ -205,7 +195,7 @@ fun EditContactScreen(
                     TextButton(
                         onClick = { trusted = !trusted }
                     ) {
-                        Text(if (trusted) "On" else "Off")
+                        Text(if (trusted) "On" else "Off", color = MaterialTheme.colorScheme.primary) // Use theme color
                     }
                 }
 
@@ -227,34 +217,13 @@ fun EditContactScreen(
                         .fillMaxWidth()
                         .padding(top = 8.dp),
                     shape = RoundedCornerShape(30.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3EC3E8))
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary) // Use theme color
                 ) {
                     Text("Update Contact", modifier = Modifier.padding(vertical = 4.dp))
                 }
             }
-
             Spacer(modifier = Modifier.weight(1f))
-
-            Surface(
-                color = Color(0xFF3B3B3B)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = Color.White)
-                    Icon(
-                        imageVector = Icons.Filled.CropSquare,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(26.dp)
-                    )
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = Color.White)
-                }
-            }
+            // Removed the hardcoded bottom bar
         }
     }
 }
@@ -266,6 +235,17 @@ private fun LabeledField(
     placeholder: String,
     leadingIcon: androidx.compose.ui.graphics.vector.ImageVector
 ) {
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
+        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
+        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        focusedSupportingTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        focusedContainerColor = MaterialTheme.colorScheme.surface,
+        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+    )
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -275,10 +255,11 @@ private fun LabeledField(
             Icon(
                 imageVector = leadingIcon,
                 contentDescription = null,
-                tint = Color(0xFF9E9E9E)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant // Use theme color
             )
         },
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(8.dp),
+        colors = fieldColors // Apply themed colors
     )
 }

@@ -108,7 +108,6 @@ fun SettingsScreen(
         ) {
             SettingsToggleRow(
                 title = "Share location in alerts",
-                subtitle = "Include GPS when alerting your circle.",
                 checked = settings.includeLocation,
                 onCheckedChange = onToggleIncludeLocation
             )
@@ -134,46 +133,39 @@ fun SettingsScreen(
             )
             SettingsActionRow(
                 title = stringResource(R.string.permission_battery_opt_title),
-                subtitle = stringResource(R.string.permission_battery_opt_description),
                 actionLabel = stringResource(R.string.permission_battery_opt_action),
                 onAction = onRequestBatteryOpt,
                 leadingIcon = Icons.Filled.PowerSettingsNew
             )
             SettingsActionRow(
                 title = stringResource(R.string.permission_unused_apps_title),
-                subtitle = stringResource(R.string.permission_unused_apps_description),
                 actionLabel = stringResource(R.string.permission_unused_apps_action),
                 onAction = onRequestUnusedApps,
                 leadingIcon = Icons.Filled.Schedule
             )
             SettingsToggleRow(
                 title = "Auto-allow remote sound change",
-                subtitle = "Automatically approve tone overrides from new links.",
                 checked = settings.autoAllowRemoteSoundChange,
                 onCheckedChange = onToggleAutoAllowRemoteSoundChange
             )
             SettingsToggleRow(
                 title = stringResource(id = R.string.settings_auto_update_contact_title),
-                subtitle = stringResource(id = R.string.settings_auto_update_contact_subtitle),
                 checked = settings.autoUpdateContactInfo,
                 onCheckedChange = onToggleAutoUpdateContactInfo
             )
             SettingsToggleRow(
                 title = stringResource(id = R.string.settings_realtime_title),
-                subtitle = stringResource(id = R.string.settings_realtime_subtitle),
                 checked = settings.realtimeEnabled,
                 onCheckedChange = onToggleRealtime
             )
             SettingsActionRow(
                 title = stringResource(id = R.string.settings_sync_contacts_title),
-                subtitle = stringResource(id = R.string.settings_sync_contacts_subtitle),
                 actionLabel = stringResource(id = R.string.settings_sync_action),
                 onAction = onSyncNow,
                 leadingIcon = Icons.Filled.Sync
             )
             SettingsActionRow(
                 title = stringResource(id = R.string.profile_update_button),
-                subtitle = stringResource(id = R.string.profile_update_subtitle),
                 actionLabel = if (profileUpdateState.inProgress) {
                     stringResource(id = R.string.profile_update_sending)
                 } else {
@@ -229,7 +221,6 @@ fun SettingsScreen(
             )
             SettingsActionRow(
                 title = stringResource(id = R.string.settings_sign_out_title),
-                subtitle = stringResource(id = R.string.settings_sign_out_subtitle),
                 actionLabel = stringResource(id = R.string.settings_sign_out_action),
                 onAction = onSignOut,
                 leadingIcon = Icons.Filled.PowerSettingsNew
@@ -258,7 +249,7 @@ fun SettingsScreen(
 @Composable
 private fun SettingsToggleRow(
     title: String,
-    subtitle: String,
+    subtitle: String? = null,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
@@ -285,11 +276,13 @@ private fun SettingsToggleRow(
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             Switch(checked = checked, onCheckedChange = onCheckedChange)
         }

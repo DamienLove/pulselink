@@ -153,11 +153,9 @@ android {
         val proReleaseConfig = signingConfigs.findByName("proRelease")
 
         create("free") {
+            manifestPlaceholders += mapOf("admobAppId" to "ca-app-pub-5327057757821609~9533221188")
             dimension = "tier"
             applicationId = "com.free.pulselink"
-            manifestPlaceholders += mapOf(
-                "admobAppId" to "ca-app-pub-5327057757821609~9533221188"
-            )
             buildConfigField("boolean", "ADS_ENABLED", "true")
             buildConfigField("boolean", "PRO_FEATURES", "false")
             buildConfigField("String", "ALERT_RELAY_BASE_URL", "\"https://us-central1-pulselink-prod.cloudfunctions.net\"")
@@ -178,11 +176,9 @@ android {
             }
         }
         create("pro") {
+            manifestPlaceholders += mapOf("admobAppId" to "")
             dimension = "tier"
             applicationIdSuffix = ".pro"
-            manifestPlaceholders += mapOf(
-                "admobAppId" to ""
-            )
             buildConfigField("boolean", "ADS_ENABLED", "false")
             buildConfigField("boolean", "PRO_FEATURES", "true")
             buildConfigField("String", "ALERT_RELAY_BASE_URL", "\"https://us-central1-pulselink-prod.cloudfunctions.net\"")

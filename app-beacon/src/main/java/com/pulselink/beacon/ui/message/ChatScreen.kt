@@ -19,15 +19,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -43,7 +44,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.pulselink.beacon.R
+import com.pulselink.beacon.ui.BeaconHeader
 import com.pulselink.beacon.ui.InitialsAvatar
+import com.pulselink.beacon.ui.Sender
 import com.pulselink.beacon.ui.colorFromName
 
 data class Message(
@@ -69,99 +72,14 @@ fun ChatScreen(
     onSettings: () -> Unit
 ) {
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.tertiary)
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_logo),
-                        contentDescription = "Logo",
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                    )
-                    Text(
-                        text = "PulseLink Beacon",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        modifier = Modifier
-                            .size(28.dp)
-                            .padding(end = 8.dp)
-                            .clip(CircleShape)
-                            .background(Color.Transparent)
-                            .clickable { onBack() }
-                            .padding(2.dp),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = if (isGroup) "Group Chat" else title,
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                        )
-                        if (isGroup) {
-                            Text(
-                                text = "${members.size} Members",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Settings",
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clickable { onSettings() },
-                        tint = MaterialTheme.colorScheme.onSurface
-                            .copy(alpha = 0.9f)
-                    )
-                }
-                if (isGroup) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    ) {
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                            modifier = Modifier.weight(1f)
-                        )
-                        MemberRow(members)
-                        Surface(
-                            color = Color(0xFFFF6F61),
-                            shape = CircleShape
-                        ) {
-                            Text(
-                                text = "+4",
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                            )
-                        }
-                    }
-                }
-            }
+            BeaconHeader(
+                onBack = onBack,
+                onSettings = onSettings,
+                title = if (isGroup) "Group Chat" else title,
+                subtitle = if (isGroup) "${members.size} Members" else null
+            )
         },
         bottomBar = {
             MessageInputBar()
@@ -209,6 +127,59 @@ fun ChatScreen(
 }
 
 @Composable
+private fun MessageInputBar() {
+    var text by rememberSaveable { mutableStateOf("") }
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
+        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
+        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        focusedSupportingTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        focusedContainerColor = MaterialTheme.colorScheme.surface,
+        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+    )
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant, // Use theme color
+        tonalElevation = 2.dp,
+        shadowElevation = 0.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField( // Changed to OutlinedTextField for consistent style
+                value = text,
+                onValueChange = { text = it },
+                placeholder = { Text("Write your message here") },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                shape = RoundedCornerShape(28.dp), // Rounded shape for input field
+                colors = fieldColors
+            )
+            Surface(
+                color = MaterialTheme.colorScheme.primary, // Use theme color
+                shape = CircleShape,
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .clip(CircleShape)
+                    .clickable { /* TODO: Send message */ text = "" }
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Send, // Updated to AutoMirrored
+                    contentDescription = "Send",
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun MemberRow(members: List<String>) {
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         members.take(4).forEach { name ->
@@ -216,10 +187,10 @@ private fun MemberRow(members: List<String>) {
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
-                    .background(Color.LightGray),
+                    .background(MaterialTheme.colorScheme.surfaceVariant), // Use theme color
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = name.first().uppercase(), color = MaterialTheme.colorScheme.onSurface)
+                Text(text = name.first().uppercase(), color = MaterialTheme.colorScheme.onSurfaceVariant) // Use theme color
             }
         }
     }
@@ -228,7 +199,7 @@ private fun MemberRow(members: List<String>) {
 @Composable
 private fun MessageBubble(message: Message) {
     val alignment = if (message.fromMe) Alignment.End else Alignment.Start
-    val background = if (message.fromMe) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.surfaceVariant
+    val background = if (message.fromMe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant // Use theme color
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (message.fromMe) Arrangement.End else Arrangement.Start
@@ -277,51 +248,6 @@ private fun MessageBubble(message: Message) {
                         )
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MessageInputBar() {
-    var text by rememberSaveable { mutableStateOf("") }
-    Surface(
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
-        color = Color(0xFFE3F4FF)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TextField(
-                value = text,
-                onValueChange = { text = it },
-                placeholder = { Text("Write your message here") },
-                modifier = Modifier.weight(1f),
-                colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = Color(0xFFE3F4FF),
-                    focusedContainerColor = Color(0xFFE3F4FF),
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
-                )
-            )
-            Surface(
-                color = Color(0xFF45B6FF),
-                shape = RoundedCornerShape(50),
-                modifier = Modifier
-                    .padding(start = 8.dp)
-                    .clip(CircleShape)
-                    .clickable { text = "" }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Send,
-                    contentDescription = "Send",
-                    tint = Color.White,
-                    modifier = Modifier.padding(12.dp)
-                )
             }
         }
     }
