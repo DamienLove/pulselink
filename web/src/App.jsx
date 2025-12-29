@@ -936,7 +936,7 @@ function App() {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
-  const spotifyCreds = { clientId: import.meta.env.VITE_SPOTIFY_CLIENT_ID, clientSecret: import.meta.env.VITE_SPOTIFY_CLIENT_SECRET };
+  // Sentinel: Removed hardcoded secrets. Use Cloud Function instead.
   const [spotifyToken, setSpotifyToken] = useState(null);
   const [spotifySearch, setSpotifySearch] = useState('');
   const [spotifyResults, setSpotifyResults] = useState([]);
@@ -969,21 +969,18 @@ function App() {
   };
 
   const getSpotifyToken = async () => {
-    if (!spotifyCreds.clientId || !spotifyCreds.clientSecret) {
-        throw new Error("Missing Client ID/Secret");
+    // Sentinel: Use Cloud Function to get token securely
+    try {
+      const callable = httpsCallable(functions, 'getSpotifyAccessToken');
+      const result = await callable();
+      const token = result.data.access_token;
+      if (!token) throw new Error("No token returned");
+      setSpotifyToken(token);
+      return token;
+    } catch (e) {
+      console.error("Failed to get Spotify token", e);
+      throw new Error("Unable to authenticate with Spotify.");
     }
-    const response = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': 'Basic ' + btoa(spotifyCreds.clientId + ':' + spotifyCreds.clientSecret)
-      },
-      body: 'grant_type=client_credentials'
-    });
-    const data = await response.json();
-    if (data.error) throw new Error(data.error_description || "Token error");
-    setSpotifyToken(data.access_token);
-    return data.access_token;
   };
 
   const handleSpotifySearch = async () => {
