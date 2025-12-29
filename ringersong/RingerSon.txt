@@ -1,0 +1,37 @@
+RingerSong status (last updated 2025-12-27)
+
+Overview
+- Android app plays progressive ringtone segments from local audio files or Spotify.
+- **NEW (v3.2):** Full Spotify integration via Spotify App Remote and Web API.
+- **NEW (v3.2):** Cross-platform sync with PulseLink WebApp via Firebase Firestore (ringer_playlist).
+- Per-contact assignments with urgency ringer.
+- Shuffle/ordered playlist, adjustable segment length and max songs.
+- Zedge convenience button.
+- YouTube Support: Users can paste a YouTube URL to download audio directly as an MP3 ringer.
+
+Integration
+- **Spotify**: Users can search tracks (Web API) and play them via Spotify App Remote.
+- **Firebase**: App syncs playlist with Firestore `users/{uid}/ringer_playlist`.
+- **Web Companion**: PulseLink WebApp now has a RingerSong tab to manage the playlist from the browser.
+
+Ads (AdMob) wired
+- App ID: ca-app-pub-5327057757821609~1777649271
+- Banner, App Open, Native, Interstitial configured.
+
+Build
+- Release AAB (v5, 3.4): app/build/outputs/bundle/release/app-release.aab
+- Application ID: com.RingerSong.free
+- Dependencies: Spotify Auth, Spotify App Remote (republish), Firebase (Auth, Firestore, Analytics).
+
+UI
+- Replaced Web Downloader UI with Spotify Search UI.
+- Real-time updates from cloud playlist.
+
+Notes / next steps
+- Deploy PulseLink WebApp to enable web-based management.
+- Ensure Spotify app is installed on user devices for playback.
+
+Release notes v5 (versionCode 5, versionName 3.4)
+- Theme preferences now sync reliably from PulseLink WebApp so mobile UI colors stay matched.
+- Applied custom typography across the app to use the intended serif display/body fonts.
+- Minor stability polish while resolving track metadata and syncing playlists.

@@ -100,7 +100,7 @@ class RemoteSmsRepository @Inject constructor(
                     status = if (outgoing) SmsMessageStatus.SENT else SmsMessageStatus.RECEIVED
                 )
             } ?: emptyList()
-            trySend(messages.sortedBy { it.timestamp })
+            trySend(messages.sortedByDescending { it.timestamp })
         }
         awaitClose { listener.remove() }
     }

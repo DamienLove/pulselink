@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh issue list:*)",
+      "Bash(gh issue close:*)",
+      "Bash(gh issue comment:*)",
+      "Bash(./gradlew :androidApp:compileFreeDebugKotlin:*)",
+      "Bash(git add:*)",
+      "Bash(git reset:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfix: prevent false emergency alerts from standard SMS\n\n- Only trigger attention tones for URGENT/EMERGENCY messages, not STANDARD\n- Increased AI confidence threshold from 0.6 to 0.75 to reduce false positives\n- Fixes issue #251: Beacon texts sending check-in alerts to trusted contacts\n- Fixes issue #243: Emergency alarm triggered by innocuous messages\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(ORG_GRADLE_JVMARGS=\"-Xmx6g -XX:MaxMetaspaceSize=2g\" ./gradlew:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(gh issue view:*)",
+      "Bash(git restore:*)",
+      "Bash(ORG_GRADLE_JVMARGS=\"-Xmx6g -XX:MaxMetaspaceSize=2g\" ./gradlew :androidApp:bundlePremiumRelease:*)",
+      "Bash(if [ ! -d \"H:/disposable\" ])",
+      "Bash(then mkdir -p \"H:/disposable\")",
+      "Bash(fi)",
+      "Bash(cp:*)",
+      "Bash(git fetch:*)",
+      "Bash(tasklist:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd.exe /c \"taskkill /IM studio64.exe\")",
+      "Bash(./gradlew:*)",
+      "Bash(claude doctor)"
+    ]
+  }
+}

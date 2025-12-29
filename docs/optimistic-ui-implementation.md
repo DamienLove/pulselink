@@ -57,7 +57,7 @@ class ContactConversationViewModel @Inject constructor(
     ) { remote, pending ->
         val remoteIds = remote.map { it.id }.toSet()
         val filteredPending = pending.filter { it.id !in remoteIds }
-        (remote + filteredPending).sortedBy { it.timestamp }
+        (remote + filteredPending).sortedByDescending { it.timestamp }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
     
     fun sendMessage(text: String) {

@@ -149,8 +149,8 @@ Return JSON: {"urgency":"standard|urgent|emergency","confidence":0.0-1.0}
 export const summarizeSmsThread = onCall({}, async (request) => {
   if (!request.auth) {
     throw new HttpsError(
-      "unauthenticated",
-      "The function must be called while authenticated.",
+        "unauthenticated",
+        "The function must be called while authenticated.",
     );
   }
   return await summarizeSmsThreadFlow.run(request.data);
@@ -159,8 +159,8 @@ export const summarizeSmsThread = onCall({}, async (request) => {
 export const composeSmsAssist = onCall({}, async (request) => {
   if (!request.auth) {
     throw new HttpsError(
-      "unauthenticated",
-      "The function must be called while authenticated.",
+        "unauthenticated",
+        "The function must be called while authenticated.",
     );
   }
   return await composeSmsAssistFlow.run(request.data);
@@ -169,8 +169,8 @@ export const composeSmsAssist = onCall({}, async (request) => {
 export const classifySmsUrgency = onCall({}, async (request) => {
   if (!request.auth) {
     throw new HttpsError(
-      "unauthenticated",
-      "The function must be called while authenticated.",
+        "unauthenticated",
+        "The function must be called while authenticated.",
     );
   }
   return await classifySmsUrgencyFlow.run(request.data);

@@ -843,6 +843,44 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 dividerColor = "#312E81",
                 inboxIconVariant = "amethyst_night"
             )
+        ),
+        ThemePreset(
+            name = "Cyber Mist",
+            theme = ThemePreferences(
+                fontStyle = "Monospace",
+                bubbleCornerRadius = 18,
+                backgroundColor = "#1e1b4b",
+                onBackground = "#e879f9",
+                topBarColor = "#2e1065",
+                onTopBarColor = "#e879f9",
+                bubbleOutgoing = "#d946ef",
+                onBubbleOutgoing = "#FFFFFF",
+                bubbleIncoming = "#4c1d95",
+                onBubbleIncoming = "#e879f9",
+                primaryColor = "#d946ef",
+                secondaryColor = "#06b6d4",
+                dividerColor = "#4c1d95",
+                inboxIconVariant = "midnight_oled"
+            )
+        ),
+        ThemePreset(
+            name = "Deep Ocean",
+            theme = ThemePreferences(
+                fontStyle = "Default",
+                bubbleCornerRadius = 24,
+                backgroundColor = "#0f172a",
+                onBackground = "#e0f2fe",
+                topBarColor = "#1e3a8a",
+                onTopBarColor = "#e0f2fe",
+                bubbleOutgoing = "#0ea5e9",
+                onBubbleOutgoing = "#FFFFFF",
+                bubbleIncoming = "#172554",
+                onBubbleIncoming = "#38bdf8",
+                primaryColor = "#0ea5e9",
+                secondaryColor = "#38bdf8",
+                dividerColor = "#1e3a8a",
+                inboxIconVariant = "ocean_deep"
+            )
         )
     )
 

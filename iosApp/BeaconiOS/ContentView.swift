@@ -72,6 +72,8 @@ private struct BeaconTab: View {
     @State private var isUnlocked = false
     @State private var showPinSheet = false
     @AppStorage("privateSafePin") private var storedPin: String = ""
+    @AppStorage("themeColor") private var themeColor: ThemeColor = .blue
+    @AppStorage("bubbleStyle") private var bubbleStyle: BubbleStyle = .rounded
 
     var isPro: Bool {
         #if PRO
@@ -127,7 +129,7 @@ private struct BeaconTab: View {
                                         .foregroundStyle(.white)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 4)
-                                        .background(Color.blue)
+                                        .background(themeColor.color)
                                         .clipShape(Capsule())
                                 }
                             }
@@ -203,6 +205,8 @@ private struct ConversationView: View {
     let onSend: (String) -> Void
 
     @State private var draft = ""
+    @AppStorage("themeColor") private var themeColor: ThemeColor = .blue
+    @AppStorage("bubbleStyle") private var bubbleStyle: BubbleStyle = .rounded
 
     var body: some View {
         VStack {
@@ -215,9 +219,9 @@ private struct ConversationView: View {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(msg.text)
                                         .padding(12)
-                                        .background(msg.isIncoming ? Color(.secondarySystemBackground) : Color.blue)
+                                        .background(msg.isIncoming ? Color(.secondarySystemBackground) : themeColor.color)
                                         .foregroundStyle(msg.isIncoming ? .primary : .white)
-                                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                        .clipShape(bubbleStyle.shape)
                                     Text(msg.timestamp, style: .time)
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)
@@ -256,12 +260,23 @@ private struct ConversationView: View {
 
 private struct SettingsTab: View {
     @ObservedObject var viewModel: BeaconViewModel
+    @AppStorage("themeColor") private var themeColor: ThemeColor = .blue
+    @AppStorage("bubbleStyle") private var bubbleStyle: BubbleStyle = .rounded
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Appearance") {
-                    Text("Theme settings coming soon")
+                    Picker("Accent Color", selection: $themeColor) {
+                        ForEach(ThemeColor.allCases, id: \.self) { color in
+                            Text(color.rawValue.capitalized).tag(color)
+                        }
+                    }
+                    Picker("Bubble Style", selection: $bubbleStyle) {
+                        ForEach(BubbleStyle.allCases, id: \.self) { style in
+                            Text(style.rawValue.capitalized).tag(style)
+                        }
+                    }
                 }
                 Section("Account") {
                     Button("Sign Out", role: .destructive) {
@@ -275,6 +290,32 @@ private struct SettingsTab: View {
                 }
             }
             .navigationTitle("Settings")
+        }
+    }
+}
+
+enum ThemeColor: String, CaseIterable {
+    case blue, purple, orange, green, pink
+
+    var color: Color {
+        switch self {
+        case .blue: return .blue
+        case .purple: return .purple
+        case .orange: return .orange
+        case .green: return .green
+        case .pink: return .pink
+        }
+    }
+}
+
+enum BubbleStyle: String, CaseIterable {
+    case rounded, square, capsule
+
+    var shape: AnyShape {
+        switch self {
+        case .rounded: return AnyShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        case .square: return AnyShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+        case .capsule: return AnyShape(Capsule())
         }
     }
 }

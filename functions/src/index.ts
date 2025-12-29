@@ -17,12 +17,12 @@ if (admin.apps.length === 0) {
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
 
-setGlobalOptions({ maxInstances: 10 });
+setGlobalOptions({maxInstances: 10});
 
-export { naturalLanguageQuery } from './naturalLanguageInterface';
-export { menuSuggestion } from './genkit-sample';
-export { summarizeSmsThread, composeSmsAssist, classifySmsUrgency } from './ai';
-export { alertRelay, alertRelayHttp } from './alertRelay';
-export { onMessageCreated } from './messaging';
-export { sendEmailNotification } from './email';
-export { findUser, deleteAccount } from './users';
+export {naturalLanguageQuery} from "./naturalLanguageInterface";
+export {menuSuggestion} from "./genkit-sample";
+export {summarizeSmsThread, composeSmsAssist, classifySmsUrgency} from "./ai";
+export {alertRelay, alertRelayHttp} from "./alertRelay";
+export {onMessageCreated} from "./messaging";
+export {sendEmailNotification} from "./email";
+export {findUser, deleteAccount} from "./users";

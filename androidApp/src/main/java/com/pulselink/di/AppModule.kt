@@ -256,4 +256,14 @@ object DatabaseModule {
     @Singleton
     @Named("TwilioAuthToken")
     fun provideTwilioAuthToken(): String = BuildConfig.TWILIO_AUTH_TOKEN
+
+    @Provides
+    @Singleton
+    @Named("TruecallerApiKeyDefault")
+    fun provideTruecallerApiKeyDefault(): String = BuildConfig.TRUECALLER_API_KEY
+
+    @Provides
+    @Singleton
+    @Named("TruecallerApiHost")
+    fun provideTruecallerApiHost(): String = BuildConfig.TRUECALLER_API_HOST
 }

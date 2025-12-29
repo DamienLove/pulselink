@@ -216,6 +216,37 @@ final class AlertRelayViewModel: ObservableObject {
         }
     }
 
+    func deleteAccount() async throws {
+        #if canImport(FirebaseAuth)
+        guard let user = Auth.auth().currentUser else { return }
+        let token = try await user.getIDToken()
+        let projectId = "pulselink-24899" // Extracted from GoogleService-Info.plist
+        let urlString = "https://us-central1-\(projectId).cloudfunctions.net/deleteAccount"
+
+        guard let url = URL(string: urlString) else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        // 'data' wrapper required for onCall
+        let body: [String: Any] = ["data": [:]]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+            // Function handles auth deletion, but we sign out locally just in case
+            try? Auth.auth().signOut()
+        } else {
+            throw NSError(domain: "AlertRelay", code: 500, userInfo: [NSLocalizedDescriptionKey: "Account deletion failed"])
+        }
+        #else
+        // Mock success
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        #endif
+    }
+
     private func loadConversations() async {
         if let fetched = try? await conversationProvider.loadConversations() {
             await MainActor.run {

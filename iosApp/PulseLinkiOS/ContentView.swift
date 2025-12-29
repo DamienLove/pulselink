@@ -339,6 +339,8 @@ private struct ConversationView: View {
 private struct SettingsTab: View {
     @ObservedObject var viewModel: AlertRelayViewModel
     @State private var baseUrlDraft: String = ""
+    @State private var showDeleteConfirmation = false
+    @State private var isDeleting = false
 
     var body: some View {
         Form {
@@ -363,6 +365,10 @@ private struct SettingsTab: View {
                     try? FirebaseAuth.Auth.auth().signOut()
                     #endif
                 }
+
+                Button("Delete Account", role: .destructive) {
+                    showDeleteConfirmation = true
+                }
             }
             Section("About") {
                 Label("Matches Android experience: emergency, trusted contacts, urgent chat", systemImage: "arrow.left.arrow.right")
@@ -371,6 +377,32 @@ private struct SettingsTab: View {
             }
         }
         .navigationTitle("Settings")
+        .alert("Delete Account", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                isDeleting = true
+                Task {
+                    do {
+                        try await viewModel.deleteAccount()
+                    } catch {
+                        isDeleting = false
+                    }
+                }
+            }
+        } message: {
+            Text("This will permanently delete your account and all associated data. This action cannot be undone.")
+        }
+        .overlay {
+            if isDeleting {
+                ZStack {
+                    Color.black.opacity(0.4).ignoresSafeArea()
+                    ProgressView("Deleting...")
+                        .padding()
+                        .background(.regularMaterial)
+                        .cornerRadius(8)
+                }
+            }
+        }
     }
 }
 

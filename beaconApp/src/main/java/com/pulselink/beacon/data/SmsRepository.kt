@@ -251,7 +251,7 @@ class SmsRepository(private val context: Context) {
 
         val mmsItems = readMmsMessages(threadId, limit)
 
-        return (smsItems + mmsItems).sortedBy { it.timestamp }.takeLast(limit)
+        return (smsItems + mmsItems).sortedByDescending { it.timestamp }.take(limit)
     }
 
     fun searchMessages(query: String, limit: Int = 40): List<SmsMessageItem> {

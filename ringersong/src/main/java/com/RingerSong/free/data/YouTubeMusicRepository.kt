@@ -1,0 +1,219 @@
+package com.RingerSong.free.data
+
+import android.content.Context
+import android.util.Log
+import com.RingerSong.free.BuildConfig
+import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.net.URLEncoder
+import java.util.concurrent.TimeUnit
+
+data class YouTubePlaylistResponse(
+    val success: Boolean?,
+    val data: YouTubePlaylistData?
+)
+
+data class YouTubePlaylistData(
+    val videos: List<YouTubeVideo>?,
+    val playlistId: String?,
+    val title: String?
+)
+
+data class YouTubeSongResponse(
+    val success: Boolean?,
+    val data: YouTubeSongData?
+)
+
+data class YouTubeSongData(
+    val videoId: String?,
+    val title: String?,
+    val artist: String?,
+    val album: String?,
+    val duration: String?,
+    val thumbnail: String?,
+    val thumbnails: List<YouTubeThumbnail>?,
+    val downloadUrl: String?
+)
+
+data class YouTubeSearchResponse(
+    val success: Boolean?,
+    val data: YouTubeSearchData?
+)
+
+data class YouTubeSearchData(
+    val results: List<YouTubeSearchResult>?
+)
+
+data class YouTubeSearchResult(
+    val videoId: String?,
+    val title: String?,
+    val artist: String?,
+    val duration: String?,
+    val thumbnail: String?,
+    val type: String?
+)
+
+data class YouTubeArtistSearchResponse(
+    val success: Boolean?,
+    val data: YouTubeArtistSearchData?
+)
+
+data class YouTubeArtistSearchData(
+    val artists: List<YouTubeArtist>?
+)
+
+data class YouTubeArtist(
+    val browseId: String?,
+    val name: String?,
+    val thumbnail: String?,
+    val subscribers: String?
+)
+
+data class YouTubeVideo(
+    val videoId: String?,
+    val title: String?,
+    val artist: String?,
+    val duration: String?,
+    val thumbnail: String?,
+    @SerializedName("thumbnails")
+    val thumbnailList: List<YouTubeThumbnail>?
+)
+
+data class YouTubeThumbnail(
+    val url: String?,
+    val width: Int?,
+    val height: Int?
+)
+
+class YouTubeMusicRepository(private val context: Context) {
+
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
+
+    private val gson = Gson()
+
+    companion object {
+        private const val TAG = "YouTubeMusic"
+    }
+
+    suspend fun getPlaylistVideos(playlistId: String): List<YouTubeVideo>? = withContext(Dispatchers.IO) {
+        try {
+            val apiUrl = "https://${BuildConfig.RAPIDAPI_YOUTUBE_HOST}/get-playlist-videos?playlistId=${URLEncoder.encode(playlistId, "UTF-8")}"
+            val response = makeRequest(apiUrl) ?: return@withContext null
+            val playlistResponse = gson.fromJson(response, YouTubePlaylistResponse::class.java)
+            Log.d(TAG, "Fetched ${playlistResponse.data?.videos?.size ?: 0} videos")
+            return@withContext playlistResponse.data?.videos
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching playlist", e)
+            return@withContext null
+        }
+    }
+
+    suspend fun getSongDetails(videoId: String): YouTubeSongData? = withContext(Dispatchers.IO) {
+        try {
+            val apiUrl = "https://${BuildConfig.RAPIDAPI_YOUTUBE_HOST}/get-song?videoId=${URLEncoder.encode(videoId, "UTF-8")}"
+            val response = makeRequest(apiUrl) ?: return@withContext null
+            val songResponse = gson.fromJson(response, YouTubeSongResponse::class.java)
+            Log.d(TAG, "Fetched song: ${songResponse.data?.title}")
+            return@withContext songResponse.data
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching song", e)
+            return@withContext null
+        }
+    }
+
+    suspend fun searchSongs(query: String): List<YouTubeSearchResult>? = withContext(Dispatchers.IO) {
+        try {
+            val apiUrl = "https://${BuildConfig.RAPIDAPI_YOUTUBE_HOST}/search?q=${URLEncoder.encode(query, "UTF-8")}"
+            val response = makeRequest(apiUrl) ?: return@withContext null
+            val searchResponse = gson.fromJson(response, YouTubeSearchResponse::class.java)
+            Log.d(TAG, "Search found ${searchResponse.data?.results?.size ?: 0} results")
+            return@withContext searchResponse.data?.results
+        } catch (e: Exception) {
+            Log.e(TAG, "Error searching", e)
+            return@withContext null
+        }
+    }
+
+    suspend fun searchArtists(query: String): List<YouTubeArtist>? = withContext(Dispatchers.IO) {
+        try {
+            val apiUrl = "https://${BuildConfig.RAPIDAPI_YOUTUBE_HOST}/search-artists?q=${URLEncoder.encode(query, "UTF-8")}"
+            val response = makeRequest(apiUrl) ?: return@withContext null
+            val artistResponse = gson.fromJson(response, YouTubeArtistSearchResponse::class.java)
+            Log.d(TAG, "Found ${artistResponse.data?.artists?.size ?: 0} artists")
+            return@withContext artistResponse.data?.artists
+        } catch (e: Exception) {
+            Log.e(TAG, "Error searching artists", e)
+            return@withContext null
+        }
+    }
+
+    private fun makeRequest(url: String): String? {
+        try {
+            if (BuildConfig.RAPIDAPI_KEY.isEmpty()) {
+                Log.e(TAG, "RapidAPI key not configured")
+                return null
+            }
+
+            Log.d(TAG, "Making request to: $url")
+            val request = Request.Builder()
+                .url(url)
+                .get()
+                .addHeader("x-rapidapi-key", BuildConfig.RAPIDAPI_KEY)
+                .addHeader("x-rapidapi-host", BuildConfig.RAPIDAPI_YOUTUBE_HOST)
+                .build()
+
+            val response = client.newCall(request).execute()
+            val body = response.body?.string()
+
+            if (!response.isSuccessful) {
+                Log.e(TAG, "API failed: ${response.code} - ${response.message}")
+                Log.e(TAG, "Response body: $body")
+                return null
+            }
+
+            Log.d(TAG, "API success: $body")
+            return body
+        } catch (e: Exception) {
+            Log.e(TAG, "Request error for URL: $url", e)
+            return null
+        }
+    }
+
+    fun convertSearchResultToSongEntry(result: YouTubeSearchResult): SongEntry? {
+        if (result.videoId == null || result.title == null) return null
+        val titleWithArtist = if (result.artist != null) {
+            "${result.title} - ${result.artist}"
+        } else {
+            result.title
+        }
+        return SongEntry(
+            id = result.videoId,
+            title = titleWithArtist,
+            uri = "youtube:video:${result.videoId}",
+            durationMs = parseDurationToMs(result.duration),
+            addedAt = System.currentTimeMillis()
+        )
+    }
+
+    private fun parseDurationToMs(duration: String?): Long {
+        if (duration == null) return 0L
+        return try {
+            val parts = duration.split(":")
+            when (parts.size) {
+                3 -> (parts[0].toLong() * 3600 + parts[1].toLong() * 60 + parts[2].toLong()) * 1000
+                2 -> (parts[0].toLong() * 60 + parts[1].toLong()) * 1000
+                else -> 0L
+            }
+        } catch (e: Exception) {
+            0L
+        }
+    }
+}

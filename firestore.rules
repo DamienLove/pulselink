@@ -11,35 +11,6 @@ service cloud.firestore {
       // ... rest of subcollections
     }
 
-    match /public_profiles/{userId} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    match /devices/{deviceId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-
-        match /threads/{threadId} {
-          allow read, write: if request.auth != null && request.auth.uid == userId;
-
-          match /messages/{messageId} {
-            allow read, write: if request.auth != null && request.auth.uid == userId;
-          }
-        }
-      }
-
-      match /devices/{deviceId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-
-      match /trustedContacts/{contactId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-
-      match /deviceContacts/{contactId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-
       match /synced_threads/{threadId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
 
@@ -52,15 +23,37 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
 
+      match /trustedContacts/{contactId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /deviceContacts/{contactId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
       match /emergencyLocations/{locationId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
 
       match /themes/{themeId} {
+         allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /ringer_playlist/{songId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /ringersong/{document=**} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }
 
+    match /public_profiles/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Explicit device matching
     match /devices/{deviceId} {
       // Security: Only the owner can read their device mapping.
       allow read: if request.auth != null && resource.data.uid == request.auth.uid;

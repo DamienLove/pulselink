@@ -1,3 +1,4 @@
+import org.gradle.api.publish.maven.MavenPublication
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -6,16 +7,23 @@ plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.plugin.serialization")
     kotlin("native.cocoapods")
+    id("maven-publish")
+    id("org.jetbrains.compose") version "1.6.11"
+    id("org.jetbrains.kotlin.plugin.compose") // Required since Kotlin 2.0.0-RC2 for Compose Multiplatform
 }
+group = "com.pulselink"
+version = "0.1.1"
 
 repositories {
     google()
     mavenCentral()
     maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/gradle-plugin")
+    maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
 }
 
 kotlin {
     androidTarget {
+        publishLibraryVariants("release")
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_17)
         }
@@ -30,6 +38,7 @@ kotlin {
         podfile = project.file("../iosApp/Podfile")
         framework {
             baseName = "Shared"
+            isStatic = true
         }
     }
 
@@ -46,6 +55,13 @@ kotlin {
                 implementation("io.ktor:ktor-client-core:2.3.10")
                 implementation("io.ktor:ktor-client-content-negotiation:2.3.10")
                 implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.10")
+
+                implementation(compose.runtime)
+                implementation(compose.foundation)
+                implementation(compose.material3)
+                implementation(compose.ui)
+                implementation(compose.components.resources)
+                implementation(compose.components.uiToolingPreview)
             }
         }
         val commonTest by getting
@@ -93,10 +109,43 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
 }
 
 tasks.withType<KotlinCompile>().configureEach {
     compilerOptions {
         freeCompilerArgs.add("-Xskip-metadata-version-check")
+    }
+}
+
+publishing {
+    publications.withType<MavenPublication>().configureEach {
+        pom {
+            name.set("PulseLink Shared")
+            description.set("Shared multiplatform core for the PulseLink suite")
+            url.set("https://github.com/DamienLove/pulselink")
+        }
+    }
+    repositories {
+        mavenLocal()
+        val githubActor = System.getenv("GITHUB_ACTOR") ?: System.getenv("GITHUB_USER")
+        val githubToken = System.getenv("GITHUB_TOKEN") ?: System.getenv("GITHUB_PACKAGES_TOKEN")
+        if (githubActor != null && githubToken != null) {
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/DamienLove/pulselink")
+                credentials {
+                    username = githubActor
+                    password = githubToken
+                }
+                content {
+                    includeGroup("com.pulselink")
+                }
+            }
+        }
     }
 }

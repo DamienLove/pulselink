@@ -1,6 +1,7 @@
-import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
-import * as nodemailer from 'nodemailer';
+import * as functions from "firebase-functions";
+import * as admin from "firebase-admin";
+import * as nodemailer from "nodemailer";
+import {escapeHtml} from "./security";
 
 // Email invitation interface
 interface EmailInvitationData {
@@ -14,9 +15,9 @@ interface EmailInvitationData {
 // Initialize Nodemailer transporter using environment variables
 const createTransporter = () => {
   const config = functions.config();
-  
+
   if (!config.email) {
-    throw new Error('Email configuration not found. Please set Firebase Functions config.');
+    throw new Error("Email configuration not found. Please set Firebase Functions config.");
   }
 
   return nodemailer.createTransport({
@@ -30,28 +31,18 @@ const createTransporter = () => {
   });
 };
 
-// Sentinel Helper: Escape HTML characters
-const escapeHtml = (unsafe: string): string => {
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-};
-
 // Generate HTML email template
 const generateEmailTemplate = (
-  senderName: string,
-  invitationCode: string,
-  deepLinkBase: string,
-  playStoreUrl: string,
-  appStoreUrl: string
+    senderName: string,
+    invitationCode: string,
+    deepLinkBase: string,
+    playStoreUrl: string,
+    appStoreUrl: string,
 ): string => {
   const safeSenderName = escapeHtml(senderName);
   const safeInvitationCode = escapeHtml(invitationCode);
   const inviteLink = `${deepLinkBase}/invite?code=${encodeURIComponent(invitationCode)}`;
-  
+
   return `
     <!DOCTYPE html>
     <html>
@@ -99,7 +90,7 @@ const generateEmailTemplate = (
           <a href="${playStoreUrl}" class="app-link">
             <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="60">
           </a>
-          ${appStoreUrl ? `<a href="${appStoreUrl}" class="app-link"><img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on App Store" height="60"></a>` : ''}
+          ${appStoreUrl ? `<a href="${appStoreUrl}" class="app-link"><img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on App Store" height="60"></a>` : ""}
         </div>
       </div>
       
@@ -115,243 +106,240 @@ If you didn't expect this invitation, you can safely ignore this email.</p>
 
 // Main Cloud Function to send email invitation
 export const sendEmailInvitation = functions.https.onCall(
-  async (data: EmailInvitationData, context) => {
-    try {
+    async (data: EmailInvitationData, context) => {
+      try {
       // Validate authentication
-      if (!context.auth) {
-        throw new functions.https.HttpsError(
-          'unauthenticated',
-          'User must be authenticated to send invitations'
-        );
-      }
+        if (!context.auth) {
+          throw new functions.https.HttpsError(
+              "unauthenticated",
+              "User must be authenticated to send invitations",
+          );
+        }
 
-      // Validate input data
-      const { recipientEmail, senderName, senderDeviceId, invitationCode, contactId } = data;
-      
-      if (!recipientEmail || !senderName || !senderDeviceId || !invitationCode) {
-        throw new functions.https.HttpsError(
-          'invalid-argument',
-          'Missing required fields: recipientEmail, senderName, senderDeviceId, or invitationCode'
-        );
-      }
+        // Validate input data
+        const {recipientEmail, senderName, senderDeviceId, invitationCode, contactId} = data;
 
-      // Email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(recipientEmail)) {
-        throw new functions.https.HttpsError(
-          'invalid-argument',
-          'Invalid email address format'
-        );
-      }
+        if (!recipientEmail || !senderName || !senderDeviceId || !invitationCode) {
+          throw new functions.https.HttpsError(
+              "invalid-argument",
+              "Missing required fields: recipientEmail, senderName, senderDeviceId, or invitationCode",
+          );
+        }
 
-      // Get configuration
-      const config = functions.config();
-      const deepLinkBase = config.app?.deep_link_base || 'https://pulselink.app';
-      const playStoreUrl = config.app?.play_store_url || 'https://play.google.com/store/apps/details?id=com.pulselink';
-      const appStoreUrl = config.app?.app_store_url || '';
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(recipientEmail)) {
+          throw new functions.https.HttpsError(
+              "invalid-argument",
+              "Invalid email address format",
+          );
+        }
 
-      // Create invitation document in Firestore
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
+        // Get configuration
+        const config = functions.config();
+        const deepLinkBase = config.app?.deep_link_base || "https://pulselink.app";
+        const playStoreUrl = config.app?.play_store_url || "https://play.google.com/store/apps/details?id=com.pulselink";
+        const appStoreUrl = config.app?.app_store_url || "";
 
-      const invitationDoc = {
-        invitationCode,
-        senderDeviceId,
-        senderName,
-        recipientEmail,
-        contactId,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
-        status: 'PENDING',
-        senderUid: context.auth.uid,
-      };
+        // Create invitation document in Firestore
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
 
-      const invitationRef = await admin
-        .firestore()
-        .collection('emailInvitations')
-        .add(invitationDoc);
-
-      functions.logger.info('Invitation document created', { invitationId: invitationRef.id });
-
-      // Send email
-      const transporter = createTransporter();
-      const emailFrom = config.email?.from_name || 'PulseLink Team';
-      
-      const mailOptions = {
-        from: `${emailFrom} <${config.email.user}>`,
-        to: recipientEmail,
-        subject: `${senderName} wants to connect on PulseLink`,
-        html: generateEmailTemplate(
-          senderName,
+        const invitationDoc = {
           invitationCode,
-          deepLinkBase,
-          playStoreUrl,
-          appStoreUrl
-        ),
-      };
+          senderDeviceId,
+          senderName,
+          recipientEmail,
+          contactId,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
+          status: "PENDING",
+          senderUid: context.auth.uid,
+        };
 
-      const info = await transporter.sendMail(mailOptions);
-      functions.logger.info('Email sent successfully', { messageId: info.messageId, recipientEmail });
+        const invitationRef = await admin
+            .firestore()
+            .collection("emailInvitations")
+            .add(invitationDoc);
 
-      return {
-        success: true,
-        invitationId: invitationRef.id,
-        message: 'Invitation email sent successfully',
-      };
+        functions.logger.info("Invitation document created", {invitationId: invitationRef.id});
 
-    } catch (error) {
-      functions.logger.error('Error sending email invitation', error);
-      
-      if (error instanceof functions.https.HttpsError) {
-        throw error;
+        // Send email
+        const transporter = createTransporter();
+        const emailFrom = config.email?.from_name || "PulseLink Team";
+
+        const mailOptions = {
+          from: `${emailFrom} <${config.email.user}>`,
+          to: recipientEmail,
+          subject: `${senderName} wants to connect on PulseLink`,
+          html: generateEmailTemplate(
+              senderName,
+              invitationCode,
+              deepLinkBase,
+              playStoreUrl,
+              appStoreUrl,
+          ),
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        functions.logger.info("Email sent successfully", {messageId: info.messageId, recipientEmail});
+
+        return {
+          success: true,
+          invitationId: invitationRef.id,
+          message: "Invitation email sent successfully",
+        };
+      } catch (error) {
+        functions.logger.error("Error sending email invitation", error);
+
+        if (error instanceof functions.https.HttpsError) {
+          throw error;
+        }
+
+        throw new functions.https.HttpsError(
+            "internal",
+            "Failed to send invitation email",
+        error instanceof Error ? error.message : "Unknown error",
+        );
       }
-      
-      throw new functions.https.HttpsError(
-        'internal',
-        'Failed to send invitation email',
-        error instanceof Error ? error.message : 'Unknown error'
-      );
-    }
-  }
+    },
 );
 
 // Function to check invitation status
 export const checkInvitationStatus = functions.https.onCall(
-  async (data: { invitationCode: string }, context) => {
-    try {
-      if (!context.auth) {
+    async (data: { invitationCode: string }, context) => {
+      try {
+        if (!context.auth) {
+          throw new functions.https.HttpsError(
+              "unauthenticated",
+              "User must be authenticated",
+          );
+        }
+
+        const {invitationCode} = data;
+
+        if (!invitationCode) {
+          throw new functions.https.HttpsError(
+              "invalid-argument",
+              "Invitation code is required",
+          );
+        }
+
+        // Query Firestore for the invitation
+        const invitationsSnapshot = await admin
+            .firestore()
+            .collection("emailInvitations")
+            .where("invitationCode", "==", invitationCode)
+            .limit(1)
+            .get();
+
+        if (invitationsSnapshot.empty) {
+          throw new functions.https.HttpsError(
+              "not-found",
+              "Invitation not found",
+          );
+        }
+
+        const invitationDoc = invitationsSnapshot.docs[0];
+        const invitation = invitationDoc.data();
+
+        // Check if expired
+        const now = new Date();
+        const expiresAt = invitation.expiresAt.toDate();
+
+        if (now > expiresAt) {
+          await invitationDoc.ref.update({status: "EXPIRED"});
+          throw new functions.https.HttpsError(
+              "failed-precondition",
+              "This invitation has expired",
+          );
+        }
+
+        // Check if already accepted
+        if (invitation.status === "ACCEPTED") {
+          throw new functions.https.HttpsError(
+              "already-exists",
+              "This invitation has already been accepted",
+          );
+        }
+
+        return {
+          success: true,
+          invitation: {
+            senderName: invitation.senderName,
+            senderDeviceId: invitation.senderDeviceId,
+            status: invitation.status,
+            createdAt: invitation.createdAt,
+          },
+        };
+      } catch (error) {
+        functions.logger.error("Error checking invitation status", error);
+
+        if (error instanceof functions.https.HttpsError) {
+          throw error;
+        }
+
         throw new functions.https.HttpsError(
-          'unauthenticated',
-          'User must be authenticated'
+            "internal",
+            "Failed to check invitation status",
         );
       }
-
-      const { invitationCode } = data;
-      
-      if (!invitationCode) {
-        throw new functions.https.HttpsError(
-          'invalid-argument',
-          'Invitation code is required'
-        );
-      }
-
-      // Query Firestore for the invitation
-      const invitationsSnapshot = await admin
-        .firestore()
-        .collection('emailInvitations')
-        .where('invitationCode', '==', invitationCode)
-        .limit(1)
-        .get();
-
-      if (invitationsSnapshot.empty) {
-        throw new functions.https.HttpsError(
-          'not-found',
-          'Invitation not found'
-        );
-      }
-
-      const invitationDoc = invitationsSnapshot.docs[0];
-      const invitation = invitationDoc.data();
-
-      // Check if expired
-      const now = new Date();
-      const expiresAt = invitation.expiresAt.toDate();
-      
-      if (now > expiresAt) {
-        await invitationDoc.ref.update({ status: 'EXPIRED' });
-        throw new functions.https.HttpsError(
-          'failed-precondition',
-          'This invitation has expired'
-        );
-      }
-
-      // Check if already accepted
-      if (invitation.status === 'ACCEPTED') {
-        throw new functions.https.HttpsError(
-          'already-exists',
-          'This invitation has already been accepted'
-        );
-      }
-
-      return {
-        success: true,
-        invitation: {
-          senderName: invitation.senderName,
-          senderDeviceId: invitation.senderDeviceId,
-          status: invitation.status,
-          createdAt: invitation.createdAt,
-        },
-      };
-
-    } catch (error) {
-      functions.logger.error('Error checking invitation status', error);
-      
-      if (error instanceof functions.https.HttpsError) {
-        throw error;
-      }
-      
-      throw new functions.https.HttpsError(
-        'internal',
-        'Failed to check invitation status'
-      );
-    }
-  }
+    },
 );
 
 // Function to mark invitation as accepted
 export const acceptInvitation = functions.https.onCall(
-  async (data: { invitationCode: string }, context) => {
-    try {
-      if (!context.auth) {
+    async (data: { invitationCode: string }, context) => {
+      try {
+        if (!context.auth) {
+          throw new functions.https.HttpsError(
+              "unauthenticated",
+              "User must be authenticated",
+          );
+        }
+
+        const {invitationCode} = data;
+
+        const invitationsSnapshot = await admin
+            .firestore()
+            .collection("emailInvitations")
+            .where("invitationCode", "==", invitationCode)
+            .where("status", "==", "PENDING")
+            .limit(1)
+            .get();
+
+        if (invitationsSnapshot.empty) {
+          throw new functions.https.HttpsError(
+              "not-found",
+              "Valid pending invitation not found",
+          );
+        }
+
+        const invitationDoc = invitationsSnapshot.docs[0];
+
+        await invitationDoc.ref.update({
+          status: "ACCEPTED",
+          acceptedAt: admin.firestore.FieldValue.serverTimestamp(),
+          acceptedByUid: context.auth.uid,
+        });
+
+        functions.logger.info("Invitation accepted", {invitationCode, uid: context.auth.uid});
+
+        return {
+          success: true,
+          message: "Invitation accepted successfully",
+        };
+      } catch (error) {
+        functions.logger.error("Error accepting invitation", error);
+
+        if (error instanceof functions.https.HttpsError) {
+          throw error;
+        }
+
         throw new functions.https.HttpsError(
-          'unauthenticated',
-          'User must be authenticated'
+            "internal",
+            "Failed to accept invitation",
         );
       }
-
-      const { invitationCode } = data;
-
-      const invitationsSnapshot = await admin
-        .firestore()
-        .collection('emailInvitations')
-        .where('invitationCode', '==', invitationCode)
-        .where('status', '==', 'PENDING')
-        .limit(1)
-        .get();
-
-      if (invitationsSnapshot.empty) {
-        throw new functions.https.HttpsError(
-          'not-found',
-          'Valid pending invitation not found'
-        );
-      }
-
-      const invitationDoc = invitationsSnapshot.docs[0];
-      
-      await invitationDoc.ref.update({
-        status: 'ACCEPTED',
-        acceptedAt: admin.firestore.FieldValue.serverTimestamp(),
-        acceptedByUid: context.auth.uid,
-      });
-
-      functions.logger.info('Invitation accepted', { invitationCode, uid: context.auth.uid });
-
-      return {
-        success: true,
-        message: 'Invitation accepted successfully',
-      };
-
-    } catch (error) {
-      functions.logger.error('Error accepting invitation', error);
-      
-      if (error instanceof functions.https.HttpsError) {
-        throw error;
-      }
-      
-      throw new functions.https.HttpsError(
-        'internal',
-        'Failed to accept invitation'
-      );
-    }
-  }
+    },
 );

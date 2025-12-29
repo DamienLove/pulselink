@@ -499,6 +499,34 @@ private fun ThemesRow(onPreset: (ThemePalette) -> Unit) {
                 bubbleRadius = 12f,
                 iconVariant = InboxIconVariant.Minimal
             )
+        ),
+        ThemePreset(
+            "Cyber Mist",
+            ThemePalette.default().copy(
+                incoming = Color(0xFF4C1D95).toArgb().toLong(),
+                outgoing = Color(0xFFD946EF).toArgb().toLong(),
+                frame = Color(0xFFD946EF).toArgb().toLong(),
+                accent = Color(0xFFD946EF).toArgb().toLong(),
+                threadBackground = Color(0xFF1E1B4B).toArgb().toLong(),
+                inboxBackground = Color(0xFF2E1065).toArgb().toLong(),
+                font = ThemeFont.Mono,
+                bubbleRadius = 18f,
+                iconVariant = InboxIconVariant.Shield
+            )
+        ),
+        ThemePreset(
+            "Deep Ocean",
+            ThemePalette.default().copy(
+                incoming = Color(0xFF172554).toArgb().toLong(),
+                outgoing = Color(0xFF0EA5E9).toArgb().toLong(),
+                frame = Color(0xFF1E3A8A).toArgb().toLong(),
+                accent = Color(0xFF0EA5E9).toArgb().toLong(),
+                threadBackground = Color(0xFF0F172A).toArgb().toLong(),
+                inboxBackground = Color(0xFF1E3A8A).toArgb().toLong(),
+                font = ThemeFont.System,
+                bubbleRadius = 24f,
+                iconVariant = InboxIconVariant.Beacon
+            )
         )
     )
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

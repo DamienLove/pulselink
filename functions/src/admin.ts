@@ -21,8 +21,8 @@ export const grantProAccess = functions.https.onCall(async (data, context) => {
   // 1. Authentication Check: Ensure the user calling the function is authenticated.
   if (!context.auth) {
     throw new functions.https.HttpsError(
-      "unauthenticated",
-      "You must be authenticated to call this function."
+        "unauthenticated",
+        "You must be authenticated to call this function.",
     );
   }
 
@@ -30,8 +30,8 @@ export const grantProAccess = functions.https.onCall(async (data, context) => {
   const callerClaims = context.auth.token;
   if (callerClaims.admin !== true) {
     throw new functions.https.HttpsError(
-      "permission-denied",
-      "You must be an admin to grant pro access."
+        "permission-denied",
+        "You must be an admin to grant pro access.",
     );
   }
 
@@ -39,39 +39,38 @@ export const grantProAccess = functions.https.onCall(async (data, context) => {
   const targetEmail = data.email;
   if (!targetEmail || typeof targetEmail !== "string") {
     throw new functions.https.HttpsError(
-      "invalid-argument",
-      "Please provide a valid email address."
+        "invalid-argument",
+        "Please provide a valid email address.",
     );
   }
 
   try {
     // 4. Grant Pro Access: Get the target user and set their custom claim.
     console.log(`Admin user '${context.auth.token.email}' is attempting to grant pro access to '${targetEmail}'.`);
-    
+
     const userToUpgrade = await admin.auth().getUserByEmail(targetEmail);
-    await admin.auth().setCustomUserClaims(userToUpgrade.uid, { pro: true });
+    await admin.auth().setCustomUserClaims(userToUpgrade.uid, {pro: true});
 
     console.log(`Successfully granted pro access to ${targetEmail} (UID: ${userToUpgrade.uid})`);
-    
+
     return {
       status: "success",
       message: `Pro access has been granted to ${targetEmail}.`,
     };
-
   } catch (error: any) {
     console.error("Error in grantProAccess function:", error);
-    
+
     // Provide a more specific error to the client if the user isn't found.
     if (error.code === "auth/user-not-found") {
-       throw new functions.https.HttpsError(
-        "not-found",
-        `The user with email ${targetEmail} was not found. Please ensure they have signed in at least once.`
+      throw new functions.https.HttpsError(
+          "not-found",
+          `The user with email ${targetEmail} was not found. Please ensure they have signed in at least once.`,
       );
     }
 
     throw new functions.https.HttpsError(
-      "internal",
-      "An unexpected error occurred while processing your request."
+        "internal",
+        "An unexpected error occurred while processing your request.",
     );
   }
 });

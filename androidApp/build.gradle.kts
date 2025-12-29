@@ -109,6 +109,17 @@ val twilioLookupMonthlyCap = optionalIntProperty("twilioLookupMonthlyCap")
     ?: System.getenv("TWILIO_LOOKUP_MONTHLY_CAP")?.toIntOrNull()
     ?: 0
 
+// Optional Truecaller API key (RapidAPI Truecaller4); keep secrets out of VCS.
+val truecallerApiKey = optionalProperty("truecallerApiKey")
+    ?: System.getenv("TRUECALLER_API_KEY")
+    ?: System.getenv("TRUECALLER_RAPIDAPI_KEY")
+    ?: ""
+val escapedTruecallerApiKey = truecallerApiKey.replace("\"", "\\\"")
+val truecallerApiHost = optionalProperty("truecallerApiHost")
+    ?: System.getenv("TRUECALLER_API_HOST")
+    ?: "truecaller4.p.rapidapi.com"
+val escapedTruecallerApiHost = truecallerApiHost.replace("\"", "\\\"")
+
 val numlookupMonthlyCap = optionalIntProperty("numlookupMonthlyCap")
     ?: System.getenv("NUMLOOKUP_MONTHLY_CAP")?.toIntOrNull()
     ?: Int.MAX_VALUE
@@ -210,9 +221,8 @@ android {
         applicationId = "com.pulselink"
         minSdk = 26
         targetSdk = 35
-        versionCode = 86
-        versionName = "86"
-
+        versionCode = 89
+        versionName = "89"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         resValue("string", "google_maps_key", mapsApiKey)
@@ -233,6 +243,8 @@ android {
         buildConfigField("String", "TWILIO_ACCOUNT_SID", "\"$escapedTwilioAccountSid\"")
         buildConfigField("String", "TWILIO_AUTH_TOKEN", "\"$escapedTwilioAuthToken\"")
         buildConfigField("int", "TWILIO_LOOKUP_MONTHLY_CAP", "${twilioLookupMonthlyCap}")
+        buildConfigField("String", "TRUECALLER_API_KEY", "\"$escapedTruecallerApiKey\"")
+        buildConfigField("String", "TRUECALLER_API_HOST", "\"$escapedTruecallerApiHost\"")
         buildConfigField("int", "NUMLOOKUP_MONTHLY_CAP", "${numlookupMonthlyCap}")
         buildConfigField("int", "NUMVERIFY_MONTHLY_CAP", "${numverifyMonthlyCap}")
         buildConfigField("int", "IPQS_MONTHLY_CAP", "${ipqsMonthlyCap}")

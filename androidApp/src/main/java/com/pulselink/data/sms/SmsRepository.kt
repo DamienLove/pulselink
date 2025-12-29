@@ -240,7 +240,7 @@ class SmsRepository @Inject constructor(
                 )
                 count++
             }
-            return items.sortedBy { it.timestamp }
+            return items.sortedByDescending { it.timestamp }
         }
     }
 
@@ -303,7 +303,7 @@ class SmsRepository @Inject constructor(
                 }
             }
         }
-        return items.distinctBy { it.id }.sortedBy { it.timestamp }.takeLast(limit)
+        return items.distinctBy { it.id }.sortedByDescending { it.timestamp }.take(limit)
     }
 
     private fun resolveMessageStatus(type: Int, status: Int, isRead: Boolean): SmsMessageStatus? {

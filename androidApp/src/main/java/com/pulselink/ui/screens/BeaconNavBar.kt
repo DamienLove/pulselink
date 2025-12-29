@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -63,6 +64,13 @@ fun BeaconNavBar(
             colors = itemColors
         )
         NavigationBarItem(
+            selected = currentRoute == BeaconNavRoute.Contacts,
+            onClick = { onNavigate(BeaconNavRoute.Contacts) },
+            icon = { Icon(Icons.Filled.Contacts, contentDescription = "Contacts", modifier = Modifier.size(iconSize)) },
+            label = { Text("Contacts") },
+            colors = itemColors
+        )
+        NavigationBarItem(
             selected = currentRoute == BeaconNavRoute.Favorites,
             onClick = { onNavigate(BeaconNavRoute.Favorites) },
             icon = { Icon(Icons.Filled.Favorite, contentDescription = "Favorites", modifier = Modifier.size(iconSize)) },
@@ -92,5 +100,6 @@ enum class BeaconNavRoute {
     Trusted,
     Favorites,
     Archived,
-    Private
+    Private,
+    Contacts
 }

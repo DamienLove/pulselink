@@ -1,0 +1,23 @@
+# local.properties.example
+# Copy this file to local.properties and add your API keys
+# NEVER commit local.properties to version control
+
+## Truecaller API (RapidAPI)
+# Get your key from: https://rapidapi.com/DataCrawler/api/truecaller4
+truecallerApiKey=YOUR_TRUECALLER_RAPIDAPI_KEY_HERE
+truecallerApiHost=truecaller4.p.rapidapi.com
+
+## Other Caller ID APIs
+rapidLookupApiKey=YOUR_RAPIDAPI_KEY_HERE
+rapidLookupApiHost=phone-number-lookup-api.p.rapidapi.com
+
+numlookupApiKey=YOUR_NUMLOOKUP_KEY_HERE
+numverifyApiKey=YOUR_NUMVERIFY_KEY_HERE
+ipqualityscoreApiKey=YOUR_IPQS_KEY_HERE
+
+## Twilio Lookup
+twilioAccountSid=YOUR_TWILIO_SID_HERE
+twilioAuthToken=YOUR_TWILIO_TOKEN_HERE
+
+## Google Maps
+mapsApiKey=YOUR_GOOGLE_MAPS_KEY_HERE

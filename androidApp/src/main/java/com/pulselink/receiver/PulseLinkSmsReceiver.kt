@@ -156,8 +156,12 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
 
         if (contact == null && !aiUpgraded) return
 
-        // Only play attention tone for urgent or emergency messages, not standard messages
-        if (effectiveUrgency == MessageUrgency.STANDARD) return
+        // Only play attention tone for EMERGENCY messages, not URGENT/STANDARD
+        // This prevents false alarms from AI misclassifications (fixes #266, #251, #243)
+        // QA TEST: Send normal messages like "miss you" or beacon check-ins between trusted contacts
+        // EXPECTED: Should NOT trigger emergency sirens/attention tones
+        // EXPECTED: Only messages with emergency phrase or high-confidence emergency classification should trigger alerts
+        if (effectiveUrgency != MessageUrgency.EMERGENCY) return
 
         val tier = when {
             effectiveUrgency != MessageUrgency.EMERGENCY -> EscalationTier.CHECK_IN

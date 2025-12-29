@@ -7,6 +7,7 @@
     var(--app-gradient-end, #070a12) 100%
   );
   color: var(--ink);
+  transition: background 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.4s ease;
 }
 
 .container {
@@ -436,6 +437,36 @@
   margin: 0 0 6px 0;
 }
 
+/* Web app info hint banner - fixes #236 */
+/* QA TEST: Check home screen banner styling on different screen sizes */
+/* EXPECTED: Blue gradient banner with info icon, visible and readable */
+.web-app-hint {
+  display: flex;
+  gap: 14px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1));
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 14px;
+  align-items: flex-start;
+}
+
+.hint-icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.hint-content {
+  color: var(--ink);
+  line-height: 1.6;
+  font-size: 0.95em;
+}
+
+.hint-content strong {
+  color: var(--primary);
+  font-weight: 600;
+}
+
 .home-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -773,6 +804,15 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  cursor: pointer;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.theme-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.5);
+  border-color: var(--accent);
+  z-index: 1;
 }
 
 .theme-preview {
@@ -780,6 +820,11 @@
   border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--surface);
+  transition: transform 0.3s ease;
+}
+
+.theme-card:hover .theme-preview {
+  transform: scale(1.02);
 }
 
 .theme-meta {
@@ -802,6 +847,105 @@
   padding: 12px;
 }
 
+.ringersong-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+  margin-bottom: 24px;
+}
+
+.ringersong-logo-mask {
+  background: var(--accent);
+  transition: background 0.3s ease;
+}
+
+.song-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.song-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.song-card:hover {
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-soft);
+}
+
+.song-art {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--surface-alt);
+  flex-shrink: 0;
+}
+
+.song-info {
+  flex: 1;
+  overflow: hidden;
+}
+
+.song-title {
+  font-weight: 600;
+  font-size: 0.95em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+
+.song-artist {
+  font-size: 0.85em;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-container {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.search-input-wrapper {
+  display: flex;
+  gap: 12px;
+  background: var(--surface-alt);
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  transition: border-color 0.2s ease;
+}
+
+.search-input-wrapper:focus-within {
+  border-color: var(--accent);
+}
+
+.search-input-wrapper .login-input {
+  border: none;
+  background: transparent;
+  flex: 1;
+}
+
+.search-input-wrapper .primary-btn {
+  border-radius: 10px;
+  padding: 8px 16px;
+}
+
 @media (max-width: 1200px) {
   .app-container {
     padding: 18px;
@@ -811,6 +955,7 @@
   .sidebar {
     width: 260px;
   }
+
 
   .nav-item {
     flex: 1 1 100%;
@@ -851,6 +996,10 @@
   gap: 16px;
 }
 
+/* Emergency map container - fixes #228: Prevents map from expanding to full screen */
+/* QA TEST: Navigate to Emergency Map view on web app */
+/* EXPECTED: Map displays at reasonable size (520px max), UI controls remain visible */
+/* EXPECTED: "Back to Home" button and map filters should be accessible above the map */
 .map-card {
   position: relative;
   border: 1px solid var(--border);

@@ -10,8 +10,8 @@ import {gemini20Flash} from "@genkit-ai/vertexai";
 // function from a Genkit action. It automatically implements streaming if your flow does.
 // The https library also has other utility methods such as hasClaim, which verifies that
 // a caller's token has a specific claim (optionally matching a specific value)
-import { onCall } from "firebase-functions/v2/https";
-import { defineSecret } from "firebase-functions/params";
+import {onCall} from "firebase-functions/v2/https";
+import {defineSecret} from "firebase-functions/params";
 const apiKey = defineSecret("GOOGLE_GENAI_API_KEY");
 
 // The Firebase telemetry plugin exports a combination of metrics, traces, and logs to Google Cloud
@@ -29,28 +29,28 @@ const ai = genkit({
 });
 
 const menuSuggestionFlow = ai.defineFlow({
-    name: "menuSuggestionFlow",
-    inputSchema: z.string().describe("A restaurant theme").default("seafood"),
-    outputSchema: z.string(),
-  }, async (subject) => {
-    // Construct a request and send it to the model API.
-    const prompt =
+  name: "menuSuggestionFlow",
+  inputSchema: z.string().describe("A restaurant theme").default("seafood"),
+  outputSchema: z.string(),
+}, async (subject) => {
+  // Construct a request and send it to the model API.
+  const prompt =
       `Suggest an item for the menu of a ${subject} themed restaurant`;
-    const response = await ai.generate({
-      model: gemini20Flash,
-      prompt: prompt,
-      config: {
-        temperature: 1,
-      },
-    });
+  const response = await ai.generate({
+    model: gemini20Flash,
+    prompt: prompt,
+    config: {
+      temperature: 1,
+    },
+  });
 
-    return response.text;
-  }
+  return response.text;
+},
 );
 
 export const menuSuggestion = onCall({
   secrets: [apiKey],
 }, async (request) => {
-    const subject = request.data || "seafood";
-    return await menuSuggestionFlow.run(subject);
+  const subject = request.data || "seafood";
+  return await menuSuggestionFlow.run(subject);
 });

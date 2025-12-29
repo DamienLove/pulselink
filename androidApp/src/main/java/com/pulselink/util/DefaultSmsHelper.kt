@@ -68,6 +68,19 @@ class DefaultSmsHelper @Inject constructor(
         return latest
     }
 
+    /**
+     * Fire a best-effort request to make this app the default SMS handler.
+     * Calls [onResult] with the latest default status after launching the system intent.
+     */
+    fun requestDefaultSms(onResult: (Boolean) -> Unit) {
+        val intent = buildRoleRequestIntent()
+        if (intent != null) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+        }
+        onResult(isDefaultSms())
+    }
+
     private companion object {
         private const val TAG = "DefaultSmsHelper"
     }

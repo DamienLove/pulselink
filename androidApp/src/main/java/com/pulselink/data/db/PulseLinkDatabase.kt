@@ -82,7 +82,7 @@ interface AlertEventDao {
 
 @Dao
 interface ContactMessageDao {
-    @Query("SELECT * FROM contact_messages WHERE contactId = :contactId ORDER BY timestamp ASC")
+    @Query("SELECT * FROM contact_messages WHERE contactId = :contactId ORDER BY timestamp DESC")
     fun observeForContact(contactId: Long): Flow<List<ContactMessage>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

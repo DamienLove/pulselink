@@ -504,7 +504,7 @@ class SmsThreadViewModel @Inject constructor(
         }
         pendingMessages.clear()
         pendingMessages.addAll(pendingRemaining)
-        return (messages + pendingRemaining).sortedBy { it.timestamp }
+        return (messages + pendingRemaining).sortedByDescending { it.timestamp }
     }
 
     private fun isSameMessage(loaded: SmsMessageItem, pending: SmsMessageItem): Boolean {

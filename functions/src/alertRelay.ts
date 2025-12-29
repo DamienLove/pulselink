@@ -30,12 +30,12 @@ export const alertRelay = functions.https.onCall(async (data: RelayRequest, cont
   }
 
   const cleanRecipients = data.recipients
-    .filter((r) => !!(r.phoneNumber || r.pushToken || r.email))
-    .map((r) => ({
-      phoneNumber: r.phoneNumber,
-      pushToken: r.pushToken,
-      email: r.email,
-    }));
+      .filter((r) => !!(r.phoneNumber || r.pushToken || r.email))
+      .map((r) => ({
+        phoneNumber: r.phoneNumber,
+        pushToken: r.pushToken,
+        email: r.email,
+      }));
 
   if (cleanRecipients.length === 0) {
     throw new functions.https.HttpsError("invalid-argument", "No recipients provided");
@@ -67,7 +67,7 @@ export const alertRelay = functions.https.onCall(async (data: RelayRequest, cont
 // (e.g., KMP/Swift via Ktor) can hit the same functionality.
 export const alertRelayHttp = functions.https.onRequest(async (req, res) => {
   if (req.method !== "POST") {
-    res.status(405).send({ error: "method_not_allowed" });
+    res.status(405).send({error: "method_not_allowed"});
     return;
   }
 
@@ -98,20 +98,20 @@ export const alertRelayHttp = functions.https.onRequest(async (req, res) => {
 
   const data = req.body as RelayRequest | undefined;
   if (!data || typeof data.message !== "string" || !Array.isArray(data.recipients)) {
-    res.status(400).send({ error: "invalid-argument", message: "Invalid payload" });
+    res.status(400).send({error: "invalid-argument", message: "Invalid payload"});
     return;
   }
 
   const cleanRecipients = data.recipients
-    .filter((r) => !!(r.phoneNumber || r.pushToken || r.email))
-    .map((r) => ({
-      phoneNumber: r.phoneNumber,
-      pushToken: r.pushToken,
-      email: r.email,
-    }));
+      .filter((r) => !!(r.phoneNumber || r.pushToken || r.email))
+      .map((r) => ({
+        phoneNumber: r.phoneNumber,
+        pushToken: r.pushToken,
+        email: r.email,
+      }));
 
   if (cleanRecipients.length === 0) {
-    res.status(400).send({ error: "invalid-argument", message: "No recipients provided" });
+    res.status(400).send({error: "invalid-argument", message: "No recipients provided"});
     return;
   }
 

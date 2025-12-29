@@ -44,7 +44,7 @@ class ContactConversationViewModel @Inject constructor(
         val filteredPending = pending.filter { pendingMessage ->
             stored.none { existing -> isSameMessage(existing, pendingMessage) }
         }
-        (stored + filteredPending).sortedBy { it.timestamp }
+        (stored + filteredPending).sortedByDescending { it.timestamp }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     suspend fun sendMessage(text: String): ManualMessageResult {
