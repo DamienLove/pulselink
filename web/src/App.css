@@ -1228,8 +1228,9 @@
 
 .skip-link {
   position: absolute;
-  top: -100px;
+  top: 0;
   left: 10px;
+  background: #007bff;
   background: var(--accent);
   color: #fff;
   padding: 12px 20px;
@@ -1237,12 +1238,14 @@
   border-radius: 0 0 12px 12px;
   text-decoration: none;
   font-weight: 600;
-  transition: top 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform: translateY(-100%);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   box-shadow: var(--shadow);
 }
 
 .skip-link:focus {
-  top: 0;
+  transform: translateY(0);
   outline: 3px solid #fff;
   outline-offset: -3px;
 }
