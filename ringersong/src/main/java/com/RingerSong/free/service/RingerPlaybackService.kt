@@ -37,6 +37,7 @@ class RingerPlaybackService : Service() {
     private var isSpotifyPlaying = false
     private var audioManager: AudioManager? = null
     private var audioFocusRequest: AudioFocusRequest? = null
+    private var originalRingerVolume: Int = -1
 
     companion object {
         private const val TAG = "RingerPlayback"
@@ -108,6 +109,18 @@ class RingerPlaybackService : Service() {
             return false
         }
 
+        // Silence default ringer
+        runCatching {
+            // Only save the volume if we haven't already saved it (prevents overwriting with 0)
+            if (originalRingerVolume == -1) {
+                originalRingerVolume = manager.getStreamVolume(AudioManager.STREAM_RING)
+            }
+            manager.setStreamVolume(AudioManager.STREAM_RING, 0, 0)
+            Log.d(TAG, "Silenced default ringer (saved volume: $originalRingerVolume)")
+        }.onFailure {
+            Log.e(TAG, "Failed to silence ringer", it)
+        }
+
         val audioAttributes = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
             .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
@@ -136,6 +149,18 @@ class RingerPlaybackService : Service() {
 
     private fun abandonAudioFocus() {
         val manager = audioManager ?: return
+
+        // Restore ringer volume
+        if (originalRingerVolume != -1) {
+            runCatching {
+                manager.setStreamVolume(AudioManager.STREAM_RING, originalRingerVolume, 0)
+                Log.d(TAG, "Restored ringer volume to $originalRingerVolume")
+            }.onFailure {
+                Log.e(TAG, "Failed to restore ringer volume", it)
+            }
+            originalRingerVolume = -1
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             audioFocusRequest?.let { manager.abandonAudioFocusRequest(it) }
         } else {
@@ -155,30 +180,41 @@ class RingerPlaybackService : Service() {
 
         if (segment.song.uri.startsWith("spotify:")) {
             Log.d(TAG, "Spotify URI detected")
-            // PRIORITY 1: Try downloaded offline file first (no Spotify app needed!)
-            val downloader = com.RingerSong.free.data.SpotifyDownloaderRepository(this)
-            val localPath = downloader.getLocalFilePathFromUri(segment.song.uri)
 
-            if (localPath != null) {
-                Log.d(TAG, "Found local file: $localPath")
-                // Play from downloaded MP3 - NO SPOTIFY APP REQUIRED!
-                playLocalFile(localPath, segment.startMs, segment.durationMs)
-            } else {
-                Log.d(TAG, "No local file, trying Spotify App Remote")
-                // PRIORITY 2: Fallback to Spotify App Remote (requires app + Premium)
-                scope.launch {
-                    runCatching {
-                        val remote = SpotifyRemoteManager.connect(this@RingerPlaybackService)
-                        remote.playerApi.play(segment.song.uri)
-                        delay(500)
-                        remote.playerApi.seekTo(segment.startMs)
-                        isSpotifyPlaying = true
-                        Log.d(TAG, "Spotify App Remote playback started")
-                    }.onFailure { e ->
-                        Log.e(TAG, "Spotify App Remote failed", e)
-                        // No offline file AND Spotify App Remote failed
-                        stopPlayback()
-                    }
+            // PRIORITY 1: Try Spotify App Remote (Streaming) as requested by user
+            // "activate users paid memberships... as the ringer"
+
+            val attemptSpotifyRemote = suspend {
+                 runCatching {
+                    val remote = SpotifyRemoteManager.connect(this@RingerPlaybackService)
+                    remote.playerApi.play(segment.song.uri)
+                    delay(500)
+                    remote.playerApi.seekTo(segment.startMs)
+                    isSpotifyPlaying = true
+                    Log.d(TAG, "Spotify App Remote playback started")
+                    true
+                }.getOrElse {
+                     Log.e(TAG, "Spotify App Remote failed", it)
+                     false
+                }
+            }
+
+            scope.launch {
+                // Try remote first
+                if (attemptSpotifyRemote()) {
+                    return@launch
+                }
+
+                // PRIORITY 2: Fallback to downloaded offline file
+                val downloader = com.RingerSong.free.data.SpotifyDownloaderRepository(this@RingerPlaybackService)
+                val localPath = downloader.getLocalFilePathFromUri(segment.song.uri)
+
+                if (localPath != null) {
+                    Log.d(TAG, "Found local file: $localPath")
+                    playLocalFile(localPath, segment.startMs, segment.durationMs)
+                } else {
+                     Log.w(TAG, "No Spotify Remote and no local file - giving up")
+                     stopPlayback()
                 }
             }
         } else if (segment.song.uri.startsWith("youtube:")) {
