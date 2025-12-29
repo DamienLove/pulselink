@@ -28,8 +28,17 @@ import './App.css';
 import logo from './assets/pulselink-pro-logo.png';
 import beaconLogo from './assets/beacon-logo.png';
 
+const areThreadsEqual = (prev, next) => {
+  return prev.isActive === next.isActive &&
+         prev.showPreviews === next.showPreviews &&
+         prev.onSelect === next.onSelect &&
+         prev.thread.id === next.thread.id &&
+         prev.thread.address === next.thread.address &&
+         prev.thread.snippet === next.thread.snippet;
+};
+
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
-// when only the selection state changes.
+// when only the selection state changes or when unrelated threads update.
 const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
   <button
     className={`thread-item ${isActive ? 'active' : ''}`}
@@ -40,11 +49,20 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
     <div className="thread-name">{thread.address}</div>
     <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
   </button>
-));
+), areThreadsEqual);
 
 ThreadItem.displayName = 'ThreadItem';
 
+const areMessagesEqual = (prev, next) => {
+  return prev.showPreviews === next.showPreviews &&
+         prev.msg.id === next.msg.id &&
+         prev.msg.body === next.msg.body &&
+         prev.msg.date === next.msg.date &&
+         prev.msg.type === next.msg.type;
+};
+
 // Bolt: Optimized MessageItem with memo to prevent re-rendering all messages when typing
+// or when new messages arrive (which creates new object references).
 const MessageItem = memo(({ msg, showPreviews }) => (
   <div className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
     <div className="message-bubble">
@@ -54,7 +72,7 @@ const MessageItem = memo(({ msg, showPreviews }) => (
       {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
     </div>
   </div>
-));
+), areMessagesEqual);
 
 MessageItem.displayName = 'MessageItem';
 
@@ -615,13 +633,9 @@ function App() {
   const mapInfoRef = useRef(null);
   const mapHomeMarkerRef = useRef(null);
   const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const defaultMapCenter = { lat: 39.5, lng: -98.35 };
+  const defaultMapCenter = useMemo(() => ({ lat: 39.5, lng: -98.35 }), []);
   const themeVars = useMemo(() => buildThemeVars(themePrefs), [themePrefs]);
 
-  // Fix for undefined function causing crash/lint error
-  const fetchAlertLocations = () => {
-    console.log("Refresh functionality not implemented");
-  };
   const filteredAlerts = useMemo(() => {
     return alertLocations.filter((alert) => {
       if (incomingOnly && !alert.incoming) return false;
@@ -857,7 +871,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [activePanel, mapsApiKey]);
+  }, [activePanel, mapsApiKey, defaultMapCenter]);
 
   useEffect(() => {
     if (activePanel !== 'map') return;
@@ -945,12 +959,8 @@ function App() {
       bounds.extend({ lat: alert.lat, lng: alert.lng });
     });
     mapInstanceRef.current.fitBounds(bounds);
-  }, [filteredAlerts, userLocation]);
+  }, [filteredAlerts, userLocation, defaultMapCenter]);
 
-  const fetchAlertLocations = () => {
-    // Snapshot listener handles real-time updates.
-    console.log("Refreshing alerts...");
-  };
 
   const handleAlertFocus = (alert) => {
     setSelectedAlertId(alert.id);
@@ -1869,7 +1879,7 @@ function App() {
                   className="secondary-btn"
                   onClick={() => window.location.reload()}
                   aria-label="Reload page"
-                >
+                ></button>
                 <button className="ghost-btn" onClick={() => setActivePanel('home')}>
                   Back to Home
                 </button>
