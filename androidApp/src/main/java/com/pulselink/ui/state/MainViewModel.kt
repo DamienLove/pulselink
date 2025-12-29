@@ -40,6 +40,7 @@ import com.pulselink.widget.WidgetStateManager
 import com.pulselink.util.BeaconIconManager
 import com.pulselink.util.normalizeSmsAddress
 import com.pulselink.util.stripSmsDisplayName
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
@@ -839,43 +840,17 @@ class MainViewModel @Inject constructor(
     private suspend fun syncContactsFromCloud(user: FirebaseUser, forcePushLocal: Boolean = false) {
         runCatching {
             val localContacts = contactRepository.getAll()
-            val snapshot = firestore.collection(COLLECTION_USERS).document(user.uid)
+
+            val primarySnapshot = firestore.collection(COLLECTION_USERS).document(user.uid)
                 .collection(COLLECTION_TRUSTED_CONTACTS)
                 .get()
                 .await()
-            val remoteContacts = snapshot.documents.mapNotNull { doc ->
-                val name = doc.getString("displayName") ?: return@mapNotNull null
-                val phone = doc.getString("phoneNumber") ?: ""
-                val email = doc.getString("email")
-                val additionalPhones = (doc.get("additionalPhones") as? List<*>)?.mapNotNull { it as? String }
-                    ?.filter { it.isNotBlank() } ?: emptyList()
-                val additionalEmails = (doc.get("additionalEmails") as? List<*>)?.mapNotNull { it as? String }
-                    ?.filter { it.isNotBlank() } ?: emptyList()
-                val tier = doc.getString("escalationTier")?.let { EscalationTier.valueOf(it) }
-                    ?: EscalationTier.EMERGENCY
-                Contact(
-                    id = 0,
-                    displayName = name,
-                    phoneNumber = phone,
-                    email = email,
-                    additionalPhones = additionalPhones,
-                    additionalEmails = additionalEmails,
-                    escalationTier = tier,
-                    includeLocation = doc.getBoolean("includeLocation") ?: true,
-                    autoCall = doc.getBoolean("autoCall") ?: false,
-                    emergencySoundKey = doc.getString("emergencySoundKey"),
-                    checkInSoundKey = doc.getString("checkInSoundKey"),
-                    contactOrder = (doc.getLong("contactOrder") ?: 0L).toInt(),
-                    allowRemoteSoundChange = doc.getBoolean("allowRemoteSoundChange") ?: false,
-                    allowRemoteOverride = doc.getBoolean("allowRemoteOverride") ?: true,
-                    linkStatus = doc.getString("linkStatus")?.let { LinkStatus.valueOf(it) }
-                        ?: LinkStatus.NONE,
-                    linkCode = doc.getString("linkCode"),
-                    remoteDeviceId = doc.getString("remoteDeviceId"),
-                    pendingApproval = doc.getBoolean("pendingApproval") ?: false,
-                    remoteUid = doc.getString("remoteUid")
-                )
-            }
+            val primaryContacts = primarySnapshot.documents.mapNotNull { it.toContact() }
+
+            val legacyContacts = fetchLegacyTrustedContacts(user)
+            val remoteContacts = (primaryContacts + legacyContacts)
+                .distinctBy { contactSyncKey(it) }
+
             val enrichedRemote = remoteContacts.map { contact ->
                 if (contact.linkCode.isNullOrBlank()) {
                     contact
@@ -914,6 +889,69 @@ class MainViewModel @Inject constructor(
         }.onFailure { error ->
             Log.w(TAG, "Unable to sync contacts from cloud", error)
         }
+    }
+
+    private suspend fun fetchLegacyTrustedContacts(user: FirebaseUser): List<Contact> {
+        return runCatching {
+            // Pull any legacy/alternate trusted contact storage in case the main subcollection is empty
+            val ownerScoped = firestore.collectionGroup(COLLECTION_TRUSTED_CONTACTS)
+                .whereEqualTo("ownerUid", user.uid)
+                .get()
+                .await()
+                .documents
+                .mapNotNull { it.toContact() }
+
+            if (ownerScoped.isNotEmpty()) return@runCatching ownerScoped
+
+            val groupSnapshot = firestore.collectionGroup(COLLECTION_TRUSTED_CONTACTS)
+                .get()
+                .await()
+            groupSnapshot.documents
+                .filter { snap ->
+                    val path = snap.reference.path
+                    path.contains("/${user.uid}/") ||
+                        snap.getString("ownerUid") == user.uid ||
+                        snap.getString("userId") == user.uid
+                }
+                .mapNotNull { it.toContact() }
+        }.getOrElse {
+            Log.w(TAG, "Legacy trusted contacts lookup failed", it)
+            emptyList()
+        }
+    }
+
+    private fun DocumentSnapshot.toContact(): Contact? {
+        val name = getString("displayName") ?: return null
+        val phone = getString("phoneNumber") ?: ""
+        val email = getString("email")
+        val additionalPhones = (get("additionalPhones") as? List<*>)?.mapNotNull { it as? String }
+            ?.filter { it.isNotBlank() } ?: emptyList()
+        val additionalEmails = (get("additionalEmails") as? List<*>)?.mapNotNull { it as? String }
+            ?.filter { it.isNotBlank() } ?: emptyList()
+        val tier = getString("escalationTier")?.let { EscalationTier.valueOf(it) }
+            ?: EscalationTier.EMERGENCY
+
+        return Contact(
+            id = 0,
+            displayName = name,
+            phoneNumber = phone,
+            email = email,
+            additionalPhones = additionalPhones,
+            additionalEmails = additionalEmails,
+            escalationTier = tier,
+            includeLocation = getBoolean("includeLocation") ?: true,
+            autoCall = getBoolean("autoCall") ?: false,
+            emergencySoundKey = getString("emergencySoundKey"),
+            checkInSoundKey = getString("checkInSoundKey"),
+            contactOrder = (getLong("contactOrder") ?: getLong("order") ?: 0L).toInt(),
+            allowRemoteSoundChange = getBoolean("allowRemoteSoundChange") ?: false,
+            allowRemoteOverride = getBoolean("allowRemoteOverride") ?: true,
+            linkStatus = getString("linkStatus")?.let { LinkStatus.valueOf(it) } ?: LinkStatus.NONE,
+            linkCode = getString("linkCode"),
+            remoteDeviceId = getString("remoteDeviceId"),
+            pendingApproval = getBoolean("pendingApproval") ?: false,
+            remoteUid = getString("remoteUid")
+        )
     }
 
     private fun mergeContacts(local: List<Contact>, remote: List<Contact>): List<Contact> {
@@ -1154,6 +1192,8 @@ class MainViewModel @Inject constructor(
             "displayName" to contact.displayName,
             "phoneNumber" to contact.phoneNumber,
             "email" to contact.email,
+            "ownerUid" to user.uid,
+            "userId" to user.uid,
             "additionalPhones" to contact.additionalPhones,
             "additionalEmails" to contact.additionalEmails,
             "escalationTier" to contact.escalationTier.name,

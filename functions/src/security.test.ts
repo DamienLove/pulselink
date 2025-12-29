@@ -15,7 +15,7 @@ describe("escapeHtml", () => {
     });
 
     it("should escape double quotes", () => {
-      expect(escapeHtml('say "hello"')).toBe("say &quot;hello&quot;");
+      expect(escapeHtml("say \"hello\"")).toBe("say &quot;hello&quot;");
     });
 
     it("should escape single quotes", () => {
@@ -25,37 +25,37 @@ describe("escapeHtml", () => {
 
   describe("XSS attack prevention", () => {
     it("should escape basic script tag", () => {
-      const input = '<script>alert("xss")</script>';
+      const input = "<script>alert(\"xss\")</script>";
       const expected = "&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;";
       expect(escapeHtml(input)).toBe(expected);
     });
 
     it("should escape img tag with onerror", () => {
-      const input = '<img src="x" onerror="alert(1)">';
+      const input = "<img src=\"x\" onerror=\"alert(1)\">";
       const expected = "&lt;img src=&quot;x&quot; onerror=&quot;alert(1)&quot;&gt;";
       expect(escapeHtml(input)).toBe(expected);
     });
 
     it("should escape iframe injection", () => {
-      const input = '<iframe src="javascript:alert(1)"></iframe>';
+      const input = "<iframe src=\"javascript:alert(1)\"></iframe>";
       const expected = "&lt;iframe src=&quot;javascript:alert(1)&quot;&gt;&lt;/iframe&gt;";
       expect(escapeHtml(input)).toBe(expected);
     });
 
     it("should escape SVG with javascript", () => {
-      const input = '<svg onload="alert(1)">';
+      const input = "<svg onload=\"alert(1)\">";
       const expected = "&lt;svg onload=&quot;alert(1)&quot;&gt;";
       expect(escapeHtml(input)).toBe(expected);
     });
 
     it("should escape style tag", () => {
-      const input = '<style>body{display:none}</style>';
+      const input = "<style>body{display:none}</style>";
       const expected = "&lt;style&gt;body{display:none}&lt;/style&gt;";
       expect(escapeHtml(input)).toBe(expected);
     });
 
     it("should escape anchor tag with javascript", () => {
-      const input = '<a href="javascript:alert(1)">click</a>';
+      const input = "<a href=\"javascript:alert(1)\">click</a>";
       const expected = "&lt;a href=&quot;javascript:alert(1)&quot;&gt;click&lt;/a&gt;";
       expect(escapeHtml(input)).toBe(expected);
     });
@@ -63,19 +63,19 @@ describe("escapeHtml", () => {
 
   describe("Multiple character escaping", () => {
     it("should escape all special characters in one string", () => {
-      const input = '&<>"\'';
+      const input = "&<>\"'";
       const expected = "&amp;&lt;&gt;&quot;&#039;";
       expect(escapeHtml(input)).toBe(expected);
     });
 
     it("should handle complex HTML with multiple entities", () => {
-      const input = '<div class="container" id=\'main\'>Content & more</div>';
+      const input = "<div class=\"container\" id='main'>Content & more</div>";
       const expected = "&lt;div class=&quot;container&quot; id=&#039;main&#039;&gt;Content &amp; more&lt;/div&gt;";
       expect(escapeHtml(input)).toBe(expected);
     });
 
     it("should escape nested tags", () => {
-      const input = '<div><span>test</span></div>';
+      const input = "<div><span>test</span></div>";
       const expected = "&lt;div&gt;&lt;span&gt;test&lt;/span&gt;&lt;/div&gt;";
       expect(escapeHtml(input)).toBe(expected);
     });
@@ -147,7 +147,7 @@ describe("escapeHtml", () => {
     });
 
     it("should escape message content", () => {
-      const message = 'User said: "Hello <friend>"';
+      const message = "User said: \"Hello <friend>\"";
       const expected = "User said: &quot;Hello &lt;friend&gt;&quot;";
       expect(escapeHtml(message)).toBe(expected);
     });

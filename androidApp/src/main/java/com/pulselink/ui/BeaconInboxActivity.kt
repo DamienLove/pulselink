@@ -287,6 +287,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                         BeaconNavRoute.Trusted -> threads.filter { it.isTrusted }
                                         BeaconNavRoute.Favorites -> threads.filter { it.isFavorite }
                                         BeaconNavRoute.Private -> threads
+                                        BeaconNavRoute.Contacts -> threads
                                         BeaconNavRoute.Archived -> emptyList()
                                     }
 
@@ -296,6 +297,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                         BeaconNavRoute.Trusted -> archivedThreads.filter { it.isTrusted }
                                         BeaconNavRoute.Favorites -> archivedThreads.filter { it.isFavorite }
                                         BeaconNavRoute.Private -> archivedThreads
+                                        BeaconNavRoute.Contacts -> archivedThreads
                                         BeaconNavRoute.Archived -> archivedThreads
                                     }
 
@@ -336,14 +338,15 @@ class BeaconInboxActivity : ComponentActivity() {
                                             },
                                             theme = state.settings.themePreferences,
                                             onImportAll = { smsInboxViewModel.importAllMessages() },
-                                            sectionTitle = when (currentRoute) {
-                                                BeaconNavRoute.Inbox -> "All messages"
-                                                BeaconNavRoute.Otp -> "2-step codes"
-                                                BeaconNavRoute.Trusted -> "Trusted contacts"
-                                                BeaconNavRoute.Favorites -> "Favorites"
-                                                BeaconNavRoute.Private -> "Private"
-                                                BeaconNavRoute.Archived -> "Archived"
-                                            },
+                                                sectionTitle = when (currentRoute) {
+                                                    BeaconNavRoute.Inbox -> "All messages"
+                                                    BeaconNavRoute.Otp -> "2-step codes"
+                                                    BeaconNavRoute.Trusted -> "Trusted contacts"
+                                                    BeaconNavRoute.Favorites -> "Favorites"
+                                                    BeaconNavRoute.Private -> "Private"
+                                                    BeaconNavRoute.Contacts -> "Contacts"
+                                                    BeaconNavRoute.Archived -> "Archived"
+                                                },
                                             showFilterTabs = currentRoute == BeaconNavRoute.Inbox,
                                             showSearchBar = currentRoute == BeaconNavRoute.Inbox,
                                             searchState = searchState,

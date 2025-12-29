@@ -6,7 +6,7 @@
  * This function is safe for use in HTML contexts (element content, attributes).
  *
  * @param unsafe - The string to escape. If null/undefined, returns empty string.
- * @returns The escaped string with HTML entities replacing special characters
+ * @return The escaped string with HTML entities replacing special characters
  *
  * @example
  * escapeHtml('<script>alert("xss")</script>')

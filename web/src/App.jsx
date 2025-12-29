@@ -907,6 +907,7 @@ function App() {
     backgroundImageUrl: ''
   });
   const [themePublishStatus, setThemePublishStatus] = useState('');
+  const [isPremiumUser, setIsPremiumUser] = useState(false);
   const [remoteSettings, setRemoteSettings] = useState({
     remoteWebAccessEnabled: false,
     autoUpdateContactInfo: true,
@@ -1054,7 +1055,6 @@ function App() {
   const mapInfoRef = useRef(null);
   const mapHomeMarkerRef = useRef(null);
   const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const defaultMapCenter = useMemo(() => ({ lat: 39.5, lng: -98.35 }), []);
   const themeVars = useMemo(() => buildThemeVars(themePrefs), [themePrefs]);
 
   // Fix for undefined function causing crash/lint error
@@ -1146,6 +1146,7 @@ function App() {
       // Mock status checks if fields don't exist yet, effectively unlocking for testing if user has flags
       // In production, these flags would be set by payment/backend logic
       const isPremium = data.subscriptionStatus === 'premium' || data.hasPremiumHistory;
+      setIsPremiumUser(isPremium);
       const isPro = data.subscriptionStatus === 'pro' || data.hasProHistory;
       const isBeta = data.isBetaTester === true;
       const isLoyal = tenureDays > 365;
@@ -1234,7 +1235,7 @@ function App() {
   }, [user]);
 
   useEffect(() => {
-    if (user) {
+    if (user && isPremiumUser) {
       // Listen to threads
       // Assuming structure: users/{uid}/synced_threads/{threadId}
       const threadsRef = collection(db, "users", user.uid, "synced_threads");
@@ -1250,7 +1251,7 @@ function App() {
     } else {
       setThreads([]);
     }
-  }, [user]);
+  }, [user, isPremiumUser]);
 
   useEffect(() => {
     const themesRef = collection(db, "themes_public");
@@ -1273,7 +1274,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (user && selectedThread) {
+    if (user && selectedThread && isPremiumUser) {
       // Listen to messages
       const messagesRef = collection(db, "users", user.uid, "synced_threads", selectedThread.id, "messages");
       const q = query(messagesRef, orderBy("date", "asc"));
@@ -1288,7 +1289,7 @@ function App() {
     } else {
       setMessages([]);
     }
-  }, [user, selectedThread]);
+  }, [user, selectedThread, isPremiumUser]);
 
   useEffect(() => {
     if (selectedThread?.address) {
@@ -1372,7 +1373,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [activePanel, mapsApiKey, defaultMapCenter]);
+  }, [activePanel, mapsApiKey]);
 
   useEffect(() => {
     if (activePanel !== 'map') return;
@@ -1465,7 +1466,7 @@ function App() {
       bounds.extend({ lat: alert.lat, lng: alert.lng });
     });
     mapInstanceRef.current.fitBounds(bounds);
-  }, [filteredAlerts, userLocation, defaultMapCenter]);
+  }, [filteredAlerts, userLocation]);
 
   const handleAlertFocus = (alert) => {
     setSelectedAlertId(alert.id);
@@ -1967,6 +1968,7 @@ function App() {
                   aria-busy={isLoggingIn}
                   className="primary-btn"
                 >
+                  {isLoggingIn ? <span className="spinner" aria-hidden="true" /> : null}
                   {isLoggingIn ? 'Signing in...' : 'Sign in'}
                 </button>
                 <button
@@ -1992,6 +1994,7 @@ function App() {
                 aria-busy={isLoggingIn}
                 className="primary-btn"
               >
+                {isLoggingIn ? <span className="spinner" aria-hidden="true" /> : null}
                 {isLoggingIn ? 'Signing in...' : 'Sign in with Google'}
               </button>
             </div>
@@ -2109,13 +2112,22 @@ function App() {
           </div>
           {activePanel === 'beacon' ? (
             <div className="thread-list">
-              {threads.length === 0 ? (
+              {!isPremiumUser ? (
+                 <div className="sidebar-placeholder">
+                   <div className="sidebar-tip muted">
+                     Premium Required
+                   </div>
+                   <div className="sidebar-tip muted">
+                     Upgrade to Premium to access your messages on the web.
+                   </div>
+                 </div>
+              ) : threads.length === 0 ? (
                 <div className="sidebar-placeholder">
                   <div className="sidebar-tip muted">
                     No conversations found.
                   </div>
                   <div className="sidebar-tip muted">
-                    Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
+                    Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings.
                   </div>
                 </div>
               ) : (
@@ -2288,6 +2300,7 @@ function App() {
                     onClick={handleProfileSave}
                     disabled={isSavingProfile}
                   >
+                    {isSavingProfile ? <span className="spinner" aria-hidden="true" /> : null}
                     {isSavingProfile ? 'Saving...' : 'Save profile'}
                   </button>
                   {profileStatus && <div className="settings-status" role="status" aria-live="polite">{profileStatus}</div>}
@@ -2453,7 +2466,6 @@ function App() {
                 <input
                   className="login-input contact-search"
                   placeholder="Search by name, phone, or email"
-                  aria-label="Search contacts"
                   value={contactSearch}
                   onChange={(e) => setContactSearch(e.target.value)}
                 />
@@ -2530,7 +2542,7 @@ function App() {
                       <p>Set VITE_GOOGLE_MAPS_API_KEY in web/.env.local to load the map view.</p>
                     </div>
                   )}
-                  {mapStatus && <div className="map-status">{mapStatus}</div>}
+                  {mapStatus && <div className="map-status" role="status" aria-live="polite">{mapStatus}</div>}
                 </div>
                 <div className="map-list">
                   {filteredAlerts.map((alert) => (
@@ -2566,6 +2578,7 @@ function App() {
                             event.stopPropagation();
                             handleClearAlert(alert.id);
                           }}
+                          aria-label={`Clear alert from ${alert.address}`}
                         >
                           Clear
                         </button>
@@ -2637,6 +2650,7 @@ function App() {
                                         className="ghost-btn icon-only" 
                                         onClick={() => handleDeleteRingerSong(song.id)}
                                         title="Remove from playlist"
+                                        aria-label={`Remove ${song.title} from playlist`}
                                         style={{width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center', border: 'none'}}
                                     >
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -3041,7 +3055,6 @@ function App() {
                   <textarea
                     className="composer-textarea"
                     placeholder="Type a message..."
-                    aria-label="Message body"
                     value={composeBody}
                     onChange={(e) => setComposeBody(e.target.value)}
                   />
@@ -3050,6 +3063,7 @@ function App() {
                     disabled={isSending || isLoggingIn}
                     className="primary-btn"
                   >
+                    {isSending ? <span className="spinner" aria-hidden="true" /> : null}
                     {isSending ? "Sending..." : "Send"}
                   </button>
                 </div>

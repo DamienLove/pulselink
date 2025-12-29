@@ -40,3 +40,4 @@ rootProject.name = "PulseLink"
 include(":androidApp")
 include(":wearApp")
 include(":shared")
+include(":ringersong")

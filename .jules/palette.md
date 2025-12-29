@@ -9,3 +9,7 @@
 ## 2024-05-25 - Semantic Active States
 **Learning:** Visual active states (CSS classes) often get implemented without the corresponding semantic HTML attributes (`aria-current`), leaving screen reader users guessing which view is active.
 **Action:** Ensure navigation components always pair `.active` visual classes with `aria-current="page"` (for tabs/nav) or `aria-current="true"` (for lists) to expose state to assistive technology.
+
+## 2024-05-26 - Loading Spinners
+**Learning:** Simply changing button text to "Saving..." is often missed by users. A visual spinner (using `currentColor` to match text) provides a much stronger affordance of activity.
+**Action:** Use a CSS-only spinner component inside buttons for async actions, placed before the text, to give clear visual feedback without layout shifts.
