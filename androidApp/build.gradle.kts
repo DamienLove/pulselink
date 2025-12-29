@@ -538,5 +538,3 @@ dependencies {
     androidTestImplementation("com.google.dagger:hilt-android-testing:2.57.2")
     kaptAndroidTest("com.google.dagger:hilt-compiler:2.57.2")
 }
-
-

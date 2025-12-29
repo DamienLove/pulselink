@@ -12,7 +12,7 @@ import kotlinx.coroutines.tasks.await
 class FirebaseSyncRepository {
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
-    
+
     private val _currentUser = MutableStateFlow(auth.currentUser)
     val currentUser: StateFlow<com.google.firebase.auth.FirebaseUser?> = _currentUser.asStateFlow()
 
@@ -35,7 +35,7 @@ class FirebaseSyncRepository {
             }
         }
     }
-    
+
     private fun startListening(uid: String) {
         stopListening()
         Log.d("FirebaseSync", "Starting listener for $uid")
@@ -99,7 +99,7 @@ class FirebaseSyncRepository {
             }
         }
     }
-    
+
     private fun stopListening() {
         commandListener?.remove()
         commandListener = null
@@ -124,11 +124,11 @@ class FirebaseSyncRepository {
             Result.failure(e)
         }
     }
-    
-    // In a real app, you'd use Google Sign In, but for now we rely on the fact 
-    // that if they are on the same device, we might want to link them? 
-    // Actually, RingerSong is standalone. 
-    // We will just expose the current user status. 
+
+    // In a real app, you'd use Google Sign In, but for now we rely on the fact
+    // that if they are on the same device, we might want to link them?
+    // Actually, RingerSong is standalone.
+    // We will just expose the current user status.
     // To sync with Web, user must sign in with same credentials.
     // We will assume Email/Password or Google Sign In is needed.
     // For now, I'll add a helper to print UID so user can verify.

@@ -52,7 +52,7 @@ fun RingerSongTheme(
     themeConfig: ThemeConfig? = null,
     content: @Composable () -> Unit
 ) {
-    val baseScheme = if (darkTheme) DarkColorScheme else LightColorScheme       
+    val baseScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     val colorScheme = themeConfig?.let { buildColorScheme(baseScheme, it) } ?: baseScheme
 

@@ -132,7 +132,7 @@ dependencies {
     implementation(libs.play.services.ads)
     implementation(libs.youtubedl.android)
     implementation(libs.youtubedl.android.ffmpeg)
-    
+
     implementation("com.spotify.android:auth:2.1.1")
 
     implementation("com.google.code.gson:gson:2.10.1")

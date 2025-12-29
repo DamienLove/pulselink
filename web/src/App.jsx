@@ -1911,7 +1911,7 @@ function App() {
     return (
       <div className="app-shell" style={themeVars}>
         <a href="#main-content" className="skip-link">Skip to main content</a>
-        <div className="container login-container" id="main-content">
+        <div className="container login-container" id="main-content" tabIndex="-1">
           <div className="login-card">
             <img src={logo} alt="PulseLink Pro" className="brand-logo" />
             <h1>PulseLink Web</h1>
@@ -2149,7 +2149,7 @@ function App() {
             </div>
           )}
         </div>
-        <div className="main-content" id="main-content">
+        <div className="main-content" id="main-content" tabIndex="-1">
           {activePanel === 'home' && (
             <div className="home-panel">
               <div className="home-hero">

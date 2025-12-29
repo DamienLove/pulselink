@@ -1279,4 +1279,3 @@ private fun openZedge(context: Context) {
         runCatching { context.startActivity(webIntent) }
     }
 }
-

@@ -71,7 +71,7 @@ private fun AppNavHost(
     val coroutineScope = rememberCoroutineScope()
     val activity = LocalContext.current as? Activity
     val currentUser = viewModel.currentUser.collectAsStateWithLifecycle().value
-    
+
     val startDest = if (currentUser == null) Routes.Login else Routes.Home
 
     NavHost(
@@ -133,10 +133,10 @@ private fun AppNavHost(
         }
         composable(Routes.Settings) {
             SettingsScreen(
-                state = viewModel.state.collectAsStateWithLifecycle().value,    
+                state = viewModel.state.collectAsStateWithLifecycle().value,
                 currentUser = currentUser,
                 onBack = { navController.popBackStack() },
-                onSegmentSecondsChange = viewModel::updateSegmentSeconds,       
+                onSegmentSecondsChange = viewModel::updateSegmentSeconds,
                 onMaxSongsChange = viewModel::updateMaxSongs,
                 onResetProgress = viewModel::resetGlobalProgress
             )

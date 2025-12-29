@@ -19,7 +19,7 @@ Ads (AdMob) wired
 - Banner, App Open, Native, Interstitial configured.
 
 Build
-- Release AAB (v5, 3.4): app/build/outputs/bundle/release/app-release.aab  
+- Release AAB (v5, 3.4): app/build/outputs/bundle/release/app-release.aab
 - Application ID: com.RingerSong.free
 - Dependencies: Spotify Auth, Spotify App Remote (republish), Firebase (Auth, Firestore, Analytics).
 
@@ -35,4 +35,3 @@ Release notes v5 (versionCode 5, versionName 3.4)
 - Theme preferences now sync reliably from PulseLink WebApp so mobile UI colors stay matched.
 - Applied custom typography across the app to use the intended serif display/body fonts.
 - Minor stability polish while resolving track metadata and syncing playlists.
-

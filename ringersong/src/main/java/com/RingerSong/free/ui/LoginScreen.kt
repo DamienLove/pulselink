@@ -159,7 +159,7 @@ fun LoginScreen(
                         Text("Sign in with Google (Coming Soon)")
                     // }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 TextButton(onClick = { viewModel.signUpWithEmail(email, password, onLoginSuccess) }) {

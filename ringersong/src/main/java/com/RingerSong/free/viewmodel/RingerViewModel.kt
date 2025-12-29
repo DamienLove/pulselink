@@ -173,13 +173,13 @@ class RingerViewModel(application: Application) : AndroidViewModel(application) 
                         // Keep local songs, but update Spotify songs from Firestore
                         val localOnlySongs: List<SongEntry> = current.songs.filterNot { it.uri.startsWith("spotify:") }
                         val combinedSongs: List<SongEntry> = localOnlySongs + firestoreSongs
-                        
+
                         // Recalculate order: maintain local order for local files, append firestore ones at end if new
                         val currentOrderList: List<String> = current.songOrder
-                        val combinedOrder: List<String> = currentOrderList.filter { id -> 
-                            combinedSongs.any { s -> s.id == id } 
+                        val combinedOrder: List<String> = currentOrderList.filter { id ->
+                            combinedSongs.any { s -> s.id == id }
                         } + firestoreSongs.map { it.id }.filterNot { it in currentOrderList }
-                        
+
                         current.copy(songs = combinedSongs, songOrder = combinedOrder)
                     }
                 }
@@ -413,7 +413,7 @@ class RingerViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             val current = state.value
             val song = current.songs.find { it.id == songId }
-            
+
             if (song != null && song.uri.startsWith("spotify:") && uid != null) {
                 // If it's a Spotify song, remove from Firestore (listener will update local)
                 db.collection("users").document(uid).collection("ringer_playlist")

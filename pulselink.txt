@@ -68,4 +68,3 @@ Current SMS features
 - 2025-12-27: Version bump to 87 and rebuilt free/pro/premium AABs (paths under androidApp/build/outputs/bundle/*Release, timestamp ~04:03). QA-ready.
 - 2025-12-27: QA request — rebuilt PulseLink v87 free/pro/premium AABs after Claude fixes; artifacts in androidApp/build/outputs/bundle/*Release/ for verification.
 - 2025-12-29: Emergency trusted-contacts recovery: MainViewModel sync now falls back to Firestore collectionGroup("trustedContacts") with ownerUid/userId/path filtering to pull legacy docs, merges and re-uploads missing entries. Contacts now write ownerUid for future migrations. Beacon nav now includes a “Contacts” tab that currently reuses the inbox view; version bumped to 89. Built freeRelease AAB at androidApp/build/outputs/bundle/freeRelease/androidApp-free-release.aab for internal testing.
-
