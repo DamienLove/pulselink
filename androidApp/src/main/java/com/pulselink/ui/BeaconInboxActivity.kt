@@ -77,7 +77,11 @@ import com.pulselink.ui.screens.SmsInboxScreen
 import com.pulselink.ui.screens.SmsThreadScreen
 import com.pulselink.ui.screens.VisualSettingsScreen
 import com.pulselink.ui.screens.ExtensionsStoreScreen
+import com.pulselink.ui.screens.ContactDetailScreen
+import com.pulselink.ui.screens.ContactCreateScreen
 import com.pulselink.ui.model.MessageRecipient
+import com.pulselink.domain.model.Contact
+import com.pulselink.ui.state.PublicProfile
 import com.pulselink.ui.state.DeviceContactsViewModel
 import com.pulselink.ui.state.MainViewModel
 import com.pulselink.ui.state.SmsInboxViewModel
@@ -91,6 +95,8 @@ import com.pulselink.util.VibrationPatterns
 import com.pulselink.util.formatTimestamp
 import com.pulselink.util.hashPin
 import com.pulselink.util.parseColorOr
+import com.pulselink.util.normalizeSmsAddress
+import com.pulselink.util.splitSmsDisplayAddress
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -311,6 +317,21 @@ class BeaconInboxActivity : ComponentActivity() {
                                                 navController.navigate(
                                                     "sms/thread/${thread.threadId}/${Uri.encode(thread.address)}?lineId=$lineSuffix"
                                                 )
+                                            },
+                                            onOpenContactForThread = { thread ->
+                                                val contact = contactsByNumber[normalizeSmsAddress(thread.address)]
+                                                if (contact != null) {
+                                                    navController.navigate("contact/${contact.id}/settings")
+                                                } else {
+                                                    val (displayName, number) = splitSmsDisplayAddress(thread.address)
+                                                    val phone = (number ?: displayName).trim()
+                                                    val encodedPhone = Uri.encode(phone)
+                                                    val encodedName = displayName
+                                                        .takeIf { it.isNotBlank() && it != phone }
+                                                        ?.let { Uri.encode(it) }
+                                                        .orEmpty()
+                                                    navController.navigate("contact/new?phone=$encodedPhone&name=$encodedName")
+                                                }
                                             },
                                             onOpenThreadById = { threadId, address ->
                                                 navController.navigate("sms/thread/$threadId/${Uri.encode(address)}")
@@ -902,6 +923,115 @@ class BeaconInboxActivity : ComponentActivity() {
                                             val hashed = newPin?.let { hashPin(it) }
                                             viewModel.setPrivatePinHash(hashed)
                                             navController.popBackStack()
+                                        },
+                                        onBack = { navController.popBackStack() }
+                                    )
+                                }
+                                composable(
+                                    route = "contact/{contactId}/settings",
+                                    arguments = listOf(navArgument("contactId") { type = NavType.LongType })
+                                ) { entry ->
+                                    val contactId = entry.arguments?.getLong("contactId") ?: return@composable
+                                    val contact = state.contacts.firstOrNull { it.id == contactId }
+                                    ContactDetailScreen(
+                                        contact = contact,
+                                        showAds = state.showAds,
+                                        onBack = { navController.popBackStack() },
+                                        onCallContact = { phone ->
+                                            val intent = Intent(Intent.ACTION_DIAL).apply {
+                                                data = Uri.parse("tel:$phone")
+                                            }
+                                            startActivity(intent)
+                                        },
+                                        onEditContact = { newName, newPhone, newEmail ->
+                                            contact?.let {
+                                                val updated = it.copy(
+                                                    displayName = newName,
+                                                    phoneNumber = newPhone,
+                                                    email = newEmail
+                                                )
+                                                viewModel.saveContact(updated)
+                                            }
+                                        },
+                                        onEditEmergencyAlert = { navController.navigate("alerts/contact/$contactId/emergency") },
+                                        onEditCheckInAlert = { navController.navigate("alerts/contact/$contactId/checkin") },
+                                        onToggleLocation = { enabled -> contact?.let { viewModel.updateContact(it.copy(includeLocation = enabled)) } },
+                                        onToggleCamera = { enabled -> contact?.let { viewModel.updateContact(it.copy(cameraEnabled = enabled)) } },
+                                        onToggleAutoCall = { enabled -> contact?.let { viewModel.updateContact(it.copy(autoCall = enabled)) } },
+                                        onToggleFavorite = { enabled -> contact?.let { viewModel.updateContact(it.copy(isFavorite = enabled)) } },
+                                        onTogglePrivate = { enabled -> contact?.let { viewModel.updateContact(it.copy(isPrivate = enabled)) } },
+                                        onToggleRemoteOverride = { allow -> viewModel.setRemoteOverridePermission(contactId, allow) },
+                                        onToggleRemoteSound = { allow -> viewModel.setRemoteSoundPermission(contactId, allow) },
+                                        onSendLink = {
+                                            contact?.let {
+                                                val linkUrl = "https://pulselink.app/invite/${state.settings.deviceId}/${it.id}"
+                                                val body = "You've been invited to connect via PulseLink: $linkUrl"
+                                                val intent = Intent(Intent.ACTION_SENDTO).apply {
+                                                    data = Uri.parse("smsto:${it.phoneNumber}")
+                                                    putExtra("sms_body", body)
+                                                }
+                                                startActivity(intent)
+                                            }
+                                        },
+                                        onApproveLink = { viewModel.approveLink(contactId) },
+                                        onPing = { viewModel.sendPing(contactId) },
+                                        onDelete = {
+                                            viewModel.deleteContact(contactId)
+                                            navController.popBackStack()
+                                        }
+                                    )
+                                }
+                                composable(
+                                    route = "contact/new?phone={phone}&name={name}",
+                                    arguments = listOf(
+                                        navArgument("phone") { type = NavType.StringType; nullable = true; defaultValue = "" },
+                                        navArgument("name") { type = NavType.StringType; nullable = true; defaultValue = "" }
+                                    )
+                                ) { entry ->
+                                    val phoneArg = entry.arguments?.getString("phone").orEmpty()
+                                    val nameArg = entry.arguments?.getString("name").orEmpty()
+                                    var publicProfile by remember { mutableStateOf<PublicProfile?>(null) }
+                                    var profileLoading by remember { mutableStateOf(false) }
+                                    var pendingNavigatePhone by remember { mutableStateOf<String?>(null) }
+
+                                    LaunchedEffect(phoneArg) {
+                                        if (phoneArg.isBlank()) return@LaunchedEffect
+                                        profileLoading = true
+                                        publicProfile = viewModel.lookupPublicProfileByPhone(phoneArg)
+                                        profileLoading = false
+                                    }
+
+                                    LaunchedEffect(state.contacts, pendingNavigatePhone) {
+                                        val pending = pendingNavigatePhone ?: return@LaunchedEffect
+                                        val resolved = state.contacts.firstOrNull { contact ->
+                                            normalizeSmsAddress(contact.phoneNumber) == pending ||
+                                                contact.additionalPhones.any { normalizeSmsAddress(it) == pending }
+                                        }
+                                        if (resolved != null) {
+                                            pendingNavigatePhone = null
+                                            navController.navigate("contact/${resolved.id}/settings") {
+                                                popUpTo("contact/new?phone={phone}&name={name}") { inclusive = true }
+                                            }
+                                        }
+                                    }
+
+                                    val suggestedName = publicProfile?.displayName?.takeIf { it.isNotBlank() } ?: nameArg
+                                    ContactCreateScreen(
+                                        initialName = suggestedName,
+                                        initialPhone = phoneArg,
+                                        initialEmail = publicProfile?.email,
+                                        initialAvatarUrl = publicProfile?.avatarUrl,
+                                        profileLoading = profileLoading,
+                                        onSave = { newName, newPhone, newEmail, avatarUrl ->
+                                            val contact = Contact(
+                                                displayName = newName,
+                                                phoneNumber = newPhone,
+                                                email = newEmail,
+                                                avatarUrl = avatarUrl,
+                                                remoteDisplayName = publicProfile?.displayName
+                                            )
+                                            viewModel.saveContact(contact)
+                                            pendingNavigatePhone = normalizeSmsAddress(newPhone)
                                         },
                                         onBack = { navController.popBackStack() }
                                     )
