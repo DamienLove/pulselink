@@ -95,7 +95,9 @@ fun SettingsScreen(
                     value = state.settings.segmentSeconds.toFloat(),
                     valueRange = 5f..90f,
                     steps = 16,
-                    onValueChange = { onSegmentSecondsChange(it.toInt()) }
+                    enabled = true,
+                    onValueChange = { onSegmentSecondsChange(it.toInt()) },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 
@@ -111,7 +113,9 @@ fun SettingsScreen(
                     value = state.settings.maxSongs.toFloat(),
                     valueRange = 1f..60f,
                     steps = 11,
-                    onValueChange = { onMaxSongsChange(it.toInt()) }
+                    enabled = true,
+                    onValueChange = { onMaxSongsChange(it.toInt()) },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 

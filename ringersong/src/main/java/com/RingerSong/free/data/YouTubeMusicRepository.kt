@@ -216,4 +216,56 @@ class YouTubeMusicRepository(private val context: Context) {
             0L
         }
     }
+
+    suspend fun downloadTrack(videoId: String): String? = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "Starting YouTube download for: $videoId")
+
+            // First get song details including download URL
+            val songData = getSongDetails(videoId)
+            if (songData?.downloadUrl == null) {
+                Log.e(TAG, "No download URL for video: $videoId")
+                return@withContext null
+            }
+
+            // Download the audio file
+            val audioRequest = Request.Builder().url(songData.downloadUrl).build()
+            val audioResponse = client.newCall(audioRequest).execute()
+
+            if (!audioResponse.isSuccessful) {
+                Log.e(TAG, "Audio download failed: ${audioResponse.code}")
+                return@withContext null
+            }
+
+            // Save to local storage
+            val musicDir = java.io.File(context.getExternalFilesDir(null), "RingerSongs")
+            if (!musicDir.exists()) musicDir.mkdirs()
+
+            val localFile = java.io.File(musicDir, "$videoId.mp3")
+
+            audioResponse.body?.byteStream()?.use { input ->
+                java.io.FileOutputStream(localFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            Log.d(TAG, "Downloaded YouTube track: ${localFile.absolutePath}")
+            return@withContext localFile.absolutePath
+
+        } catch (e: Exception) {
+            Log.e(TAG, "YouTube download error", e)
+            return@withContext null
+        }
+    }
+
+    fun isTrackDownloaded(videoId: String): Boolean {
+        val musicDir = java.io.File(context.getExternalFilesDir(null), "RingerSongs")
+        return java.io.File(musicDir, "$videoId.mp3").exists()
+    }
+
+    fun getLocalFilePath(videoId: String): String? {
+        val musicDir = java.io.File(context.getExternalFilesDir(null), "RingerSongs")
+        val file = java.io.File(musicDir, "$videoId.mp3")
+        return if (file.exists()) file.absolutePath else null
+    }
 }

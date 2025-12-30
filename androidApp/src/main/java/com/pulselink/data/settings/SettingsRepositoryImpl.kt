@@ -130,9 +130,9 @@ class SettingsRepositoryImpl @Inject constructor(
             }
                 ?: PulseLinkSettings().checkInProfile,
             callSoundKey = prefs[CALL_SOUND] ?: PulseLinkSettings().callSoundKey,
-            messageNotificationSoundUri = prefs[MESSAGE_NOTIFICATION_SOUND]     
+            messageNotificationSoundUri = prefs[MESSAGE_NOTIFICATION_SOUND]
                 ?: PulseLinkSettings().messageNotificationSoundUri,
-            messageNotificationVibrate = prefs[MESSAGE_NOTIFICATION_VIBRATE]    
+            messageNotificationVibrate = prefs[MESSAGE_NOTIFICATION_VIBRATE]
                 ?: PulseLinkSettings().messageNotificationVibrate,
             messageNotificationSoundOverrides = decodeJsonOrNull(
                 prefs[MESSAGE_NOTIFICATION_SOUND_OVERRIDES]

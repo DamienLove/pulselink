@@ -338,6 +338,8 @@ class BeaconInboxActivity : ComponentActivity() {
                                             },
                                             theme = state.settings.themePreferences,
                                             onImportAll = { smsInboxViewModel.importAllMessages() },
+                                            onLoadMore = { smsInboxViewModel.loadMoreThreads() },
+                                            hasMoreToLoad = smsInboxViewModel.hasMoreThreads.collectAsStateWithLifecycle().value,
                                                 sectionTitle = when (currentRoute) {
                                                     BeaconNavRoute.Inbox -> "All messages"
                                                     BeaconNavRoute.Otp -> "2-step codes"
@@ -702,7 +704,9 @@ class BeaconInboxActivity : ComponentActivity() {
                                         },
                                         onClearCompose = { threadViewModel.clearCompose() },
                                         aiSummaryEnabled = premiumActive && state.settings.aiSummariesEnabled,
-                                        aiComposeEnabled = premiumActive && state.settings.aiComposeEnabled
+                                        aiComposeEnabled = premiumActive && state.settings.aiComposeEnabled,
+                                        onLoadMore = { threadViewModel.loadMoreMessages() },
+                                        hasMoreToLoad = threadViewModel.hasMoreMessages.collectAsStateWithLifecycle().value
                                     )
                                 }
                                 composable("beacon_settings") {

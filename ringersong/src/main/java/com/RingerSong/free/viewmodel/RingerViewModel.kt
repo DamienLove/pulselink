@@ -320,16 +320,33 @@ class RingerViewModel(application: Application) : AndroidViewModel(application) 
                 return@launch
             }
 
-            // Create the song entry for local state
+            // Download the track first (handle both Spotify and YouTube)
+            onResult("Downloading ${track.name}...")
+            val localFilePath = if (track.uri!!.startsWith("youtube:")) {
+                // Extract video ID from URI like "youtube:video:xxxx"
+                val videoId = track.uri!!.substringAfterLast(":")
+                youtubeMusicRepo.downloadTrack(videoId)
+            } else {
+                // Spotify track
+                spotifyDownloader.downloadTrack(track.uri!!)
+            }
+
+            if (localFilePath == null) {
+                onResult("Failed to download ${track.name}")
+                return@launch
+            }
+
+            // Create the song entry with local file URI
+            val localFileUri = "file://$localFilePath"
             val songEntry = SongEntry(
                 id = track.id ?: java.util.UUID.randomUUID().toString(),
                 title = "${track.name ?: "Unknown Track"} - ${track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"}",
-                uri = track.uri!!, // Safe because we already checked for null above
+                uri = localFileUri,
                 durationMs = track.duration_ms,
                 addedAt = System.currentTimeMillis()
             )
 
-            // Update local state first for immediate UI feedback
+            // Update local state
             withContext(Dispatchers.IO) {
                 store.update { current ->
                     val updatedSongs = current.songs + songEntry
@@ -341,7 +358,8 @@ class RingerViewModel(application: Application) : AndroidViewModel(application) 
             // Then sync to Firestore
             val trackData = mapOf(
                 "spotifyId" to track.id,
-                "uri" to track.uri!!, // Safe because we already checked for null above
+                "uri" to localFileUri,
+                "spotifyUri" to track.uri,
                 "title" to (track.name ?: "Unknown Track"),
                 "artist" to (track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"),
                 "durationMs" to (track.duration_ms ?: 0L),

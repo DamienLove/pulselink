@@ -1053,6 +1053,9 @@ private fun ContactSettingsDialog(
     onPickUrgencyTone: () -> Unit,
     onClearUrgencyTone: () -> Unit
 ) {
+    var showUrgencySongPicker by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Contact settings") },
@@ -1104,15 +1107,22 @@ private fun ContactSettingsDialog(
                     value = contact.urgencyThreshold.toFloat(),
                     valueRange = 0f..10f,
                     steps = 9,
-                    onValueChange = { onUrgencyThresholdChange(it.toInt()) }
+                    enabled = true,
+                    onValueChange = { onUrgencyThresholdChange(it.toInt()) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
                 )
                 Text(
                     text = contact.urgencyToneTitle ?: "No urgency tone selected",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Button(onClick = onPickUrgencyTone, modifier = Modifier.fillMaxWidth()) {
-                    Text("Pick urgency tone")
+                Button(onClick = { showUrgencySongPicker = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Select from my songs")
+                }
+                OutlinedButton(onClick = onPickUrgencyTone, modifier = Modifier.fillMaxWidth()) {
+                    Text("Pick from device files")
                 }
                 if (contact.urgencyToneUri != null) {
                     OutlinedButton(onClick = onClearUrgencyTone, modifier = Modifier.fillMaxWidth()) {
@@ -1128,6 +1138,49 @@ private fun ContactSettingsDialog(
             }
         }
     )
+
+    if (showUrgencySongPicker) {
+        AlertDialog(
+            onDismissRequest = { showUrgencySongPicker = false },
+            title = { Text("Select urgency tone") },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 400.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (songs.isEmpty()) {
+                        Text(
+                            text = "No songs in your list yet. Add songs first.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        songs.forEach { song ->
+                            Button(
+                                onClick = {
+                                    song.uri?.let { uri ->
+                                        onSetUrgencyTone(contact.id, Uri.parse(uri))
+                                    }
+                                    showUrgencySongPicker = false
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(song.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showUrgencySongPicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 @Composable
