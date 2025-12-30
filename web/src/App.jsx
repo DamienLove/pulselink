@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -56,6 +56,8 @@ const ContactIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="
 const SettingsIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
 const TrashIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
 const LinkIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
+const CopyIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>;
+const CheckIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
 
 const areThreadsEqual = (prev, next) => {
   return prev.isActive === next.isActive &&
@@ -1069,6 +1071,17 @@ function App() {
   const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
   const [spotifyResults, setSpotifyResults] = useState([]);
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
+  const [copyFeedback, setCopyFeedback] = useState(null);
+
+  const handleCopy = useCallback(async (text, id) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyFeedback(id);
+      setTimeout(() => setCopyFeedback(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy', err);
+    }
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -3049,7 +3062,18 @@ function App() {
                   </div>
                   <div className="settings-row">
                     <span className="settings-label">User ID</span>
-                    <span className="settings-value mono">{user.uid}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="settings-value mono">{user.uid}</span>
+                      <button
+                        className="ghost-btn"
+                        onClick={() => handleCopy(user.uid, 'uid')}
+                        title="Copy User ID"
+                        aria-label={copyFeedback === 'uid' ? "Copied User ID" : "Copy User ID"}
+                        style={{ padding: 0, height: 28, width: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none' }}
+                      >
+                        {copyFeedback === 'uid' ? <CheckIcon /> : <CopyIcon />}
+                      </button>
+                    </div>
                   </div>
                   <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
                     Send password reset email
