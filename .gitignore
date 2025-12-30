@@ -87,3 +87,4 @@ ringersong-keystore/
 ringersong/libs/android-sdk-0.8.0-appremote_v2.1.0-auth/
 ringersong/android-sdk-0.8.0-appremote_v2.1.0-auth.zip
 ringersong/libs/android-sdk-*-appremote*/
+*.log

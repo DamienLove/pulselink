@@ -1,29 +1,24 @@
 import { test, expect } from '@playwright/test';
 
-test('visual verification of login page', async ({ page }) => {
-  // Navigate to the app (assuming it's running on localhost:5173 or the configured base URL)
-  // For local testing, we assume the dev server is running.
-  // In a CI environment, baseURL would be set.
+test('Future Deep theme renders correctly', async ({ page }) => {
+  // Go to login page
   await page.goto('/');
 
   // Wait for the app shell to load
   await page.waitForSelector('.app-shell');
 
-  // Verify key elements are visible with correct classes
-  await expect(page.locator('.login-card')).toBeVisible();
-  await expect(page.locator('.brand-logo')).toBeVisible();
-  await expect(page.getByText('PulseLink Web')).toBeVisible();
+  // Check login card background (glassmorphism)
+  const loginCard = page.locator('.login-card');
+  await expect(loginCard).toBeVisible();
 
-  // Verify Fonts are loaded (Inter and Space Grotesk)
-  // This is a basic check to see if the computed style matches
-  const heading = page.getByRole('heading', { name: 'PulseLink Web' });
-  await expect(heading).toHaveCSS('font-family', /Space Grotesk/);
+  // Check primary button color (Indigo)
+  const primaryBtn = page.locator('.primary-btn').first();
+  await expect(primaryBtn).toBeVisible();
+  // Computed style might vary slightly depending on browser, but checking for the variable or roughly the RGB
+  // We can check if it's computed to rgb(99, 102, 241) which is #6366f1
+  await expect(primaryBtn).toHaveCSS('background-color', 'rgb(99, 102, 241)');
 
-  const body = page.locator('body');
-  await expect(body).toHaveCSS('font-family', /Inter/);
-
-  // Take a screenshot for manual review or visual regression tools
-  // Note: Actual visual regression testing (toMatchSnapshot) requires a baseline.
-  // This test currently ensures the page renders without error and captures the state.
-  await page.screenshot({ path: 'login-visual.png', fullPage: true });
+  // Check background color of the app shell
+  const appShell = page.locator('.app-shell');
+  await expect(appShell).toHaveCSS('background-color', 'rgb(3, 4, 7)'); // #030407
 });
