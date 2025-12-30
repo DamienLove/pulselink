@@ -2,6 +2,7 @@ package com.RingerSong.free.data
 
 import android.content.Context
 import android.util.Base64
+import com.RingerSong.free.BuildConfig
 import com.google.gson.Gson
 import com.spotify.android.appremote.api.ConnectionParams
 import com.spotify.android.appremote.api.Connector
@@ -16,10 +17,10 @@ import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-// Spotify API credentials for search functionality
-private const val CLIENT_ID = "b846ea3c7e3440439c6a870be4de24ce"
-private const val CLIENT_SECRET = "c228e27787164bdebec398c25fe40145"
-private const val REDIRECT_URI = "com.RingerSong.free://callback"
+// Spotify API credentials moved to BuildConfig
+private val CLIENT_ID = BuildConfig.SPOTIFY_CLIENT_ID
+private val CLIENT_SECRET = BuildConfig.SPOTIFY_CLIENT_SECRET
+private val REDIRECT_URI = BuildConfig.SPOTIFY_REDIRECT_URI
 
 data class SpotifyTrack(
     val id: String?,
@@ -74,10 +75,8 @@ class SpotifyRepository(
     private fun ensureToken() {
         if (accessToken != null && System.currentTimeMillis() < tokenExpiration) return
 
-        if (CLIENT_ID == "YOUR_CLIENT_ID_HERE") {
-             // For prototype purposes, we can't really throw here without breaking the app for the user immediately.
-             // We will throw a helpful error.
-             throw IOException("Please set your Spotify CLIENT_ID and CLIENT_SECRET in SpotifyRepository.kt")
+        if (CLIENT_ID.isEmpty()) {
+             throw IOException("Please set your Spotify CLIENT_ID and CLIENT_SECRET in build.gradle.kts")
         }
 
         val auth = Base64.encodeToString("$CLIENT_ID:$CLIENT_SECRET".toByteArray(), Base64.NO_WRAP)
@@ -100,7 +99,7 @@ class SpotifyRepository(
 object SpotifyRemoteManager {
     private var spotifyAppRemote: SpotifyAppRemote? = null
 
-    suspend fun connect(context: Context): SpotifyAppRemote = suspendCancellableCoroutine { cont ->
+    suspend fun connect(context: Context, showAuthView: Boolean = true): SpotifyAppRemote = suspendCancellableCoroutine { cont ->
         if (spotifyAppRemote?.isConnected == true) {
             cont.resume(spotifyAppRemote!!)
             return@suspendCancellableCoroutine
@@ -108,7 +107,7 @@ object SpotifyRemoteManager {
 
         val connectionParams = ConnectionParams.Builder(CLIENT_ID)
             .setRedirectUri(REDIRECT_URI)
-            .showAuthView(true)
+            .showAuthView(showAuthView)
             .build()
 
         SpotifyAppRemote.connect(context, connectionParams, object : Connector.ConnectionListener {

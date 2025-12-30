@@ -52,6 +52,11 @@ android {
             "\"youtube-music-api-yt.p.rapidapi.com\"")
         buildConfigField("String", "RAPIDAPI_TRUECALLER_HOST",
             "\"truecaller4.p.rapidapi.com\"")
+
+        // Spotify Configuration
+        buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"b846ea3c7e3440439c6a870be4de24ce\"")
+        buildConfigField("String", "SPOTIFY_CLIENT_SECRET", "\"c228e27787164bdebec398c25fe40145\"")
+        buildConfigField("String", "SPOTIFY_REDIRECT_URI", "\"com.RingerSong.free://callback\"")
     }
 
     signingConfigs {

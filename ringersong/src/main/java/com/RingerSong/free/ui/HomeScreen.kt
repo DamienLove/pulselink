@@ -70,6 +70,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
@@ -687,7 +688,7 @@ private fun SpotifySection(
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Search for tracks on Spotify and add them to your progression. Connect Spotify App first.",
+                    text = stringResource(R.string.spotify_connect_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -697,7 +698,7 @@ private fun SpotifySection(
                 onClick = onConnectSpotify,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Authorize / Connect Spotify App")
+                Text(stringResource(R.string.spotify_auth_button))
             }
 
             OutlinedTextField(
@@ -1299,32 +1300,32 @@ private fun urgencyLabel(contact: ContactEntry): String {
 private fun HowToAddMusicHelper() {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
-            text = "How to add music",
+            text = stringResource(R.string.how_to_add_title),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold
         )
         Text(
-            text = "Search & add songs from Spotify. We use your paid Spotify membership to stream the ringer directly from the Spotify App.",
+            text = stringResource(R.string.how_to_add_spotify),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "Please ensure the Spotify App is installed and you are logged in.",
+            text = stringResource(R.string.how_to_add_spotify_login),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "You can also use local audio files (MP3/WAV/M4A) by selecting them from your device.",
+            text = stringResource(R.string.how_to_add_local),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "Tip: Share audio files from apps like Zedge to import them here.",
+            text = stringResource(R.string.how_to_add_zedge),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "⚠️ RingerSong will automatically silence your default ringer while playing, but setting your phone's ringtone to Silent is a good backup.",
+            text = stringResource(R.string.ringer_warning),
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.primary

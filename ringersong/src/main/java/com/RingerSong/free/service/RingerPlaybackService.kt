@@ -29,10 +29,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class RingerPlaybackService : Service() {
     private val scope = CoroutineScope(Dispatchers.IO)
     private var player: MediaPlayer? = null
+    private var playbackJob: Job? = null
     private var stopJob: Job? = null
     private var isSpotifyPlaying = false
     private var audioManager: AudioManager? = null
@@ -46,12 +48,16 @@ class RingerPlaybackService : Service() {
         const val EXTRA_PHONE_NUMBER = "phone_number"
         private const val NOTIFICATION_ID = 9002
         private const val CHANNEL_ID = "ringer_playback"
+        private const val SPOTIFY_START_DELAY_MS = 500L // Time for Spotify to initialize playback
+        private const val PREFS_NAME = "ringer_song_prefs"
+        private const val KEY_MUTED_VOLUME = "muted_volume"
     }
 
     override fun onCreate() {
         super.onCreate()
         createChannel()
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        restoreMuteState()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -75,6 +81,7 @@ class RingerPlaybackService : Service() {
 
     override fun onDestroy() {
         stopPlayback()
+        SpotifyRemoteManager.disconnect()
         super.onDestroy()
     }
 
@@ -146,10 +153,17 @@ class RingerPlaybackService : Service() {
     }
 
     private fun muteRinger() {
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.MODIFY_AUDIO_SETTINGS)
+            != PackageManager.PERMISSION_GRANTED) {
+            Log.w(TAG, "No permission to modify audio settings")
+            return
+        }
+
         audioManager?.let { manager ->
             try {
                 if (originalRingerVolume == -1) {
                     originalRingerVolume = manager.getStreamVolume(AudioManager.STREAM_RING)
+                    saveMuteState(originalRingerVolume)
                 }
                 manager.setStreamVolume(AudioManager.STREAM_RING, 0, 0)
                 Log.d(TAG, "Muted system ringer (saved volume: $originalRingerVolume)")
@@ -160,6 +174,12 @@ class RingerPlaybackService : Service() {
     }
 
     private fun restoreRinger() {
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.MODIFY_AUDIO_SETTINGS)
+            != PackageManager.PERMISSION_GRANTED) {
+            Log.w(TAG, "No permission to modify audio settings")
+            return
+        }
+
         if (originalRingerVolume != -1) {
             audioManager?.let { manager ->
                 try {
@@ -170,7 +190,28 @@ class RingerPlaybackService : Service() {
                 }
             }
             originalRingerVolume = -1
+            clearMuteState()
         }
+    }
+
+    private fun saveMuteState(volume: Int) {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(KEY_MUTED_VOLUME, volume).apply()
+    }
+
+    private fun restoreMuteState() {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val savedVolume = prefs.getInt(KEY_MUTED_VOLUME, -1)
+        if (savedVolume != -1) {
+            Log.d(TAG, "Found saved muted volume: $savedVolume, restoring now")
+            originalRingerVolume = savedVolume
+            restoreRinger()
+        }
+    }
+
+    private fun clearMuteState() {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().remove(KEY_MUTED_VOLUME).apply()
     }
 
     private fun playSegment(segment: SegmentPlay) {
@@ -189,14 +230,14 @@ class RingerPlaybackService : Service() {
             Log.d(TAG, "Spotify URI detected")
 
             // PRIORITY 1: Streaming via Spotify App Remote (User's Paid Membership)
-            // This is the new preferred method.
-            scope.launch {
+            playbackJob = scope.launch {
                 var streamingSuccess = false
                 runCatching {
                     Log.d(TAG, "Attempting to connect to Spotify App Remote...")
-                    val remote = SpotifyRemoteManager.connect(this@RingerPlaybackService)
+                    // Pass false for showAuthView because we are in a Service
+                    val remote = SpotifyRemoteManager.connect(this@RingerPlaybackService, showAuthView = false)
                     remote.playerApi.play(segment.song.uri)
-                    delay(500) // Give it a moment to start
+                    delay(SPOTIFY_START_DELAY_MS) // Give it a moment to start
                     remote.playerApi.seekTo(segment.startMs)
                     isSpotifyPlaying = true
                     streamingSuccess = true
@@ -213,8 +254,6 @@ class RingerPlaybackService : Service() {
 
                     if (localPath != null) {
                          Log.d(TAG, "Found local file: $localPath")
-                         // Must run on main thread or handle appropriately? MediaPlayer is fine on BG thread if prepared.
-                         // But playLocalFile launches its own scope for stopping.
                          withContext(Dispatchers.Main) {
                              playLocalFile(localPath, segment.startMs, segment.durationMs)
                          }
@@ -230,49 +269,15 @@ class RingerPlaybackService : Service() {
             stopPlayback()
         } else {
             Log.d(TAG, "Local file URI: ${segment.song.uri}")
-            val uri = Uri.parse(segment.song.uri)
-            val mediaPlayer = MediaPlayer()
-            player = mediaPlayer
-            runCatching {
-                mediaPlayer.setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build()
-                )
-                mediaPlayer.setDataSource(this, uri)
-                Log.d(TAG, "Preparing MediaPlayer")
-                mediaPlayer.prepare()
-                mediaPlayer.seekTo(segment.startMs.toInt())
-                mediaPlayer.start()
-                Log.d(TAG, "MediaPlayer started successfully")
-
-                mediaPlayer.setOnCompletionListener {
-                    Log.d(TAG, "MediaPlayer completed")
-                    stopPlayback()
-                }
-
-                stopJob = scope.launch {
-                    delay(segment.durationMs)
-                    Log.d(TAG, "Segment duration elapsed, stopping")
-                    stopPlayback()
-                }
-            }.onFailure { e ->
-                Log.e(TAG, "MediaPlayer failed", e)
-                stopPlayback()
+            // For direct local file, we also use the main thread for consistency and callbacks
+            scope.launch(Dispatchers.Main) {
+                playLocalFile(segment.song.uri, segment.startMs, segment.durationMs, isUri = true)
             }
         }
-
-        // Safety timeout in case everything hangs?
-        // Not adding now, but good to keep in mind.
-        // The segment duration timer (stopJob) handles normal stopping.
     }
 
-    private suspend fun withContext(context: kotlin.coroutines.CoroutineContext, block: suspend () -> Unit) {
-        kotlinx.coroutines.withContext(context) { block() }
-    }
-
-    private fun playLocalFile(filePath: String, startMs: Long, durationMs: Long) {
+    // Helper to handle both file paths and URIs safely on the main thread
+    private fun playLocalFile(pathOrUri: String, startMs: Long, durationMs: Long, isUri: Boolean = false) {
         val mediaPlayer = MediaPlayer()
         player = mediaPlayer
         runCatching {
@@ -282,29 +287,48 @@ class RingerPlaybackService : Service() {
                     .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                     .build()
             )
-            mediaPlayer.setDataSource(filePath)
-            mediaPlayer.prepare()
-            mediaPlayer.seekTo(startMs.toInt())
-            mediaPlayer.start()
+
+            if (isUri) {
+                 mediaPlayer.setDataSource(this, Uri.parse(pathOrUri))
+            } else {
+                 mediaPlayer.setDataSource(pathOrUri)
+            }
+
+            // Use prepareAsync to avoid blocking Main thread, even though usually fast for local files
+            mediaPlayer.setOnPreparedListener { mp ->
+                Log.d(TAG, "MediaPlayer prepared")
+                mp.seekTo(startMs.toInt())
+                mp.start()
+            }
 
             mediaPlayer.setOnCompletionListener {
+                Log.d(TAG, "MediaPlayer completed")
                 stopPlayback()
             }
 
+            mediaPlayer.prepareAsync()
+
+            // Schedule stop
             stopJob = scope.launch {
                 delay(durationMs)
+                Log.d(TAG, "Segment duration elapsed, stopping")
                 stopPlayback()
             }
         }.onFailure {
-            Log.e(TAG, "Failed to play local file: $filePath", it)
+            Log.e(TAG, "Failed to play local file: $pathOrUri", it)
             stopPlayback()
         }
     }
 
     private fun stopPlayback() {
         Log.d(TAG, "Stopping playback and restoring ringer")
+
+        playbackJob?.cancel()
+        playbackJob = null
+
         stopJob?.cancel()
         stopJob = null
+
         player?.runCatching {
             stop()
             release()
@@ -314,9 +338,7 @@ class RingerPlaybackService : Service() {
         if (isSpotifyPlaying) {
              scope.launch {
                 runCatching {
-                    // Pause instead of disconnect to be faster next time?
-                    // Or just pause.
-                    val remote = SpotifyRemoteManager.connect(this@RingerPlaybackService)
+                    val remote = SpotifyRemoteManager.connect(this@RingerPlaybackService, showAuthView = false)
                     remote.playerApi.pause()
                 }
             }

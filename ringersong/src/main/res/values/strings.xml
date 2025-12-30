@@ -1,4 +1,12 @@
 <resources>
     <string name="app_name">RingerSong</string>
     <string name="admob_app_id">ca-app-pub-5327057757821609~1777649271</string>
+    <string name="spotify_connect_hint">Search for tracks on Spotify and add them to your progression. Connect Spotify App first.</string>
+    <string name="spotify_auth_button">Authorize / Connect Spotify App</string>
+    <string name="how_to_add_title">How to add music</string>
+    <string name="how_to_add_spotify">Search &amp; add songs from Spotify. We use your paid Spotify membership to stream the ringer directly from the Spotify App.</string>
+    <string name="how_to_add_spotify_login">Please ensure the Spotify App is installed and you are logged in.</string>
+    <string name="how_to_add_local">You can also use local audio files (MP3/WAV/M4A) by selecting them from your device.</string>
+    <string name="how_to_add_zedge">Tip: Share audio files from apps like Zedge to import them here.</string>
+    <string name="ringer_warning">⚠️ RingerSong will automatically silence your default ringer while playing, but setting your phone\'s ringtone to Silent is a good backup.</string>
 </resources>

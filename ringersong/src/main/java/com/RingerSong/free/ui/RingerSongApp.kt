@@ -34,6 +34,7 @@ fun RingerSongApp(
     val coroutineScope = rememberCoroutineScope()
     val activity = LocalContext.current as? Activity
     val state = viewModel.state.collectAsStateWithLifecycle()
+    var isConnectingSpotify by remember { androidx.compose.runtime.mutableStateOf(false) }
 
     LaunchedEffect(sharedUri) {
         if (sharedUri != null) {
@@ -71,6 +72,7 @@ private fun AppNavHost(
     val coroutineScope = rememberCoroutineScope()
     val activity = LocalContext.current as? Activity
     val currentUser = viewModel.currentUser.collectAsStateWithLifecycle().value
+    var isConnectingSpotify by remember { androidx.compose.runtime.mutableStateOf(false) }
 
     val startDest = if (currentUser == null) Routes.Login else Routes.Home
 
@@ -126,13 +128,18 @@ private fun AppNavHost(
                     }
                 },
                 onConnectSpotify = {
-                    coroutineScope.launch {
-                        activity?.let { ctx ->
-                            try {
-                                com.RingerSong.free.data.SpotifyRemoteManager.connect(ctx)
-                                snackbarHostState.showSnackbar("Spotify connected successfully!")
-                            } catch (e: Exception) {
-                                snackbarHostState.showSnackbar("Failed to connect Spotify: ${e.message}")
+                    if (!isConnectingSpotify) {
+                        isConnectingSpotify = true
+                        coroutineScope.launch {
+                            activity?.let { ctx ->
+                                try {
+                                    com.RingerSong.free.data.SpotifyRemoteManager.connect(ctx)
+                                    snackbarHostState.showSnackbar("Spotify connected successfully!")
+                                } catch (e: Exception) {
+                                    snackbarHostState.showSnackbar("Failed to connect Spotify: ${e.message}")
+                                } finally {
+                                    isConnectingSpotify = false
+                                }
                             }
                         }
                     }
