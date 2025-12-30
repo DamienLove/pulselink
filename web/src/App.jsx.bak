@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, memo } from 'react';
+import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -41,6 +41,8 @@ import blueprintBg from './assets/themes/blueprint.svg';
 import glitchBg from './assets/themes/glitch_stream.svg';
 import oakBg from './assets/themes/legacy_oak.svg';
 import eternalBg from './assets/themes/eternal_sky.svg';
+import cyberMistBg from './assets/themes/cyber_mist.svg';
+import deepOceanBg from './assets/themes/deep_ocean.svg';
 import premiumAvatar from './assets/avatars/premium_crown.svg';
 import proAvatar from './assets/avatars/pro_spark.svg';
 import betaAvatar from './assets/avatars/beta_flask.svg';
@@ -103,6 +105,37 @@ const MessageItem = memo(({ msg, showPreviews }) => (
 
 MessageItem.displayName = 'MessageItem';
 
+// Bolt: Custom comparator for DeviceContactItem to handle object reference changes
+const areDeviceContactsEqual = (prev, next) => {
+  const p = prev.contact;
+  const n = next.contact;
+  if (p === n) return true; // Reference equality
+  if (!p || !n) return false; // Null/undefined safety
+
+  // Shallow checks for simple props
+  if (p.id !== n.id) return false;
+  if (p.displayName !== n.displayName) return false;
+  if (p.phoneNumber !== n.phoneNumber) return false;
+  if (p.email !== n.email) return false;
+
+  // Deep check for array props (assuming arrays of strings)
+  const pPhones = p.additionalPhones || [];
+  const nPhones = n.additionalPhones || [];
+  if (pPhones.length !== nPhones.length) return false;
+  for (let i = 0; i < pPhones.length; i++) {
+    if (pPhones[i] !== nPhones[i]) return false;
+  }
+
+  const pEmails = p.additionalEmails || [];
+  const nEmails = n.additionalEmails || [];
+  if (pEmails.length !== nEmails.length) return false;
+  for (let i = 0; i < pEmails.length; i++) {
+    if (pEmails[i] !== nEmails[i]) return false;
+  }
+
+  return true;
+};
+
 // Bolt: Optimized DeviceContactItem to prevent re-renders of the large contact list
 const DeviceContactItem = memo(({ contact }) => {
   const extraPhones = Array.isArray(contact.additionalPhones)
@@ -123,25 +156,138 @@ const DeviceContactItem = memo(({ contact }) => {
       </div>
     </div>
   );
-});
+}, areDeviceContactsEqual);
 
 DeviceContactItem.displayName = 'DeviceContactItem';
 
+// Bolt: Optimized TrustedContactRow to avoid re-rendering list on parent state changes
+const TrustedContactRow = memo(({ contact, isConfirmingDelete, onEdit, onDeleteRequest, onDeleteConfirm, onDeleteCancel }) => (
+  <div className="contact-row">
+    <div className="contact-main">
+      <div className="contact-name">{contact.displayName}</div>
+      <div className="contact-meta">
+        {contact.phoneNumber || contact.email || 'No phone or email'}
+      </div>
+    </div>
+    <div className="contact-actions">
+      <button
+        className="secondary-btn"
+        onClick={() => onEdit(contact)}
+        aria-label={`Edit ${contact.displayName}`}
+      >
+        Edit
+      </button>
+      {isConfirmingDelete ? (
+        <button
+          className="secondary-btn"
+          onClick={() => onDeleteConfirm(contact.id)}
+          aria-label={`Confirm remove ${contact.displayName}`}
+          onBlur={onDeleteCancel}
+        >
+          Confirm?
+        </button>
+      ) : (
+        <button
+          className="ghost-btn"
+          onClick={() => onDeleteRequest(contact.id)}
+          aria-label={`Remove ${contact.displayName}`}
+        >
+          Remove
+        </button>
+      )}
+    </div>
+  </div>
+), (prev, next) => {
+  return prev.isConfirmingDelete === next.isConfirmingDelete &&
+    prev.contact.id === next.contact.id &&
+    prev.contact.displayName === next.contact.displayName &&
+    prev.contact.phoneNumber === next.contact.phoneNumber &&
+    prev.contact.email === next.contact.email;
+});
+
+TrustedContactRow.displayName = 'TrustedContactRow';
+
+const alertBadgeCopy = {
+  emergency: 'Emergency',
+  check_in: 'Check-in',
+  non_urgent: 'Alert'
+};
+
+const alertBadgeColor = {
+  emergency: '#f43f5e',
+  check_in: '#22c55e',
+  non_urgent: '#60a5fa'
+};
+
+const buildAlertSnippet = (body = '') => {
+  const firstLine = body.split('\n')[0] ?? '';
+  if (firstLine.length <= 88) return firstLine;
+  return `${firstLine.slice(0, 85)}...`;
+};
+
+// Bolt: Optimized MapAlertItem to prevent re-renders of the alert list
+const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => (
+  <div
+    className={`map-item ${isActive ? 'active' : ''}`}
+    onClick={() => onFocus(alert)}
+    role="button"
+    tabIndex={0}
+    onKeyDown={(event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        onFocus(alert);
+      }
+    }}
+  >
+    <div className="map-item-header">
+      <div className="map-item-title">{alert.address}</div>
+      <span
+        className="map-badge"
+        style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
+      >
+        {alertBadgeCopy[alert.severity] ?? 'Alert'}
+      </span>
+    </div>
+    <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
+    <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
+    <div className="map-item-actions">
+      <button
+        className="secondary-btn"
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onClear(alert.id);
+        }}
+      >
+        Clear
+      </button>
+    </div>
+  </div>
+), (prev, next) => {
+  return prev.isActive === next.isActive &&
+    prev.alert.id === next.alert.id &&
+    prev.alert.address === next.alert.address &&
+    prev.alert.severity === next.alert.severity &&
+    prev.alert.date === next.alert.date &&
+    prev.alert.body === next.alert.body;
+});
+MapAlertItem.displayName = 'MapAlertItem';
+
 const defaultTheme = {
-  primaryColor: "#6750A4",
-  secondaryColor: "#625B71",
-  bubbleOutgoing: "#D0BCFF",
-  bubbleIncoming: "#E8DEF8",
-  backgroundColor: "#FFFFFF",
+  primaryColor: "#5e6fff",
+  secondaryColor: "#00f3ff",
+  bubbleOutgoing: "#5e6fff",
+  bubbleIncoming: "#161b2e",
+  backgroundColor: "#030407",
   iconSizeFactor: 1.0,
   fontStyle: "Default",
-  bubbleCornerRadius: 12,
+  bubbleCornerRadius: 20,
   inboxIconVariant: "Default",
-  onBubbleOutgoing: "#000000",
-  onBubbleIncoming: "#000000",
-  onBackground: "#000000",
-  topBarColor: "#FFFFFF",
-  onTopBarColor: "#000000",
+  onBubbleOutgoing: "#ffffff",
+  onBubbleIncoming: "#f0f4ff",
+  onBackground: "#f0f4ff",
+  topBarColor: "#0e121e",
+  onTopBarColor: "#f0f4ff",
   bubbleCornerRadiusTopStart: null,
   bubbleCornerRadiusTopEnd: null,
   bubbleCornerRadiusBottomStart: null,
@@ -473,6 +619,46 @@ const themePresets = [
       dividerColor: "#312E81",
       inboxIconVariant: "lavender_haze"
     }
+  },
+  {
+    name: "Cyber Mist",
+    theme: {
+      fontStyle: "Monospace",
+      bubbleCornerRadius: 18,
+      backgroundColor: "#1e1b4b",
+      onBackground: "#e879f9",
+      topBarColor: "#2e1065",
+      onTopBarColor: "#e879f9",
+      bubbleOutgoing: "#d946ef",
+      onBubbleOutgoing: "#FFFFFF",
+      bubbleIncoming: "#4c1d95",
+      onBubbleIncoming: "#e879f9",
+      primaryColor: "#d946ef",
+      secondaryColor: "#06b6d4",
+      dividerColor: "#4c1d95",
+      inboxIconVariant: "midnight_oled",
+      backgroundImageUrl: cyberMistBg
+    }
+  },
+  {
+    name: "Deep Ocean",
+    theme: {
+      fontStyle: "Default",
+      bubbleCornerRadius: 24,
+      backgroundColor: "#0f172a",
+      onBackground: "#e0f2fe",
+      topBarColor: "#1e3a8a",
+      onTopBarColor: "#e0f2fe",
+      bubbleOutgoing: "#0ea5e9",
+      onBubbleOutgoing: "#FFFFFF",
+      bubbleIncoming: "#172554",
+      onBubbleIncoming: "#38bdf8",
+      primaryColor: "#0ea5e9",
+      secondaryColor: "#38bdf8",
+      dividerColor: "#1e3a8a",
+      inboxIconVariant: "ocean_deep",
+      backgroundImageUrl: deepOceanBg
+    }
   }
 ];
 
@@ -765,24 +951,6 @@ const toMillis = (value) => {
   return 0;
 };
 
-const alertBadgeCopy = {
-  emergency: 'Emergency',
-  check_in: 'Check-in',
-  non_urgent: 'Alert'
-};
-
-const alertBadgeColor = {
-  emergency: '#f43f5e',
-  check_in: '#22c55e',
-  non_urgent: '#60a5fa'
-};
-
-const buildAlertSnippet = (body = '') => {
-  const firstLine = body.split('\n')[0] ?? '';
-  if (firstLine.length <= 88) return firstLine;
-  return `${firstLine.slice(0, 85)}...`;
-};
-
 // Sentinel: Prevent XSS in map info windows
 const escapeHtml = (unsafe) => {
   return (unsafe || '')
@@ -822,7 +990,7 @@ const loadGoogleMaps = (() => {
 })();
 
 function App() {
-  const [user, setUser] = useState({ uid: 'mock-user', email: 'mock@example.com' });
+  const [user, setUser] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [threads, setThreads] = useState([]);
   const [selectedThread, setSelectedThread] = useState(null);
@@ -898,6 +1066,7 @@ function App() {
   const spotifyCreds = { clientId: import.meta.env.VITE_SPOTIFY_CLIENT_ID, clientSecret: import.meta.env.VITE_SPOTIFY_CLIENT_SECRET };
   const [spotifyToken, setSpotifyToken] = useState(null);
   const [spotifySearch, setSpotifySearch] = useState('');
+  const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
   const [spotifyResults, setSpotifyResults] = useState([]);
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
 
@@ -906,11 +1075,16 @@ function App() {
       setRingerPlaylist([]);
       return;
     }
-    // Mock playlist for verification
-    setRingerPlaylist([
-        { id: '1', title: 'Test Song 1', artist: 'Test Artist 1', addedAt: Date.now() },
-        { id: '2', title: 'Test Song 2', artist: 'Test Artist 2', addedAt: Date.now() }
-    ]);
+    const playlistRef = collection(db, "users", user.uid, "ringer_playlist");
+    const q = query(playlistRef, orderBy("addedAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setRingerPlaylist(items);
+    });
+    return () => unsubscribe();
   }, [user]);
 
   const handleDeleteRingerSong = async (songId) => {
@@ -942,6 +1116,7 @@ function App() {
 
   const handleSpotifySearch = async () => {
     if (!spotifySearch.trim()) return;
+    setIsSearchingSpotify(true);
     setSettingsStatus("Searching...");
     try {
         let token = spotifyToken;
@@ -968,6 +1143,8 @@ function App() {
         setSettingsStatus("");
     } catch (e) {
         setSettingsStatus("Search failed: " + e.message);
+    } finally {
+        setIsSearchingSpotify(false);
     }
   };
 
@@ -1050,13 +1227,12 @@ function App() {
   }, [deviceContacts, contactSearch]);
 
   useEffect(() => {
-    // const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      const currentUser = { uid: 'mock', email: 'mock@example.com' };
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setIsLoggingIn(false);
-      setActivePanel('home');
-    // });
-    // return () => unsubscribe();
+      setActivePanel(currentUser ? 'home' : 'home');
+    });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -1071,8 +1247,8 @@ function App() {
       return;
     }
     const userRef = doc(db, "users", user.uid);
-    // const unsubscribe = onSnapshot(userRef, (snapshot) => {
-      const data = {};
+    const unsubscribe = onSnapshot(userRef, (snapshot) => {
+      const data = snapshot.data() || {};
       setProfile({
         ownerName: data.ownerName ?? user.displayName ?? '',
         avatarUrl: data.avatarUrl ?? '',
@@ -1145,15 +1321,11 @@ function App() {
         setUnlockedAvatars(avatarPresets.filter(p => currentUnlockedAvatars.includes(p.id)));
       }
 
-      // Force unlock for verification
-      setUnlockedAvatars(avatarPresets);
-
       if (Object.keys(updates).length > 0) {
-        // setDoc(doc(db, "users", user.uid), updates, { merge: true });
+        setDoc(doc(db, "users", user.uid), updates, { merge: true });
       }
-    // });
-    // return () => unsubscribe();
-    // return () => {};
+    });
+    return () => unsubscribe();
   }, [user]);
 
   useEffect(() => {
@@ -1425,7 +1597,8 @@ function App() {
     mapInstanceRef.current.fitBounds(bounds);
   }, [filteredAlerts, userLocation, defaultMapCenter]);
 
-  const handleAlertFocus = (alert) => {
+  // Bolt: Wrap handlers in useCallback to ensure stable references for React.memo
+  const handleAlertFocus = useCallback((alert) => {
     setSelectedAlertId(alert.id);
     if (!mapInstanceRef.current || !window.google?.maps) return;
     const marker = mapMarkersRef.current.get(alert.id);
@@ -1452,10 +1625,11 @@ function App() {
       mapInstanceRef.current.panTo({ lat: alert.lat, lng: alert.lng });
       mapInstanceRef.current.setZoom(13);
     }
-  };
+  }, []);
 
-  const handleClearAlert = async (alertId) => {
-    if (!user) return;
+  const handleClearAlert = useCallback(async (alertId) => {
+    if (!user) return; // user is in closure, but user.uid might change. Actually, user ref might change.
+    // To be safe, add user as dependency.
     try {
       await setDoc(
         doc(db, "users", user.uid, "emergencyLocations", alertId),
@@ -1466,7 +1640,7 @@ function App() {
       console.error('Failed to clear alert', error);
       setAlertStatus(error?.message ?? 'Unable to clear alert.');
     }
-  };
+  }, [user]);
 
   const fetchAlertLocations = () => {
     // Firestore onSnapshot handles real-time updates automatically.
@@ -1597,7 +1771,7 @@ function App() {
     setContactStatus('');
   };
 
-  const handleEditContact = (contact) => {
+  const handleEditContact = useCallback((contact) => {
     setContactForm({
       displayName: contact.displayName ?? '',
       phoneNumber: contact.phoneNumber ?? '',
@@ -1613,7 +1787,7 @@ function App() {
     setEditingContactId(contact.id);
     setContactStatus('');
     setActivePanel('pulselink');
-  };
+  }, []);
 
   const handleSaveContact = async () => {
     if (!user) return;
@@ -1653,7 +1827,7 @@ function App() {
     }
   };
 
-  const handleDeleteContact = async (contactId) => {
+  const handleDeleteContact = useCallback(async (contactId) => {
     if (!user) return;
     setContactStatus("Removing contact...");
     try {
@@ -1663,7 +1837,17 @@ function App() {
       console.error("Delete contact failed", error);
       setContactStatus(error?.message ?? "Delete failed.");
     }
-  };
+  }, [user]);
+
+  // Stable handlers for TrustedContactRow
+  const handleDeleteConfirm = useCallback((id) => {
+    handleDeleteContact(id);
+    setConfirmDeleteId(null);
+  }, [handleDeleteContact]);
+
+  const handleDeleteCancel = useCallback(() => {
+    setConfirmDeleteId(null);
+  }, []);
 
   const handleApplyPreset = async (presetTheme) => {
     if (!user) return;
@@ -1864,10 +2048,17 @@ function App() {
     }
   };
 
+  // Bolt: Stable handler to prevent ghost content when switching threads
+  const handleThreadSelect = useCallback((thread) => {
+    setMessages([]); // Clear previous messages immediately
+    setSelectedThread(thread);
+  }, []);
+
   if (!user) {
     return (
       <div className="app-shell" style={themeVars}>
-        <div className="container login-container">
+        <a href="#main-content" className="skip-link">Skip to main content</a>
+        <div className="container login-container" id="main-content">
           <div className="login-card">
             <img src={logo} alt="PulseLink Pro" className="brand-logo" />
             <h1>PulseLink Web</h1>
@@ -1916,7 +2107,7 @@ function App() {
                   </button>
                 </div>
               </div>
-              {authError && <div className="auth-error">{authError}</div>}
+              {authError && <div className="auth-error" role="alert">{authError}</div>}
               <div className="login-actions">
                 <button
                   onClick={() => handleEmailAuth('signin')}
@@ -1960,6 +2151,7 @@ function App() {
 
   return (
     <div className="app-shell" style={themeVars}>
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       <div className="app-container">
         <div className="sidebar">
           <div className="sidebar-header">
@@ -1967,7 +2159,7 @@ function App() {
               <img src={logo} alt="PulseLink Suite" className="brand-logo small" />
               <div>
                 <div className="brand-title">PulseLink Suite</div>
-                <div className="brand-subtitle">Web Command Center</div>
+                <div className="brand-subtitle">Premium Web Access</div>
               </div>
             </div>
             <div className="sidebar-actions">
@@ -2080,7 +2272,7 @@ function App() {
                     key={thread.id}
                     thread={thread}
                     isActive={selectedThread?.id === thread.id}
-                    onSelect={setSelectedThread}
+                    onSelect={handleThreadSelect}
                     showPreviews={showPreviews}
                   />
                 ))
@@ -2093,12 +2285,22 @@ function App() {
             </div>
           )}
         </div>
-        <div className="main-content">
+        <div className="main-content" id="main-content">
           {activePanel === 'home' && (
             <div className="home-panel">
               <div className="home-hero">
                 <h2>Welcome back</h2>
                 <p>Choose what you want to manage on PulseLink Web.</p>
+              </div>
+              {/* Web app info tooltip - fixes #236: Users need to know about web app availability */}
+              {/* QA TEST: Visit web app home screen after login */}
+              {/* EXPECTED: Blue info banner should be visible explaining web.pulselink.app access */}
+              {/* EXPECTED: Banner should display icon, bold heading, and feature description */}
+              <div className="web-app-hint">
+                <div className="hint-icon">ℹ️</div>
+                <div className="hint-content">
+                  <strong>Access PulseLink Web anytime:</strong> Visit web.pulselink.app from any browser to manage your contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.
+                </div>
               </div>
               <div className="home-grid">
                 <button className="home-card" onClick={() => setActivePanel('pulselink')}>
@@ -2237,56 +2439,27 @@ function App() {
                   >
                     {isSavingProfile ? 'Saving...' : 'Save profile'}
                   </button>
-                  {profileStatus && <div className="settings-status">{profileStatus}</div>}
+                  {profileStatus && <div className="settings-status" role="status" aria-live="polite">{profileStatus}</div>}
                 </div>
                 <div className="settings-card">
                   <h4>Trusted contacts</h4>
                   <div className="contact-list">
                     {trustedContacts.map((contact) => (
-                      <div key={contact.id} className="contact-row">
-                        <div className="contact-main">
-                          <div className="contact-name">{contact.displayName}</div>
-                          <div className="contact-meta">
-                            {contact.phoneNumber || contact.email || 'No phone or email'}
-                          </div>
-                        </div>
-                        <div className="contact-actions">
-                          <button
-                            className="secondary-btn"
-                            onClick={() => handleEditContact(contact)}
-                            aria-label={`Edit ${contact.displayName}`}
-                          >
-                            Edit
-                          </button>
-                          {confirmDeleteId === contact.id ? (
-                            <button
-                              className="secondary-btn"
-                              onClick={() => {
-                                handleDeleteContact(contact.id);
-                                setConfirmDeleteId(null);
-                              }}
-                              aria-label={`Confirm remove ${contact.displayName}`}
-                              onBlur={() => setConfirmDeleteId(null)}
-                            >
-                              Confirm?
-                            </button>
-                          ) : (
-                            <button
-                              className="ghost-btn"
-                              onClick={() => setConfirmDeleteId(contact.id)}
-                              aria-label={`Remove ${contact.displayName}`}
-                            >
-                              Remove
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                      <TrustedContactRow
+                        key={contact.id}
+                        contact={contact}
+                        isConfirmingDelete={confirmDeleteId === contact.id}
+                        onEdit={handleEditContact}
+                        onDeleteRequest={setConfirmDeleteId}
+                        onDeleteConfirm={handleDeleteConfirm}
+                        onDeleteCancel={handleDeleteCancel}
+                      />
                     ))}
                     {trustedContacts.length === 0 && (
                       <div className="settings-note">No trusted contacts yet.</div>
                     )}
                   </div>
-                  {contactStatus && <div className="settings-status">{contactStatus}</div>}
+                  {contactStatus && <div className="settings-status" role="status" aria-live="polite">{contactStatus}</div>}
                 </div>
                 <div className="settings-card">
                   <h4>{editingContactId ? 'Edit trusted contact' : 'Add trusted contact'}</h4>
@@ -2381,7 +2554,7 @@ function App() {
                       Clear
                     </button>
                   </div>
-                  {contactStatus && <div className="settings-status">{contactStatus}</div>}
+                  {contactStatus && <div className="settings-status" role="status" aria-live="polite">{contactStatus}</div>}
                 </div>
               </div>
             </div>
@@ -2477,47 +2650,55 @@ function App() {
                       <p>Set VITE_GOOGLE_MAPS_API_KEY in web/.env.local to load the map view.</p>
                     </div>
                   )}
-                  {mapStatus && <div className="map-status">{mapStatus}</div>}
+                  {mapStatus && <div className="map-status" role="status" aria-live="polite">{mapStatus}</div>}
                 </div>
                 <div className="map-list">
                   {filteredAlerts.map((alert) => (
-                    <div
-                      key={alert.id}
-                      className={`map-item ${selectedAlertId === alert.id ? 'active' : ''}`}
-                      onClick={() => handleAlertFocus(alert)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          handleAlertFocus(alert);
-                        }
-                      }}
-                    >
-                      <div className="map-item-header">
-                        <div className="map-item-title">{alert.address}</div>
-                        <span
-                          className="map-badge"
-                          style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
-                        >
-                          {alertBadgeCopy[alert.severity] ?? 'Alert'}
-                        </span>
+                    <React.Fragment key={alert.id}>
+                      <MapAlertItem
+                        alert={alert}
+                        isActive={selectedAlertId === alert.id}
+                        onFocus={handleAlertFocus}
+                        onClear={handleClearAlert}
+                      />
+                      <div
+                        className={`map-item ${selectedAlertId === alert.id ? 'active' : ''}`}
+                        onClick={() => handleAlertFocus(alert)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            handleAlertFocus(alert);
+                          }
+                        }}
+                      >
+                        <div className="map-item-header">
+                          <div className="map-item-title">{alert.address}</div>
+                          <span
+                            className="map-badge"
+                            style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
+                          >
+                            {alertBadgeCopy[alert.severity] ?? 'Alert'}
+                          </span>
+                        </div>
+                        <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
+                        <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
+                        <div className="map-item-actions">
+                          <button
+                            className="secondary-btn"
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleClearAlert(alert.id);
+                            }}
+                            aria-label={`Clear alert from ${alert.address}`}
+                          >
+                            Clear
+                          </button>
+                        </div>
                       </div>
-                      <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
-                      <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
-                      <div className="map-item-actions">
-                        <button
-                          className="secondary-btn"
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleClearAlert(alert.id);
-                          }}
-                        >
-                          Clear
-                        </button>
-                      </div>
-                    </div>
+                    </React.Fragment>
                   ))}
                   {filteredAlerts.length === 0 && (
                     <div className="map-empty">
@@ -2534,87 +2715,58 @@ function App() {
 
           {activePanel === 'ringersong' && (
             <div className="pulselink-panel">
-              <div className="panel-header">
-                <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
-                  <img
-                    src={ringersongLogo}
-                    alt="RingerSong"
-                    className="ringersong-logo-tint"
-                    style={{
-                      width: 48,
-                      height: 48,
-                      // Tint logic: make it monochrome and take accent color
-                      filter: 'grayscale(100%) sepia(100%) hue-rotate(var(--hue-rotate, 0deg)) saturate(1000%)',
-                      // Fallback or enhancement if we can calculate the hue rotation from the theme accent.
-                      // Since we can't easily do calc(accent) in CSS filter without HSL, let's use a mask approach for better results
-                      // assuming the image has transparency.
-                      maskImage: `url(${ringersongLogo})`,
-                      maskSize: 'cover',
-                      WebkitMaskImage: `url(${ringersongLogo})`,
-                      WebkitMaskSize: 'cover',
+              <div className="ringersong-header">
+                <div
+                  className="ringersong-logo-mask"
+                  style={{
+                      width: 52, height: 52,
                       backgroundColor: 'var(--accent)',
-                      objectFit: 'cover' // This might conflict with mask if it's an img tag.
-                                         // Better approach for img tag tinting:
-                    }}
-                  />
-                  {/* Actually, let's just use a wrapper div for the mask approach to be safe */}
-                  <div
-                    className="ringersong-logo-mask"
-                    style={{
-                        width: 48, height: 48,
-                        backgroundColor: 'var(--accent)',
-                        maskImage: `url(${ringersongLogo})`,
-                        maskSize: 'contain',
-                        maskRepeat: 'no-repeat',
-                        maskPosition: 'center',
-                        WebkitMaskImage: `url(${ringersongLogo})`,
-                        WebkitMaskSize: 'contain',
-                        WebkitMaskRepeat: 'no-repeat',
-                        WebkitMaskPosition: 'center'
-                    }}
-                  />
-                </div>
+                      maskImage: `url(${ringersongLogo})`,
+                      maskSize: 'contain',
+                      maskRepeat: 'no-repeat',
+                      maskPosition: 'center',
+                      WebkitMaskImage: `url(${ringersongLogo})`,
+                      WebkitMaskSize: 'contain',
+                      WebkitMaskRepeat: 'no-repeat',
+                      WebkitMaskPosition: 'center'
+                  }}
+                />
                 <div>
                     <h3>RingerSong</h3>
-                    <p>Smart ringtone progression and streaming manager.</p>
+                    <p style={{color: 'var(--muted)'}}>Progressive ringtone streaming & playlist manager.</p>
                 </div>
               </div>
 
               <div className="pulselink-grid">
                 <div className="settings-card">
-                    <div className="card-header-row" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16}}>
+                    <div className="card-header-row" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20}}>
                         <h4>Current Playlist</h4>
-                        <span className="badge">{ringerPlaylist.length} songs</span>
+                        <span className="badge" style={{background: 'var(--accent)', color: '#fff', padding: '2px 8px', borderRadius: 12, fontSize: '0.8em'}}>{ringerPlaylist.length} songs</span>
                     </div>
 
                     {ringerPlaylist.length === 0 ? (
                         <div className="empty-state">
-                            <p className="muted">Your playlist is empty. Add songs below.</p>
+                            <p className="muted">Your playlist is empty. Add songs to start streaming.</p>
                         </div>
                     ) : (
-                        <div className="contact-list">
+                        <div className="song-grid">
                             {ringerPlaylist.map(song => (
-                                <div key={song.id} className="contact-row" style={{alignItems: 'center'}}>
-                                    <div style={{
-                                        width: 48, height: 48, borderRadius: 8, overflow: 'hidden',
-                                        backgroundColor: 'var(--surface-alt)', marginRight: 12, flexShrink: 0
-                                    }}>
-                                        {song.albumArtUrl ? (
-                                            <img src={song.albumArtUrl} alt="" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                                        ) : (
-                                            <div style={{display: 'grid', placeItems: 'center', width: '100%', height: '100%', color: 'var(--muted)'}}>♫</div>
-                                        )}
-                                    </div>
-                                    <div className="contact-main">
-                                        <div className="contact-name">{song.title}</div>
-                                        <div className="contact-meta">{song.artist}</div>
+                                <div key={song.id} className="song-card">
+                                    {song.albumArtUrl ? (
+                                        <img src={song.albumArtUrl} alt="" className="song-art" />
+                                    ) : (
+                                        <div className="song-art" style={{display: 'grid', placeItems: 'center'}}>♫</div>
+                                    )}
+                                    <div className="song-info">
+                                        <div className="song-title">{song.title}</div>
+                                        <div className="song-artist">{song.artist}</div>
                                     </div>
                                     <button
                                         className="ghost-btn icon-only"
                                         onClick={() => handleDeleteRingerSong(song.id)}
                                         title="Remove from playlist"
-                                        aria-label="Remove from playlist"
-                                        style={{color: 'var(--muted)', padding: 8}}
+                                        aria-label={`Remove ${song.title} from playlist`}
+                                        style={{width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center', border: 'none'}}
                                     >
                                         <TrashIcon />
                                     </button>
@@ -2626,31 +2778,37 @@ function App() {
 
                 <div className="settings-card">
                     <h4>Add Music</h4>
-                    <p className="settings-note" style={{marginBottom: 16}}>
-                        Search Spotify for tracks to add to your progressive ringtone playlist.
-                    </p>
-
-                    <div className="composer-row">
-                        <input
-                            className="login-input"
-                            placeholder="Search by song or artist..."
-                            value={spotifySearch}
-                            onChange={(e) => setSpotifySearch(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSpotifySearch()}
-                        />
-                        <button className="primary-btn" onClick={handleSpotifySearch}>Search</button>
+                    <div className="search-container">
+                        <div className="search-input-wrapper">
+                            <input
+                                className="login-input"
+                                placeholder="Search Spotify for songs..."
+                                aria-label="Search Spotify for songs"
+                                value={spotifySearch}
+                                onChange={(e) => setSpotifySearch(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSpotifySearch()}
+                            />
+                            <button
+                                className="primary-btn"
+                                onClick={handleSpotifySearch}
+                                disabled={isSearchingSpotify}
+                                aria-busy={isSearchingSpotify}
+                            >
+                                {isSearchingSpotify ? "Searching..." : "Search"}
+                            </button>
+                        </div>
                     </div>
 
                     {spotifyResults.length > 0 && (
-                        <div className="contact-list" style={{marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 16}}>
+                        <div className="song-grid">
                             {spotifyResults.map(track => (
-                                <div key={track.id} className="contact-row" style={{alignItems: 'center'}}>
-                                    <img src={track.album?.images[2]?.url || track.album?.images[0]?.url} alt="" style={{width: 40, height: 40, borderRadius: 4}} />
-                                    <div className="contact-main" style={{flex: 1, marginLeft: 10}}>
-                                        <div className="contact-name" style={{fontSize: '0.9em'}}>{track.name}</div>
-                                        <div className="contact-meta">{track.artists.map(a => a.name).join(', ')}</div>
+                                <div key={track.id} className="song-card">
+                                    <img src={track.album?.images[0]?.url} alt="" className="song-art" />
+                                    <div className="song-info">
+                                        <div className="song-title">{track.name}</div>
+                                        <div className="song-artist">{track.artists.map(a => a.name).join(', ')}</div>
                                     </div>
-                                    <button className="secondary-btn" style={{padding: '4px 12px', fontSize: '0.8em'}} onClick={() => handlePushSpotifyTrack(track)}>
+                                    <button className="secondary-btn" style={{padding: '6px 12px', fontSize: '0.85em'}} onClick={() => handlePushSpotifyTrack(track)}>
                                         Add
                                     </button>
                                 </div>
@@ -2658,7 +2816,7 @@ function App() {
                         </div>
                     )}
 
-                    {settingsStatus && <div className="settings-status" style={{marginTop: 12}}>{settingsStatus}</div>}
+                    {settingsStatus && <div className="settings-status" style={{marginTop: 12}} role="status" aria-live="polite">{settingsStatus}</div>}
                 </div>
               </div>
             </div>
@@ -2716,7 +2874,7 @@ function App() {
                       <div className="theme-empty">No themes yet. Be the first to publish!</div>
                     )}
                   </div>
-                  {themeGalleryStatus && <div className="settings-status">{themeGalleryStatus}</div>}
+                  {themeGalleryStatus && <div className="settings-status" role="status" aria-live="polite">{themeGalleryStatus}</div>}
                 </div>
                 <div className="settings-card themes-card">
                   <h4>Publish your theme</h4>
@@ -2770,7 +2928,7 @@ function App() {
                   <button className="primary-btn" type="button" onClick={handlePublishTheme}>
                     Publish theme
                   </button>
-                  {themePublishStatus && <div className="settings-status">{themePublishStatus}</div>}
+                  {themePublishStatus && <div className="settings-status" role="status" aria-live="polite">{themePublishStatus}</div>}
                 </div>
                 <div className="settings-card themes-card">
                   <h4>Quick presets</h4>
@@ -2870,7 +3028,7 @@ function App() {
                   <button className="primary-btn" type="button" onClick={() => handleApplyPreset(themePrefs)}>
                     Save theme
                   </button>
-                  {themeStatus && <div className="settings-status">{themeStatus}</div>}
+                  {themeStatus && <div className="settings-status" role="status" aria-live="polite">{themeStatus}</div>}
                 </div>
               </div>
             </div>
@@ -2896,7 +3054,7 @@ function App() {
                   <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
                     Send password reset email
                   </button>
-                  {settingsStatus && <div className="settings-status">{settingsStatus}</div>}
+                  {settingsStatus && <div className="settings-status" role="status" aria-live="polite">{settingsStatus}</div>}
                 </div>
                 <div className="settings-card">
                   <h4>Web preferences</h4>
@@ -2977,7 +3135,7 @@ function App() {
                       {deleteAction === 'account' ? "Deleting..." : "Delete account"}
                     </button>
                   </div>
-                  {deleteStatus && <div className="settings-status">{deleteStatus}</div>}
+                  {deleteStatus && <div className="settings-status" role="status" aria-live="polite">{deleteStatus}</div>}
                 </div>
               </div>
             </div>
@@ -3031,7 +3189,7 @@ function App() {
                     {isSending ? "Sending..." : "Send"}
                   </button>
                 </div>
-                {sendStatus && <div className="compose-status">{sendStatus}</div>}
+                {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
                 <div className="compose-hint">
                   Messages are sent from your phone when it&apos;s online and signed in.
                 </div>
