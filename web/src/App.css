@@ -465,6 +465,7 @@
   border-color: var(--accent);
   background: rgba(255, 255, 255, 0.08);
   transform: translateY(-1px);
+}
 /* Spinner for loading states */
 .spinner {
   display: inline-block;
@@ -506,6 +507,16 @@
   color: var(--ink);
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
+}
+
+.ghost-btn.icon-only {
+  padding: 4px;
+  width: auto;
+  height: auto;
+  min-height: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .link-button {
