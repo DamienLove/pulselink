@@ -117,6 +117,7 @@ fun HomeScreen(
     onSearch: () -> Unit,
     onClearSearch: () -> Unit,
     onAddSpotifyTrack: (SpotifyTrack) -> Unit,
+    onConnectSpotify: () -> Unit,
     onYouTubeQueryChange: (String) -> Unit,
     onYouTubeSearch: () -> Unit,
     onClearYouTubeSearch: () -> Unit,
@@ -254,6 +255,7 @@ fun HomeScreen(
                     onSearch = onSearch,
                     onClear = onClearSearch,
                     onAddTrack = onAddSpotifyTrack,
+                    onConnectSpotify = onConnectSpotify,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -673,6 +675,7 @@ private fun SpotifySection(
     onSearch: () -> Unit,
     onClear: () -> Unit,
     onAddTrack: (SpotifyTrack) -> Unit,
+    onConnectSpotify: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     SectionCard(modifier = modifier) {
@@ -684,10 +687,17 @@ private fun SpotifySection(
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Search for tracks on Spotify and add them to your progression.",
+                    text = "Search for tracks on Spotify and add them to your progression. Connect Spotify App first.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            OutlinedButton(
+                onClick = onConnectSpotify,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Authorize / Connect Spotify App")
             }
 
             OutlinedTextField(
@@ -1294,7 +1304,12 @@ private fun HowToAddMusicHelper() {
             fontWeight = FontWeight.SemiBold
         )
         Text(
-            text = "Search & add songs from Spotify or YouTube Music using the sections above. Songs will be downloaded for offline playback.",
+            text = "Search & add songs from Spotify. We use your paid Spotify membership to stream the ringer directly from the Spotify App.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "Please ensure the Spotify App is installed and you are logged in.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -1309,7 +1324,7 @@ private fun HowToAddMusicHelper() {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "⚠️ IMPORTANT: Set your phone's default ringtone to Silent in Settings > Sounds for best results. RingerSong will still play your progressive ringer!",
+            text = "⚠️ RingerSong will automatically silence your default ringer while playing, but setting your phone's ringtone to Silent is a good backup.",
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.primary

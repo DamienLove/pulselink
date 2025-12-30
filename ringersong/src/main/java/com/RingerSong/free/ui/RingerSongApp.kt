@@ -125,6 +125,18 @@ private fun AppNavHost(
                         activity?.let { AdServices.showInterstitial(it) }
                     }
                 },
+                onConnectSpotify = {
+                    coroutineScope.launch {
+                        activity?.let { ctx ->
+                            try {
+                                com.RingerSong.free.data.SpotifyRemoteManager.connect(ctx)
+                                snackbarHostState.showSnackbar("Spotify connected successfully!")
+                            } catch (e: Exception) {
+                                snackbarHostState.showSnackbar("Failed to connect Spotify: ${e.message}")
+                            }
+                        }
+                    }
+                },
                 onYouTubeQueryChange = viewModel::updateYouTubeSearchQuery,
                 onYouTubeSearch = viewModel::searchYouTubeMusic,
                 onClearYouTubeSearch = viewModel::clearYouTubeSearch,

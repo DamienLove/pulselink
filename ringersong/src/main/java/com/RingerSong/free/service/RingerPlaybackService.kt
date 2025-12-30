@@ -37,6 +37,7 @@ class RingerPlaybackService : Service() {
     private var isSpotifyPlaying = false
     private var audioManager: AudioManager? = null
     private var audioFocusRequest: AudioFocusRequest? = null
+    private var originalRingerVolume: Int = -1
 
     companion object {
         private const val TAG = "RingerPlayback"
@@ -144,46 +145,88 @@ class RingerPlaybackService : Service() {
         }
     }
 
+    private fun muteRinger() {
+        audioManager?.let { manager ->
+            try {
+                if (originalRingerVolume == -1) {
+                    originalRingerVolume = manager.getStreamVolume(AudioManager.STREAM_RING)
+                }
+                manager.setStreamVolume(AudioManager.STREAM_RING, 0, 0)
+                Log.d(TAG, "Muted system ringer (saved volume: $originalRingerVolume)")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to mute ringer", e)
+            }
+        }
+    }
+
+    private fun restoreRinger() {
+        if (originalRingerVolume != -1) {
+            audioManager?.let { manager ->
+                try {
+                    manager.setStreamVolume(AudioManager.STREAM_RING, originalRingerVolume, 0)
+                    Log.d(TAG, "Restored system ringer to $originalRingerVolume")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to restore ringer", e)
+                }
+            }
+            originalRingerVolume = -1
+        }
+    }
+
     private fun playSegment(segment: SegmentPlay) {
         Log.d(TAG, "playSegment called for URI: ${segment.song.uri}")
-        stopPlayback()
+        stopPlayback() // Ensure previous playback/mute is cleared safely
 
-        // Request audio focus to try to duck/stop the system ringtone
+        // 1. Mute the system ringer to prevent double-audio
+        muteRinger()
+
+        // 2. Request audio focus as a backup/standard practice
         if (!requestAudioFocus()) {
             Log.w(TAG, "Failed to get audio focus, but continuing anyway")
         }
 
         if (segment.song.uri.startsWith("spotify:")) {
             Log.d(TAG, "Spotify URI detected")
-            // PRIORITY 1: Try downloaded offline file first (no Spotify app needed!)
-            val downloader = com.RingerSong.free.data.SpotifyDownloaderRepository(this)
-            val localPath = downloader.getLocalFilePathFromUri(segment.song.uri)
 
-            if (localPath != null) {
-                Log.d(TAG, "Found local file: $localPath")
-                // Play from downloaded MP3 - NO SPOTIFY APP REQUIRED!
-                playLocalFile(localPath, segment.startMs, segment.durationMs)
-            } else {
-                Log.d(TAG, "No local file, trying Spotify App Remote")
-                // PRIORITY 2: Fallback to Spotify App Remote (requires app + Premium)
-                scope.launch {
-                    runCatching {
-                        val remote = SpotifyRemoteManager.connect(this@RingerPlaybackService)
-                        remote.playerApi.play(segment.song.uri)
-                        delay(500)
-                        remote.playerApi.seekTo(segment.startMs)
-                        isSpotifyPlaying = true
-                        Log.d(TAG, "Spotify App Remote playback started")
-                    }.onFailure { e ->
-                        Log.e(TAG, "Spotify App Remote failed", e)
-                        // No offline file AND Spotify App Remote failed
+            // PRIORITY 1: Streaming via Spotify App Remote (User's Paid Membership)
+            // This is the new preferred method.
+            scope.launch {
+                var streamingSuccess = false
+                runCatching {
+                    Log.d(TAG, "Attempting to connect to Spotify App Remote...")
+                    val remote = SpotifyRemoteManager.connect(this@RingerPlaybackService)
+                    remote.playerApi.play(segment.song.uri)
+                    delay(500) // Give it a moment to start
+                    remote.playerApi.seekTo(segment.startMs)
+                    isSpotifyPlaying = true
+                    streamingSuccess = true
+                    Log.d(TAG, "Spotify App Remote playback started")
+                }.onFailure { e ->
+                    Log.e(TAG, "Spotify App Remote failed", e)
+                }
+
+                if (!streamingSuccess) {
+                    Log.d(TAG, "Streaming failed, falling back to local file if available")
+                    // PRIORITY 2: Local File (Legacy/Fallback)
+                    val downloader = com.RingerSong.free.data.SpotifyDownloaderRepository(this@RingerPlaybackService)
+                    val localPath = downloader.getLocalFilePathFromUri(segment.song.uri)
+
+                    if (localPath != null) {
+                         Log.d(TAG, "Found local file: $localPath")
+                         // Must run on main thread or handle appropriately? MediaPlayer is fine on BG thread if prepared.
+                         // But playLocalFile launches its own scope for stopping.
+                         withContext(Dispatchers.Main) {
+                             playLocalFile(localPath, segment.startMs, segment.durationMs)
+                         }
+                    } else {
+                        Log.e(TAG, "No local file available. Playback failed.")
+                        // We must stop to restore the ringer
                         stopPlayback()
                     }
                 }
             }
         } else if (segment.song.uri.startsWith("youtube:")) {
             Log.w(TAG, "YouTube URI not supported yet")
-            // YouTube Music - will need implementation
             stopPlayback()
         } else {
             Log.d(TAG, "Local file URI: ${segment.song.uri}")
@@ -203,23 +246,30 @@ class RingerPlaybackService : Service() {
                 mediaPlayer.seekTo(segment.startMs.toInt())
                 mediaPlayer.start()
                 Log.d(TAG, "MediaPlayer started successfully")
+
+                mediaPlayer.setOnCompletionListener {
+                    Log.d(TAG, "MediaPlayer completed")
+                    stopPlayback()
+                }
+
+                stopJob = scope.launch {
+                    delay(segment.durationMs)
+                    Log.d(TAG, "Segment duration elapsed, stopping")
+                    stopPlayback()
+                }
             }.onFailure { e ->
                 Log.e(TAG, "MediaPlayer failed", e)
                 stopPlayback()
-                return
-            }
-
-            mediaPlayer.setOnCompletionListener {
-                Log.d(TAG, "MediaPlayer completed")
-                stopPlayback()
             }
         }
 
-        stopJob = scope.launch {
-            delay(segment.durationMs)
-            Log.d(TAG, "Segment duration elapsed, stopping")
-            stopPlayback()
-        }
+        // Safety timeout in case everything hangs?
+        // Not adding now, but good to keep in mind.
+        // The segment duration timer (stopJob) handles normal stopping.
+    }
+
+    private suspend fun withContext(context: kotlin.coroutines.CoroutineContext, block: suspend () -> Unit) {
+        kotlinx.coroutines.withContext(context) { block() }
     }
 
     private fun playLocalFile(filePath: String, startMs: Long, durationMs: Long) {
@@ -246,13 +296,13 @@ class RingerPlaybackService : Service() {
                 stopPlayback()
             }
         }.onFailure {
-            android.util.Log.e("RingerPlayback", "Failed to play local file: $filePath", it)
+            Log.e(TAG, "Failed to play local file: $filePath", it)
             stopPlayback()
         }
     }
 
     private fun stopPlayback() {
-        abandonAudioFocus()
+        Log.d(TAG, "Stopping playback and restoring ringer")
         stopJob?.cancel()
         stopJob = null
         player?.runCatching {
@@ -264,14 +314,17 @@ class RingerPlaybackService : Service() {
         if (isSpotifyPlaying) {
              scope.launch {
                 runCatching {
+                    // Pause instead of disconnect to be faster next time?
+                    // Or just pause.
                     val remote = SpotifyRemoteManager.connect(this@RingerPlaybackService)
                     remote.playerApi.pause()
-                    // Optionally disconnect if we don't want to keep the connection
-                    // SpotifyRemoteManager.disconnect()
                 }
             }
             isSpotifyPlaying = false
         }
+
+        abandonAudioFocus()
+        restoreRinger()
 
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
