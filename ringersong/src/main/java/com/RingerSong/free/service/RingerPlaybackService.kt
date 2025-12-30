@@ -26,6 +26,7 @@ import com.RingerSong.free.data.SpotifyRemoteManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -37,7 +38,8 @@ class RingerPlaybackService : Service() {
     private var isSpotifyPlaying = false
     private var audioManager: AudioManager? = null
     private var audioFocusRequest: AudioFocusRequest? = null
-    private var originalRingerVolume: Int = -1
+    private var originalRingerVolume: Int? = null
+    private var spotifyRemote: com.spotify.android.appremote.api.SpotifyAppRemote? = null
 
     companion object {
         private const val TAG = "RingerPlayback"
@@ -75,6 +77,7 @@ class RingerPlaybackService : Service() {
 
     override fun onDestroy() {
         stopPlayback()
+        scope.cancel()
         super.onDestroy()
     }
 
@@ -110,15 +113,20 @@ class RingerPlaybackService : Service() {
         }
 
         // Silence default ringer
-        runCatching {
+        try {
             // Only save the volume if we haven't already saved it (prevents overwriting with 0)
-            if (originalRingerVolume == -1) {
+            if (originalRingerVolume == null) {
                 originalRingerVolume = manager.getStreamVolume(AudioManager.STREAM_RING)
             }
-            manager.setStreamVolume(AudioManager.STREAM_RING, 0, 0)
-            Log.d(TAG, "Silenced default ringer (saved volume: $originalRingerVolume)")
-        }.onFailure {
-            Log.e(TAG, "Failed to silence ringer", it)
+            // Check for permission if necessary or just attempt it safely
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || android.provider.Settings.System.canWrite(this)) {
+                manager.setStreamVolume(AudioManager.STREAM_RING, 0, 0)
+                Log.d(TAG, "Silenced default ringer (saved volume: $originalRingerVolume)")
+            } else {
+                Log.w(TAG, "Cannot silence ringer: Missing MODIFY_AUDIO_SETTINGS permission")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to silence ringer", e)
         }
 
         val audioAttributes = AudioAttributes.Builder()
@@ -151,14 +159,16 @@ class RingerPlaybackService : Service() {
         val manager = audioManager ?: return
 
         // Restore ringer volume
-        if (originalRingerVolume != -1) {
-            runCatching {
-                manager.setStreamVolume(AudioManager.STREAM_RING, originalRingerVolume, 0)
-                Log.d(TAG, "Restored ringer volume to $originalRingerVolume")
-            }.onFailure {
-                Log.e(TAG, "Failed to restore ringer volume", it)
+        originalRingerVolume?.let { volume ->
+            try {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || android.provider.Settings.System.canWrite(this)) {
+                    manager.setStreamVolume(AudioManager.STREAM_RING, volume, 0)
+                    Log.d(TAG, "Restored ringer volume to $volume")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to restore ringer volume", e)
             }
-            originalRingerVolume = -1
+            originalRingerVolume = null
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -185,13 +195,20 @@ class RingerPlaybackService : Service() {
             // "activate users paid memberships... as the ringer"
 
             val attemptSpotifyRemote = suspend {
-                 runCatching {
+                runCatching {
                     val remote = SpotifyRemoteManager.connect(this@RingerPlaybackService)
+                    spotifyRemote = remote // Keep reference for cleanup
                     remote.playerApi.play(segment.song.uri)
                     delay(500)
                     remote.playerApi.seekTo(segment.startMs)
                     isSpotifyPlaying = true
                     Log.d(TAG, "Spotify App Remote playback started")
+
+                    // Enforce duration for Spotify
+                    stopJob = scope.launch {
+                        delay(segment.durationMs)
+                        stopPlayback()
+                    }
                     true
                 }.getOrElse {
                      Log.e(TAG, "Spotify App Remote failed", it)
@@ -251,10 +268,14 @@ class RingerPlaybackService : Service() {
             }
         }
 
-        stopJob = scope.launch {
-            delay(segment.durationMs)
-            Log.d(TAG, "Segment duration elapsed, stopping")
-            stopPlayback()
+        // Only set the default stopJob if we're NOT using Spotify Remote (which sets its own)
+        // or if we fall through to local playback
+        if (!segment.song.uri.startsWith("spotify:") && !segment.song.uri.startsWith("youtube:")) {
+             stopJob = scope.launch {
+                delay(segment.durationMs)
+                Log.d(TAG, "Segment duration elapsed, stopping")
+                stopPlayback()
+            }
         }
     }
 
@@ -282,7 +303,7 @@ class RingerPlaybackService : Service() {
                 stopPlayback()
             }
         }.onFailure {
-            android.util.Log.e("RingerPlayback", "Failed to play local file: $filePath", it)
+            Log.e(TAG, "Failed to play local file: $filePath", it)
             stopPlayback()
         }
     }
@@ -300,13 +321,23 @@ class RingerPlaybackService : Service() {
         if (isSpotifyPlaying) {
              scope.launch {
                 runCatching {
-                    val remote = SpotifyRemoteManager.connect(this@RingerPlaybackService)
+                    // Use existing connection if available, otherwise reconnect
+                    val remote = spotifyRemote ?: SpotifyRemoteManager.connect(this@RingerPlaybackService)
                     remote.playerApi.pause()
-                    // Optionally disconnect if we don't want to keep the connection
-                    // SpotifyRemoteManager.disconnect()
+                    SpotifyRemoteManager.disconnect(remote)
+                }.onFailure {
+                    Log.e(TAG, "Failed to pause/disconnect Spotify", it)
                 }
+                // Always clear state
+                spotifyRemote = null
+                isSpotifyPlaying = false
             }
-            isSpotifyPlaying = false
+        } else {
+             // Ensure cleanup even if not playing but connected
+             spotifyRemote?.let {
+                 SpotifyRemoteManager.disconnect(it)
+                 spotifyRemote = null
+             }
         }
 
         stopForeground(STOP_FOREGROUND_REMOVE)
