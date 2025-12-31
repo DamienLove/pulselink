@@ -6,17 +6,14 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import com.pulselink.ui.theme.FutureDeepColors.BackgroundDark
+import com.pulselink.ui.theme.FutureDeepColors.MutedDark
+import com.pulselink.ui.theme.FutureDeepColors.OnBackgroundDark
+import com.pulselink.ui.theme.FutureDeepColors.PrimaryIndigo
+import com.pulselink.ui.theme.FutureDeepColors.SecondaryCyan
+import com.pulselink.ui.theme.FutureDeepColors.SurfaceAltDark
+import com.pulselink.ui.theme.FutureDeepColors.SurfaceDark
 
-// Future Deep Palette
-private val BackgroundDark = Color(0xFF030407)
-private val SurfaceDark = Color(0xFF0F111A)
-private val SurfaceAltDark = Color(0xFF161B2C)
-private val PrimaryIndigo = Color(0xFF6366F1)
-private val SecondaryCyan = Color(0xFF22D3EE)
-private val OnBackgroundDark = Color(0xFFEEF2FB)
-private val MutedDark = Color(0xFF64748B)
-
-// We primarily support Dark Theme for the "Future" look, but will provide a functional Light theme.
 private val DarkColors = darkColorScheme(
     primary = PrimaryIndigo,
     onPrimary = Color.White,
@@ -32,7 +29,7 @@ private val DarkColors = darkColorScheme(
     surface = SurfaceDark,
     onSurface = OnBackgroundDark,
     surfaceVariant = SurfaceAltDark,
-    onSurfaceVariant = Color(0xFF94A3B8), // Slate 400
+    onSurfaceVariant = MutedDark,
     outline = Color(0xFF334155),
     error = Color(0xFFEF4444),
     onError = Color.White
@@ -57,12 +54,10 @@ fun PulseLinkTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    // Force Dark Theme if the user wants the "Future" look, but respect system setting for now.
-    // Ideally, we'd have an in-app setting for this.
     val colors = if (darkTheme) DarkColors else LightColors
     MaterialTheme(
         colorScheme = colors,
-        typography = MaterialTheme.typography, // Default Typography for now, could be customized
+        typography = MaterialTheme.typography,
         content = content
     )
 }

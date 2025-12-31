@@ -77,8 +77,21 @@ data class ThemePalette(
     ).joinToString("|")
 
     companion object {
-        // Updated to "Future Deep" as the default
+        // Reverted to legacy light theme to avoid breaking existing users
         fun default(): ThemePalette = ThemePalette(
+            incoming = 0xFFE8F4FF,
+            outgoing = 0xFFD7F8D6,
+            frame = 0xFF2B7BFF,
+            accent = 0xFF2B7BFF,
+            threadBackground = 0xFFF6F7FB,
+            inboxBackground = 0xFFFFFFFF,
+            bubbleRadius = 18f,
+            font = ThemeFont.System,
+            iconVariant = InboxIconVariant.Beacon
+        )
+
+        // New Future Deep theme
+        fun futureDeep(): ThemePalette = ThemePalette(
             incoming = 0xFF161B2C, // Surface Alt
             outgoing = 0xFF6366F1, // Indigo Primary
             frame = 0xFF22D3EE,    // Cyan Secondary

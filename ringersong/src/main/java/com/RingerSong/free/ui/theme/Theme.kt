@@ -1,6 +1,7 @@
 package com.RingerSong.free.ui.theme
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -46,7 +47,7 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun RingerSongTheme(
-    darkTheme: Boolean = true, // Default to true for Future Deep look
+    darkTheme: Boolean = isSystemInDarkTheme(),
     themeConfig: ThemeConfig? = null,
     content: @Composable () -> Unit
 ) {

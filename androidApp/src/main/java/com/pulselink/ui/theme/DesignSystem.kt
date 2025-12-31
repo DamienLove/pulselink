@@ -3,13 +3,12 @@ package com.pulselink.ui.theme
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-
-// Future Deep Tokens
-private val BackgroundDark = Color(0xFF030407)
-private val BrandPrimary = Color(0xFF6366F1) // Indigo
-private val BrandSecondary = Color(0xFF22D3EE) // Cyan
-private val EmergencyRed = Color(0xFFEF4444)
-private val EmergencyDarkRed = Color(0xFF991B1B)
+import com.pulselink.ui.theme.FutureDeepColors.BackgroundDark
+import com.pulselink.ui.theme.FutureDeepColors.EmergencyDarkRed
+import com.pulselink.ui.theme.FutureDeepColors.EmergencyRed
+import com.pulselink.ui.theme.FutureDeepColors.PrimaryIndigo
+import com.pulselink.ui.theme.FutureDeepColors.SecondaryCyan
+import com.pulselink.ui.theme.FutureDeepColors.SurfaceDark
 
 object Spacing {
     val extraSmall = 4.dp
@@ -33,7 +32,7 @@ object Gradients {
     )
     
     val BrandGradient = Brush.horizontalGradient(
-        colors = listOf(BrandPrimary, BrandSecondary)
+        colors = listOf(PrimaryIndigo, SecondaryCyan)
     )
 
     val EmergencyGradient = Brush.linearGradient(
@@ -42,13 +41,13 @@ object Gradients {
 
     val GlassGradient = Brush.verticalGradient(
         colors = listOf(
-            Color(0xFF0F111A).copy(alpha = 0.9f),
-            Color(0xFF0F111A).copy(alpha = 0.7f)
+            SurfaceDark.copy(alpha = 0.9f),
+            SurfaceDark.copy(alpha = 0.7f)
         )
     )
 }
 
 object Elevations {
-    val card = 0.dp // Flat for glassmorphism usually, or subtle shadow
+    val card = 0.dp
     val floating = 8.dp
 }
