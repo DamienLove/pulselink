@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.google.services)
+    id("com.google.dagger.hilt.android")
+    id("kotlin-kapt")
     id("com.google.firebase.crashlytics")
 }
 
@@ -33,7 +35,7 @@ android {
         manifestPlaceholders["redirectSchemeName"] = "com.RingerSong.free"
         manifestPlaceholders["redirectHostName"] = "callback"
 
-        // RapidAPI Configuration for Spotify, YouTube Music, and Truecaller
+        // RapidAPI Configuration and Spotify
         val localProps = Properties().apply {
             val localPropsFile = rootProject.file("local.properties")
             if (localPropsFile.exists()) {
@@ -52,6 +54,15 @@ android {
             "\"youtube-music-api-yt.p.rapidapi.com\"")
         buildConfigField("String", "RAPIDAPI_TRUECALLER_HOST",
             "\"truecaller4.p.rapidapi.com\"")
+
+        // Spotify Client ID from local.properties
+        buildConfigField(
+            "String",
+            "SPOTIFY_CLIENT_ID",
+            "\"${localProps.getProperty("spotify.client.id", "YOUR_CLIENT_ID_PLACEHOLDER")}\""
+        )
+        buildConfigField("String", "REDIRECT_SCHEME", "\"com.RingerSong.free\"")
+        buildConfigField("String", "REDIRECT_HOST", "\"callback\"")
     }
 
     signingConfigs {
@@ -132,6 +143,11 @@ dependencies {
     implementation(libs.play.services.ads)
     implementation(libs.youtubedl.android)
     implementation(libs.youtubedl.android.ffmpeg)
+
+    // Hilt Dependencies
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.android.compiler)
+    implementation(libs.androidx.hilt.navigation.compose)
 
     implementation("com.spotify.android:auth:2.1.1")
 

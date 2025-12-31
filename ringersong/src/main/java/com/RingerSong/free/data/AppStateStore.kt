@@ -6,15 +6,21 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.random.Random
 
 private val Context.appStateDataStore: DataStore<Preferences> by preferencesDataStore(name = "ringer_state")
 
-class AppStateStore(private val context: Context) {
+@Singleton
+class AppStateStore @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true

@@ -23,10 +23,18 @@ data class SettingsState(
 )
 
 @Serializable
+enum class SongSource {
+    SPOTIFY,
+    YOUTUBE_MUSIC,
+    LOCAL
+}
+
+@Serializable
 data class SongEntry(
     val id: String,
     val title: String,
     val uri: String,
+    val source: SongSource = SongSource.LOCAL, // Default to LOCAL for backward compatibility
     val durationMs: Long? = null,
     val addedAt: Long = System.currentTimeMillis()
 )
