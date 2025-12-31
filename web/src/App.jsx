@@ -56,7 +56,41 @@ const ContactIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="
 const SettingsIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
 const TrashIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
 const LinkIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
+const CopyIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>;
+const CheckIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
 const Spinner = () => <span className="spinner" aria-hidden="true" />;
+
+const CopyButton = ({ text, label }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
+  useEffect(() => {
+    if (copied) {
+      const timer = setTimeout(() => setCopied(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [copied]);
+
+  return (
+    <button
+      className="ghost-btn icon-only"
+      onClick={handleCopy}
+      aria-label={label || "Copy to clipboard"}
+      title={label || "Copy"}
+      style={{ padding: 4 }}
+    >
+      {copied ? <CheckIcon /> : <CopyIcon />}
+    </button>
+  );
+};
 
 const areThreadsEqual = (prev, next) => {
   return prev.isActive === next.isActive &&
@@ -93,16 +127,33 @@ const areMessagesEqual = (prev, next) => {
 
 // Bolt: Optimized MessageItem with memo to prevent re-rendering all messages when typing
 // or when new messages arrive (which creates new object references).
-const MessageItem = memo(({ msg, showPreviews }) => (
-  <div className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
-    <div className="message-bubble">
-      {showPreviews ? msg.body : '••••••'}
+const MessageItem = memo(({ msg, showPreviews, onAvatarClick, threadAddress }) => {
+  const isReceived = msg.type === 1;
+  const contactInitial = threadAddress ? threadAddress.charAt(0).toUpperCase() : '?';
+
+  return (
+    <div className={`message ${isReceived ? 'received' : 'sent'}`}>
+      {isReceived && (
+        <button
+          className="message-avatar"
+          onClick={() => onAvatarClick && onAvatarClick(threadAddress)}
+          aria-label={`View contact info for ${threadAddress}`}
+          title="View contact info"
+        >
+          {contactInitial}
+        </button>
+      )}
+      <div className="message-content">
+        <div className="message-bubble">
+          {showPreviews ? msg.body : '••••••'}
+        </div>
+        <div className="message-time">
+          {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </div>
+      </div>
     </div>
-    <div className="message-time">
-      {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-    </div>
-  </div>
-), areMessagesEqual);
+  );
+}, areMessagesEqual);
 
 MessageItem.displayName = 'MessageItem';
 
@@ -273,6 +324,42 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => (
     prev.alert.body === next.alert.body;
 });
 MapAlertItem.displayName = 'MapAlertItem';
+
+// Bolt: Optimized ThemeGalleryItem to prevent re-renders of the theme list
+const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
+  const previewTheme = useMemo(() => normalizeTheme(themeDoc.theme || {}), [themeDoc.theme]);
+  const previewStyle = useMemo(() => buildThemePreviewStyle(previewTheme), [previewTheme]);
+
+  const authorLabel = themeDoc.anonymous
+    ? 'Anonymous'
+    : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
+
+  return (
+    <div className="theme-card">
+      <div className="theme-preview" style={previewStyle} />
+      <div className="theme-meta">
+        <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
+        <div className="theme-author">{authorLabel}</div>
+      </div>
+      <button
+        className="primary-btn"
+        type="button"
+        onClick={() => onImport(themeDoc)}
+        aria-label={`Import theme ${themeDoc.name || 'Untitled'}`}
+      >
+        Import
+      </button>
+    </div>
+  );
+}, (prev, next) => {
+  // Use strict equality for themeDoc because Firestore updates create new object references
+  // even if the data inside is similar, which is the desired behavior for updates.
+  // Note: Unlike MapAlertItem which uses deep field comparison, we rely on reference equality here
+  // because theme objects are large and deeply comparing them would be expensive.
+  return prev.themeDoc === next.themeDoc && prev.onImport === next.onImport;
+});
+
+ThemeGalleryItem.displayName = 'ThemeGalleryItem';
 
 const defaultTheme = {
   primaryColor: "#6366f1", // Indigo
@@ -919,11 +1006,16 @@ const buildThemePreviewStyle = (theme) => {
   const style = {
     backgroundColor: active.backgroundColor
   };
-  if (active.appBackgroundGradientStart && active.appBackgroundGradientEnd) {
-    style.backgroundImage = `linear-gradient(135deg, ${active.appBackgroundGradientStart}, ${active.appBackgroundGradientEnd})`;
-  }
+  // Build background layers (gradient + image if both exist)
+  const bgLayers = [];
   if (active.backgroundImageUrl) {
-    style.backgroundImage = `url(${active.backgroundImageUrl})`;
+    bgLayers.push(`url(${active.backgroundImageUrl})`);
+  }
+  if (active.appBackgroundGradientStart && active.appBackgroundGradientEnd) {
+    bgLayers.push(`linear-gradient(135deg, ${active.appBackgroundGradientStart}, ${active.appBackgroundGradientEnd})`);
+  }
+  if (bgLayers.length > 0) {
+    style.backgroundImage = bgLayers.join(', ');
     style.backgroundSize = 'cover';
     style.backgroundPosition = 'center';
   }
@@ -1050,6 +1142,8 @@ function App() {
   const [sendStatus, setSendStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [activePanel, setActivePanel] = useState('home');
+  const [beaconTab, setBeaconTab] = useState('messages'); // 'messages' or 'contacts'
+  const [viewingContactAddress, setViewingContactAddress] = useState(null); // Phone number of contact being viewed
   const [alertLocations, setAlertLocations] = useState([]);
   const [alertStatus, setAlertStatus] = useState('');
   const [severityFilter, setSeverityFilter] = useState('emergency');
@@ -1257,9 +1351,15 @@ function App() {
 
   const messageListElements = useMemo(() => (
     messages.map(msg => (
-      <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} />
+      <MessageItem
+        key={msg.id}
+        msg={msg}
+        showPreviews={showPreviews}
+        threadAddress={selectedThread?.address}
+        onAvatarClick={setViewingContactAddress}
+      />
     ))
-  ), [messages, showPreviews]);
+  ), [messages, showPreviews, selectedThread?.address]);
 
   const contactListElements = useMemo(() => (
     filteredDeviceContacts.map((contact) => (
@@ -1480,7 +1580,7 @@ function App() {
   useEffect(() => {
     if (!user) {
       setAlertLocations([]);
-      setAlertStatus('');
+      setAlertStatus('Sign in to view emergency locations.');
       return;
     }
     const alertsRef = collection(db, "users", user.uid, "emergencyLocations");
@@ -1510,7 +1610,11 @@ function App() {
       },
       (error) => {
         console.error('Failed to load emergency locations', error);
-        setAlertStatus(error?.message ?? 'Unable to load emergency locations.');
+        if (error?.code === 'permission-denied') {
+          setAlertStatus('Missing permissions to read emergency locations. Sign out/in or check Firebase rules for your account.');
+        } else {
+          setAlertStatus(error?.message ?? 'Unable to load emergency locations.');
+        }
       }
     );
     return () => unsubscribe();
@@ -1891,7 +1995,7 @@ function App() {
     setConfirmDeleteId(null);
   }, []);
 
-  const handleApplyPreset = async (presetTheme) => {
+  const handleApplyPreset = useCallback(async (presetTheme) => {
     if (!user) return;
     const normalized = normalizeTheme(presetTheme);
     setThemeStatus("Updating theme...");
@@ -1914,13 +2018,13 @@ function App() {
       console.error("Theme update failed", error);
       setThemeStatus(error?.message ?? "Theme update failed.");
     }
-  };
+  }, [user]);
 
-  const handleImportPublicTheme = async (themeDoc) => {
+  const handleImportPublicTheme = useCallback(async (themeDoc) => {
     if (!themeDoc?.theme) return;
     await handleApplyPreset(themeDoc.theme);
     setThemeGalleryStatus(`Imported "${themeDoc.name}".`);
-  };
+  }, [handleApplyPreset]);
 
   const handlePublishTheme = async () => {
     if (!user) return;
@@ -2095,6 +2199,7 @@ function App() {
   };
 
   // Bolt: Stable handler to prevent ghost content when switching threads
+  // eslint-disable-next-line no-unused-vars
   const handleThreadSelect = useCallback((thread) => {
     setMessages([]); // Clear previous messages immediately
     setSelectedThread(thread);
@@ -2303,26 +2408,7 @@ function App() {
           </div>
           {activePanel === 'beacon' ? (
             <div className="thread-list">
-              {threads.length === 0 ? (
-                <div className="sidebar-placeholder">
-                  <div className="sidebar-tip muted">
-                    No conversations found.
-                  </div>
-                  <div className="sidebar-tip muted">
-                    Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
-                  </div>
-                </div>
-              ) : (
-                threads.map(thread => (
-                  <ThreadItem
-                    key={thread.id}
-                    thread={thread}
-                    isActive={selectedThread?.id === thread.id}
-                    onSelect={handleThreadSelect}
-                    showPreviews={showPreviews}
-                  />
-                ))
-              )}
+              {threadListElements}
             </div>
           ) : (
             <div className="sidebar-placeholder">
@@ -2659,6 +2745,14 @@ function App() {
                 <h3>Emergency map</h3>
                 <p>Locations parsed from PulseLink alert messages synced to this account.</p>
               </div>
+              {!user && (
+                <div className="settings-card" style={{ marginBottom: 20 }}>
+                  <h4>Sign in to view alerts</h4>
+                  <p className="settings-note">Emergency locations are secured per account. Please sign in to load your map.</p>
+                </div>
+              )}
+              {user && (
+              <>
               <div className="map-controls">
                 <button
                   className="secondary-btn"
@@ -2714,7 +2808,7 @@ function App() {
                 </div>
                 <div className="map-list">
                   {filteredAlerts.map((alert) => (
-                    <React.Fragment key={alert.id}>
+                    <Fragment key={alert.id}>
                       <MapAlertItem
                         alert={alert}
                         isActive={selectedAlertId === alert.id}
@@ -2758,7 +2852,14 @@ function App() {
                           </button>
                         </div>
                       </div>
-                    </React.Fragment>
+                    </Fragment>
+                    <MapAlertItem
+                      key={alert.id}
+                      alert={alert}
+                      isActive={selectedAlertId === alert.id}
+                      onFocus={handleAlertFocus}
+                      onClear={handleClearAlert}
+                    />
                   ))}
                   {filteredAlerts.length === 0 && (
                     <div className="map-empty">
@@ -2770,6 +2871,8 @@ function App() {
                   )}
                 </div>
               </div>
+              </>
+              )}
             </div>
           )}
 
@@ -2898,6 +3001,13 @@ function App() {
                     </button>
                   </div>
                   <div className="theme-gallery-grid">
+                    {filteredThemes.map((themeDoc) => (
+                      <ThemeGalleryItem
+                        key={themeDoc.id}
+                        themeDoc={themeDoc}
+                        onImport={handleImportPublicTheme}
+                      />
+                    ))}
                     {filteredThemes.map((themeDoc) => {
                       const previewTheme = normalizeTheme(themeDoc.theme || {});
                       const previewStyle = buildThemePreviewStyle(previewTheme);
@@ -2906,7 +3016,28 @@ function App() {
                         : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
                       return (
                         <div key={themeDoc.id} className="theme-card">
-                          <div className="theme-preview" style={previewStyle} />
+                          <div className="theme-preview" style={previewStyle}>
+                            <div className="theme-preview-chat">
+                              <div
+                                className="theme-bubble incoming"
+                                style={{
+                                  background: previewTheme.bubbleIncoming,
+                                  color: previewTheme.onBubbleIncoming
+                                }}
+                              >
+                                Hey, you good?
+                              </div>
+                              <div
+                                className="theme-bubble outgoing"
+                                style={{
+                                  background: previewTheme.bubbleOutgoing,
+                                  color: previewTheme.onBubbleOutgoing
+                                }}
+                              >
+                                Yep, on my way!
+                              </div>
+                            </div>
+                          </div>
                           <div className="theme-meta">
                             <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
                             <div className="theme-author">{authorLabel}</div>
@@ -2991,8 +3122,30 @@ function App() {
                         className="theme-chip"
                         onClick={() => handleApplyPreset(preset.theme)}
                       >
-                        <span className="theme-dot" style={{ background: preset.theme.primaryColor }} />
-                        {preset.name}
+                        <div className="theme-chip-title">
+                          <span className="theme-dot" style={{ background: preset.theme.primaryColor }} />
+                          <strong>{preset.name}</strong>
+                        </div>
+                        <div className="theme-chip-preview">
+                          <div
+                            className="theme-bubble incoming"
+                            style={{
+                              background: preset.theme.bubbleIncoming,
+                              color: preset.theme.onBubbleIncoming
+                            }}
+                          >
+                            Sample incoming
+                          </div>
+                          <div
+                            className="theme-bubble outgoing"
+                            style={{
+                              background: preset.theme.bubbleOutgoing,
+                              color: preset.theme.onBubbleOutgoing
+                            }}
+                          >
+                            Sample reply
+                          </div>
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -3086,6 +3239,31 @@ function App() {
             </div>
           )}
 
+          {activePanel === 'extensions' && (
+            <div className="pulselink-panel">
+              <div className="panel-header">
+                <h3>Extensions</h3>
+                <p>Attach third-party add-ons to PulseLink / Beacon once enabled. Web access mirrors the mobile toggle.</p>
+              </div>
+              <div className="settings-card">
+                <p className="settings-note" style={{ marginBottom: 12 }}>
+                  Status: {remoteSettings.thirdPartyExtensionsEnabled ? "Enabled (beta)" : "Disabled"}.
+                  Turn this on in Settings to allow extensions in both the app and web.
+                </p>
+                {!remoteSettings.thirdPartyExtensionsEnabled && (
+                  <button className="primary-btn" type="button" onClick={() => setActivePanel('settings')}>
+                    Enable in Settings
+                  </button>
+                )}
+                {remoteSettings.thirdPartyExtensionsEnabled && (
+                  <div className="settings-note">
+                    Extension marketplace coming soon. Admins can still side-load trusted extensions via mobile until then.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {activePanel === 'settings' && (
             <div className="settings-panel">
               <div className="settings-header">
@@ -3095,13 +3273,19 @@ function App() {
               <div className="settings-grid">
                 <div className="settings-card">
                   <h4>Account</h4>
-                  <div className="settings-row">
-                    <span className="settings-label">Signed in as</span>
+                  <div
+                    className="settings-row"
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <span className="settings-label">Signed in as:</span>
                     <span className="settings-value">{user.email || 'Unknown'}</span>
                   </div>
                   <div className="settings-row">
                     <span className="settings-label">User ID</span>
-                    <span className="settings-value mono">{user.uid}</span>
+                    <div className="settings-value-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="settings-value mono">{user.uid}</span>
+                      <CopyButton text={user.uid} label="Copy User ID" />
+                    </div>
                   </div>
                   <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
                     Send password reset email
@@ -3215,59 +3399,190 @@ function App() {
 
           {activePanel === 'beacon' && (
             <>
-              {selectedThread ? (
+              <div className="beacon-tabs">
+                <button
+                  className={`beacon-tab ${beaconTab === 'messages' ? 'active' : ''}`}
+                  onClick={() => setBeaconTab('messages')}
+                >
+                  Messages
+                </button>
+                <button
+                  className={`beacon-tab ${beaconTab === 'contacts' ? 'active' : ''}`}
+                  onClick={() => setBeaconTab('contacts')}
+                >
+                  Contacts
+                </button>
+              </div>
+              {beaconTab === 'messages' ? (
                 <>
-                  <div className="chat-header">
-                    <h3>{selectedThread.address}</h3>
-                  </div>
-                  <div className="messages-list">
-                    {messageListElements}
-                    <div ref={messagesEndRef} />
+                  {selectedThread ? (
+                    <>
+                      <div className="chat-header">
+                        <h3>{selectedThread.address}</h3>
+                        <button
+                          className="secondary-btn"
+                          onClick={() => setViewingContactAddress(selectedThread.address)}
+                          aria-label="View contact info"
+                        >
+                          Info
+                        </button>
+                      </div>
+                      <div className="messages-list">
+                        {messageListElements}
+                        <div ref={messagesEndRef} />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="empty-state">
+                      <img src={beaconLogo} alt="Beacon" className="empty-logo" />
+                      <div>Select a thread or start a new message</div>
+                    </div>
+                  )}
+                  <div className="composer">
+                    <div className="composer-row">
+                      <label className="composer-label" htmlFor="compose-address">To</label>
+                      <input
+                        id="compose-address"
+                        className="composer-input"
+                        type="tel"
+                        placeholder="Phone number"
+                        value={composeAddress}
+                        onChange={(e) => setComposeAddress(e.target.value)}
+                      />
+                    </div>
+                    <div className="composer-row composer-actions">
+                      <textarea
+                        className="composer-textarea"
+                        placeholder="Type a message..."
+                        aria-label="Message body"
+                        value={composeBody}
+                        onChange={(e) => setComposeBody(e.target.value)}
+                      />
+                      <button
+                        onClick={handleSendMessage}
+                        disabled={isSending || isLoggingIn}
+                        className="primary-btn"
+                      >
+                        {isSending ? "Sending..." : "Send"}
+                      </button>
+                    </div>
+                    {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
+                    <div className="compose-hint">
+                      Messages are sent from your phone when it&apos;s online and signed in.
+                    </div>
                   </div>
                 </>
               ) : (
-                <div className="empty-state">
-                  <img src={beaconLogo} alt="Beacon" className="empty-logo" />
-                  <div>Select a thread or start a new message</div>
+                <div className="contacts-panel">
+                  <div className="panel-header">
+                    <h3>Contacts</h3>
+                    <p>All device contacts synced from your phone.</p>
+                  </div>
+                  <div className="contacts-toolbar">
+                    <div className="contact-count">
+                      {filteredDeviceContacts.length} contact{filteredDeviceContacts.length === 1 ? '' : 's'}
+                    </div>
+                    <input
+                      className="login-input contact-search"
+                      placeholder="Search by name, phone, or email"
+                      aria-label="Search contacts"
+                      value={contactSearch}
+                      onChange={(e) => setContactSearch(e.target.value)}
+                    />
+                  </div>
+                  <div className="contact-list contact-list--full">
+                    {contactListElements}
+                    {filteredDeviceContacts.length === 0 && (
+                      <div className="settings-note">
+                        {contactSearch.trim()
+                          ? 'No contacts match that search.'
+                          : 'No device contacts synced yet.'}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
-              <div className="composer">
-                <div className="composer-row">
-                  <label className="composer-label" htmlFor="compose-address">To</label>
-                  <input
-                    id="compose-address"
-                    className="composer-input"
-                    type="tel"
-                    placeholder="Phone number"
-                    value={composeAddress}
-                    onChange={(e) => setComposeAddress(e.target.value)}
-                  />
-                </div>
-                <div className="composer-row composer-actions">
-                  <textarea
-                    className="composer-textarea"
-                    placeholder="Type a message..."
-                    aria-label="Message body"
-                    value={composeBody}
-                    onChange={(e) => setComposeBody(e.target.value)}
-                  />
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={isSending || isLoggingIn}
-                    className="primary-btn"
-                  >
-                    {isSending ? "Sending..." : "Send"}
-                  </button>
-                </div>
-                {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
-                <div className="compose-hint">
-                  Messages are sent from your phone when it&apos;s online and signed in.
-                </div>
-              </div>
             </>
           )}
         </div>
       </div>
+
+      {/* Contact Info Modal */}
+      {viewingContactAddress && (
+        <div className="contact-modal-overlay" onClick={() => setViewingContactAddress(null)}>
+          <div className="contact-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="contact-modal-header">
+              <h4>Contact Info</h4>
+              <button
+                className="contact-modal-close"
+                onClick={() => setViewingContactAddress(null)}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <div className="contact-modal-body">
+              <div className="contact-modal-avatar">
+                {viewingContactAddress.charAt(0).toUpperCase()}
+              </div>
+              <div className="contact-modal-info">
+                {(() => {
+                  const contact = deviceContacts.find(
+                    (c) => c.phoneNumber === viewingContactAddress
+                  );
+                  if (contact) {
+                    return (
+                      <>
+                        {contact.displayName && (
+                          <div className="contact-modal-field">
+                            <div className="contact-modal-label">Name</div>
+                            <div className="contact-modal-value">{contact.displayName}</div>
+                          </div>
+                        )}
+                        <div className="contact-modal-field">
+                          <div className="contact-modal-label">Phone</div>
+                          <div className="contact-modal-value">{contact.phoneNumber}</div>
+                        </div>
+                        {contact.email && (
+                          <div className="contact-modal-field">
+                            <div className="contact-modal-label">Email</div>
+                            <div className="contact-modal-value">{contact.email}</div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  } else {
+                    return (
+                      <div className="contact-modal-field">
+                        <div className="contact-modal-label">Phone</div>
+                        <div className="contact-modal-value">{viewingContactAddress}</div>
+                      </div>
+                    );
+                  }
+                })()}
+              </div>
+              <div className="contact-modal-actions">
+                <button
+                  className="secondary-btn"
+                  onClick={() => {
+                    setComposeAddress(viewingContactAddress);
+                    setViewingContactAddress(null);
+                    setBeaconTab('messages');
+                  }}
+                >
+                  Send Message
+                </button>
+                <button
+                  className="ghost-btn"
+                  onClick={() => setViewingContactAddress(null)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2904,10 +2904,10 @@ function App() {
               <div className="settings-grid">
                 <div className="settings-card">
                   <h4>Account</h4>
-                  <div className="settings-row">
-                    <span className="settings-label">Signed in as</span>
-                    <span className="settings-value">{user.email || 'Unknown'}</span>
-                  </div>
+                    <div className="settings-row" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="settings-label">Signed in as:</span>
+                      <span className="settings-value">{user.email || 'Unknown'}</span>
+                    </div>
                   <div className="settings-row">
                     <span className="settings-label">User ID</span>
                     <span className="settings-value mono">{user.uid}</span>

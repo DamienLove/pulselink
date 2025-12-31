@@ -78,6 +78,7 @@ class SmsSyncWorker @AssistedInject constructor(
                         "snippet" to thread.snippet,
                         "date" to thread.timestamp,
                         "unread" to thread.unread,
+                        "unreadCount" to thread.unreadCount,
                         "isFavorite" to thread.isFavorite,
                         "isPrivate" to thread.isPrivate,
                         "isTrusted" to thread.isTrusted

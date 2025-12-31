@@ -125,15 +125,17 @@ private fun AppNavHost(
                         activity?.let { AdServices.showInterstitial(it) }
                     }
                 },
-                onYouTubeQueryChange = viewModel::updateYouTubeSearchQuery,
+                onYouTubeQueryChange = viewModel::updateYouTubeSearchQuery,     
                 onYouTubeSearch = viewModel::searchYouTubeMusic,
                 onClearYouTubeSearch = viewModel::clearYouTubeSearch,
                 onAddYouTubeTrack = { track ->
                     viewModel.addSpotifyTrack(track) { message ->
                         coroutineScope.launch { snackbarHostState.showSnackbar(message) }
-                        activity?.let { AdServices.showInterstitial(it) }
+                        activity?.let { AdServices.showInterstitial(it) }       
                     }
-                }
+                },
+                snackbarHostState = snackbarHostState,
+                onClearDownloadError = viewModel::clearDownloadError
             )
         }
         composable(Routes.Settings) {

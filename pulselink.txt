@@ -1,6 +1,10 @@
 dewBranch: Suite-Beta (based on Beta)
 
 Recent work
+- 2025-12-31: Repaired SmsInboxViewModel merge regression (restored pagination flags, load-more messages) and added LinePicker/MultiLine indicators; fixed "Signed in as" spacing in web settings; rebuilt PulseLink v95 free/pro AABs (androidApp/build/outputs/bundle/{freeRelease,proRelease}/androidApp-*-release.aab).
+- 2025-12-31: Fixed Beacon crash on open (TabsRow double horizontalScroll causing infinite width); rebuilt PulseLink v95 bundles.
+- 2025-12-30: RingerSong download robustness — added typed DownloadError/DownloadResult, network checks, retry for Spotify, and surfaced download errors to UI via snackbar with friendly messages.
+- 2025-12-30: Web app visual fix — restored visible layout (no hidden overflow), added theme gallery chat previews & color swatches matching the mobile picker, added extensions placeholder panel; rebuilt web via `npm run build`.
 - 2025-12-30: Bumped PulseLink to v93 (free/pro); rebuilt release AABs at androidApp/build/outputs/bundle/freeRelease/androidApp-free-release.aab and .../proRelease/androidApp-pro-release.aab. RingerSong remains v20 (bundle rebuilt).
 - 2025-12-30: Added SMS attachment picker in Beacon threads (paperclip button opens file picker + SMS/MMS send intent); rebuilt PulseLink v92 (free/pro) and RingerSong v20 release bundles.
 - 2025-12-30: Version bump — PulseLink v92 (free/pro) and RingerSong v20; premium branding shows gold logos/badges on splash/login and Beacon inbox logo now blue (free) or gold (premium) unless overridden by theme.
@@ -83,3 +87,16 @@ Current SMS features
 - 2025-12-27: Version bump to 87 and rebuilt free/pro/premium AABs (paths under androidApp/build/outputs/bundle/*Release, timestamp ~04:03). QA-ready.
 - 2025-12-27: QA request — rebuilt PulseLink v87 free/pro/premium AABs after Claude fixes; artifacts in androidApp/build/outputs/bundle/*Release/ for verification.
 - 2025-12-29: Emergency trusted-contacts recovery: MainViewModel sync now falls back to Firestore collectionGroup("trustedContacts") with ownerUid/userId/path filtering to pull legacy docs, merges and re-uploads missing entries. Contacts now write ownerUid for future migrations. Beacon nav now includes a “Contacts” tab that currently reuses the inbox view; version bumped to 89. Built freeRelease AAB at androidApp/build/outputs/bundle/freeRelease/androidApp-free-release.aab for internal testing.
+2025-12-23
+- Added Maps SDK key wiring (mapsApiKey from local.properties or env -> resValue google_maps_key) and manifest meta-data; stored local key in local.properties.
+
+2025-12-23
+- Web portal: added Emergency Map panel that parses synced SMS alert locations, loads Google Maps when VITE_GOOGLE_MAPS_API_KEY is set, and added UI filters + map list.
+2025-12-28
+- Sms inbox polish + perf: SmsInboxViewModel refresh runs on IO with parallel thread/archive loads; SmsThreadViewModel refresh moves Telephony queries + contact lookup off main.
+- Sms inbox UI: thread rows now have bordered cards with unread accent + avatar dot indicator; filter tabs restyled as pill chips with optional unread badge.
+
+2025-12-31
+- Installed Claude Code CLI globally via npm (`@anthropic-ai/claude-code` v2.0.76).
+- Beacon: warm message cache in inbox to preload recent thread history and speed conversation open.
+- Beacon: added unread message count badges on thread previews (local + synced lines).

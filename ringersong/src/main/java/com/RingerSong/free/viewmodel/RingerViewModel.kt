@@ -12,6 +12,8 @@ import com.RingerSong.free.data.SongEntry
 import com.RingerSong.free.data.SpotifyRepository
 import com.RingerSong.free.data.SpotifyTrack
 import com.RingerSong.free.data.SpotifyArtist
+import com.RingerSong.free.data.DownloadError
+import com.RingerSong.free.data.DownloadResult
 import com.RingerSong.free.data.resolveSongMetadata
 import com.RingerSong.free.data.ThemeConfig
 import com.pulselink.shared.ui.theme.SharedThemePreferences
@@ -322,18 +324,23 @@ class RingerViewModel(application: Application) : AndroidViewModel(application) 
 
             // Download the track first (handle both Spotify and YouTube)
             onResult("Downloading ${track.name}...")
-            val localFilePath = if (track.uri!!.startsWith("youtube:")) {
-                // Extract video ID from URI like "youtube:video:xxxx"
+            val downloadResult = if (track.uri!!.startsWith("youtube:")) {
                 val videoId = track.uri!!.substringAfterLast(":")
                 youtubeMusicRepo.downloadTrack(videoId)
             } else {
-                // Spotify track
                 spotifyDownloader.downloadTrack(track.uri!!)
             }
 
-            if (localFilePath == null) {
-                onResult("Failed to download ${track.name}")
-                return@launch
+            val localFilePath = when (downloadResult) {
+                is DownloadResult.Success -> {
+                    clearDownloadError()
+                    downloadResult.filePath
+                }
+                is DownloadResult.Failure -> {
+                    val message = mapDownloadError(downloadResult.error)
+                    setDownloadError(message)
+                    return@launch
+                }
             }
 
             // Create the song entry with local file URI
@@ -569,8 +576,17 @@ class RingerViewModel(application: Application) : AndroidViewModel(application) 
     // === Spotify Downloader Methods ===
     fun downloadSpotifyTrack(spotifyUrl: String, onComplete: (String?) -> Unit) {
         viewModelScope.launch {
-            val localPath = spotifyDownloader.downloadTrack(spotifyUrl)
-            onComplete(localPath)
+            when (val result = spotifyDownloader.downloadTrack(spotifyUrl)) {
+                is DownloadResult.Success -> {
+                    clearDownloadError()
+                    onComplete(result.filePath)
+                }
+                is DownloadResult.Failure -> {
+                    val message = mapDownloadError(result.error)
+                    setDownloadError(message)
+                    onComplete(null)
+                }
+            }
         }
     }
 
@@ -605,6 +621,36 @@ class RingerViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             val info = truecallerRepo.getCallerInfo(phoneNumber, "US")
             onComplete(info)
+        }
+    }
+
+    private fun mapDownloadError(error: DownloadError): String {
+        return when (error) {
+            is DownloadError.NoApiKey -> "Download unavailable - app not configured"
+            DownloadError.NetworkUnavailable -> "No internet connection"
+            is DownloadError.RateLimitExceeded -> "Too many requests - try again in a few minutes"
+            is DownloadError.ApiError -> {
+                when (error.statusCode) {
+                    in 400..499 -> "Unable to find track"
+                    in 500..599 -> "Service temporarily unavailable"
+                    else -> error.message ?: "Download failed"
+                }
+            }
+            is DownloadError.AudioDownloadFailed -> error.message ?: "Audio download failed"
+            is DownloadError.NoDownloadUrl -> "Download link unavailable"
+            is DownloadError.UnknownError -> error.message ?: "Download failed"
+        }
+    }
+
+    private fun setDownloadError(message: String) {
+        viewModelScope.launch {
+            store.update { it.copy(downloadError = message) }
+        }
+    }
+
+    fun clearDownloadError() {
+        viewModelScope.launch {
+            store.update { it.copy(downloadError = null) }
         }
     }
 }

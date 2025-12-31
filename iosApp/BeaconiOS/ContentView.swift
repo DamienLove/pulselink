@@ -75,7 +75,7 @@ private struct BeaconTab: View {
     @State private var isUnlocked = false
     @State private var showPinSheet = false
     @AppStorage("privateSafePin") private var storedPin: String = ""
-    @AppStorage("themeColor") private var themeColor: ThemeColor = .blue
+    @AppStorage("themeColor") private var themeColor: ThemeColor = .indigo
     @AppStorage("bubbleStyle") private var bubbleStyle: BubbleStyle = .rounded
 
     var isPro: Bool {
@@ -241,7 +241,7 @@ private struct ConversationView: View {
     var onDisappear: (() -> Void)? = nil
 
     @State private var draft = ""
-    @AppStorage("themeColor") private var themeColor: ThemeColor = .blue
+    @AppStorage("themeColor") private var themeColor: ThemeColor = .indigo
     @AppStorage("bubbleStyle") private var bubbleStyle: BubbleStyle = .rounded
 
     var body: some View {
@@ -299,7 +299,7 @@ private struct ConversationView: View {
 private struct SettingsTab: View {
     @ObservedObject var viewModel: BeaconViewModel
     let isPro: Bool
-    @AppStorage("themeColor") private var themeColor: ThemeColor = .blue
+    @AppStorage("themeColor") private var themeColor: ThemeColor = .indigo
     @AppStorage("bubbleStyle") private var bubbleStyle: BubbleStyle = .rounded
 
     var body: some View {
@@ -341,10 +341,11 @@ private struct SettingsTab: View {
 }
 
 enum ThemeColor: String, CaseIterable {
-    case blue, purple, orange, green, pink
+    case indigo, blue, purple, orange, green, pink
 
     var color: Color {
         switch self {
+        case .indigo: return .indigo
         case .blue: return .blue
         case .purple: return .purple
         case .orange: return .orange
