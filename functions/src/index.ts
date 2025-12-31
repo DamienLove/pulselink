@@ -26,3 +26,4 @@ export {alertRelay, alertRelayHttp} from "./alertRelay";
 export {onMessageCreated} from "./messaging";
 export {sendEmailNotification} from "./email";
 export {findUser, deleteAccount} from "./users";
+export {getSpotifyAccessToken} from "./spotify";
