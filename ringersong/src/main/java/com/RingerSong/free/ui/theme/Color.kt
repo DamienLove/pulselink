@@ -2,11 +2,22 @@ package com.RingerSong.free.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Ink = Color(0xFF15202B)
-val DeepBlue = Color(0xFF1C3C5A)
-val Ocean = Color(0xFF2C5E8C)
-val Sky = Color(0xFF9EC4E8)
-val Mist = Color(0xFFF2F6FB)
-val Ice = Color(0xFFE3EDF7)
-val Slate = Color(0xFF7A8FA6)
-val Azure = Color(0xFF4E86C6)
+// Future Deep Palette
+val DeepBg = Color(0xFF030407)
+val Surface = Color(0xFF0F111A)
+val SurfaceAlt = Color(0xFF161B2C)
+
+val Indigo = Color(0xFF6366F1)
+val Cyan = Color(0xFF22D3EE)
+val Slate = Color(0xFF64748B)
+
+val Ink = Color(0xFFEEF2FB)
+val Muted = Color(0xFF94A3B8)
+
+// Legacy aliases to prevent breakage if referenced elsewhere
+val Ocean = Indigo
+val Sky = Cyan
+val Mist = SurfaceAlt
+val Ice = Ink
+val Azure = Color(0xFF0EA5E9)
+val DeepBlue = DeepBg

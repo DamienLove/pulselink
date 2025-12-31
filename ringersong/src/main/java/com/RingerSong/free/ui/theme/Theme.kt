@@ -8,47 +8,45 @@ import androidx.compose.ui.graphics.Color
 import com.RingerSong.free.data.ThemeConfig
 import com.pulselink.shared.ui.theme.hexToColor
 
-private val LightColorScheme = lightColorScheme(
-    primary = Ocean,
-    secondary = Azure,
-    tertiary = Sky,
-    background = Mist,
-    surface = Ice,
-    surfaceVariant = Sky.copy(alpha = 0.35f),
-    onPrimary = Mist,
-    onSecondary = Mist,
-    onTertiary = Ink,
+// Default to Dark Theme colors for Future Deep
+private val DarkColorScheme = darkColorScheme(
+    primary = Indigo,
+    secondary = Cyan,
+    tertiary = Azure,
+    background = DeepBg,
+    surface = Surface,
+    surfaceVariant = SurfaceAlt,
+    onPrimary = Color.White,
+    onSecondary = DeepBg,
+    onTertiary = Color.White,
     onBackground = Ink,
     onSurface = Ink,
-    onSurfaceVariant = Ink.copy(alpha = 0.65f),
-    primaryContainer = Sky.copy(alpha = 0.6f),
+    onSurfaceVariant = Muted,
+    primaryContainer = Indigo.copy(alpha = 0.2f),
     onPrimaryContainer = Ink,
-    tertiaryContainer = Sky.copy(alpha = 0.3f),
+    tertiaryContainer = Cyan.copy(alpha = 0.2f),
     onTertiaryContainer = Ink
 )
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Sky,
-    secondary = Azure,
-    tertiary = Ice,
-    background = Ink,
-    surface = DeepBlue,
-    surfaceVariant = Ocean,
-    onPrimary = Ink,
-    onSecondary = Mist,
-    onTertiary = Ink,
-    onBackground = Mist,
-    onSurface = Mist,
-    onSurfaceVariant = Mist.copy(alpha = 0.7f),
-    primaryContainer = Ocean,
-    onPrimaryContainer = Mist,
-    tertiaryContainer = Azure.copy(alpha = 0.2f),
-    onTertiaryContainer = Mist
+// Minimal light theme fallback
+private val LightColorScheme = lightColorScheme(
+    primary = Indigo,
+    secondary = Cyan,
+    tertiary = Azure,
+    background = Color(0xFFF8FAFC),
+    surface = Color.White,
+    surfaceVariant = Color(0xFFE2E8F0),
+    onPrimary = Color.White,
+    onSecondary = Color.White,
+    onTertiary = Color.White,
+    onBackground = Color(0xFF0F172A),
+    onSurface = Color(0xFF0F172A),
+    onSurfaceVariant = Color(0xFF64748B)
 )
 
 @Composable
 fun RingerSongTheme(
-    darkTheme: Boolean = false,
+    darkTheme: Boolean = true, // Default to true for Future Deep look
     themeConfig: ThemeConfig? = null,
     content: @Composable () -> Unit
 ) {

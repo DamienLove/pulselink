@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -362,26 +362,26 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
 ThemeGalleryItem.displayName = 'ThemeGalleryItem';
 
 const defaultTheme = {
-  primaryColor: "#6750A4",
-  secondaryColor: "#625B71",
-  bubbleOutgoing: "#D0BCFF",
-  bubbleIncoming: "#E8DEF8",
-  backgroundColor: "#FFFFFF",
+  primaryColor: "#6366f1", // Indigo
+  secondaryColor: "#22d3ee", // Cyan
+  bubbleOutgoing: "#6366f1",
+  bubbleIncoming: "#161b2c",
+  backgroundColor: "#030407", // Deep Dark
   iconSizeFactor: 1.0,
   fontStyle: "Default",
-  bubbleCornerRadius: 12,
-  inboxIconVariant: "Default",
-  onBubbleOutgoing: "#000000",
-  onBubbleIncoming: "#000000",
-  onBackground: "#000000",
-  topBarColor: "#FFFFFF",
-  onTopBarColor: "#000000",
+  bubbleCornerRadius: 20,
+  inboxIconVariant: "Beacon",
+  onBubbleOutgoing: "#FFFFFF",
+  onBubbleIncoming: "#eef2fb",
+  onBackground: "#eef2fb",
+  topBarColor: "#030407",
+  onTopBarColor: "#eef2fb",
   bubbleCornerRadiusTopStart: null,
   bubbleCornerRadiusTopEnd: null,
   bubbleCornerRadiusBottomStart: null,
   bubbleCornerRadiusBottomEnd: null,
-  timestampColor: null,
-  dividerColor: null,
+  timestampColor: "#94a3b8",
+  dividerColor: "rgba(255, 255, 255, 0.08)",
   appBackgroundGradientStart: null,
   appBackgroundGradientEnd: null,
   fontScale: 1.0,
@@ -2808,51 +2808,6 @@ function App() {
                 </div>
                 <div className="map-list">
                   {filteredAlerts.map((alert) => (
-                    <Fragment key={alert.id}>
-                      <MapAlertItem
-                        alert={alert}
-                        isActive={selectedAlertId === alert.id}
-                        onFocus={handleAlertFocus}
-                        onClear={handleClearAlert}
-                      />
-                      <div
-                        className={`map-item ${selectedAlertId === alert.id ? 'active' : ''}`}
-                        onClick={() => handleAlertFocus(alert)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            handleAlertFocus(alert);
-                          }
-                        }}
-                      >
-                        <div className="map-item-header">
-                          <div className="map-item-title">{alert.address}</div>
-                          <span
-                            className="map-badge"
-                            style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
-                          >
-                            {alertBadgeCopy[alert.severity] ?? 'Alert'}
-                          </span>
-                        </div>
-                        <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
-                        <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
-                        <div className="map-item-actions">
-                          <button
-                            className="secondary-btn"
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleClearAlert(alert.id);
-                            }}
-                            aria-label={`Clear alert from ${alert.address}`}
-                          >
-                            Clear
-                          </button>
-                        </div>
-                      </div>
-                    </Fragment>
                     <MapAlertItem
                       key={alert.id}
                       alert={alert}
