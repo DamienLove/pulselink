@@ -37,6 +37,9 @@ interface ContactDao {
     @Query("SELECT * FROM contacts WHERE phoneNumber = :phone LIMIT 1")
     suspend fun getByPhone(phone: String): Contact?
 
+    @Query("SELECT * FROM contacts WHERE phoneNumber IN (:phones)")
+    suspend fun getByPhones(phones: List<String>): List<Contact>
+
     @Query("SELECT * FROM contacts WHERE email = :email LIMIT 1")
     suspend fun getByEmail(email: String?): Contact?
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
-    
+
     <!-- Emergency Alert Shortcut -->
     <!-- Users can say: "Hey Google, have PulseLink send an emergency alert" -->
     <shortcut
@@ -9,14 +9,14 @@
         android:icon="@drawable/ic_logo"
         android:shortcutShortLabel="@string/assistant_shortcut_emergency_short"
         android:shortcutLongLabel="@string/assistant_shortcut_emergency_long">
-        
+
         <!-- Built-in Intent for triggering emergency action -->
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="com.pulselink"
             android:targetClass="com.pulselink.ui.AssistantShortcutActivity"
             android:data="pulselink://assistant/emergency" />
-        
+
         <!-- Capability binding for Google Assistant integration -->
         <capability-binding android:key="actions.intent.OPEN_APP_FEATURE">
             <parameter-binding
@@ -24,7 +24,7 @@
                 android:value="@array/emergency_synonyms" />
         </capability-binding>
     </shortcut>
-    
+
     <!-- Check-in Shortcut -->
     <!-- Users can say: "Hey Google, have PulseLink send a check-in" -->
     <shortcut
@@ -33,20 +33,20 @@
         android:icon="@drawable/ic_logo"
         android:shortcutShortLabel="@string/assistant_shortcut_check_in_short"
         android:shortcutLongLabel="@string/assistant_shortcut_check_in_long">
-        
+
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="com.pulselink"
             android:targetClass="com.pulselink.ui.AssistantShortcutActivity"
             android:data="pulselink://assistant/checkin" />
-        
+
         <capability-binding android:key="actions.intent.OPEN_APP_FEATURE">
             <parameter-binding
                 android:key="feature"
                 android:value="@array/checkin_synonyms" />
         </capability-binding>
     </shortcut>
-    
+
     <!-- Cancel Emergency Shortcut -->
     <!-- Users can say: "Hey Google, have PulseLink cancel my alert" -->
     <shortcut
@@ -55,13 +55,13 @@
         android:icon="@drawable/ic_logo"
         android:shortcutShortLabel="@string/assistant_shortcut_cancel_short"
         android:shortcutLongLabel="@string/assistant_shortcut_cancel_long">
-        
+
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="com.pulselink"
             android:targetClass="com.pulselink.ui.AssistantShortcutActivity"
             android:data="pulselink://assistant/cancel" />
-        
+
         <capability-binding android:key="actions.intent.OPEN_APP_FEATURE">
             <parameter-binding
                 android:key="feature"

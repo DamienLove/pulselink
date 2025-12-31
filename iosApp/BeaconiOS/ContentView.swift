@@ -33,12 +33,14 @@ struct ContentView: View {
                         Label("Favorites", systemImage: "star.fill")
                     }
 
-                BeaconTab(viewModel: viewModel, filter: .private)
-                    .tabItem {
-                        Label("Private", systemImage: "lock.fill")
-                    }
+                if isPro {
+                    BeaconTab(viewModel: viewModel, filter: .private)
+                        .tabItem {
+                            Label("Private", systemImage: "lock.fill")
+                        }
+                }
 
-                SettingsTab(viewModel: viewModel)
+                SettingsTab(viewModel: viewModel, isPro: isPro)
                     .tabItem {
                         Label("Settings", systemImage: "gear")
                     }
@@ -68,11 +70,12 @@ private struct BeaconTab: View {
     @ObservedObject var viewModel: BeaconViewModel
     let filter: BeaconTabFilter
     @State private var searchText = ""
+    @State private var subFilter: InboxSubFilter = .all
     @State private var pinInput = ""
     @State private var isUnlocked = false
     @State private var showPinSheet = false
     @AppStorage("privateSafePin") private var storedPin: String = ""
-    @AppStorage("themeColor") private var themeColor: ThemeColor = .blue
+    @AppStorage("themeColor") private var themeColor: ThemeColor = .indigo
     @AppStorage("bubbleStyle") private var bubbleStyle: BubbleStyle = .rounded
 
     var isPro: Bool {
@@ -81,6 +84,12 @@ private struct BeaconTab: View {
         #else
         return false
         #endif
+    }
+
+    enum InboxSubFilter: String, CaseIterable {
+        case all = "All"
+        case read = "Read"
+        case unread = "Unread"
     }
 
     var filteredContacts: [BeaconContactCard] {
@@ -92,17 +101,40 @@ private struct BeaconTab: View {
         case .private: base = viewModel.privateContacts
         }
 
-        if searchText.isEmpty {
-            return base
+        let subFiltered: [BeaconContactCard]
+        if filter != .private {
+            switch subFilter {
+            case .all: subFiltered = base
+            case .read: subFiltered = base.filter { $0.unread == 0 }
+            case .unread: subFiltered = base.filter { $0.unread > 0 }
+            }
         } else {
-            return base.filter { $0.name.localizedCaseInsensitiveContains(searchText) || $0.address.contains(searchText) }
+            subFiltered = base
+        }
+
+        if searchText.isEmpty {
+            return subFiltered
+        } else {
+            return subFiltered.filter { $0.name.localizedCaseInsensitiveContains(searchText) || $0.address.contains(searchText) }
         }
     }
 
     var body: some View {
         NavigationStack {
-            Group {
-                if filter == .private && !isUnlocked {
+            VStack {
+                if filter != .private {
+                    Picker("Filter", selection: $subFilter) {
+                        ForEach(InboxSubFilter.allCases, id: \.self) { f in
+                            Text(f.rawValue).tag(f)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal)
+                    .padding(.top, 10)
+                }
+
+                Group {
+                    if filter == .private && !isUnlocked {
                     VStack(spacing: 20) {
                         Image(systemName: "lock.circle.fill")
                             .font(.system(size: 60))
@@ -209,7 +241,7 @@ private struct ConversationView: View {
     var onDisappear: (() -> Void)? = nil
 
     @State private var draft = ""
-    @AppStorage("themeColor") private var themeColor: ThemeColor = .blue
+    @AppStorage("themeColor") private var themeColor: ThemeColor = .indigo
     @AppStorage("bubbleStyle") private var bubbleStyle: BubbleStyle = .rounded
 
     var body: some View {
@@ -266,23 +298,31 @@ private struct ConversationView: View {
 
 private struct SettingsTab: View {
     @ObservedObject var viewModel: BeaconViewModel
-    @AppStorage("themeColor") private var themeColor: ThemeColor = .blue
+    let isPro: Bool
+    @AppStorage("themeColor") private var themeColor: ThemeColor = .indigo
     @AppStorage("bubbleStyle") private var bubbleStyle: BubbleStyle = .rounded
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Appearance") {
-                    Picker("Accent Color", selection: $themeColor) {
-                        ForEach(ThemeColor.allCases, id: \.self) { color in
-                            Text(color.rawValue.capitalized).tag(color)
+                if isPro {
+                    Section("Appearance") {
+                        Picker("Accent Color", selection: $themeColor) {
+                            ForEach(ThemeColor.allCases, id: \.self) { color in
+                                Text(color.rawValue.capitalized).tag(color)
+                            }
+                        }
+                        Picker("Bubble Style", selection: $bubbleStyle) {
+                            ForEach(BubbleStyle.allCases, id: \.self) { style in
+                                Text(style.rawValue.capitalized).tag(style)
+                            }
                         }
                     }
-                    Picker("Bubble Style", selection: $bubbleStyle) {
-                        ForEach(BubbleStyle.allCases, id: \.self) { style in
-                            Text(style.rawValue.capitalized).tag(style)
-                        }
-                    }
+                } else {
+                     Section("Appearance") {
+                         Text("Upgrade to Pro to customize themes.")
+                             .foregroundStyle(.secondary)
+                     }
                 }
                 Section("Account") {
                     Button("Sign Out", role: .destructive) {
@@ -301,10 +341,11 @@ private struct SettingsTab: View {
 }
 
 enum ThemeColor: String, CaseIterable {
-    case blue, purple, orange, green, pink
+    case indigo, blue, purple, orange, green, pink
 
     var color: Color {
         switch self {
+        case .indigo: return .indigo
         case .blue: return .blue
         case .purple: return .purple
         case .orange: return .orange

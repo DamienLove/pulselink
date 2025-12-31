@@ -78,11 +78,12 @@ fun LoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     val logoRes = brandLogoRes(useProBranding)
-    val title = if (state.mode == LoginMode.SIGN_IN) {
+    val baseTitle = if (state.mode == LoginMode.SIGN_IN) {
         stringResource(R.string.login_title_sign_in)
     } else {
         stringResource(R.string.login_title_create_account)
     }
+    val title = if (useProBranding) "$baseTitle • Premium" else baseTitle
     val subtitle = if (state.mode == LoginMode.SIGN_IN) {
         stringResource(R.string.login_subtitle_sign_in)
     } else {
@@ -119,6 +120,13 @@ fun LoginScreen(
                 modifier = Modifier
                     .size(120.dp)
             )
+            if (useProBranding) {
+                Text(
+                    text = "Premium",
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp),

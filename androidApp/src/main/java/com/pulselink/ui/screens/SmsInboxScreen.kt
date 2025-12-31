@@ -5,10 +5,12 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -26,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -142,7 +145,10 @@ fun SmsInboxScreen(
     showLinePicker: Boolean = false,
     onImportAll: () -> Unit = {},
     archivedOnly: Boolean = false,
-    isDatabaseBusy: Boolean = false
+    isDatabaseBusy: Boolean = false,
+    onLoadMore: () -> Unit = {},
+    hasMoreToLoad: Boolean = true,
+    isPremium: Boolean = false
 ) {
     var filter by rememberSaveable(archivedOnly) {
         mutableStateOf(if (archivedOnly) InboxFilter.ARCHIVED else InboxFilter.ALL)
@@ -247,6 +253,14 @@ fun SmsInboxScreen(
     } else {
         TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
     }
+    val defaultTheme = ThemePreferences()
+    val themeOverridesTopColor = theme.onTopBarColor != defaultTheme.onTopBarColor
+    val premiumLogoTint = Color(0xFFF5C542)
+    val freeLogoTint = Color(0xFF1D4ED8)
+    val logoTint = when {
+        themeOverridesTopColor -> parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)
+        else -> if (isPremium) premiumLogoTint else freeLogoTint
+    }
     val topBarForeground = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)
     val collapsedFraction = scrollBehavior.state.collapsedFraction
     val beaconExpandedAlpha = (1f - collapsedFraction).coerceIn(0f, 1f)
@@ -265,7 +279,7 @@ fun SmsInboxScreen(
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_beacon_inbox),
                                 contentDescription = null,
-                                tint = topBarForeground,
+                                tint = logoTint,
                                 modifier = Modifier
                                     .size(beaconExpandedIconSize * beaconExpandedAlpha)
                                     .alpha(beaconExpandedAlpha)
@@ -281,7 +295,7 @@ fun SmsInboxScreen(
                         Icon(
                             painter = painterResource(id = R.drawable.ic_beacon_inbox),
                             contentDescription = "Beacon",
-                            tint = topBarForeground,
+                            tint = logoTint,
                             modifier = Modifier
                                 .size(beaconCollapsedIconSize)
                                 .alpha(beaconCollapsedAlpha)
@@ -560,6 +574,18 @@ fun SmsInboxScreen(
                             actionsEnabled = isLocalLine
                         )
                     }
+                    if (hasMoreToLoad && filtered.size >= 20) {
+                         item {
+                             Box(
+                                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                 contentAlignment = Alignment.Center
+                             ) {
+                                 OutlinedButton(onClick = onLoadMore) {
+                                     Text("Load more conversations")
+                                 }
+                             }
+                         }
+                    }
                 }
             }
             }
@@ -615,6 +641,11 @@ private fun ThreadRow(
         }
     )
     val actionIconSize = (20f * theme.iconSizeFactor).coerceIn(16f, 28f).dp
+    val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+    val surfaceColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor)
+    val outlineColor = parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground)
+        .copy(alpha = if (thread.unread) 0.14f else 0.08f)
+    val borderColor = if (thread.unread) primary.copy(alpha = 0.22f) else outlineColor
 
     SwipeToDismissBox(
         state = dismissState,
@@ -663,85 +694,73 @@ private fun ThreadRow(
                             }
                         }
                     ),
-                tonalElevation = 1.dp,
-                shape = RoundedCornerShape(14.dp),
-                color = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor) // Use surface or BG? Or a slightly lighter shade if BG is dark?
-                // Actually, Surface defaults to surface color. If BG is custom, we might want this to be custom too or transparent?
-                // For simplicity, let's keep it tonal or slightly varied if needed, or just follow BG + onBG.
-                // Let's make it transparent so it blends with scaffold BG, or keep elevation.
-                // If the user sets BG to Black, Tonal Elevation 1.dp will make it Dark Grey. That is good.
-                // But we need to ensure text color matches onBackground.
+                tonalElevation = if (thread.unread) 2.dp else 1.dp,
+                shape = RoundedCornerShape(18.dp),
+                color = surfaceColor,
+                border = BorderStroke(1.dp, borderColor)
             ) {
-                Box {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AvatarCircle(text = displayName, theme = theme)
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        Box(modifier = Modifier.clickable { onAvatarClick(thread) }) {
-                            AvatarCircle(
-                                text = avatarText,
-                                theme = theme,
-                                avatarUrl = contact?.avatarUrl
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = displayName.ifBlank { number ?: "Unknown" },
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = if (thread.unread) FontWeight.Bold else FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground),
+                            fontSize = MaterialTheme.typography.titleMedium.fontSize * theme.fontScale
+                            )
+                            Text(
+                                text = dateFormatter(thread.timestamp),
+                                style = MaterialTheme.typography.labelSmall,
+                            color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.timestampColor ?: theme.onBackground).copy(alpha = 0.7f)
                             )
                         }
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = resolvedName.ifBlank { number ?: "Unknown" },
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = if (thread.unread) FontWeight.Bold else FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground),
-                                fontSize = MaterialTheme.typography.titleMedium.fontSize * theme.fontScale
-                                )
-                                Text(
-                                    text = dateFormatter(thread.timestamp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.timestampColor ?: theme.onBackground).copy(alpha = 0.7f)
-                                )
-                            }
-                            if (!number.isNullOrBlank() && number != resolvedName) {
-                                Text(
-                                    text = number,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
+                        if (!number.isNullOrBlank() && number != displayName) {
                             Text(
-                                text = thread.snippet.ifBlank { "No preview available." },
-                                style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.8f),
-                            fontSize = MaterialTheme.typography.bodyMedium.fontSize * theme.fontScale
+                                text = number,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
-                            if (thread.unread) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                UnreadPill()
-                            }
-                            if (thread.isTrusted && thread.trustedUrgency != null) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                TrustedPill(thread.trustedUrgency)
-                            }
-                            if (thread.isOtp) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                OtpPill()
-                            }
-                            if (isPrivate) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                PrivatePill()
-                            }
+                        }
+                        Text(
+                            text = thread.snippet.ifBlank { "No preview available." },
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.8f),
+                        fontSize = MaterialTheme.typography.bodyMedium.fontSize * theme.fontScale
+                        )
+                        if (thread.unread) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            UnreadPill()
+                        }
+                        if (thread.isTrusted && thread.trustedUrgency != null) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            TrustedPill(thread.trustedUrgency)
+                        }
+                        if (thread.isOtp) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            OtpPill()
+                        }
+                        if (isPrivate) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            PrivatePill()
                         }
                     }
                     if (lineIndex != null && lineCount > 1 && lineColors.isNotEmpty()) {
@@ -751,7 +770,7 @@ private fun ThreadRow(
                             lineColors = lineColors,
                             theme = theme,
                             modifier = Modifier
-                                .align(Alignment.BottomEnd)
+                                .align(Alignment.Bottom)
                                 .padding(end = 10.dp, bottom = 10.dp)
                         )
                     }
@@ -818,204 +837,21 @@ private fun ThreadRowSkeleton(
 }
 
 @Composable
-private fun LineBadge(
-    index: Int,
-    color: Color,
-    theme: ThemePreferences,
-    isActive: Boolean = false,
-    size: Dp = (16f * theme.iconSizeFactor).coerceIn(12f, 20f).dp
-) {
-    val shape = RoundedCornerShape(3.dp)
-    val borderColor = if (isActive) color else color.copy(alpha = 0.45f)
-    val backgroundColor = if (isActive) color else color.copy(alpha = 0.12f)
-    Box(
-        modifier = Modifier
-            .size(size)
-            .border(width = if (isActive) 2.dp else 1.dp, color = borderColor, shape = shape)
-            .background(backgroundColor, shape),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = (index + 1).toString(),
-            color = if (isActive) Color.White else borderColor,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium
-        )
-    }
-}
-
-@Composable
-private fun MultiLineIndicator(
-    lineCount: Int,
-    activeIndex: Int?,
-    lineColors: List<Color>,
-    theme: ThemePreferences,
-    modifier: Modifier = Modifier
-) {
-    if (lineCount <= 0 || lineColors.isEmpty()) return
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        repeat(lineCount) { index ->
-            val color = lineColors[index % lineColors.size]
-            LineBadge(
-                index = index,
-                color = color,
-                theme = theme,
-                isActive = activeIndex == index,
-                size = (14f * theme.iconSizeFactor).coerceIn(12f, 18f).dp
-            )
-        }
-    }
-}
-
-@Composable
-private fun LinePickerRow(
-    lines: List<com.pulselink.domain.model.SmsLine>,
-    activeLineId: String?,
-    lineColors: List<Color>,
-    theme: ThemePreferences,
-    onSelectLine: (String) -> Unit
-) {
-    if (lines.isEmpty()) return
-    var expanded by remember { mutableStateOf(false) }
-    val selectedIndex = lines.indexOfFirst { it.id == activeLineId }.takeIf { it >= 0 } ?: 0
-    val selectedLine = lines.getOrNull(selectedIndex)
-    val badgeColor = lineColors[selectedIndex % lineColors.size]
-    val label = "Line ${selectedIndex + 1}"
-    val subtitle = selectedLine?.phoneNumber ?: ""
-    val onBackground = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
-
-    Box(modifier = Modifier.fillMaxWidth()) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = true },
-            tonalElevation = 1.dp,
-            shape = RoundedCornerShape(12.dp),
-            color = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor)
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                LineBadge(
-                    index = selectedIndex,
-                    color = badgeColor,
-                    theme = theme,
-                    isActive = true,
-                    size = (18f * theme.iconSizeFactor).coerceIn(14f, 22f).dp
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Active line",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = onBackground.copy(alpha = 0.7f)
-                    )
-                    Text(label, fontWeight = FontWeight.SemiBold, color = onBackground)
-                    if (subtitle.isNotBlank()) {
-                        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = onBackground.copy(alpha = 0.7f))
-                    }
-                }
-                if (lines.size > 1) {
-                    MultiLineIndicator(
-                        lineCount = lines.size,
-                        activeIndex = selectedIndex,
-                        lineColors = lineColors,
-                        theme = theme
-                    )
-                }
-                ThemeIcon(
-                    iconKey = ThemeIconKey.ARROW_DOWN,
-                    theme = theme,
-                    imageVector = Icons.Filled.KeyboardArrowDown,
-                    contentDescription = null,
-                    tint = onBackground
-                )
-            }
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            lines.forEachIndexed { index, line ->
-                val itemColor = lineColors[index % lineColors.size]
-                val itemLabel = "Line ${index + 1}"
-                val isActive = index == selectedIndex
-                DropdownMenuItem(
-                    text = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            LineBadge(
-                                index = index,
-                                color = itemColor,
-                                theme = theme,
-                                isActive = isActive,
-                                size = (16f * theme.iconSizeFactor).coerceIn(12f, 20f).dp
-                            )
-                            Column {
-                                Text(itemLabel)
-                                if (line.phoneNumber.isNotBlank()) {
-                                    Text(line.phoneNumber, style = MaterialTheme.typography.bodySmall)
-                                }
-                            }
-                            Spacer(modifier = Modifier.weight(1f))
-                            if (isActive) {
-                                Text(
-                                    text = "Active",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = itemColor
-                                )
-                            }
-                        }
-                    },
-                    onClick = {
-                        expanded = false
-                        onSelectLine(line.id)
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AvatarCircle(
-    text: String,
-    theme: ThemePreferences,
-    avatarUrl: String? = null
-) {
+private fun AvatarCircle(text: String, theme: ThemePreferences) {
     val initial = text.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
     Box(
         modifier = Modifier
             .size(44.dp)
             .clip(CircleShape)
-            .background(parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing)),
+            .background(parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing)), // Reuse outgoing bubble color for avatar bg? Or Primary?
         contentAlignment = Alignment.Center
     ) {
-        if (!avatarUrl.isNullOrBlank()) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(avatarUrl)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            Text(
-                text = initial,
-                style = MaterialTheme.typography.titleMedium,
-                color = parseColorOr(MaterialTheme.colorScheme.onPrimaryContainer, theme.onBubbleOutgoing),
-                fontWeight = FontWeight.Bold
-            )
-        }
+        Text(
+            text = initial.toString(),
+            style = MaterialTheme.typography.titleMedium,
+            color = parseColorOr(MaterialTheme.colorScheme.onPrimaryContainer, theme.onBubbleOutgoing),
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
@@ -1185,13 +1021,15 @@ private fun TabsRow(
     onFilterChange: (InboxFilter) -> Unit,
     theme: ThemePreferences
 ) {
+    val scrollState = rememberScrollState()
+    val unreadBadge = unreadCount.takeIf { it > 0 }?.toString()
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
             .selectableGroup()
+            .horizontalScroll(scrollState)
             .padding(horizontal = 12.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         TabText(label = "All Messages", selected = filter == InboxFilter.ALL, theme = theme) {
@@ -1200,7 +1038,7 @@ private fun TabsRow(
         TabText(label = "Read", selected = filter == InboxFilter.READ, theme = theme) {
             onFilterChange(InboxFilter.READ)
         }
-        TabText(label = "Unread${if (unreadCount > 0) " ($unreadCount)" else ""}", selected = filter == InboxFilter.UNREAD, theme = theme) {
+        TabText(label = "Unread", badge = unreadBadge, selected = filter == InboxFilter.UNREAD, theme = theme) {
             onFilterChange(InboxFilter.UNREAD)
         }
         TabText(label = "Archived", selected = filter == InboxFilter.ARCHIVED, theme = theme) {
@@ -1210,8 +1048,29 @@ private fun TabsRow(
 }
 
 @Composable
-private fun TabText(label: String, selected: Boolean, theme: ThemePreferences, onClick: () -> Unit) {
+private fun TabText(
+    label: String,
+    badge: String? = null,
+    selected: Boolean,
+    theme: ThemePreferences,
+    onClick: () -> Unit
+) {
     val selectedColor = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+    val containerColor = if (selected) {
+        selectedColor.copy(alpha = 0.16f)
+    } else {
+        parseColorOr(MaterialTheme.colorScheme.surfaceVariant, theme.backgroundColor).copy(alpha = 0.4f)
+    }
+    val borderColor = if (selected) {
+        selectedColor.copy(alpha = 0.4f)
+    } else {
+        parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.2f)
+    }
+    val contentColor = if (selected) {
+        parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground)
+    } else {
+        parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f)
+    }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.selectable(
@@ -1220,19 +1079,202 @@ private fun TabText(label: String, selected: Boolean, theme: ThemePreferences, o
             onClick = onClick
         )
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (selected) parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground) else parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.6f)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Box(
+        Row(
             modifier = Modifier
-                .height(2.dp)
-                .fillMaxWidth(0.8f)
-                .background(if (selected) selectedColor else Color.Transparent)
+                .clip(RoundedCornerShape(999.dp))
+                .background(containerColor)
+                .border(BorderStroke(1.dp, borderColor), RoundedCornerShape(999.dp))
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                color = contentColor
+            )
+            if (badge != null) {
+                Surface(
+                    color = selectedColor.copy(alpha = 0.18f),
+                    shape = RoundedCornerShape(999.dp)
+                ) {
+                    Text(
+                        text = badge,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = selectedColor,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LineBadge(
+    index: Int,
+    color: Color,
+    theme: ThemePreferences,
+    isActive: Boolean = false,
+    size: Dp = (16f * theme.iconSizeFactor).coerceIn(12f, 20f).dp
+) {
+    val shape = RoundedCornerShape(3.dp)
+    val borderColor = if (isActive) color else color.copy(alpha = 0.45f)
+    val backgroundColor = if (isActive) color else color.copy(alpha = 0.12f)
+    Box(
+        modifier = Modifier
+            .size(size)
+            .border(width = if (isActive) 2.dp else 1.dp, color = borderColor, shape = shape)
+            .background(backgroundColor, shape),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = (index + 1).toString(),
+            color = if (isActive) Color.White else borderColor,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium
         )
+    }
+}
+
+@Composable
+private fun MultiLineIndicator(
+    lineCount: Int,
+    activeIndex: Int?,
+    lineColors: List<Color>,
+    theme: ThemePreferences,
+    modifier: Modifier = Modifier
+) {
+    if (lineCount <= 0 || lineColors.isEmpty()) return
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(lineCount) { index ->
+            val color = lineColors[index % lineColors.size]
+            LineBadge(
+                index = index,
+                color = color,
+                theme = theme,
+                isActive = activeIndex == index,
+                size = (14f * theme.iconSizeFactor).coerceIn(12f, 18f).dp
+            )
+        }
+    }
+}
+
+@Composable
+private fun LinePickerRow(
+    lines: List<com.pulselink.domain.model.SmsLine>,
+    activeLineId: String?,
+    lineColors: List<Color>,
+    theme: ThemePreferences,
+    onSelectLine: (String) -> Unit
+) {
+    if (lines.isEmpty()) return
+    var expanded by remember { mutableStateOf(false) }
+    val selectedIndex = lines.indexOfFirst { it.id == activeLineId }.takeIf { it >= 0 } ?: 0
+    val selectedLine = lines.getOrNull(selectedIndex)
+    val badgeColor = lineColors[selectedIndex % lineColors.size]
+    val label = "Line ${selectedIndex + 1}"
+    val subtitle = selectedLine?.phoneNumber ?: ""
+    val onBackground = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = true },
+            tonalElevation = 1.dp,
+            shape = RoundedCornerShape(12.dp),
+            color = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                LineBadge(
+                    index = selectedIndex,
+                    color = badgeColor,
+                    theme = theme,
+                    isActive = true,
+                    size = (18f * theme.iconSizeFactor).coerceIn(14f, 22f).dp
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Active line",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = onBackground.copy(alpha = 0.7f)
+                    )
+                    Text(label, fontWeight = FontWeight.SemiBold, color = onBackground)
+                    if (subtitle.isNotBlank()) {
+                        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = onBackground.copy(alpha = 0.7f))
+                    }
+                }
+                if (lines.size > 1) {
+                    MultiLineIndicator(
+                        lineCount = lines.size,
+                        activeIndex = selectedIndex,
+                        lineColors = lineColors,
+                        theme = theme
+                    )
+                }
+                ThemeIcon(
+                    iconKey = ThemeIconKey.ARROW_DOWN,
+                    theme = theme,
+                    imageVector = Icons.Filled.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = onBackground
+                )
+            }
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            lines.forEachIndexed { index, line ->
+                val itemColor = lineColors[index % lineColors.size]
+                val itemLabel = "Line ${index + 1}"
+                val isActive = index == selectedIndex
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            LineBadge(
+                                index = index,
+                                color = itemColor,
+                                theme = theme,
+                                isActive = isActive,
+                                size = (16f * theme.iconSizeFactor).coerceIn(12f, 20f).dp
+                            )
+                            Column {
+                                Text(itemLabel)
+                                if (line.phoneNumber.isNotBlank()) {
+                                    Text(line.phoneNumber, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                            if (isActive) {
+                                Text(
+                                    text = "Active",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = itemColor
+                                )
+                            }
+                        }
+                    },
+                    onClick = {
+                        expanded = false
+                        onSelectLine(line.id)
+                    }
+                )
+            }
+        }
     }
 }
 

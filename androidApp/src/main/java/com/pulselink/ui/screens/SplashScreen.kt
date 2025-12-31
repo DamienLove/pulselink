@@ -41,13 +41,20 @@ fun SplashScreen(
                 contentDescription = "PulseLink logo"
             )
             Text(
-                text = "PulseLink",
+                text = if (useProBranding) "PulseLink Premium" else "PulseLink",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 ),
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
+            if (useProBranding) {
+                Text(
+                    text = "Premium",
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
         }
     }
 }

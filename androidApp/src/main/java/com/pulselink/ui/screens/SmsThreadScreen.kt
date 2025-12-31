@@ -1,5 +1,7 @@
 package com.pulselink.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -32,6 +34,7 @@ import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -42,6 +45,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
@@ -76,6 +80,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.widget.Toast
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.pulselink.data.sms.SmsMessageItem
@@ -119,7 +129,9 @@ fun SmsThreadScreen(
     onRequestCompose: (AiComposeAction, String?, String?) -> Unit = { _, _, _ -> },
     onClearCompose: () -> Unit = {},
     aiSummaryEnabled: Boolean = false,
-    aiComposeEnabled: Boolean = false
+    aiComposeEnabled: Boolean = false,
+    onLoadMore: () -> Unit = {},
+    hasMoreToLoad: Boolean = true
 ) {
     val effectiveTheme = contact?.themeOverride ?: globalTheme
     var showThemeMenu by remember { mutableStateOf(false) }
@@ -138,6 +150,14 @@ fun SmsThreadScreen(
             val layout = listState.layoutInfo
             val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
             lastVisible >= (layout.totalItemsCount - 2).coerceAtLeast(0)
+        }
+    }
+    val context = LocalContext.current
+    val attachmentPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            sendAttachmentViaSms(context, address, uri)
         }
     }
     var initialScrollDone by remember(address) { mutableStateOf(false) }
@@ -180,6 +200,7 @@ fun SmsThreadScreen(
                 lineOptions = lineOptions,
                 selectedLineId = selectedLineId,
                 onSelectLine = onSelectLine,
+                onPickAttachment = { attachmentPicker.launch("*/*") },
                 lineStatus = lineStatus,
                 aiEnabled = aiComposeEnabled,
                 aiState = aiComposeState,
@@ -325,19 +346,10 @@ fun SmsThreadScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 state = listState,
+                reverseLayout = true,
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (aiSummaryEnabled) {
-                    item {
-                        AiSummaryCard(
-                            state = aiSummaryState,
-                            onGenerate = onRequestSummary,
-                            onClear = onClearSummary,
-                            theme = effectiveTheme
-                        )
-                    }
-                }
                 if (messages.isEmpty() && isDatabaseBusy) {
                     items(6) { index ->
                         MessageBubbleSkeleton(
@@ -356,6 +368,28 @@ fun SmsThreadScreen(
                         )
                     }
                 }
+                if (hasMoreToLoad && messages.size >= 20) {
+                     item {
+                         Box(
+                             modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                             contentAlignment = Alignment.Center
+                         ) {
+                             OutlinedButton(onClick = onLoadMore) {
+                                 Text("Load older messages")
+                             }
+                         }
+                     }
+                }
+                if (aiSummaryEnabled) {
+                    item {
+                        AiSummaryCard(
+                            state = aiSummaryState,
+                            onGenerate = onRequestSummary,
+                            onClear = onClearSummary,
+                            theme = effectiveTheme
+                        )
+                    }
+                }
             }
         }
     }
@@ -363,7 +397,7 @@ fun SmsThreadScreen(
     LaunchedEffect(messages.size) {
         if (messages.isEmpty()) return@LaunchedEffect
         if (!initialScrollDone || isNearBottom) {
-            listState.animateScrollToItem(0)  // Scroll to index 0 (most recent message, since messages are sorted DESC by date)
+            listState.animateScrollToItem(0)
             initialScrollDone = true
         }
     }
@@ -439,6 +473,7 @@ private fun MessageInput(
     lineOptions: List<com.pulselink.domain.model.SmsLine>,
     selectedLineId: String?,
     onSelectLine: (String) -> Unit,
+    onPickAttachment: () -> Unit,
     lineStatus: Map<String, Boolean>,
     aiEnabled: Boolean,
     aiState: AiComposeState,
@@ -523,6 +558,19 @@ private fun MessageInput(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                IconButton(
+                    onClick = onPickAttachment
+                ) {
+                    ThemeIcon(
+                        iconKey = ThemeIconKey.ATTACH,
+                        theme = theme,
+                        imageVector = Icons.Filled.AttachFile,
+                        contentDescription = "Attach file",
+                        tint = primary,
+                        modifier = Modifier.size(iconSize)
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
                 OutlinedTextField(
                     value = draft,
                     onValueChange = onDraftChange,
@@ -977,4 +1025,41 @@ private fun LineStatusDot(
             .size(8.dp)
             .background(color, shape = CircleShape)
     )
+}
+
+private fun sendAttachmentViaSms(
+    context: Context,
+    address: String,
+    uri: Uri
+) {
+    val mimeType = context.contentResolver.getType(uri) ?: "*/*"
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = mimeType
+        data = Uri.parse("smsto:$address")
+        putExtra(Intent.EXTRA_STREAM, uri)
+        putExtra("address", address)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+
+    val resolved = context.packageManager.queryIntentActivities(
+        intent,
+        PackageManager.MATCH_DEFAULT_ONLY
+    )
+    resolved.forEach { resolveInfo ->
+        context.grantUriPermission(
+            resolveInfo.activityInfo.packageName,
+            uri,
+            Intent.FLAG_GRANT_READ_URI_PERMISSION
+        )
+    }
+
+    try {
+        context.startActivity(Intent.createChooser(intent, "Send attachment via SMS/MMS"))
+    } catch (e: ActivityNotFoundException) {
+        Toast.makeText(
+            context,
+            "No messaging app found to send attachments",
+            Toast.LENGTH_LONG
+        ).show()
+    }
 }

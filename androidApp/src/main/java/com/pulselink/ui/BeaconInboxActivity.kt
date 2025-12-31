@@ -76,6 +76,7 @@ import com.pulselink.ui.screens.LineLimitDialog
 import com.pulselink.ui.screens.SmsInboxScreen
 import com.pulselink.ui.screens.SmsThreadScreen
 import com.pulselink.ui.screens.VisualSettingsScreen
+import com.pulselink.ui.screens.ExtensionsStoreScreen
 import com.pulselink.ui.model.MessageRecipient
 import com.pulselink.ui.state.DeviceContactsViewModel
 import com.pulselink.ui.state.MainViewModel
@@ -338,6 +339,8 @@ class BeaconInboxActivity : ComponentActivity() {
                                             },
                                             theme = state.settings.themePreferences,
                                             onImportAll = { smsInboxViewModel.importAllMessages() },
+                                            onLoadMore = { smsInboxViewModel.loadMoreThreads() },
+                                            hasMoreToLoad = smsInboxViewModel.hasMoreThreads.collectAsStateWithLifecycle().value,
                                                 sectionTitle = when (currentRoute) {
                                                     BeaconNavRoute.Inbox -> "All messages"
                                                     BeaconNavRoute.Otp -> "2-step codes"
@@ -702,7 +705,9 @@ class BeaconInboxActivity : ComponentActivity() {
                                         },
                                         onClearCompose = { threadViewModel.clearCompose() },
                                         aiSummaryEnabled = premiumActive && state.settings.aiSummariesEnabled,
-                                        aiComposeEnabled = premiumActive && state.settings.aiComposeEnabled
+                                        aiComposeEnabled = premiumActive && state.settings.aiComposeEnabled,
+                                        onLoadMore = { threadViewModel.loadMoreMessages() },
+                                        hasMoreToLoad = threadViewModel.hasMoreMessages.collectAsStateWithLifecycle().value
                                     )
                                 }
                                 composable("beacon_settings") {
@@ -723,6 +728,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onTimeFormatChange = { viewModel.setTimeFormat(it) },
                                         onOpenVisualSettings = { navController.navigate("visual_settings") },
                                         onOpenProfileSettings = { navController.navigate("profile_settings") },
+                                        onOpenExtensionsStore = { navController.navigate("extensions_store") },
                                         messageSoundLabel = messageSoundLabel,
                                         messageVibrate = state.settings.messageNotificationVibrate,
                                         onEditMessageSound = { navController.navigate("notifications/message_sound") },
@@ -762,6 +768,20 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onToggleAiUrgencyIncludeUnknown = { enabled ->
                                             viewModel.setAiUrgencyIncludeUnknown(enabled)
                                         }
+                                    )
+                                }
+                                composable("extensions_store") {
+                                    ExtensionsStoreScreen(
+                                        settings = state.settings,
+                                        onToggleBeaconLauncher = { enabled -> viewModel.setBeaconLauncherEnabled(enabled) },
+                                        onToggleFirebaseMessaging = viewModel::setFirebaseMessagingEnabled,
+                                        onToggleEmailFallback = viewModel::setEmailFallbackEnabled,
+                                        onToggleCrashDetection = viewModel::setCrashDetectionEnabled,
+                                        onToggleOtpCleanup = viewModel::setOtpCleanupEnabled,
+                                        onToggleRemoteWebAccess = viewModel::setRemoteWebAccess,
+                                        onToggleAiSummaries = viewModel::setAiSummariesEnabled,
+                                        onToggleThirdPartyExtensions = viewModel::setThirdPartyExtensionsEnabled,
+                                        onBack = { navController.popBackStack() }
                                     )
                                 }
                                 composable(

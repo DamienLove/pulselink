@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="extensions_store_title">Features &amp; extensions</string>
+    <string name="extensions_store_header">Built-in features (included)</string>
+    <string name="extensions_store_subtitle">These ship with PulseLink. Turn them on or off to keep things lean and fast.</string>
+    <string name="extensions_store_unavailable">Temporarily unavailable</string>
+    <string name="settings_extensions_store_title">Features</string>
+    <string name="settings_extensions_store_subtitle">Built-in features and add-ons</string>
+    <string name="settings_extensions_store_action">Open</string>
+    <string name="settings_extensions_hint_header">Looking for add-ons?</string>
+    <string name="settings_extensions_hint_body">Built-in features live here. External extensions can be installed and attached soon (PulseLink, RingerSong, or 3rd party).</string>
+    <string name="extensions_store_premium_badge">Premium</string>
+    <string name="extensions_store_premium_hint">Requires Premium subscription.</string>
+
+    <!-- External extensions (downloadable add-ons) -->
+    <string name="extensions_store_external_header">Extensions you add yourself</string>
+    <string name="extensions_store_external_body">Download optional extensions and attach them to PulseLink, RingerSong, or future apps. Third-party add-ons are supported. Marketplace/attach flow is coming soon.</string>
+    <string name="extensions_store_external_action">Browse extensions (soon)</string>
+
+    <!-- Extension Items -->
+    <string name="extension_beacon_title">Beacon Inbox</string>
+    <string name="extension_beacon_desc">A focused, distraction-free SMS inbox with privacy features and custom themes.</string>
+    <string name="extension_relay_title">Cloud Relay</string>
+    <string name="extension_relay_desc">Sync messages between devices using Firebase. Faster delivery than SMS.</string>
+    <string name="extension_email_backup_title">Email Backup</string>
+    <string name="extension_email_backup_desc">Automatically send critical alerts via email when SMS fails.</string>
+    <string name="extension_web_title">Web Access</string>
+    <string name="extension_web_desc">Manage your messages and settings from a computer browser.</string>
+    <string name="extension_otp_title">Smart OTP Cleanup</string>
+    <string name="extension_otp_desc">Automatically delete one-time password messages after 24 hours.</string>
+    <string name="extension_ai_title">AI Assistant</string>
+    <string name="extension_ai_desc">Smart summaries, urgency detection, and reply suggestions.</string>
+    <string name="extension_crash_title">Crash Detection</string>
+    <string name="extension_crash_desc">Automatically alert contacts if a vehicle crash is detected.</string>
+    <string name="extension_third_party_title">3rd-party extensions</string>
+    <string name="extension_third_party_desc">Enable downloadable add-ons from trusted partners (beta). Requires Premium.</string>
+</resources>

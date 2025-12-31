@@ -306,6 +306,7 @@ private fun ConversationBody(
                 .fillMaxWidth()
                 .weight(1f),
             state = listState,
+                        reverseLayout = true,
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
