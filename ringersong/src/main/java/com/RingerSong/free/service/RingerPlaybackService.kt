@@ -320,13 +320,14 @@ class RingerPlaybackService : Service() {
 
         if (isSpotifyPlaying) {
              scope.launch {
-                runCatching {
-                    // Use existing connection if available, otherwise reconnect
-                    val remote = spotifyRemote ?: SpotifyRemoteManager.connect(this@RingerPlaybackService)
-                    remote.playerApi.pause()
-                    SpotifyRemoteManager.disconnect(remote)
-                }.onFailure {
-                    Log.e(TAG, "Failed to pause/disconnect Spotify", it)
+                // Fix: Only use existing remote, do not reconnect just to stop
+                spotifyRemote?.let { remote ->
+                    runCatching {
+                        remote.playerApi.pause()
+                        SpotifyRemoteManager.disconnect(remote)
+                    }.onFailure {
+                        Log.e(TAG, "Failed to pause/disconnect Spotify", it)
+                    }
                 }
                 // Always clear state
                 spotifyRemote = null

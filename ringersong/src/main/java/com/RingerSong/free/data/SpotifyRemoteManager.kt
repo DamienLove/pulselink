@@ -12,8 +12,7 @@ import kotlin.coroutines.suspendCoroutine
 object SpotifyRemoteManager {
     private const val TAG = "SpotifyRemoteManager"
     // Note: This Client ID should ideally come from BuildConfig or a secure source.
-    // WARNING: This looks like a Google Client ID. Replace with a valid Spotify Client ID for production.
-    private const val CLIENT_ID = "156950194350-u6lano9eotko62l37777gqe23pbmthpm.apps.googleusercontent.com"
+    private const val CLIENT_ID = "b846ea3c7e3440439c6a870be4de24ce"
     private const val REDIRECT_URI = "com.RingerSong.free://callback"
 
     suspend fun connect(context: Context): SpotifyAppRemote {
