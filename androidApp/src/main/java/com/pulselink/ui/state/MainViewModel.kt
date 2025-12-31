@@ -1501,6 +1501,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setThirdPartyExtensionsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setThirdPartyExtensionsEnabled(enabled)
+        }
+    }
+
     fun setCrashDetectionEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setCrashDetectionEnabled(enabled)

@@ -139,8 +139,6 @@ class SmsStore @Inject constructor(
     }
 
     private fun scheduleSync() {
-        if (!BuildConfig.PREMIUM_FEATURES) return
-
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()

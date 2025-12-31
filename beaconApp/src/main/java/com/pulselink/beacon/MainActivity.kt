@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import com.google.android.gms.ads.MobileAds
+import com.pulselink.beacon.data.InboxState
 import com.pulselink.beacon.ui.ads.BannerAd
 import com.pulselink.beacon.ui.InboxScreen
 import com.pulselink.beacon.ui.NewMessageScreen
@@ -198,6 +199,8 @@ private fun BeaconNav(
                         missingPermissions = missingReadPerms,
                         notificationsEnabled = notificationsEnabled,
                         notificationsSilent = notificationsSilent,
+                        filter = vm.currentFilter,
+                        onFilterChange = { vm.setFilter(it) },
                     onOpenNotificationSettings = {
                         val intent = com.pulselink.beacon.notifications.MessageNotificationManager
                             .buildNotificationSettingsIntent(context)
@@ -217,13 +220,14 @@ private fun BeaconNav(
                         navController.navigate("thread/$id/${Uri.encode(address)}")
                     },
                     onDeleteThread = { vm.deleteThread(it) },
+                    onTogglePin = { vm.togglePin(it) },
+                    onToggleArchive = { vm.toggleArchive(it) },
                     onRefresh = { vm.refreshThreads() },
                     onSearch = { vm.search(it) },
                     onClearSearch = { vm.clearSearch() },
                     onCustomize = { navController.navigate("customize?address=") },
                     onCompose = { navController.navigate("newMessage") },
                     onOpenNotifications = { navController.navigate("notifications") }
-                                        onCompose = { navController.navigate("newMessage") }
                 )
             }
             composable(
@@ -346,17 +350,22 @@ private fun BeaconNav(
 }
 
 private fun buildDefaultSmsRequestIntent(context: android.content.Context): Intent? {
-            composable("newMessage") {
-                NewMessageScreen(
-                    theme = themeState.global,
-                    onBack = { navController.popBackStack() },
-                    onStartConversation = { address ->
-                        navController.navigate("thread/0/${Uri.encode(address)}") {
-                            popUpTo("inbox")
-                        }
-                    }
-                )
-            }
+    val packageName = context.packageName
+    if (isDefaultSmsRoleHeld(context)) return null
+
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val roleManager = context.getSystemService(RoleManager::class.java)
+        if (roleManager?.isRoleAvailable(RoleManager.ROLE_SMS) == true) {
+            roleManager.createRequestRoleIntent(RoleManager.ROLE_SMS)
+        } else {
+            null
+        }
+    } else {
+        Intent(Telephony.Sms.Intents.ACTION_CHANGE_DEFAULT).apply {
+            putExtra(Telephony.Sms.Intents.EXTRA_PACKAGE_NAME, packageName)
+        }
+    }
+}
 
 private fun requestDefaultSms(context: android.content.Context) {
     val packageName = context.packageName

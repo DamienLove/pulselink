@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Schedule
@@ -110,6 +111,7 @@ fun SettingsScreen(
     onOpenHelp: () -> Unit,
     onOpenBeacon: () -> Unit,
     onEditProfile: () -> Unit,
+    onOpenThemes: () -> Unit,
     showAddLogin: Boolean,
     onAddLogin: () -> Unit,
     onSignOut: () -> Unit,
@@ -145,8 +147,7 @@ fun SettingsScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Extensions Store & Profile
-            SettingsSectionHeader("Customization")
+            // Features entry (separate screen)
             SettingsActionRow(
                 title = stringResource(R.string.settings_extensions_store_title),
                 subtitle = stringResource(R.string.settings_extensions_store_subtitle),
@@ -156,43 +157,65 @@ fun SettingsScreen(
             )
 
             // Profile
-            SettingsSectionHeader("Profile")
-            SettingsActionRow(
-                title = "My Profile",
-                subtitle = "Edit name and avatar seen by contacts",
-                actionLabel = "Edit",
-                onAction = onEditProfile,
-                leadingIcon = Icons.Filled.Person // Or AccountCircle if available
-            )
-
-            // General
-            SettingsSectionHeader("General")
-            SettingsToggleRow(
-                title = "Share location in alerts",
-                subtitle = null,
-                checked = settings.includeLocation,
-                onCheckedChange = onToggleIncludeLocation
-            )
-            if (settings.crashDetectionEnabled) {
-                SettingsToggleRow(
-                    title = "Crash Detection",
-                    subtitle = "Alert trusted contacts if a vehicle crash is detected. (Temporarily unavailable)",
-                    checked = settings.crashDetectionEnabled,
-                    enabled = false,
-                    onCheckedChange = onToggleCrashDetection
+            CollapsibleSettingsSection(
+                title = "Profile",
+                initiallyExpanded = false
+            ) {
+                SettingsActionRow(
+                    title = "My Profile",
+                    subtitle = "Edit name and avatar seen by contacts",
+                    actionLabel = "Edit",
+                    onAction = onEditProfile,
+                    leadingIcon = Icons.Filled.Person
                 )
             }
-            SettingsToggleRow(
-                title = "Auto-allow remote sound change",
-                subtitle = null,
-                checked = settings.autoAllowRemoteSoundChange,
-                onCheckedChange = onToggleAutoAllowRemoteSoundChange
-            )
+
+            // Themes / appearance
+            CollapsibleSettingsSection(
+                title = "Themes & appearance",
+                initiallyExpanded = false
+            ) {
+                SettingsActionRow(
+                    title = "Theme & visuals",
+                    subtitle = "Colors, gradients, typography, and cards",
+                    actionLabel = "Open",
+                    onAction = onOpenThemes,
+                    leadingIcon = Icons.Filled.Palette
+                )
+            }
+
+            // General
+            CollapsibleSettingsSection(
+                title = "General",
+                initiallyExpanded = false
+            ) {
+                SettingsToggleRow(
+                    title = "Share location in alerts",
+                    subtitle = null,
+                    checked = settings.includeLocation,
+                    onCheckedChange = onToggleIncludeLocation
+                )
+                if (settings.crashDetectionEnabled) {
+                    SettingsToggleRow(
+                        title = "Crash Detection",
+                        subtitle = "Alert trusted contacts if a vehicle crash is detected. (Temporarily unavailable)",
+                        checked = settings.crashDetectionEnabled,
+                        enabled = false,
+                        onCheckedChange = onToggleCrashDetection
+                    )
+                }
+                SettingsToggleRow(
+                    title = "Auto-allow remote sound change",
+                    subtitle = null,
+                    checked = settings.autoAllowRemoteSoundChange,
+                    onCheckedChange = onToggleAutoAllowRemoteSoundChange
+                )
+            }
 
             // Notifications & Tones
             CollapsibleSettingsSection(
                 title = "Notifications & Tones",
-                initiallyExpanded = true
+                initiallyExpanded = false
             ) {
                 SettingsActionRow(
                     title = "Emergency alert tone",
@@ -476,20 +499,9 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsSectionHeader(title: String) {
-    Text(
-        text = title,
-        color = MaterialTheme.colorScheme.onSurface,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(top = 8.dp)
-    )
-}
-
-@Composable
 private fun CollapsibleSettingsSection(
     title: String,
-    initiallyExpanded: Boolean = true,
+    initiallyExpanded: Boolean = false,
     content: @Composable () -> Unit
 ) {
     var expanded by remember { mutableStateOf(initiallyExpanded) }

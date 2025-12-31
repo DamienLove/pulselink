@@ -763,8 +763,11 @@ class MainActivity : AppCompatActivity() {
                             .padding(bottom = if (state.showAds) bannerHeight else 0.dp)
                     ) {
                         NavHost(navController = navController, startDestination = startDestination) {
+                    val premiumBranding = state.settings.premiumUnlocked ||
+                        BuildConfig.PREMIUM_FEATURES ||
+                        state.isProUser
                     composable("splash") {
-                        SplashScreen(useProBranding = state.isProUser)
+                        SplashScreen(useProBranding = premiumBranding)
                         LaunchedEffect(authState, state.onboardingComplete) {
                             if (authState is AuthState.Loading) return@LaunchedEffect
                             delay(1200)
@@ -814,8 +817,8 @@ class MainActivity : AppCompatActivity() {
 
                         LoginScreen(
                             state = loginUiState,
-                            onEmailChange = loginViewModel::updateEmail,        
-                            onPasswordChange = loginViewModel::updatePassword,  
+                            onEmailChange = loginViewModel::updateEmail,
+                            onPasswordChange = loginViewModel::updatePassword,
                             onConfirmPasswordChange = loginViewModel::updateConfirmPassword,
                             onSubmit = loginViewModel::submit,
                             onToggleMode = loginViewModel::toggleMode,
@@ -823,7 +826,7 @@ class MainActivity : AppCompatActivity() {
                             onSmsOnlyClick = loginViewModel::signInSmsOnly,
                             onGoogleClick = { googleLauncher.launch(googleClient.signInIntent) },
                             onMessageConsumed = loginViewModel::clearTransientMessages,
-                            useProBranding = state.isProUser
+                            useProBranding = premiumBranding
                         )
                         LaunchedEffect(authState, state.onboardingComplete) {
                             val authenticated = authState as? AuthState.Authenticated
@@ -1403,6 +1406,7 @@ class MainActivity : AppCompatActivity() {
                             onOpenHelp = { navController.navigate("settings_help") },
                             onOpenBeacon = launchBeaconInbox,
                             onEditProfile = { navController.navigate("profile_settings") },
+                            onOpenThemes = { navController.navigate("visual_settings") },
                             showAddLogin = isSmsOnlyUser,
                             onAddLogin = { navController.navigate("login") },
                             onSignOut = {
@@ -1422,6 +1426,7 @@ class MainActivity : AppCompatActivity() {
                             onToggleOtpCleanup = viewModel::setOtpCleanupEnabled,
                             onToggleRemoteWebAccess = viewModel::setRemoteWebAccess,
                             onToggleAiSummaries = viewModel::setAiSummariesEnabled,
+                            onToggleThirdPartyExtensions = viewModel::setThirdPartyExtensionsEnabled,
                             onBack = { navController.popBackStack() }
                         )
                     }
@@ -1596,6 +1601,7 @@ class MainActivity : AppCompatActivity() {
                             onImportAll = { smsInboxViewModel.importAllMessages() },
                             isDatabaseBusy = inboxBusy,
                             contactsByNumber = contactsByNumber,
+                            isPremium = isPremium,
                             banner = {
                                 if (!notificationsEnabled || notificationsSilent) {
                                     Surface(

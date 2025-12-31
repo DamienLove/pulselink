@@ -19,7 +19,10 @@ protocol ConversationProvider {
 // For simplicity in this environment, we use 'Any' or just return the Firebase object if available,
 // or a dummy closure wrapper.
 #if canImport(FirebaseFirestore)
-// ListenerRegistration is available
+// ListenerRegistration is available from FirebaseFirestore
+class MockListener: ListenerRegistration {
+    func remove() {}
+}
 #else
 protocol ListenerRegistration {
     func remove()

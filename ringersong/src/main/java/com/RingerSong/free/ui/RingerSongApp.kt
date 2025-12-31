@@ -133,7 +133,9 @@ private fun AppNavHost(
                         coroutineScope.launch { snackbarHostState.showSnackbar(message) }
                         activity?.let { AdServices.showInterstitial(it) }
                     }
-                }
+                },
+                snackbarHostState = snackbarHostState,
+                onClearDownloadError = viewModel::clearDownloadError
             )
         }
         composable(Routes.Settings) {

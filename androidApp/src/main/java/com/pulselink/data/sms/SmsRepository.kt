@@ -38,12 +38,24 @@ class SmsRepository @Inject constructor(
     private val observerFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val addressCache = LruCache<String, String>(500)
     private val canonicalAddressCache = LruCache<String, String>(1000)
+    private val threadMessagesCache = LruCache<Long, List<SmsMessageItem>>(40)
 
     private data class ThreadCacheEntry(
         val limit: Int,
         val updatedAt: Long,
         val threads: List<SmsThreadItem>,
         val archived: List<SmsThreadItem>
+    )
+
+    // Helper class to avoid re-parsing recipients
+    private data class ParsedThreadData(
+        val threadId: Long,
+        val timestamp: Long,
+        val unread: Boolean,
+        val snippet: String,
+        val displayAddress: String,
+        val primaryPhone: String,
+        val normalizedPhone: String
     )
 
     @Volatile private var threadsCache: ThreadCacheEntry? = null
@@ -240,7 +252,11 @@ class SmsRepository @Inject constructor(
                 )
                 count++
             }
-            return items.sortedByDescending { it.timestamp }
+            val sorted = items.sortedByDescending { it.timestamp }
+            if (sorted.isNotEmpty()) {
+                threadMessagesCache.put(threadId, sorted)
+            }
+            return sorted
         }
     }
 
@@ -304,6 +320,21 @@ class SmsRepository @Inject constructor(
             }
         }
         return items.distinctBy { it.id }.sortedByDescending { it.timestamp }.take(limit)
+    }
+
+    fun getCachedThreadMessages(threadId: Long): List<SmsMessageItem>? {
+        return threadMessagesCache.get(threadId)
+    }
+
+    fun prefetchThreadMessages(threadIds: List<Long>, limit: Int = 80) {
+        if (!hasReadPerms() || threadIds.isEmpty()) return
+        threadIds.asSequence()
+            .filter { it > 0 }
+            .distinct()
+            .forEach { threadId ->
+                if (threadMessagesCache.get(threadId) != null) return@forEach
+                messagesForThread(threadId, limit)
+            }
     }
 
     private fun resolveMessageStatus(type: Int, status: Int, isRead: Boolean): SmsMessageStatus? {
@@ -578,6 +609,7 @@ class SmsRepository @Inject constructor(
     private fun invalidateThreadCaches() {
         threadsCache = null
         smsOnlyCache = null
+        threadMessagesCache.evictAll()
     }
 
     private suspend fun listThreadsFromThreads(
@@ -645,27 +677,58 @@ class SmsRepository @Inject constructor(
         if (!loadCanonicalAddresses(recipientIdSet)) {
             return emptyList()
         }
-        val items = mutableListOf<SmsThreadItem>()
+
+        // BATCHING OPTIMIZATION: Collect all potential phone numbers first, storing parsed data
+        // Address "Code Duplication": Use ParsedThreadData to store parsed info
+        val parsedThreads = mutableListOf<ParsedThreadData>()
         rows.forEach { row ->
-            if (SmsCodec.isPulseLinkPayload(row.snippet)) return@forEach
-            val isArchived = archivedIds.contains(row.threadId)
-            if (onlyArchived && !isArchived) return@forEach
-            if (!includeArchived && isArchived) return@forEach
             val recipients = row.recipientIds.split(' ')
                 .mapNotNull { id ->
                     val trimmed = id.trim()
                     if (trimmed.isEmpty()) return@mapNotNull null
                     canonicalAddressCache.get(trimmed)?.takeIf { it.isNotBlank() }
                 }
-            if (recipients.isEmpty()) return@forEach
-            val displayAddress = if (recipients.isEmpty()) "" else {
-                recipients.joinToString(", ") { resolveAddress(it) }
-            }
+            if (recipients.isEmpty()) return@forEach // Address "Redundant Condition Checks": early return is fine here
+
+            val displayAddress = recipients.joinToString(", ") { resolveAddress(it) }
             val primaryRecipient = recipients.firstOrNull().orEmpty()
             val phone = if (primaryRecipient.isNotBlank()) primaryRecipient else stripSmsDisplayName(displayAddress)
             val normalized = normalizePhone(phone)
-            val contact = contactDao.getByPhone(phone)
-                ?: contactDao.getByPhone(normalized)
+
+            parsedThreads.add(ParsedThreadData(
+                threadId = row.threadId,
+                timestamp = row.timestamp,
+                unread = row.unread,
+                snippet = row.snippet,
+                displayAddress = displayAddress,
+                primaryPhone = phone,
+                normalizedPhone = normalized
+            ))
+        }
+
+        if (parsedThreads.isEmpty()) return emptyList()
+        val unreadCounts = loadUnreadCounts(parsedThreads.filter { it.unread }.map { it.threadId })
+        val allPhones = parsedThreads.map { it.primaryPhone }.distinct()
+        val normalizedPhones = parsedThreads.map { it.normalizedPhone }.distinct()
+        val allLookupKeys = (allPhones + normalizedPhones).distinct()
+
+        // Batch query contacts with chunking (Address "Room Query Performance")
+        // SQLite limits variables to 999. Room might handle this, but explicit chunking is safer.
+        val contactsList = allLookupKeys.chunked(900).flatMap { chunk ->
+            contactDao.getByPhones(chunk)
+        }
+        val contactsMap = contactsList.associateBy { it.phoneNumber }
+
+        val items = mutableListOf<SmsThreadItem>()
+        parsedThreads.forEach { row ->
+            if (SmsCodec.isPulseLinkPayload(row.snippet)) return@forEach
+            val isArchived = archivedIds.contains(row.threadId)
+            if (onlyArchived && !isArchived) return@forEach
+            if (!includeArchived && isArchived) return@forEach
+
+            // Look up in our pre-fetched map
+            val contact = contactsMap[row.primaryPhone] ?: contactsMap[row.normalizedPhone]
+
             val trustedUrgency = contact?.let {
                 when {
                     OtpHelper.isUrgentBody(row.snippet) -> MessageUrgency.URGENT
@@ -673,17 +736,20 @@ class SmsRepository @Inject constructor(
                     else -> MessageUrgency.STANDARD
                 }
             }
+            val unreadCount = unreadCounts[row.threadId] ?: 0
+            val resolvedUnreadCount = if (row.unread && unreadCount == 0) 1 else unreadCount
             items += SmsThreadItem(
                 threadId = row.threadId,
-                address = displayAddress,
+                address = row.displayAddress,
                 snippet = row.snippet,
                 timestamp = row.timestamp,
                 unread = row.unread,
+                unreadCount = resolvedUnreadCount,
                 isPrivate = contact?.isPrivate == true,
                 isFavorite = contact?.isFavorite == true,
                 isTrusted = contact != null,
                 trustedUrgency = trustedUrgency,
-                isOtp = OtpHelper.isOtpMessage(phone, row.snippet)
+                isOtp = OtpHelper.isOtpMessage(row.primaryPhone, row.snippet)
             )
         }
         return items.sortedByDescending { it.timestamp }
@@ -726,6 +792,39 @@ class SmsRepository @Inject constructor(
         }
     }
 
+    private fun loadUnreadCounts(threadIds: List<Long>): Map<Long, Int> {
+        if (!hasReadPerms()) return emptyMap()
+        val cleaned = threadIds.filter { it > 0 }.distinct()
+        if (cleaned.isEmpty()) return emptyMap()
+        val counts = mutableMapOf<Long, Int>()
+        val projection = arrayOf(Telephony.Sms.THREAD_ID)
+        cleaned.chunked(400).forEach { chunk ->
+            val selection = buildString {
+                append("${Telephony.Sms.READ}=0 AND ${Telephony.Sms.THREAD_ID} IN (")
+                append(chunk.joinToString(",") { "?" })
+                append(")")
+            }
+            val args = chunk.map { it.toString() }.toTypedArray()
+            val cursor = runCatching {
+                context.contentResolver.query(
+                    Telephony.Sms.CONTENT_URI,
+                    projection,
+                    selection,
+                    args,
+                    null
+                )
+            }.getOrNull() ?: return@forEach
+            cursor.use { c ->
+                val threadIdx = c.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID)
+                while (c.moveToNext()) {
+                    val threadId = c.getLong(threadIdx)
+                    counts[threadId] = (counts[threadId] ?: 0) + 1
+                }
+            }
+        }
+        return counts
+    }
+
     private suspend fun listThreadsFromSms(
         limit: Int,
         archivedIds: Set<Long>,
@@ -758,8 +857,11 @@ class SmsRepository @Inject constructor(
             val dateIdx = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
             val readIdx = c.getColumnIndexOrThrow(Telephony.Sms.READ)
             val seenThreads = HashSet<Long>()
-            val items = mutableListOf<SmsThreadItem>()
+
+            // Reuse ParsedThreadData for consistent batching
+            val parsedThreads = mutableListOf<ParsedThreadData>()
             var count = 0
+
             while (c.moveToNext() && count < limit) {
                 val threadId = c.getLong(threadIdx)
                 val body = c.getString(bodyIdx) ?: ""
@@ -767,42 +869,75 @@ class SmsRepository @Inject constructor(
                     continue
                 }
                 if (!seenThreads.add(threadId)) continue
+
                 val ts = c.getLong(dateIdx)
                 val unread = c.getInt(readIdx) == 0
                 val address = resolveAddress(c.getString(addrIdx))
                 val isArchived = archivedIds.contains(threadId)
 
                 if (onlyArchived && !isArchived) {
-                    // skip
+                    continue
                 } else if (!includeArchived && isArchived) {
-                    // skip
-                } else {
-                    val phone = stripSmsDisplayName(address)
-                    val normalized = normalizePhone(phone)
-                    val contact = contactDao.getByPhone(phone)
-                        ?: contactDao.getByPhone(normalized)
-                    val trustedUrgency = contact?.let {
-                        when {
-                            OtpHelper.isUrgentBody(body) -> MessageUrgency.URGENT
-                            it.escalationTier == EscalationTier.EMERGENCY -> MessageUrgency.EMERGENCY
-                            else -> MessageUrgency.STANDARD
-                        }
-                    }
-                    items += SmsThreadItem(
-                        threadId = threadId,
-                        address = address,
-                        snippet = body,
-                        timestamp = ts,
-                        unread = unread,
-                        isPrivate = contact?.isPrivate == true,
-                        isFavorite = contact?.isFavorite == true,
-                        isTrusted = contact != null,
-                        trustedUrgency = trustedUrgency,
-                        isOtp = OtpHelper.isOtpMessage(phone, body)
-                    )
+                    continue
                 }
+
+                val phone = stripSmsDisplayName(address)
+                val normalized = normalizePhone(phone)
+
+                parsedThreads.add(ParsedThreadData(
+                    threadId = threadId,
+                    timestamp = ts,
+                    unread = unread,
+                    snippet = body,
+                    displayAddress = address,
+                    primaryPhone = phone,
+                    normalizedPhone = normalized
+                ))
                 count++
             }
+
+            if (parsedThreads.isEmpty()) return emptyList()
+            val unreadCounts = loadUnreadCounts(parsedThreads.filter { it.unread }.map { it.threadId })
+
+            // Batch Contact Lookup with chunking
+            val allPhones = parsedThreads.map { it.primaryPhone }.distinct()
+            val normalizedPhones = parsedThreads.map { it.normalizedPhone }.distinct()
+            val allKeys = (allPhones + normalizedPhones).distinct()
+
+            val contactsList = allKeys.chunked(900).flatMap { chunk ->
+                contactDao.getByPhones(chunk)
+            }
+            val contactsMap = contactsList.associateBy { it.phoneNumber }
+
+            val items = mutableListOf<SmsThreadItem>()
+            parsedThreads.forEach { row ->
+                val contact = contactsMap[row.primaryPhone] ?: contactsMap[row.normalizedPhone]
+
+                 val trustedUrgency = contact?.let {
+                    when {
+                        OtpHelper.isUrgentBody(row.snippet) -> MessageUrgency.URGENT
+                        it.escalationTier == EscalationTier.EMERGENCY -> MessageUrgency.EMERGENCY
+                        else -> MessageUrgency.STANDARD
+                    }
+                }
+                val unreadCount = unreadCounts[row.threadId] ?: 0
+                val resolvedUnreadCount = if (row.unread && unreadCount == 0) 1 else unreadCount
+
+                items += SmsThreadItem(
+                    threadId = row.threadId,
+                    address = row.displayAddress,
+                    snippet = row.snippet,
+                    timestamp = row.timestamp,
+                    unread = row.unread,
+                    unreadCount = resolvedUnreadCount,
+                    isPrivate = contact?.isPrivate == true,
+                    isFavorite = contact?.isFavorite == true,
+                    isTrusted = contact != null,
+                    trustedUrgency = trustedUrgency,
+                    isOtp = OtpHelper.isOtpMessage(row.primaryPhone, row.snippet)
+                )
+            }
+
             return items
         }
     }

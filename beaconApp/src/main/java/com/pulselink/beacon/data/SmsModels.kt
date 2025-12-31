@@ -5,7 +5,9 @@ data class SmsThreadItem(
     val address: String,
     val snippet: String,
     val timestamp: Long,
-    val unread: Boolean
+    val unread: Boolean,
+    val isPinned: Boolean = false,
+    val isArchived: Boolean = false
 )
 
 data class SmsMessageItem(
@@ -23,4 +25,9 @@ data class MmsPart(
     val contentType: String,
     val text: String? = null,
     val dataUri: android.net.Uri? = null
+)
+
+data class InboxState(
+    val pinnedThreadIds: Set<Long> = emptySet(),
+    val archivedThreadIds: Set<Long> = emptySet()
 )

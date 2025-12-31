@@ -28,6 +28,7 @@ object ThemeIconKey {
     const val SEND = "icon.send"
     const val AI = "icon.ai"
     const val ARROW_DOWN = "icon.arrow_down"
+    const val ATTACH = "icon.attach"
 }
 
 @Composable

@@ -73,6 +73,7 @@ private val BEACON_HINT_DISMISSED = booleanPreferencesKey("beacon_hint_dismissed
 private val WEB_ACCESS_HINT_DISMISSED = booleanPreferencesKey("web_access_hint_dismissed")
 private val FIREBASE_MESSAGING_ENABLED = booleanPreferencesKey("firebase_messaging_enabled")
 private val EMAIL_FALLBACK_ENABLED = booleanPreferencesKey("email_fallback_enabled")
+private val THIRD_PARTY_EXTENSIONS_ENABLED = booleanPreferencesKey("third_party_extensions_enabled")
 private val MESSAGING_CHANNEL_PRIORITY = stringPreferencesKey("messaging_channel_priority")
 private val CRASH_DETECTION_ENABLED = booleanPreferencesKey("crash_detection_enabled")
 private val AI_SUMMARIES_ENABLED = booleanPreferencesKey("ai_summaries_enabled")
@@ -173,6 +174,7 @@ class SettingsRepositoryImpl @Inject constructor(
             webAccessHintDismissed = prefs[WEB_ACCESS_HINT_DISMISSED] ?: PulseLinkSettings().webAccessHintDismissed,
             firebaseMessagingEnabled = prefs[FIREBASE_MESSAGING_ENABLED] ?: PulseLinkSettings().firebaseMessagingEnabled,
             emailFallbackEnabled = prefs[EMAIL_FALLBACK_ENABLED] ?: PulseLinkSettings().emailFallbackEnabled,
+            thirdPartyExtensionsEnabled = prefs[THIRD_PARTY_EXTENSIONS_ENABLED] ?: PulseLinkSettings().thirdPartyExtensionsEnabled,
             messagingChannelPriority = decodeJsonOrNull(prefs[MESSAGING_CHANNEL_PRIORITY]) {
                 json.decodeFromString<List<MessageChannel>>(it)
             } ?: PulseLinkSettings().messagingChannelPriority,
@@ -254,6 +256,7 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[WEB_ACCESS_HINT_DISMISSED] = updated.webAccessHintDismissed
             prefs[FIREBASE_MESSAGING_ENABLED] = updated.firebaseMessagingEnabled
             prefs[EMAIL_FALLBACK_ENABLED] = updated.emailFallbackEnabled
+            prefs[THIRD_PARTY_EXTENSIONS_ENABLED] = updated.thirdPartyExtensionsEnabled
             prefs[MESSAGING_CHANNEL_PRIORITY] = encodeJson {
                 json.encodeToString(updated.messagingChannelPriority)
             }
@@ -564,6 +567,12 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setEmailFallbackEnabled(enabled: Boolean) {
         editOnIo { prefs ->
             prefs[EMAIL_FALLBACK_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setThirdPartyExtensionsEnabled(enabled: Boolean) {
+        editOnIo { prefs ->
+            prefs[THIRD_PARTY_EXTENSIONS_ENABLED] = enabled
         }
     }
 
