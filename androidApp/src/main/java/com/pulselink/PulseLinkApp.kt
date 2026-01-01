@@ -58,25 +58,23 @@ class PulseLinkApp : Application(), Configuration.Provider {
             appOpenAdController.updateAvailability(false)
         }
 
-        if (BuildConfig.PREMIUM_FEATURES) {
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
 
-            val syncRequest = PeriodicWorkRequest.Builder(
-                com.pulselink.data.sms.SmsSyncWorker::class.java,
-                15,
-                java.util.concurrent.TimeUnit.MINUTES
-            )
-                .setConstraints(constraints)
-                .build()
+        val syncRequest = PeriodicWorkRequest.Builder(
+            com.pulselink.data.sms.SmsSyncWorker::class.java,
+            15,
+            java.util.concurrent.TimeUnit.MINUTES
+        )
+            .setConstraints(constraints)
+            .build()
 
-            WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-                "SmsSync",
-                ExistingPeriodicWorkPolicy.KEEP,
-                syncRequest
-            )
-        }
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "SmsSync",
+            ExistingPeriodicWorkPolicy.KEEP,
+            syncRequest
+        )
 
         val otpCleanupRequest = PeriodicWorkRequest.Builder(
             com.pulselink.data.sms.OtpCleanupWorker::class.java,

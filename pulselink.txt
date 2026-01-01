@@ -1,6 +1,20 @@
 dewBranch: Suite-Beta (based on Beta)
 
 Recent work
+- 2025-12-31: Repaired SmsInboxViewModel merge regression (restored pagination flags, load-more messages) and added LinePicker/MultiLine indicators; fixed "Signed in as" spacing in web settings; rebuilt PulseLink v95 free/pro AABs (androidApp/build/outputs/bundle/{freeRelease,proRelease}/androidApp-*-release.aab).
+- 2025-12-31: Fixed Beacon crash on open (TabsRow double horizontalScroll causing infinite width); rebuilt PulseLink v95 bundles.
+- 2025-12-30: RingerSong download robustness — added typed DownloadError/DownloadResult, network checks, retry for Spotify, and surfaced download errors to UI via snackbar with friendly messages.
+- 2025-12-30: Web app visual fix — restored visible layout (no hidden overflow), added theme gallery chat previews & color swatches matching the mobile picker, added extensions placeholder panel; rebuilt web via `npm run build`.
+- 2025-12-30: Bumped PulseLink to v93 (free/pro); rebuilt release AABs at androidApp/build/outputs/bundle/freeRelease/androidApp-free-release.aab and .../proRelease/androidApp-pro-release.aab. RingerSong remains v20 (bundle rebuilt).
+- 2025-12-30: Added SMS attachment picker in Beacon threads (paperclip button opens file picker + SMS/MMS send intent); rebuilt PulseLink v92 (free/pro) and RingerSong v20 release bundles.
+- 2025-12-30: Version bump — PulseLink v92 (free/pro) and RingerSong v20; premium branding shows gold logos/badges on splash/login and Beacon inbox logo now blue (free) or gold (premium) unless overridden by theme.
+- 2025-12-30: Premium branding refresh: splash/login now use gold logo when premium is active; Beacon inbox logo tints blue (free) or gold (premium) while respecting theme overrides; added 3rd-party extensions toggle (premium-gated) across Android/Web settings.
+- 2025-12-30: Premium gating added to Features screen (web access, AI, crash) so non-premium users can’t enable locked items; Beacon settings now collapsible by default with dedicated Profile/Themes sections and Features entry.
+- 2025-12-30: Beacon settings cleaned: everything collapsible by default (Profile, Themes, General, Notifications, Permissions, Contacts, Beacon Feature, Support), with Features link as separate page entry and themes now routed to visual settings.
+- 2025-12-30: Renamed in-app “Extensions” UI to “Features” (built-in toggles) and added messaging for attachable third-party extensions; updated Android Feature/Extensions screen copy and callout.
+- 2025-12-30: Assigned JWT kid `musicapi-es256-2025-12-30` for MusicAPI dev tokens (ES256 pair under secrets/musicapi-dev); use this kid in JWT headers with the matching public key registered in MusicAPI.
+- 2025-12-30: Generated MusicAPI ES256 dev-token key pair; stored under secrets/musicapi-dev (ec-private.pem ignored by git); public key ready to paste into MusicAPI “Dev Token JWT Public EC Keys”.
+- 2025-12-30: Documented Codemagic webhook for automatic iOS builds; add GitHub repo webhook pointing to https://api.codemagic.io/hooks/692e97da708bf7140dc61865 to trigger the ios-simulator-kmp workflow on push/PR events.
 - 2025-12-29: Trimmed Spotify SDK sample/docs from RingerSong to shrink repo; kept only spotify-app-remote-release-0.8.0.aar and added libs/README with re-download steps. Added runtime pro-branding toggle so free users with active premium sub see Pro (gold) logo and styling in splash/login; branding follows premiumUnlocked/proUnlocked state.
 - 2025-12-29: Deployed billing functions verifySubscription/getPremiumStatus/handlePlayStoreRTDN with Play config (package com.free.pulselink, service account key pulselink-24899-3c6465ae9de2.json) set via firebase functions:config. Build succeeded after excluding test files from TS compile.
 - 2025-12-29: Bumped PulseLink versionCode/Name to 90 (free/pro/premium) and Ring-erSong versionCode/Name to 18; built new bundles: androidApp/build/outputs/bundle/freeRelease/androidApp-free-release.aab, androidApp/build/outputs/bundle/proRelease/androidApp-pro-release.aab, ringersong/build/outputs/bundle/release/ringersong-release.aab. Hosted web app redeployed via firebase deploy --only hosting (pulselink-24899.web.app).
@@ -13,7 +27,7 @@ Recent work
 - 2025-12-27: Compose Multiplatform Plugin Fix: Resolved Kotlin 2.0.0-RC2 configuration error by adding id("org.jetbrains.kotlin.plugin.compose") to shared/build.gradle.kts plugins block (line 12). This separated Compose compiler plugin is now required for Compose Multiplatform. Fix enables successful builds of :shared module and all dependents including :wearApp. Verified with ./gradlew :shared:build and :wearApp:assembleDebug both completing successfully.
 - 2025-12-26: Release v86 (free/pro/premium): Fixed 6 critical bugs (#218, #228, #236, #248, #251, #260). Message scroll now shows most recent (not oldest). Multi-line presence threshold increased 2min→5min. Added web access hint card for premium users. Emergency map sizing fixed in web app. Auth errors no longer block emergency SMS fallback. AI threshold increased 0.6→0.75 to reduce false alerts. Added 6 new Beacon theme icons. Migration 14→15 adds messageId/status to contact_messages.
 - 2025-12-26: UI/Theme Polishing: Added Glassmorphism effects (backdrop-filter: blur(12px)) and dynamic color-mixing to Web App for better readability over custom backgrounds.
-- 2025-12-26: Generated custom SVG background assets for primary themes (Aurora, Midnight OLED, Sunset Fade, Forest Trail, Neon Noir) and special tier-based themes.
+- 2025-12-26: Generated custom SVG backgrochange ttheon und assets for primary themes (Aurora, Midnight OLED, Sunset Fade, Forest Trail, Neon Noir) and special tier-based themes.
 - 2025-12-26: Cross-Platform Theme Sync: Implemented Real-time theme synchronization between Web, React Native (PulseLink), and Native Android (Beacon) using Firestore. PulseLink now features an ImageBackground layer that reacts to Firestore theme updates.
 - 2025-12-26: Reward System: Implemented "Unlocked & Reward Themes" system. Exclusive themes (Gold Standard, Obsidian Pro, Blueprint, etc.) automatically unlock based on user status (Premium, Pro, Beta Tester, or Tenure) and persist across account states.
 - 2025-12-26: Public Profile Decor: Extended user profiles to sync theme preferences and custom avatars to a public_profiles collection. Users' chosen decor is now visible to others, providing a unified and personal brand across the platform.
@@ -73,3 +87,16 @@ Current SMS features
 - 2025-12-27: Version bump to 87 and rebuilt free/pro/premium AABs (paths under androidApp/build/outputs/bundle/*Release, timestamp ~04:03). QA-ready.
 - 2025-12-27: QA request — rebuilt PulseLink v87 free/pro/premium AABs after Claude fixes; artifacts in androidApp/build/outputs/bundle/*Release/ for verification.
 - 2025-12-29: Emergency trusted-contacts recovery: MainViewModel sync now falls back to Firestore collectionGroup("trustedContacts") with ownerUid/userId/path filtering to pull legacy docs, merges and re-uploads missing entries. Contacts now write ownerUid for future migrations. Beacon nav now includes a “Contacts” tab that currently reuses the inbox view; version bumped to 89. Built freeRelease AAB at androidApp/build/outputs/bundle/freeRelease/androidApp-free-release.aab for internal testing.
+2025-12-23
+- Added Maps SDK key wiring (mapsApiKey from local.properties or env -> resValue google_maps_key) and manifest meta-data; stored local key in local.properties.
+
+2025-12-23
+- Web portal: added Emergency Map panel that parses synced SMS alert locations, loads Google Maps when VITE_GOOGLE_MAPS_API_KEY is set, and added UI filters + map list.
+2025-12-28
+- Sms inbox polish + perf: SmsInboxViewModel refresh runs on IO with parallel thread/archive loads; SmsThreadViewModel refresh moves Telephony queries + contact lookup off main.
+- Sms inbox UI: thread rows now have bordered cards with unread accent + avatar dot indicator; filter tabs restyled as pill chips with optional unread badge.
+
+2025-12-31
+- Installed Claude Code CLI globally via npm (`@anthropic-ai/claude-code` v2.0.76).
+- Beacon: warm message cache in inbox to preload recent thread history and speed conversation open.
+- Beacon: added unread message count badges on thread previews (local + synced lines).

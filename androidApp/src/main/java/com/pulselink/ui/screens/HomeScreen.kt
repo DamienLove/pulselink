@@ -147,7 +147,10 @@ fun HomeScreen(
     showWebAccessHint: Boolean = false,
     onWebAccessHintDismiss: () -> Unit = {},
     onWebAccessHintAction: () -> Unit = {},
-    onUpgradeClick: () -> Unit = {}
+    onUpgradeClick: () -> Unit = {},
+    brandName: String = "PulseLink",
+    isPremium: Boolean = false,
+    isPro: Boolean = false
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -248,7 +251,12 @@ fun HomeScreen(
                 onReorderContacts = onReorderContacts
             )
             if (state.adsAvailable) {
-                UpgradeCard(isPro = state.isProUser, onUpgradeClick = onUpgradeClick)
+                UpgradeCard(
+                    isPro = state.isProUser,
+                    isPremium = isPremium,
+                    brandName = brandName,
+                    onUpgradeClick = onUpgradeClick
+                )
             }
             if (state.showAds) {
                 NativeAdCard(enabled = true)
@@ -1431,7 +1439,12 @@ private fun LinkActionButtons(
 }
 
 @Composable
-private fun UpgradeCard(isPro: Boolean, onUpgradeClick: () -> Unit) {
+private fun UpgradeCard(
+    isPro: Boolean,
+    isPremium: Boolean,
+    brandName: String,
+    onUpgradeClick: () -> Unit
+) {
     val proShape = RoundedCornerShape(28.dp)
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -1451,27 +1464,27 @@ private fun UpgradeCard(isPro: Boolean, onUpgradeClick: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "PulseLink Pro",
+                text = brandName,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = Color.White
             )
             Text(
-                text = if (isPro) {
-                    stringResource(id = R.string.upgrade_card_active_copy)
-                } else {
-                    stringResource(id = R.string.upgrade_card_pitch)
+                text = when {
+                    isPremium -> "Subscription active"
+                    isPro -> stringResource(id = R.string.upgrade_card_active_copy)
+                    else -> stringResource(id = R.string.upgrade_card_pitch)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.8f)
             )
-            if (isPro) {
+            if (isPremium || isPro) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = Color(0xFF34D399))
                     Text(
-                        text = "Lifetime access activated",
+                        text = if (isPremium) "Premium subscription active" else "Lifetime access activated",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White
                     )

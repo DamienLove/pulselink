@@ -27,12 +27,14 @@ struct ContentView: View {
                     .tabItem {
                         Label("Home", systemImage: "shield.lefthalf.filled")
                     }
-                    .badge(isPro ? "Pro" : nil)
+                    .badge(isPro ? Text("Pro") : nil)
 
-                ContactsTab(viewModel: viewModel, selectedContact: $selectedContact)
-                    .tabItem {
-                        Label("Contacts", systemImage: "person.2.fill")
-                    }
+                if isPro {
+                    ContactsTab(viewModel: viewModel, selectedContact: $selectedContact)
+                        .tabItem {
+                            Label("Contacts", systemImage: "person.2.fill")
+                        }
+                }
 
                 SettingsTab(viewModel: viewModel)
                     .tabItem {
@@ -68,9 +70,13 @@ private struct HomeTab: View {
             ScrollView {
                 VStack(spacing: 20) {
                     emergencyCard
-                    relayCard
-                    overrideCard
-                    activityCard
+                    if isPro {
+                        relayCard
+                        overrideCard
+                        activityCard
+                    } else {
+                        proUpsellCard
+                    }
                 }
                 .padding(16)
             }
@@ -220,6 +226,21 @@ private struct HomeTab: View {
             Label("Check-in acknowledged - Morgan", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(.secondary)
             Label("Widget updated with latest status", systemImage: "rectangle.dashed.badge.record")
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var proUpsellCard: some View {
+        Card {
+            HStack {
+                Text("Upgrade to Pro")
+                    .font(.headline)
+                Spacer()
+                Image(systemName: "star.fill")
+                    .foregroundStyle(RelayColors.accent)
+            }
+            Text("Unlock SMS Relay, Contacts, and DND Overrides.")
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
     }
@@ -508,9 +529,9 @@ private struct CancelEmergencySheet: View {
 // MARK: - Theme
 
 enum RelayColors {
-    static let primary = Color(red: 0.96, green: 0.80, blue: 0.43)   // gold light
-    static let accent  = Color(red: 0.75, green: 0.53, blue: 0.12)   // gold deep
-    static let deep    = Color(red: 0.07, green: 0.09, blue: 0.14)   // near-black
+    static let primary = Color(red: 0.39, green: 0.40, blue: 0.95)   // Indigo (#6366f1)
+    static let accent  = Color(red: 0.75, green: 0.53, blue: 0.12)   // Gold deep
+    static let deep    = Color(red: 0.01, green: 0.02, blue: 0.03)   // Deep Dark (#030407)
 }
 
 #Preview {

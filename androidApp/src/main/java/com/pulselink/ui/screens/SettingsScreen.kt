@@ -29,11 +29,13 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.outlined.WifiTethering
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Card
@@ -109,9 +111,11 @@ fun SettingsScreen(
     onOpenHelp: () -> Unit,
     onOpenBeacon: () -> Unit,
     onEditProfile: () -> Unit,
+    onOpenThemes: () -> Unit,
     showAddLogin: Boolean,
     onAddLogin: () -> Unit,
     onSignOut: () -> Unit,
+    onOpenExtensionsStore: () -> Unit,
     onBack: () -> Unit
 ) {
     Scaffold(
@@ -143,42 +147,75 @@ fun SettingsScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Profile
-            SettingsSectionHeader("Profile")
+            // Features entry (separate screen)
             SettingsActionRow(
-                title = "My Profile",
-                subtitle = "Edit name and avatar seen by contacts",
-                actionLabel = "Edit",
-                onAction = onEditProfile,
-                leadingIcon = Icons.Filled.Person // Or AccountCircle if available
+                title = stringResource(R.string.settings_extensions_store_title),
+                subtitle = stringResource(R.string.settings_extensions_store_subtitle),
+                actionLabel = stringResource(R.string.settings_extensions_store_action),
+                onAction = onOpenExtensionsStore,
+                leadingIcon = Icons.Filled.AddCircle
             )
 
+            // Profile
+            CollapsibleSettingsSection(
+                title = "Profile",
+                initiallyExpanded = false
+            ) {
+                SettingsActionRow(
+                    title = "My Profile",
+                    subtitle = "Edit name and avatar seen by contacts",
+                    actionLabel = "Edit",
+                    onAction = onEditProfile,
+                    leadingIcon = Icons.Filled.Person
+                )
+            }
+
+            // Themes / appearance
+            CollapsibleSettingsSection(
+                title = "Themes & appearance",
+                initiallyExpanded = false
+            ) {
+                SettingsActionRow(
+                    title = "Theme & visuals",
+                    subtitle = "Colors, gradients, typography, and cards",
+                    actionLabel = "Open",
+                    onAction = onOpenThemes,
+                    leadingIcon = Icons.Filled.Palette
+                )
+            }
+
             // General
-            SettingsSectionHeader("General")
-            SettingsToggleRow(
-                title = "Share location in alerts",
-                subtitle = null,
-                checked = settings.includeLocation,
-                onCheckedChange = onToggleIncludeLocation
-            )
-            SettingsToggleRow(
-                title = "Crash Detection",
-                subtitle = "Alert trusted contacts if a vehicle crash is detected. (Temporarily unavailable)",
-                checked = settings.crashDetectionEnabled,
-                enabled = false,
-                onCheckedChange = onToggleCrashDetection
-            )
-            SettingsToggleRow(
-                title = "Auto-allow remote sound change",
-                subtitle = null,
-                checked = settings.autoAllowRemoteSoundChange,
-                onCheckedChange = onToggleAutoAllowRemoteSoundChange
-            )
+            CollapsibleSettingsSection(
+                title = "General",
+                initiallyExpanded = false
+            ) {
+                SettingsToggleRow(
+                    title = "Share location in alerts",
+                    subtitle = null,
+                    checked = settings.includeLocation,
+                    onCheckedChange = onToggleIncludeLocation
+                )
+                if (settings.crashDetectionEnabled) {
+                    SettingsToggleRow(
+                        title = "Crash Detection",
+                        subtitle = "Alert trusted contacts if a vehicle crash is detected. (Temporarily unavailable)",
+                        checked = settings.crashDetectionEnabled,
+                        enabled = false,
+                        onCheckedChange = onToggleCrashDetection
+                    )
+                }
+                SettingsToggleRow(
+                    title = "Auto-allow remote sound change",
+                    subtitle = null,
+                    checked = settings.autoAllowRemoteSoundChange,
+                    onCheckedChange = onToggleAutoAllowRemoteSoundChange
+                )
+            }
 
             // Notifications & Tones
             CollapsibleSettingsSection(
                 title = "Notifications & Tones",
-                initiallyExpanded = true
+                initiallyExpanded = false
             ) {
                 SettingsActionRow(
                     title = "Emergency alert tone",
@@ -244,18 +281,22 @@ fun SettingsScreen(
                     onAction = onRequestDndAccess,
                     leadingIcon = Icons.Filled.NotificationsActive
                 )
-                SettingsToggleRow(
-                    title = "Firebase Messaging (Faster)",
-                    subtitle = "Uses internet for instant delivery. Requires both devices to be online.",
-                    checked = settings.firebaseMessagingEnabled,
-                    onCheckedChange = onToggleFirebaseMessaging
-                )
-                SettingsToggleRow(
-                    title = "Email Fallback",
-                    subtitle = "Send email if other channels fail.",
-                    checked = settings.emailFallbackEnabled,
-                    onCheckedChange = onToggleEmailFallback
-                )
+                if (settings.firebaseMessagingEnabled) {
+                    SettingsToggleRow(
+                        title = "Firebase Messaging (Faster)",
+                        subtitle = "Uses internet for instant delivery. Requires both devices to be online.",
+                        checked = settings.firebaseMessagingEnabled,
+                        onCheckedChange = onToggleFirebaseMessaging
+                    )
+                }
+                if (settings.emailFallbackEnabled) {
+                    SettingsToggleRow(
+                        title = "Email Fallback",
+                        subtitle = "Send email if other channels fail.",
+                        checked = settings.emailFallbackEnabled,
+                        onCheckedChange = onToggleEmailFallback
+                    )
+                }
             }
 
             // Permissions & System
@@ -344,10 +385,11 @@ fun SettingsScreen(
             }
 
             // Beacon Feature
-            CollapsibleSettingsSection(
-                title = "Beacon Feature",
-                initiallyExpanded = false
-            ) {
+            if (settings.beaconLauncherEnabled) {
+                CollapsibleSettingsSection(
+                    title = "Beacon Feature",
+                    initiallyExpanded = false
+                ) {
                 val smsStatusIcon = if (isDefaultSmsApp) Icons.Filled.CheckCircle else Icons.Filled.Error
                 val smsStatusColor = if (isDefaultSmsApp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                 SettingsActionRow(
@@ -381,12 +423,36 @@ fun SettingsScreen(
                     leadingIcon = Icons.Outlined.WifiTethering
                 )
             }
+            } // End Beacon Feature visibility check
 
             // Support & Account
             CollapsibleSettingsSection(
                 title = "Support & Account",
                 initiallyExpanded = false
             ) {
+                // Hint for hidden extensions
+                if (!settings.beaconLauncherEnabled || !settings.firebaseMessagingEnabled || !settings.emailFallbackEnabled) {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                        ),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = stringResource(R.string.settings_extensions_hint_header),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = stringResource(R.string.settings_extensions_hint_body),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                }
                 AssistantCommandsCard(
                     proEnabled = !BuildConfig.ADS_ENABLED || settings.proUnlocked,
                     onOpenHelp = onOpenHelp
@@ -433,20 +499,9 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsSectionHeader(title: String) {
-    Text(
-        text = title,
-        color = MaterialTheme.colorScheme.onSurface,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(top = 8.dp)
-    )
-}
-
-@Composable
 private fun CollapsibleSettingsSection(
     title: String,
-    initiallyExpanded: Boolean = true,
+    initiallyExpanded: Boolean = false,
     content: @Composable () -> Unit
 ) {
     var expanded by remember { mutableStateOf(initiallyExpanded) }

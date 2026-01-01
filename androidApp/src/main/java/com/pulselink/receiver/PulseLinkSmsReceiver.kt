@@ -89,6 +89,28 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
                         if (otpCode != null) {
                             OtpNotifier.notify(context, origin, otpCode)
                         }
+
+                        val pinMatch = PIN_REGEX.find(body)
+                        if (pinMatch != null) {
+                            val pin = pinMatch.groupValues[1]
+                            val normalized = PhoneNumberUtils.normalizeNumber(origin)
+                            val contact = contactRepository.getByPhone(origin)
+                                ?: contactRepository.getByPhone(normalized)
+
+                            if (contact != null && contact.remotePin == pin) {
+                                val tier = EscalationTier.EMERGENCY
+                                remoteActionHandler.playAttentionTone(
+                                    contact = contact,
+                                    tier = tier,
+                                    title = "Emergency override by PIN",
+                                    body = body,
+                                    notificationId = (contact.id.hashCode() and 0xFFFF) + 9000,
+                                    forceBypass = true,
+                                    volumeHint = VolumeHint.MAX
+                                )
+                            }
+                        }
+
                         handleTrustedSms(origin, body, settings)
                         val threadId = runCatching {
                             Telephony.Threads.getOrCreateThreadId(context, origin)
@@ -208,5 +230,6 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
         private const val TAG = "PulseLinkSmsReceiver"
         private const val AI_CLASSIFY_TIMEOUT_MS = 4_000L
         private const val AI_CONFIDENCE_THRESHOLD = 0.75f  // Increased from 0.6 to reduce false positives
+        private val PIN_REGEX = Regex("pulselink\\s+(\\d+)\\s+emergency", RegexOption.IGNORE_CASE)
     }
 }

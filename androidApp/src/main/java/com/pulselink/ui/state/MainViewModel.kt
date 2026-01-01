@@ -567,6 +567,15 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch { linkManager.updateRemoteOverridePermission(contactId, allow) }
     }
 
+    fun setRemotePin(contactId: Long, pin: String?) {
+        viewModelScope.launch {
+            val contact = contactRepository.getContact(contactId)
+            if (contact != null) {
+                contactRepository.upsert(contact.copy(remotePin = pin))
+            }
+        }
+    }
+
     suspend fun sendManualMessage(
         contactId: Long,
         message: String,
@@ -1498,6 +1507,12 @@ class MainViewModel @Inject constructor(
     fun setEmailFallbackEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setEmailFallbackEnabled(enabled)
+        }
+    }
+
+    fun setThirdPartyExtensionsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setThirdPartyExtensionsEnabled(enabled)
         }
     }
 

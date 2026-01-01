@@ -53,6 +53,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -120,7 +121,9 @@ fun HomeScreen(
     onYouTubeQueryChange: (String) -> Unit,
     onYouTubeSearch: () -> Unit,
     onClearYouTubeSearch: () -> Unit,
-    onAddYouTubeTrack: (SpotifyTrack) -> Unit
+    onAddYouTubeTrack: (SpotifyTrack) -> Unit,
+    snackbarHostState: SnackbarHostState,
+    onClearDownloadError: () -> Unit
 ) {
     val context = LocalContext.current
     val showContent = remember { mutableStateOf(false) }
@@ -162,6 +165,13 @@ fun HomeScreen(
             onSetUrgencyTone(contact.id, uri)
         }
         activeContactForUrgency = null
+    }
+
+    LaunchedEffect(state.downloadError) {
+        state.downloadError?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            onClearDownloadError()
+        }
     }
 
     Box(
@@ -295,6 +305,9 @@ fun HomeScreen(
                 },
                 onClearUrgencyTone = {
                     onClearUrgencyTone(activeContact!!.id)
+                },
+                onSetUrgencyTone = { contactId, uri ->
+                    onSetUrgencyTone(contactId, uri)
                 }
             )
         }
@@ -1051,8 +1064,12 @@ private fun ContactSettingsDialog(
     onAssignSong: (String?) -> Unit,
     onUrgencyThresholdChange: (Int) -> Unit,
     onPickUrgencyTone: () -> Unit,
-    onClearUrgencyTone: () -> Unit
+    onClearUrgencyTone: () -> Unit,
+    onSetUrgencyTone: (String, Uri) -> Unit
 ) {
+    var showUrgencySongPicker by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Contact settings") },
@@ -1104,15 +1121,22 @@ private fun ContactSettingsDialog(
                     value = contact.urgencyThreshold.toFloat(),
                     valueRange = 0f..10f,
                     steps = 9,
-                    onValueChange = { onUrgencyThresholdChange(it.toInt()) }
+                    enabled = true,
+                    onValueChange = { onUrgencyThresholdChange(it.toInt()) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
                 )
                 Text(
                     text = contact.urgencyToneTitle ?: "No urgency tone selected",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Button(onClick = onPickUrgencyTone, modifier = Modifier.fillMaxWidth()) {
-                    Text("Pick urgency tone")
+                Button(onClick = { showUrgencySongPicker = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Select from my songs")
+                }
+                OutlinedButton(onClick = onPickUrgencyTone, modifier = Modifier.fillMaxWidth()) {
+                    Text("Pick from device files")
                 }
                 if (contact.urgencyToneUri != null) {
                     OutlinedButton(onClick = onClearUrgencyTone, modifier = Modifier.fillMaxWidth()) {
@@ -1128,6 +1152,49 @@ private fun ContactSettingsDialog(
             }
         }
     )
+
+    if (showUrgencySongPicker) {
+        AlertDialog(
+            onDismissRequest = { showUrgencySongPicker = false },
+            title = { Text("Select urgency tone") },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 400.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (songs.isEmpty()) {
+                        Text(
+                            text = "No songs in your list yet. Add songs first.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        songs.forEach { song ->
+                            Button(
+                                onClick = {
+                                    song.uri?.let { uri ->
+                                        onSetUrgencyTone(contact.id, Uri.parse(uri))
+                                    }
+                                    showUrgencySongPicker = false
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(song.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showUrgencySongPicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 @Composable

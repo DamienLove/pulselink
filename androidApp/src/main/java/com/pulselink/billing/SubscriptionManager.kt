@@ -208,6 +208,7 @@ class SubscriptionManager @Inject constructor(
             purchase.products.contains(BuildConfig.SUBS_MONTHLY_PRODUCT_ID) &&
                 purchase.purchaseState == Purchase.PurchaseState.PURCHASED
         }
+        val wasActive = _state.value.isPremiumActive
         _state.value = _state.value.copy(isPremiumActive = active, loading = false)
         scope.launch {
             val currentSettings = settingsRepository.settings.first()
@@ -219,6 +220,11 @@ class SubscriptionManager @Inject constructor(
                 settingsRepository.setTierBeforePremium(tierBefore)
             }
             settingsRepository.setPremiumUnlocked(active)
+
+            // Auto-enable remote web access when premium becomes active
+            if (active && !wasActive) {
+                settingsRepository.setRemoteWebAccessEnabled(true)
+            }
             purchases.firstOrNull { it.products.contains(BuildConfig.SUBS_MONTHLY_PRODUCT_ID) }
                 ?.let {
                     settingsRepository.setPremiumPurchaseToken(it.purchaseToken)
@@ -261,8 +267,14 @@ class SubscriptionManager @Inject constructor(
         }.onSuccess { result ->
             val data = result.data as? Map<*, *> ?: emptyMap<String, Any>()
             val active = (data["hasClaim"] as? Boolean) == true
+            val wasActive = _state.value.isPremiumActive
             _state.value = _state.value.copy(isPremiumActive = active)
             settingsRepository.setPremiumUnlocked(active)
+
+            // Auto-enable remote web access when premium becomes active
+            if (active && !wasActive) {
+                settingsRepository.setRemoteWebAccessEnabled(true)
+            }
             if (!active) {
                 settingsRepository.setPremiumPurchaseToken(null)
             }

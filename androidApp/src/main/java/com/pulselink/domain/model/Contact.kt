@@ -36,7 +36,8 @@ data class Contact(
     val lastSuccessfulChannel: MessageChannel? = null,
     val themeOverride: ThemePreferences? = null,
     val avatarUrl: String? = null,
-    val remoteDisplayName: String? = null
+    val remoteDisplayName: String? = null,
+    val remotePin: String? = null
 )
 
 @Serializable

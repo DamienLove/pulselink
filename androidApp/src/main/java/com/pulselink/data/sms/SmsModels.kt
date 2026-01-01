@@ -6,6 +6,7 @@ data class SmsThreadItem(
     val snippet: String,
     val timestamp: Long,
     val unread: Boolean,
+    val unreadCount: Int = 0,
     val isPrivate: Boolean = false,
     val isFavorite: Boolean = false,
     val isTrusted: Boolean = false,

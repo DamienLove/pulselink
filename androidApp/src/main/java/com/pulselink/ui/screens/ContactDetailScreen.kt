@@ -26,9 +26,14 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Mail
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Send
 import android.widget.Toast
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -86,6 +91,7 @@ fun ContactDetailScreen(
     onToggleRemoteSound: (Boolean) -> Unit,
     onSendLink: () -> Unit,
     onApproveLink: () -> Unit,
+    onSetRemotePin: (String?) -> Unit,
     onPing: suspend () -> Boolean,
     onDelete: () -> Unit
 ) {
@@ -160,6 +166,7 @@ fun ContactDetailScreen(
                     contact = contact,
                     onSendLink = onSendLink,
                     onApproveLink = onApproveLink,
+                    onSetRemotePin = onSetRemotePin,
                     onToggleRemoteSound = onToggleRemoteSound,
                     onPing = launchPing
                 )
@@ -233,10 +240,14 @@ private fun LinkStatusSection(
     contact: Contact,
     onSendLink: () -> Unit,
     onApproveLink: () -> Unit,
+    onSetRemotePin: (String?) -> Unit,
     onToggleRemoteSound: (Boolean) -> Unit,
     onPing: () -> Unit
 ) {
     val canSendLink = contact.phoneNumber.isNotBlank() || contact.email?.isNotBlank() == true
+    val context = LocalContext.current
+    var showPinDialog by remember { mutableStateOf(false) }
+
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(text = "Link status", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
@@ -247,6 +258,63 @@ private fun LinkStatusSection(
                         Icon(Icons.Filled.Link, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Send link request")
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
+                    Text(text = "Or set up SMS override:", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                    Text(text = "If they don't have the app, set a PIN so they can text 'pulselink <PIN> emergency' to trigger an alert.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                    val hasPin = !contact.remotePin.isNullOrBlank()
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(onClick = { showPinDialog = true }, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.Filled.Lock, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(if (hasPin) "Change PIN" else "Set PIN")
+                        }
+                        if (hasPin) {
+                            OutlinedButton(
+                                onClick = {
+                                    val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
+                                        data = Uri.parse("mailto:")
+                                        putExtra(Intent.EXTRA_EMAIL, arrayOf(contact.email ?: ""))
+                                        putExtra(Intent.EXTRA_SUBJECT, "Override Instructions")
+                                        putExtra(
+                                            Intent.EXTRA_TEXT,
+                                            "You have been set as a trusted contact. Even without the PulseLink app, you can trigger an emergency alert on my phone by texting exactly:\n\n'pulselink ${contact.remotePin} emergency'\n\nto my number."
+                                        )
+                                    }
+                                    try {
+                                        context.startActivity(emailIntent)
+                                        Toast.makeText(context, "Opening email client...", Toast.LENGTH_SHORT).show()
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "No email client found", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Filled.Mail, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Send Info")
+                            }
+                        }
+                    }
+                    if (hasPin) {
+                        Text(text = "Active PIN: ${contact.remotePin}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_SUBJECT, "Download PulseLink")
+                                putExtra(Intent.EXTRA_TEXT, "Download PulseLink for Android: https://play.google.com/store/apps/details?id=com.pulselink\n\niOS Coming Soon!")
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "Share PulseLink"))
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Filled.Share, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Share Download Link")
                     }
                 }
                 LinkStatus.OUTBOUND_PENDING -> {
@@ -301,6 +369,60 @@ private fun LinkStatusSection(
             }
         }
     }
+
+    if (showPinDialog) {
+        SetPinDialog(
+            currentPin = contact.remotePin,
+            onDismiss = { showPinDialog = false },
+            onSave = { newPin ->
+                onSetRemotePin(newPin)
+                showPinDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun SetPinDialog(
+    currentPin: String?,
+    onDismiss: () -> Unit,
+    onSave: (String?) -> Unit
+) {
+    var pin by remember { mutableStateOf(currentPin ?: "") }
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = "Set Emergency PIN") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Enter a code (e.g. 0000). The contact can text 'pulselink <code> emergency' to force an alert.")
+                OutlinedTextField(
+                    value = pin,
+                    onValueChange = { if (it.length <= 8) pin = it.filter { char -> char.isDigit() } },
+                    label = { Text("PIN") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onSave(pin.takeIf { it.isNotBlank() }) }
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+            if (currentPin != null) {
+                TextButton(onClick = { onSave(null) }) { Text("Clear PIN") }
+            }
+        }
+    )
 }
 
 @Composable
