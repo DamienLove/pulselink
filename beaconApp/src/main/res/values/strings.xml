@@ -10,29 +10,4 @@
     <string name="inbox_empty">No messages yet</string>
     <string name="action_delete">Delete</string>
     <string name="hint_write_message">Write your message</string>
-
-    <!-- ThreadScreen -->
-    <string name="content_desc_back">Back</string>
-    <string name="content_desc_call">Call</string>
-    <string name="content_desc_customize_theme">Customize theme</string>
-    <string name="content_desc_notification_sound">Notification sound</string>
-    <string name="content_desc_delete_thread">Delete thread</string>
-    <string name="content_desc_attach_file">Attach file</string>
-    <string name="content_desc_send">Send</string>
-    <string name="content_desc_mms_image">MMS image</string>
-    <string name="toast_no_dialer">No dialer app found</string>
-    <string name="toast_unable_to_call">Unable to make call</string>
-    <string name="toast_no_messaging_app">No messaging app found to send attachments</string>
-    <string name="chooser_send_attachment">Send attachment via SMS/MMS</string>
-    <string name="date_header_today">Today</string>
-    <string name="date_header_yesterday">Yesterday</string>
-
-    <!-- Smart Replies -->
-    <string name="smart_reply_yes">Yes</string>
-    <string name="smart_reply_no">No</string>
-    <string name="smart_reply_ok">OK</string>
-    <string name="smart_reply_thanks">Thanks</string>
-    <string name="smart_reply_cant_talk">Can\'t talk now</string>
-    <string name="smart_reply_call_later">Call me later</string>
-    <string name="smart_reply_on_way">On my way!</string>
 </resources>
