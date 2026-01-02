@@ -274,6 +274,59 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => (
 });
 MapAlertItem.displayName = 'MapAlertItem';
 
+// Bolt: Optimized ThemeGalleryItem to prevent re-renders when list doesn't change
+const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
+  const previewTheme = normalizeTheme(themeDoc.theme || {});
+  const previewStyle = buildThemePreviewStyle(previewTheme);
+  const authorLabel = themeDoc.anonymous
+    ? 'Anonymous'
+    : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
+
+  return (
+    <div className="theme-card">
+      <div className="theme-preview" style={previewStyle}>
+        <div className="theme-preview-chat">
+          <div
+            className="theme-bubble incoming"
+            style={{
+              background: previewTheme.bubbleIncoming,
+              color: previewTheme.onBubbleIncoming
+            }}
+          >
+            Hey, you good?
+          </div>
+          <div
+            className="theme-bubble outgoing"
+            style={{
+              background: previewTheme.bubbleOutgoing,
+              color: previewTheme.onBubbleOutgoing
+            }}
+          >
+            Yep, on my way!
+          </div>
+        </div>
+      </div>
+      <div className="theme-meta">
+        <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
+        <div className="theme-author">{authorLabel}</div>
+      </div>
+      <button
+        className="primary-btn"
+        type="button"
+        onClick={() => onImport(themeDoc)}
+        aria-label={`Import theme ${themeDoc.name || 'Untitled'}`}
+      >
+        Import
+      </button>
+    </div>
+  );
+}, (prev, next) => {
+  // Shallow comparison of themeDoc is sufficient as Firestore updates return new objects
+  // but stable references for unchanged documents in the list
+  return prev.themeDoc === next.themeDoc && prev.onImport === next.onImport;
+});
+ThemeGalleryItem.displayName = 'ThemeGalleryItem';
+
 const defaultTheme = {
   primaryColor: "#6750A4",
   secondaryColor: "#625B71",
@@ -1868,7 +1921,7 @@ function App() {
     setConfirmDeleteId(null);
   }, []);
 
-  const handleApplyPreset = async (presetTheme) => {
+  const handleApplyPreset = useCallback(async (presetTheme) => {
     if (!user) return;
     const normalized = normalizeTheme(presetTheme);
     setThemeStatus("Updating theme...");
@@ -1891,13 +1944,13 @@ function App() {
       console.error("Theme update failed", error);
       setThemeStatus(error?.message ?? "Theme update failed.");
     }
-  };
+  }, [user]);
 
-  const handleImportPublicTheme = async (themeDoc) => {
+  const handleImportPublicTheme = useCallback(async (themeDoc) => {
     if (!themeDoc?.theme) return;
     await handleApplyPreset(themeDoc.theme);
     setThemeGalleryStatus(`Imported "${themeDoc.name}".`);
-  };
+  }, [handleApplyPreset]);
 
   const handlePublishTheme = async () => {
     if (!user) return;
@@ -2899,51 +2952,13 @@ function App() {
                     </button>
                   </div>
                   <div className="theme-gallery-grid">
-                    {filteredThemes.map((themeDoc) => {
-                      const previewTheme = normalizeTheme(themeDoc.theme || {});
-                      const previewStyle = buildThemePreviewStyle(previewTheme);
-                      const authorLabel = themeDoc.anonymous
-                        ? 'Anonymous'
-                        : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
-                      return (
-                        <div key={themeDoc.id} className="theme-card">
-                          <div className="theme-preview" style={previewStyle}>
-                            <div className="theme-preview-chat">
-                              <div
-                                className="theme-bubble incoming"
-                                style={{
-                                  background: previewTheme.bubbleIncoming,
-                                  color: previewTheme.onBubbleIncoming
-                                }}
-                              >
-                                Hey, you good?
-                              </div>
-                              <div
-                                className="theme-bubble outgoing"
-                                style={{
-                                  background: previewTheme.bubbleOutgoing,
-                                  color: previewTheme.onBubbleOutgoing
-                                }}
-                              >
-                                Yep, on my way!
-                              </div>
-                            </div>
-                          </div>
-                          <div className="theme-meta">
-                            <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
-                            <div className="theme-author">{authorLabel}</div>
-                          </div>
-                          <button
-                            className="primary-btn"
-                            type="button"
-                            onClick={() => handleImportPublicTheme(themeDoc)}
-                            aria-label={`Import theme ${themeDoc.name || 'Untitled'}`}
-                          >
-                            Import
-                          </button>
-                        </div>
-                      );
-                    })}
+                    {filteredThemes.map((themeDoc) => (
+                      <ThemeGalleryItem
+                        key={themeDoc.id}
+                        themeDoc={themeDoc}
+                        onImport={handleImportPublicTheme}
+                      />
+                    ))}
                     {filteredThemes.length === 0 && (
                       <div className="theme-empty">No themes yet. Be the first to publish!</div>
                     )}
