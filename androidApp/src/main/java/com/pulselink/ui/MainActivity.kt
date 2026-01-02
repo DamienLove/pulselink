@@ -1586,6 +1586,8 @@ class MainActivity : AppCompatActivity() {
                             onToggleAiSummaries = viewModel::setAiSummariesEnabled,
                             onToggleMergedExperience = viewModel::setMergedExperienceEnabled,
                             onToggleThirdPartyExtensions = viewModel::setThirdPartyExtensionsEnabled,
+                            onApplyEssentials = viewModel::applyEssentialsPreset,
+                            onApplyPowerUser = viewModel::applyPowerUserPreset,
                             onBack = { navController.popBackStack() }
                         )
                     }

@@ -12,6 +12,13 @@
     <string name="extensions_store_premium_badge">Premium</string>
     <string name="extensions_store_premium_hint">Requires Premium subscription.</string>
 
+    <!-- Quick Setup -->
+    <string name="extensions_quick_setup_title">Quick Setup</string>
+    <string name="extensions_quick_setup_essentials">Just the Basics</string>
+    <string name="extensions_quick_setup_essentials_desc">Essential safety features only. Keeps it simple.</string>
+    <string name="extensions_quick_setup_power">Enable Everything</string>
+    <string name="extensions_quick_setup_power_desc">Turn on all available extensions.</string>
+
     <!-- External extensions (downloadable add-ons) -->
     <string name="extensions_store_external_header">Extensions you add yourself</string>
     <string name="extensions_store_external_body">Download optional extensions and attach them to PulseLink, RingerSong, or future apps. Third-party add-ons are supported. Marketplace/attach flow is coming soon.</string>

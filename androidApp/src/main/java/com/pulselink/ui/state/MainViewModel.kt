@@ -1572,6 +1572,40 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun applyEssentialsPreset() {
+        viewModelScope.launch {
+            settingsRepository.setBeaconLauncherEnabled(false)
+            settingsRepository.setOtpCleanupEnabled(false)
+            settingsRepository.setAiSummariesEnabled(false)
+            settingsRepository.setMergedExperienceEnabled(false)
+            settingsRepository.setRemoteWebAccessEnabled(false)
+            settingsRepository.setThirdPartyExtensionsEnabled(false)
+            // Note: We don't disable FirebaseMessaging or EmailFallback as those are core reliability features
+            applyInboxIconVariant("Default", enabled = false)
+        }
+    }
+
+    fun applyPowerUserPreset() {
+        viewModelScope.launch {
+            settingsRepository.setBeaconLauncherEnabled(true)
+            settingsRepository.setOtpCleanupEnabled(true)
+            settingsRepository.setAiSummariesEnabled(true)
+            settingsRepository.setMergedExperienceEnabled(true)
+            settingsRepository.setRemoteWebAccessEnabled(true)
+            settingsRepository.setThirdPartyExtensionsEnabled(true)
+
+            // Apply side effects
+            val settings = settingsRepository.settings.first()
+            applyInboxIconVariant(settings.themePreferences.inboxIconVariant, enabled = true)
+
+            // Trigger sync for web access if premium
+            if (BuildConfig.PREMIUM_FEATURES) {
+                val request = OneTimeWorkRequest.Builder(com.pulselink.data.sms.SmsSyncWorker::class.java).build()
+                workManager.enqueueUniqueWork("SmsSyncManual", ExistingWorkPolicy.KEEP, request)
+            }
+        }
+    }
+
     private fun emitDndStatus(result: AlertResult?) {
         val overrideResult = result?.overrideResult ?: run {
             dndStatus.value = null

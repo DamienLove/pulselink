@@ -24,6 +24,9 @@ import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.WifiTethering
 import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -31,6 +34,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -69,6 +73,8 @@ fun ExtensionsStoreScreen(
     onToggleAiSummaries: (Boolean) -> Unit,
     onToggleThirdPartyExtensions: (Boolean) -> Unit,
     onToggleMergedExperience: (Boolean) -> Unit,
+    onApplyEssentials: () -> Unit,
+    onApplyPowerUser: () -> Unit,
     onBack: () -> Unit
 ) {
     val premiumActive = remember(settings) {
@@ -177,6 +183,10 @@ fun ExtensionsStoreScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            QuickSetupCard(onApplyEssentials, onApplyPowerUser)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             Text(
                 text = stringResource(R.string.extensions_store_header),
                 style = MaterialTheme.typography.titleMedium,
@@ -196,6 +206,77 @@ fun ExtensionsStoreScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             ExtensionCTA()
+        }
+    }
+}
+
+@Composable
+fun QuickSetupCard(
+    onApplyEssentials: () -> Unit,
+    onApplyPowerUser: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.extensions_quick_setup_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Essentials
+                OutlinedButton(
+                    onClick = onApplyEssentials,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    ) {
+                        Icon(Icons.Filled.Shield, contentDescription = null)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.extensions_quick_setup_essentials),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                // Power User
+                OutlinedButton(
+                    onClick = onApplyPowerUser,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    ) {
+                        Icon(Icons.Filled.Bolt, contentDescription = null)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.extensions_quick_setup_power),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
         }
     }
 }
