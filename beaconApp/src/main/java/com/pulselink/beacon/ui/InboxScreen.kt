@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
@@ -42,7 +43,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FabPosition
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -66,8 +66,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -77,6 +80,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.semantics.Role
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.SmsThreadItem
 import com.pulselink.beacon.data.ThemePalette
@@ -121,8 +126,6 @@ fun InboxScreen(
     val filtered = remember(filter, threads) {
         threads.filter { thread ->
             when (filter) {
-                // ALL and ARCHIVED modes are pre-filtered by the Repository query.
-                // We trust the repository to return the correct set (Inbox/Pinned vs Archived).
                 InboxFilter.ALL -> true
                 InboxFilter.READ -> !thread.unread
                 InboxFilter.UNREAD -> thread.unread
@@ -187,7 +190,7 @@ fun InboxScreen(
                 scrollBehavior = scrollBehavior
             )
         },
-                floatingActionButton = {
+        floatingActionButton = {
             FloatingActionButton(
                 onClick = onCompose,
                 containerColor = theme.accentColor
@@ -303,7 +306,7 @@ fun InboxScreen(
             }
 
             if (missingPermissions.isNotEmpty()) {
-                Surface(
+                 Surface(
                     tonalElevation = 2.dp,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -502,7 +505,6 @@ private fun SwipeableThreadRow(
     SwipeToDismissBox(
         state = state,
         backgroundContent = {
-            // Use muted theme color for archive, accent for pin
             val (color, alignment, icon) = when (state.targetValue) {
                 SwipeToDismissBoxValue.EndToStart -> Triple(theme.frameColor.copy(alpha = 0.5f), Alignment.CenterEnd, Icons.Default.Inbox) // Archive
                 SwipeToDismissBoxValue.StartToEnd -> Triple(theme.accentColor, Alignment.CenterStart, if (thread.isPinned) Icons.Default.PushPin else Icons.Default.PushPin) // Pin/Unpin
@@ -560,9 +562,10 @@ private fun ThreadRow(
                 onLongClick = { showMenu = true }
             )
     ) {
-        Column(
+        Row(
             modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 10.dp)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             DropdownMenu(
                 expanded = showMenu,
@@ -608,37 +611,80 @@ private fun ThreadRow(
                     }
                 )
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (thread.isPinned) {
-                    Icon(
-                        Icons.Default.PushPin,
-                        contentDescription = "Pinned",
-                        tint = theme.accentColor,
-                        modifier = Modifier.padding(end = 4.dp).size(16.dp)
+
+            // Avatar
+            val avatarSize = 48.dp
+            if (thread.photoUri != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(thread.photoUri)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(avatarSize)
+                        .clip(CircleShape)
+                )
+            } else {
+                // Fallback avatar with initial
+                val initial = thread.address.firstOrNull()?.toString()?.uppercase() ?: "?"
+                Box(
+                    modifier = Modifier
+                        .size(avatarSize)
+                        .clip(CircleShape)
+                        .background(theme.accentColor.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = initial,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = theme.accentColor
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.size(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (thread.isPinned) {
+                        Icon(
+                            Icons.Default.PushPin,
+                            contentDescription = "Pinned",
+                            tint = theme.accentColor,
+                            modifier = Modifier
+                                .padding(end = 4.dp)
+                                .size(16.dp)
+                        )
+                    }
+                    Text(
+                        text = thread.address.ifBlank { "Unknown" },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = if (thread.unread) FontWeight.SemiBold else FontWeight.Normal,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.size(8.dp))
+                    Text(
+                        text = DateUtils.getRelativeTimeSpanString(
+                            thread.timestamp,
+                            System.currentTimeMillis(),
+                            DateUtils.MINUTE_IN_MILLIS
+                        ).toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.DarkGray
+                    )
+                }
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = thread.address.ifBlank { "Unknown" },
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if (thread.unread) FontWeight.SemiBold else FontWeight.Normal,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    text = DateUtils.getRelativeTimeSpanString(
-                        thread.timestamp,
-                        System.currentTimeMillis(),
-                        DateUtils.MINUTE_IN_MILLIS
-                    ).toString(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.DarkGray
+                    text = thread.snippet,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    color = if (thread.unread) theme.frameColor else theme.frameColor.copy(alpha = 0.7f)
                 )
             }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = thread.snippet,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1
-            )
         }
     }
 }

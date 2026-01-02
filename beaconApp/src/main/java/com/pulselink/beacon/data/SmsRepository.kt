@@ -20,14 +20,21 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.jvm.Volatile
 
+private data class ContactInfo(
+    val displayName: String,
+    val formattedNumber: String,
+    val photoUri: String?
+)
+
 class SmsRepository(private val context: Context) {
 
     @Volatile private var observersRegistered = false
     private val observerFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val otpRegex = Regex("\\b\\d{4,8}\\b")
 
-    private val addressCache = LruCache<Long, String>(ADDRESS_CACHE_SIZE)
-    private val contactCache = LruCache<String, String>(CONTACT_CACHE_SIZE)
+    // Cache stores ContactInfo objects instead of raw strings
+    private val addressCache = LruCache<Long, ContactInfo>(ADDRESS_CACHE_SIZE)
+    private val contactCache = LruCache<String, ContactInfo>(CONTACT_CACHE_SIZE)
 
     init {
         ensureObserversRegistered()
@@ -37,6 +44,18 @@ class SmsRepository(private val context: Context) {
     }
 
     fun changes(): SharedFlow<Unit> = observerFlow.asSharedFlow()
+
+    private fun formatDisplayAddress(info: ContactInfo): String {
+        return if (info.displayName != info.formattedNumber) {
+            "${info.displayName} \u2022 ${info.formattedNumber}"
+        } else {
+            info.formattedNumber
+        }
+    }
+
+    private fun formatPrimaryDisplay(info: ContactInfo): String {
+        return if (info.displayName != info.formattedNumber) info.displayName else info.formattedNumber
+    }
 
     suspend fun listThreads(limit: Int = 50): List<SmsThreadItem> = withContext(Dispatchers.IO) {
         if (!hasReadPerms()) return@withContext emptyList()
@@ -70,13 +89,16 @@ class SmsRepository(private val context: Context) {
                 val snippet = c.getString(snippetIdx) ?: ""
                 val ts = c.getLong(dateIdx)
                 val unread = c.getInt(readIdx) == 0
-                val address = resolveThreadAddress(threadId)
+                val contactInfo = resolveThreadContact(threadId)
+
                 items += SmsThreadItem(
                     threadId = threadId,
-                    address = address,
+                    address = formatDisplayAddress(contactInfo),
                     snippet = snippet,
                     timestamp = ts,
-                    unread = unread
+                    unread = unread,
+                    photoUri = contactInfo.photoUri,
+                    senderNumber = contactInfo.formattedNumber
                 )
                 count++
             }
@@ -85,7 +107,7 @@ class SmsRepository(private val context: Context) {
         return@withContext listThreadsFromSms(limit)
     }
 
-    private fun resolveThreadAddress(threadId: Long): String {
+    private fun resolveThreadContact(threadId: Long): ContactInfo {
         addressCache[threadId]?.let { return it }
 
         val cursor = runCatching {
@@ -96,16 +118,16 @@ class SmsRepository(private val context: Context) {
                 arrayOf(threadId.toString()),
                 "${Telephony.Sms.DATE} DESC"
             )
-        }.getOrNull() ?: return ""
+        }.getOrNull() ?: return ContactInfo("", "", null)
 
-        var result = ""
+        var result = ContactInfo("", "", null)
         cursor.use { c ->
             if (c.moveToFirst()) {
                 val addr = c.getString(c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS))
-                result = resolveAddress(addr)
+                result = resolveContactInfo(addr)
             }
         }
-        if (result.isNotBlank()) {
+        if (result.formattedNumber.isNotBlank()) {
             addressCache.put(threadId, result)
         }
         return result
@@ -174,7 +196,8 @@ class SmsRepository(private val context: Context) {
         cursor.use { c ->
             if (c.moveToFirst()) {
                 val addr = c.getString(c.getColumnIndexOrThrow("address"))
-                return@withContext resolveAddress(addr)
+                val info = resolveContactInfo(addr)
+                return@withContext formatDisplayAddress(info)
             }
         }
         return@withContext ""
@@ -245,7 +268,8 @@ class SmsRepository(private val context: Context) {
             var count = 0
             while (c.moveToNext() && count < limit) {
                 val id = c.getLong(idIdx)
-                val addr = resolveAddress(c.getString(addrIdx))
+                val info = resolveContactInfo(c.getString(addrIdx))
+                val displayAddr = formatPrimaryDisplay(info)
                 val body = c.getString(bodyIdx) ?: ""
                 val ts = c.getLong(dateIdx)
                 val type = c.getInt(typeIdx)
@@ -253,7 +277,7 @@ class SmsRepository(private val context: Context) {
                 items += SmsMessageItem(
                     id = id,
                     threadId = c.getLong(threadIdx),
-                    address = addr,
+                    address = displayAddr,
                     body = body,
                     timestamp = ts,
                     outgoing = outgoing,
@@ -302,10 +326,13 @@ class SmsRepository(private val context: Context) {
             var count = 0
             while (c.moveToNext() && count < limit) {
                 val outgoing = c.getInt(typeIdx) == Telephony.Sms.MESSAGE_TYPE_SENT || c.getInt(typeIdx) == Telephony.Sms.MESSAGE_TYPE_OUTBOX
+                val info = resolveContactInfo(c.getString(addrIdx))
+                val displayAddr = formatPrimaryDisplay(info)
+
                 hits += SmsMessageItem(
                     id = c.getLong(idIdx),
                     threadId = c.getLong(threadIdx),
-                    address = resolveAddress(c.getString(addrIdx)),
+                    address = displayAddr,
                     body = c.getString(bodyIdx) ?: "",
                     timestamp = c.getLong(dateIdx),
                     outgoing = outgoing
@@ -402,10 +429,10 @@ class SmsRepository(private val context: Context) {
         observerFlow.tryEmit(Unit)
     }
 
-    private fun resolveAddress(raw: String?): String {
-        if (!hasReadPerms()) return raw.orEmpty()
+    private fun resolveContactInfo(raw: String?): ContactInfo {
+        if (!hasReadPerms()) return ContactInfo(raw.orEmpty(), raw.orEmpty(), null)
         val number = raw?.trim().orEmpty()
-        if (number.isBlank()) return ""
+        if (number.isBlank()) return ContactInfo("", "", null)
 
         contactCache[number]?.let { return it }
 
@@ -414,7 +441,7 @@ class SmsRepository(private val context: Context) {
         val result = runCatching {
             context.contentResolver.query(
                 lookupUri,
-                arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME, ContactsContract.PhoneLookup.NUMBER),
+                arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME, ContactsContract.PhoneLookup.NUMBER, ContactsContract.PhoneLookup.PHOTO_THUMBNAIL_URI),
                 null,
                 null,
                 null
@@ -423,13 +450,21 @@ class SmsRepository(private val context: Context) {
             if (c.moveToFirst()) {
                 val nameIdx = c.getColumnIndexOrThrow(ContactsContract.PhoneLookup.DISPLAY_NAME)
                 val numIdx = c.getColumnIndexOrThrow(ContactsContract.PhoneLookup.NUMBER)
+                val photoIdx = c.getColumnIndexOrThrow(ContactsContract.PhoneLookup.PHOTO_THUMBNAIL_URI)
+
                 val name = c.getString(nameIdx) ?: ""
                 val formatted = c.getString(numIdx) ?: number
-                if (name.isNotBlank()) "$name \u2022 $formatted" else formatted
+                val photoUri = c.getString(photoIdx)
+
+                ContactInfo(
+                    displayName = if (name.isNotBlank()) name else formatted,
+                    formattedNumber = formatted,
+                    photoUri = photoUri
+                )
             } else {
-                number
+                ContactInfo(number, number, null)
             }
-        } ?: number
+        } ?: ContactInfo(number, number, null)
 
         contactCache.put(number, result)
         return result
@@ -528,13 +563,16 @@ class SmsRepository(private val context: Context) {
                 val body = c.getString(bodyIdx) ?: ""
                 val ts = c.getLong(dateIdx)
                 val unread = c.getInt(readIdx) == 0
-                val address = resolveAddress(c.getString(addrIdx))
+                val info = resolveContactInfo(c.getString(addrIdx))
+
                 items += SmsThreadItem(
                     threadId = threadId,
-                    address = address,
+                    address = formatDisplayAddress(info),
                     snippet = body,
                     timestamp = ts,
-                    unread = unread
+                    unread = unread,
+                    photoUri = info.photoUri,
+                    senderNumber = info.formattedNumber
                 )
                 count++
             }

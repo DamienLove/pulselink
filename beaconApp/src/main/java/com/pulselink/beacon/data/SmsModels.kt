@@ -2,12 +2,14 @@ package com.pulselink.beacon.data
 
 data class SmsThreadItem(
     val threadId: Long,
-    val address: String,
+    val address: String, // Display Name (or Number if no name)
     val snippet: String,
     val timestamp: Long,
     val unread: Boolean,
     val isPinned: Boolean = false,
-    val isArchived: Boolean = false
+    val isArchived: Boolean = false,
+    val photoUri: String? = null,
+    val senderNumber: String? = null // The actual phone number, useful if address is a Name
 )
 
 data class SmsMessageItem(
