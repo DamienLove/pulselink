@@ -275,28 +275,28 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => (
 MapAlertItem.displayName = 'MapAlertItem';
 
 const defaultTheme = {
-  primaryColor: "#6750A4",
-  secondaryColor: "#625B71",
-  bubbleOutgoing: "#D0BCFF",
-  bubbleIncoming: "#E8DEF8",
-  backgroundColor: "#FFFFFF",
+  primaryColor: "#22D3EE", // Cyan 400
+  secondaryColor: "#0EA5E9", // Sky 500
+  bubbleOutgoing: "#155E75", // Cyan 900
+  bubbleIncoming: "#1F2937", // Gray 800
+  backgroundColor: "#05070F", // Deep Background
   iconSizeFactor: 1.0,
   fontStyle: "Default",
-  bubbleCornerRadius: 12,
-  inboxIconVariant: "Default",
-  onBubbleOutgoing: "#000000",
-  onBubbleIncoming: "#000000",
-  onBackground: "#000000",
-  topBarColor: "#FFFFFF",
-  onTopBarColor: "#000000",
+  bubbleCornerRadius: 20,
+  inboxIconVariant: "Beacon",
+  onBubbleOutgoing: "#FFFFFF",
+  onBubbleIncoming: "#F3F4F6",
+  onBackground: "#EEF2FB", // Ink
+  topBarColor: "#0C1326", // Deep Surface
+  onTopBarColor: "#EEF2FB",
   bubbleCornerRadiusTopStart: null,
   bubbleCornerRadiusTopEnd: null,
   bubbleCornerRadiusBottomStart: null,
   bubbleCornerRadiusBottomEnd: null,
-  timestampColor: null,
-  dividerColor: null,
-  appBackgroundGradientStart: null,
-  appBackgroundGradientEnd: null,
+  timestampColor: "#94A3B8",
+  dividerColor: "#1E293B",
+  appBackgroundGradientStart: "#0D1224",
+  appBackgroundGradientEnd: "#05070F",
   fontScale: 1.0,
   backgroundImageUrl: null,
   iconOverrides: {}

@@ -180,9 +180,8 @@ fun HomeScreen(
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        MaterialTheme.colorScheme.surface,
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
-                        MaterialTheme.colorScheme.background
+                        Color(0xFF0C1326), // Deep Surface
+                        Color(0xFF05070F)  // Deep Background
                     )
                 )
             )
@@ -1200,14 +1199,15 @@ private fun ContactSettingsDialog(
 @Composable
 private fun SectionCard(
     modifier: Modifier = Modifier,
-    accent: Color = MaterialTheme.colorScheme.surface,
-    contentColor: Color = MaterialTheme.colorScheme.onSurface,
+    accent: Color = Color(0xFF0C1326).copy(alpha = 0.6f), // Glass-like dark surface
+    contentColor: Color = Color(0xFFEEF2FB), // Light Ink
     content: @Composable () -> Unit
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(20.dp)),
+            .shadow(8.dp, RoundedCornerShape(20.dp))
+            .border(1.dp, Color(0xFF22D3EE).copy(alpha = 0.1f), RoundedCornerShape(20.dp)), // Future border
         shape = RoundedCornerShape(20.dp)
     ) {
         Column(
@@ -1232,13 +1232,13 @@ private fun BoxScope.MusicBackdrop() {
         val width = size.width
         val height = size.height
         drawCircle(
-            color = Color(0xFFB6D7F2).copy(alpha = 0.35f),
-            radius = width * 0.55f,
+            color = Color(0xFF22D3EE).copy(alpha = 0.08f), // Cyan glow
+            radius = width * 0.65f,
             center = androidx.compose.ui.geometry.Offset(width * 0.85f, height * 0.1f)
         )
         drawCircle(
-            color = Color(0xFF7CB2E4).copy(alpha = 0.25f),
-            radius = width * 0.45f,
+            color = Color(0xFF0EA5E9).copy(alpha = 0.06f), // Sky glow
+            radius = width * 0.55f,
             center = androidx.compose.ui.geometry.Offset(width * 0.1f, height * 0.2f)
         )
     }
@@ -1249,8 +1249,8 @@ private fun BoxScope.MusicBackdrop() {
             .size(120.dp)
             .align(Alignment.TopEnd)
             .padding(top = 20.dp, end = 12.dp)
-            .alpha(0.08f),
-        tint = MaterialTheme.colorScheme.primary
+            .alpha(0.05f),
+        tint = Color(0xFF22D3EE)
     )
     Icon(
         imageVector = Icons.Filled.MusicNote,
@@ -1259,8 +1259,8 @@ private fun BoxScope.MusicBackdrop() {
             .size(90.dp)
             .align(Alignment.BottomStart)
             .padding(bottom = 60.dp, start = 20.dp)
-            .alpha(0.06f),
-        tint = MaterialTheme.colorScheme.secondary
+            .alpha(0.03f),
+        tint = Color(0xFF0EA5E9)
     )
 }
 
