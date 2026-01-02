@@ -1049,6 +1049,7 @@ function App() {
   const [composeBody, setComposeBody] = useState('');
   const [sendStatus, setSendStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isLoadingThreads, setIsLoadingThreads] = useState(true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [activePanel, setActivePanel] = useState('home');
   const [alertLocations, setAlertLocations] = useState([]);
@@ -1380,16 +1381,19 @@ function App() {
       // Assuming structure: users/{uid}/synced_threads/{threadId}
       const threadsRef = collection(db, "users", user.uid, "synced_threads");
       const q = query(threadsRef, orderBy("date", "desc"));
+      setIsLoadingThreads(true);
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const threadsData = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
         setThreads(threadsData);
+        setIsLoadingThreads(false);
       });
       return () => unsubscribe();
     } else {
       setThreads([]);
+      setIsLoadingThreads(false);
     }
   }, [user]);
 
@@ -2275,7 +2279,13 @@ function App() {
           </div>
           {activePanel === 'beacon' ? (
             <div className="thread-list">
-              {threads.length === 0 ? (
+              {isLoadingThreads ? (
+                <div className="sidebar-placeholder">
+                  <div className="sidebar-tip muted">
+                    <Spinner /> Loading conversations...
+                  </div>
+                </div>
+              ) : threads.length === 0 ? (
                 <div className="sidebar-placeholder">
                   <div className="sidebar-tip muted">
                     No conversations found.

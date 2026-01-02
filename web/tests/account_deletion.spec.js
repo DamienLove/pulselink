@@ -1,5 +1,5 @@
 
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
 // Note: This test assumes we can reach the settings panel.
 // Since we don't have a robust way to mock auth in this environment without modifying App.jsx,
@@ -23,6 +23,7 @@ test.describe('Account Deletion Confirmation', () => {
     // await page.getByRole('button', { name: 'Settings' }).click();
 
     // 1. Initial State
+    // eslint-disable-next-line no-unused-vars
     const deleteBtn = page.getByRole('button', { name: 'Delete account' });
     // await expect(deleteBtn).toBeVisible();
 
