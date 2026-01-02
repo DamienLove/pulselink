@@ -9,6 +9,7 @@ import com.RingerSong.free.data.AppState
 import com.RingerSong.free.data.AppStateStore
 import com.RingerSong.free.data.ContactEntry
 import com.RingerSong.free.data.SongEntry
+import com.RingerSong.free.data.SongSource
 import com.RingerSong.free.data.SpotifyRepository
 import com.RingerSong.free.data.SpotifyTrack
 import com.RingerSong.free.data.SpotifyArtist
@@ -16,11 +17,13 @@ import com.RingerSong.free.data.DownloadError
 import com.RingerSong.free.data.DownloadResult
 import com.RingerSong.free.data.resolveSongMetadata
 import com.RingerSong.free.data.ThemeConfig
+import com.RingerSong.free.service.SpotifyPlayerManager
 import com.pulselink.shared.ui.theme.SharedThemePreferences
 import com.RingerSong.free.data.SongMetadata
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -33,6 +36,7 @@ import kotlinx.coroutines.Dispatchers
 import okhttp3.OkHttpClient
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 
 data class SpotifySearchState(
     val query: String = "",
@@ -51,7 +55,11 @@ data class AuthState(
     val errorMessage: String? = null
 )
 
-class RingerViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class RingerViewModel @Inject constructor(
+    application: Application,
+    private val spotifyPlayerManager: SpotifyPlayerManager
+) : AndroidViewModel(application) {
     private val store = AppStateStore(application)
     private val resolver: ContentResolver = application.contentResolver
     private val auth = FirebaseAuth.getInstance()
@@ -158,13 +166,21 @@ class RingerViewModel(application: Application) : AndroidViewModel(application) 
                 if (e != null || snapshot == null) return@addSnapshotListener
 
                 val firestoreSongs: List<SongEntry> = snapshot.documents.mapNotNull { doc ->
-                    val uri = doc.getString("uri")
-                    if (uri.isNullOrBlank()) return@mapNotNull null // Skip songs with invalid URIs
+                    val uri = doc.getString("uri") ?: doc.getString("spotifyUri")
+                    if (uri.isNullOrBlank()) return@mapNotNull null
+
+                    val sourceStr = doc.getString("source")
+                    val source = try {
+                         if (sourceStr != null) SongSource.valueOf(sourceStr) else SongSource.SPOTIFY // Default to spotify if not specified in FS but has URI
+                    } catch (e: Exception) {
+                        SongSource.SPOTIFY
+                    }
 
                     SongEntry(
                         id = doc.id,
                         title = (doc.getString("title") ?: "Unknown") + " - " + (doc.getString("artist") ?: "Unknown"),
                         uri = uri,
+                        source = source,
                         durationMs = doc.getLong("durationMs"),
                         addedAt = doc.getTimestamp("addedAt")?.toDate()?.time ?: System.currentTimeMillis()
                     )
@@ -173,7 +189,7 @@ class RingerViewModel(application: Application) : AndroidViewModel(application) 
                 viewModelScope.launch {
                     store.update { current ->
                         // Keep local songs, but update Spotify songs from Firestore
-                        val localOnlySongs: List<SongEntry> = current.songs.filterNot { it.uri.startsWith("spotify:") }
+                        val localOnlySongs: List<SongEntry> = current.songs.filter { it.source == SongSource.LOCAL }
                         val combinedSongs: List<SongEntry> = localOnlySongs + firestoreSongs
 
                         // Recalculate order: maintain local order for local files, append firestore ones at end if new
@@ -299,6 +315,13 @@ class RingerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun connectToSpotify(onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val success = spotifyPlayerManager.connect(showAuthView = true)
+            onResult(success)
+        }
+    }
+
     fun addSpotifyTrack(track: SpotifyTrack, onResult: (String) -> Unit) {
         val uid = auth.currentUser?.uid ?: run {
             onResult("Error: Please sign in to add songs")
@@ -322,38 +345,59 @@ class RingerViewModel(application: Application) : AndroidViewModel(application) 
                 return@launch
             }
 
-            // Download the track first (handle both Spotify and YouTube)
-            onResult("Downloading ${track.name}...")
-            val downloadResult = if (track.uri!!.startsWith("youtube:")) {
+            // Check if it's a YouTube track, which still needs download
+            if (track.uri!!.startsWith("youtube:")) {
+                onResult("Downloading ${track.name} from YouTube...")
                 val videoId = track.uri!!.substringAfterLast(":")
-                youtubeMusicRepo.downloadTrack(videoId)
-            } else {
-                spotifyDownloader.downloadTrack(track.uri!!)
+                val downloadResult = youtubeMusicRepo.downloadTrack(videoId)
+
+                val localFilePath = when (downloadResult) {
+                    is DownloadResult.Success -> {
+                        clearDownloadError()
+                        downloadResult.filePath
+                    }
+                    is DownloadResult.Failure -> {
+                        val message = mapDownloadError(downloadResult.error)
+                        setDownloadError(message)
+                        return@launch
+                    }
+                }
+
+                val localFileUri = "file://$localFilePath"
+                val songEntry = SongEntry(
+                    id = track.id ?: java.util.UUID.randomUUID().toString(),
+                    title = "${track.name ?: "Unknown Track"} - ${track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"}",
+                    uri = localFileUri,
+                    source = SongSource.LOCAL,
+                    durationMs = track.duration_ms,
+                    addedAt = System.currentTimeMillis()
+                )
+
+                 // Update local state (no sync for local files implemented in this snippet for simplicity, or add to FS with local uri which is tricky across devices)
+                 // But for consistency with original code, let's just add to local store.
+                withContext(Dispatchers.IO) {
+                    store.update { current ->
+                        val updatedSongs = current.songs + songEntry
+                        val updatedOrder = current.songOrder + songEntry.id
+                        current.copy(songs = updatedSongs, songOrder = updatedOrder)
+                    }
+                }
+                onResult("Added ${track.name} (Offline)")
+                return@launch
             }
 
-            val localFilePath = when (downloadResult) {
-                is DownloadResult.Success -> {
-                    clearDownloadError()
-                    downloadResult.filePath
-                }
-                is DownloadResult.Failure -> {
-                    val message = mapDownloadError(downloadResult.error)
-                    setDownloadError(message)
-                    return@launch
-                }
-            }
-
-            // Create the song entry with local file URI
-            val localFileUri = "file://$localFilePath"
+            // For Spotify, we use STREAMING now (users request)
+            // No download. Just add the Spotify URI.
             val songEntry = SongEntry(
                 id = track.id ?: java.util.UUID.randomUUID().toString(),
                 title = "${track.name ?: "Unknown Track"} - ${track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"}",
-                uri = localFileUri,
+                uri = track.uri!!,
+                source = SongSource.SPOTIFY,
                 durationMs = track.duration_ms,
                 addedAt = System.currentTimeMillis()
             )
 
-            // Update local state
+            // Update local state temporarily for immediate feedback
             withContext(Dispatchers.IO) {
                 store.update { current ->
                     val updatedSongs = current.songs + songEntry
@@ -362,11 +406,12 @@ class RingerViewModel(application: Application) : AndroidViewModel(application) 
                 }
             }
 
-            // Then sync to Firestore
+            // Sync to Firestore
             val trackData = mapOf(
                 "spotifyId" to track.id,
-                "uri" to localFileUri,
+                "uri" to track.uri,
                 "spotifyUri" to track.uri,
+                "source" to SongSource.SPOTIFY.name,
                 "title" to (track.name ?: "Unknown Track"),
                 "artist" to (track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"),
                 "durationMs" to (track.duration_ms ?: 0L),
@@ -376,10 +421,10 @@ class RingerViewModel(application: Application) : AndroidViewModel(application) 
             db.collection("users").document(uid).collection("ringer_playlist")
                 .add(trackData)
                 .addOnSuccessListener {
-                    onResult("Added ${track.name}")
+                    onResult("Added ${track.name} (Streaming)")
                 }
                 .addOnFailureListener { e ->
-                    // Remove from local state if Firestore sync fails
+                    // Revert local state if sync fails
                     viewModelScope.launch {
                         withContext(Dispatchers.IO) {
                             store.update { current ->
@@ -419,6 +464,7 @@ class RingerViewModel(application: Application) : AndroidViewModel(application) 
                     id = UUID.randomUUID().toString(),
                     title = metadata.title,
                     uri = uri.toString(),
+                    source = SongSource.LOCAL,
                     durationMs = metadata.durationMs
                 )
             }
@@ -441,16 +487,38 @@ class RingerViewModel(application: Application) : AndroidViewModel(application) 
 
             if (song != null && song.uri.startsWith("spotify:") && uid != null) {
                 // If it's a Spotify song, remove from Firestore (listener will update local)
-                db.collection("users").document(uid).collection("ringer_playlist")
-                    .document(songId)
-                    .delete()
-            } else {
-                // If local song, just update local state
-                store.update { current ->
-                    val songs = current.songs.filterNot { it.id == songId }
-                    val order = current.songOrder.filterNot { it == songId }
-                    current.copy(songs = songs, songOrder = order)
-                }
+                // Need to find the doc ID. Wait, songId IS the docId if coming from Firestore logic above?
+                // Let's check startFirestoreSync.
+                // Yes, id = doc.id.
+                // However, for newly added songs that haven't synced back yet, id might be UUID.
+                // But normally we wait for sync.
+                // Wait, addSpotifyTrack adds locally with UUID then adds to Firestore which generates NEW ID.
+                // This causes DUPLICATION potentially until re-sync?
+                // Actually, the listener logic:
+                // combinedSongs = localOnlySongs + firestoreSongs
+                // If we add locally with UUID, it's treated as LOCAL (source=SPOTIFY but logic above uses filterNot startsWith spotify:).
+                // My new logic in startFirestoreSync uses source check.
+
+                // Let's rely on Firestore deletion.
+                // Query by spotifyId or just delete if we know the doc ID.
+                // If it was added via Firestore add(), we don't know the ID immediately unless we store it.
+                // But for now, let's assume songId is valid.
+                // A better approach is to delete by field 'uri' if we aren't sure of ID.
+                 val query = db.collection("users").document(uid).collection("ringer_playlist")
+                     .whereEqualTo("uri", song.uri)
+                     .get()
+                     .addOnSuccessListener { snapshot ->
+                         for (doc in snapshot.documents) {
+                             doc.reference.delete()
+                         }
+                     }
+            }
+
+            // Always update local state immediately for UI responsiveness
+            store.update { current ->
+                val songs = current.songs.filterNot { it.id == songId }
+                val order = current.songOrder.filterNot { it == songId }
+                current.copy(songs = songs, songOrder = order)
             }
         }
     }

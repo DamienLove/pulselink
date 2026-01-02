@@ -85,6 +85,7 @@ import com.RingerSong.free.ads.populateNativeAdView
 import com.RingerSong.free.data.AppState
 import com.RingerSong.free.data.ContactEntry
 import com.RingerSong.free.data.SongEntry
+import com.RingerSong.free.data.SongSource
 import com.RingerSong.free.data.SpotifyTrack
 import com.RingerSong.free.viewmodel.SpotifySearchState
 import com.google.android.gms.ads.AdListener
@@ -122,6 +123,7 @@ fun HomeScreen(
     onYouTubeSearch: () -> Unit,
     onClearYouTubeSearch: () -> Unit,
     onAddYouTubeTrack: (SpotifyTrack) -> Unit,
+    onConnectSpotify: ( (Boolean) -> Unit ) -> Unit,
     snackbarHostState: SnackbarHostState,
     onClearDownloadError: () -> Unit
 ) {
@@ -264,6 +266,7 @@ fun HomeScreen(
                     onSearch = onSearch,
                     onClear = onClearSearch,
                     onAddTrack = onAddSpotifyTrack,
+                    onConnect = onConnectSpotify,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -683,8 +686,11 @@ private fun SpotifySection(
     onSearch: () -> Unit,
     onClear: () -> Unit,
     onAddTrack: (SpotifyTrack) -> Unit,
+    onConnect: ( (Boolean) -> Unit ) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var isConnecting by remember { mutableStateOf(false) }
+
     SectionCard(modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -694,11 +700,36 @@ private fun SpotifySection(
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Search for tracks on Spotify and add them to your progression.",
+                    text = "Search for tracks on Spotify. Songs will be streamed directly from your Spotify App.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+
+            Button(
+                onClick = {
+                    isConnecting = true
+                    onConnect { success ->
+                        isConnecting = false
+                        // Optional: Show snackbar based on success
+                    }
+                },
+                enabled = !isConnecting,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF1DB954), // Spotify Green
+                    contentColor = Color.Black
+                )
+            ) {
+                if (isConnecting) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.Black)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Connecting...")
+                } else {
+                    Text("Connect Spotify")
+                }
+            }
+
 
             OutlinedTextField(
                 value = state.query,
@@ -1001,6 +1032,12 @@ private fun SongRow(
     modifier: Modifier = Modifier,
     onRemove: () -> Unit
 ) {
+    val sourceIcon = when (song.source) {
+        SongSource.SPOTIFY -> "Spotify" // You might want an icon
+        SongSource.LOCAL -> "File"
+        else -> ""
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -1032,8 +1069,9 @@ private fun SongRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            val subText = if (song.source == SongSource.SPOTIFY) "Spotify Stream" else "Local File"
             Text(
-                text = "Progresses with each call",
+                text = subText,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

@@ -26,7 +26,7 @@ class SpotifyPlayerManager @Inject constructor(
         private const val TAG = "SpotifyPlayerManager"
     }
 
-    suspend fun connect(): Boolean = suspendCancellableCoroutine { continuation ->
+    suspend fun connect(showAuthView: Boolean = true): Boolean = suspendCancellableCoroutine { continuation ->
         if (spotifyAppRemote?.isConnected == true) {
             continuation.resume(true)
             return@suspendCancellableCoroutine
@@ -40,7 +40,7 @@ class SpotifyPlayerManager @Inject constructor(
 
         val connectionParams = ConnectionParams.Builder(CLIENT_ID)
             .setRedirectUri(REDIRECT_URI)
-            .showAuthView(true)
+            .showAuthView(showAuthView)
             .build()
 
         SpotifyAppRemote.connect(context, connectionParams, object : Connector.ConnectionListener {
@@ -59,7 +59,8 @@ class SpotifyPlayerManager @Inject constructor(
 
     suspend fun playUri(uri: String): Boolean {
         if (spotifyAppRemote?.isConnected != true) {
-            if (!connect()) return false
+            // Attempt silent connection first
+            if (!connect(showAuthView = false)) return false
         }
 
         return try {

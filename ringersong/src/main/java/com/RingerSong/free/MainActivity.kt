@@ -8,12 +8,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.RingerSong.free.ads.CurrentActivityHolder
 import com.RingerSong.free.ui.RingerSongApp
 import com.RingerSong.free.viewmodel.RingerViewModel
-import com.RingerSong.free.viewmodel.RingerViewModelFactory
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val sharedUriState = mutableStateOf<Uri?>(null)
 
@@ -23,9 +24,8 @@ class MainActivity : ComponentActivity() {
         updateSharedIntent(intent)
         setContent {
             val sharedUri = remember { sharedUriState }
-            val viewModel: RingerViewModel = viewModel(
-                factory = RingerViewModelFactory(application)
-            )
+            // Use hiltViewModel() instead of manually creating via factory
+            val viewModel: RingerViewModel = hiltViewModel()
             RingerSongApp(
                 viewModel = viewModel,
                 sharedUri = sharedUri.value,

@@ -134,6 +134,13 @@ private fun AppNavHost(
                         activity?.let { AdServices.showInterstitial(it) }
                     }
                 },
+                onConnectSpotify = { onResult ->
+                     viewModel.connectToSpotify { success ->
+                         val message = if (success) "Connected to Spotify" else "Failed to connect to Spotify. Check the app is installed."
+                         coroutineScope.launch { snackbarHostState.showSnackbar(message) }
+                         onResult(success)
+                     }
+                },
                 snackbarHostState = snackbarHostState,
                 onClearDownloadError = viewModel::clearDownloadError
             )

@@ -6,6 +6,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
+import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Build
@@ -85,17 +86,70 @@ class RingerPlaybackService : Service() {
             }
 
             // We set STREAM_RING to 0 to silence the default ringer.
-            am.setStreamVolume(AudioManager.STREAM_RING, 0, 0)
-            Log.d(TAG, "Silenced system ringer")
+            try {
+                am.setStreamVolume(AudioManager.STREAM_RING, 0, 0)
+                Log.d(TAG, "Silenced system ringer")
+
+                // Double check
+                val currentVol = am.getStreamVolume(AudioManager.STREAM_RING)
+                if (currentVol != 0) {
+                    Log.w(TAG, "Failed to silence ringer completely. Current vol: $currentVol")
+                }
+            } catch (e: SecurityException) {
+                Log.e(TAG, "SecurityException silencing ringer: ${e.message}")
+            }
+
+            // Request Audio Focus to ensure our music plays over anything else
+            requestAudioFocus()
+        }
+    }
+
+    private fun requestAudioFocus() {
+        audioManager?.let { am ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                    .setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .build()
+                    )
+                    .build()
+                am.requestAudioFocus(focusRequest)
+            } else {
+                @Suppress("DEPRECATION")
+                am.requestAudioFocus(
+                    null,
+                    AudioManager.STREAM_MUSIC,
+                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+                )
+            }
+        }
+    }
+
+    private fun abandonAudioFocus() {
+         audioManager?.let { am ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).build()
+                am.abandonAudioFocusRequest(focusRequest)
+            } else {
+                @Suppress("DEPRECATION")
+                am.abandonAudioFocus(null)
+            }
         }
     }
 
     private fun restoreSystemRinger() {
         if (originalRingerVolume != -1) {
-            audioManager?.setStreamVolume(AudioManager.STREAM_RING, originalRingerVolume, 0)
-            Log.d(TAG, "Restored system ringer to $originalRingerVolume")
+            try {
+                audioManager?.setStreamVolume(AudioManager.STREAM_RING, originalRingerVolume, 0)
+                Log.d(TAG, "Restored system ringer to $originalRingerVolume")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error restoring ringer", e)
+            }
             originalRingerVolume = -1
         }
+        abandonAudioFocus()
     }
 
     private fun playRandomSong(phoneNumber: String?) {
@@ -127,6 +181,7 @@ class RingerPlaybackService : Service() {
     private fun playSpotifySong(song: SongEntry) {
         // Spotify App Remote plays on the Spotify app (STREAM_MUSIC), so it works fine while Ring is 0.
         scope.launch {
+            // connect(false) is called inside playUri if needed
             val success = spotifyPlayer.playUri(song.uri)
             if (!success) {
                 Log.e(TAG, "Spotify playback failed")
