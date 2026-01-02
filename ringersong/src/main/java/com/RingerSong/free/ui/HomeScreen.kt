@@ -53,7 +53,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -121,9 +120,7 @@ fun HomeScreen(
     onYouTubeQueryChange: (String) -> Unit,
     onYouTubeSearch: () -> Unit,
     onClearYouTubeSearch: () -> Unit,
-    onAddYouTubeTrack: (SpotifyTrack) -> Unit,
-    snackbarHostState: SnackbarHostState,
-    onClearDownloadError: () -> Unit
+    onAddYouTubeTrack: (SpotifyTrack) -> Unit
 ) {
     val context = LocalContext.current
     val showContent = remember { mutableStateOf(false) }
@@ -165,13 +162,6 @@ fun HomeScreen(
             onSetUrgencyTone(contact.id, uri)
         }
         activeContactForUrgency = null
-    }
-
-    LaunchedEffect(state.downloadError) {
-        state.downloadError?.let { message ->
-            snackbarHostState.showSnackbar(message)
-            onClearDownloadError()
-        }
     }
 
     Box(

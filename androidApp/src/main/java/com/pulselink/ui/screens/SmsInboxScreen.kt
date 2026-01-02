@@ -5,12 +5,10 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -28,7 +26,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -641,11 +638,6 @@ private fun ThreadRow(
         }
     )
     val actionIconSize = (20f * theme.iconSizeFactor).coerceIn(16f, 28f).dp
-    val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
-    val surfaceColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor)
-    val outlineColor = parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground)
-        .copy(alpha = if (thread.unread) 0.14f else 0.08f)
-    val borderColor = if (thread.unread) primary.copy(alpha = 0.22f) else outlineColor
 
     SwipeToDismissBox(
         state = dismissState,
@@ -694,73 +686,85 @@ private fun ThreadRow(
                             }
                         }
                     ),
-                tonalElevation = if (thread.unread) 2.dp else 1.dp,
-                shape = RoundedCornerShape(18.dp),
-                color = surfaceColor,
-                border = BorderStroke(1.dp, borderColor)
+                tonalElevation = 1.dp,
+                shape = RoundedCornerShape(14.dp),
+                color = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor) // Use surface or BG? Or a slightly lighter shade if BG is dark?
+                // Actually, Surface defaults to surface color. If BG is custom, we might want this to be custom too or transparent?
+                // For simplicity, let's keep it tonal or slightly varied if needed, or just follow BG + onBG.
+                // Let's make it transparent so it blends with scaffold BG, or keep elevation.
+                // If the user sets BG to Black, Tonal Elevation 1.dp will make it Dark Grey. That is good.
+                // But we need to ensure text color matches onBackground.
             ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AvatarCircle(text = displayName, theme = theme)
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                Box {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        Box(modifier = Modifier.clickable { onAvatarClick(thread) }) {
+                            AvatarCircle(
+                                text = avatarText,
+                                theme = theme,
+                                avatarUrl = contact?.avatarUrl
+                            )
+                        }
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = resolvedName.ifBlank { number ?: "Unknown" },
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = if (thread.unread) FontWeight.Bold else FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground),
+                                fontSize = MaterialTheme.typography.titleMedium.fontSize * theme.fontScale
+                                )
+                                Text(
+                                    text = dateFormatter(thread.timestamp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.timestampColor ?: theme.onBackground).copy(alpha = 0.7f)
+                                )
+                            }
+                            if (!number.isNullOrBlank() && number != resolvedName) {
+                                Text(
+                                    text = number,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                             Text(
-                                text = displayName.ifBlank { number ?: "Unknown" },
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = if (thread.unread) FontWeight.Bold else FontWeight.SemiBold,
-                                maxLines = 1,
+                                text = thread.snippet.ifBlank { "No preview available." },
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
-                            color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground),
-                            fontSize = MaterialTheme.typography.titleMedium.fontSize * theme.fontScale
+                            color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.8f),
+                            fontSize = MaterialTheme.typography.bodyMedium.fontSize * theme.fontScale
                             )
-                            Text(
-                                text = dateFormatter(thread.timestamp),
-                                style = MaterialTheme.typography.labelSmall,
-                            color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.timestampColor ?: theme.onBackground).copy(alpha = 0.7f)
-                            )
-                        }
-                        if (!number.isNullOrBlank() && number != displayName) {
-                            Text(
-                                text = number,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        Text(
-                            text = thread.snippet.ifBlank { "No preview available." },
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.8f),
-                        fontSize = MaterialTheme.typography.bodyMedium.fontSize * theme.fontScale
-                        )
-                        if (thread.unread) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            UnreadPill()
-                        }
-                        if (thread.isTrusted && thread.trustedUrgency != null) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            TrustedPill(thread.trustedUrgency)
-                        }
-                        if (thread.isOtp) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            OtpPill()
-                        }
-                        if (isPrivate) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            PrivatePill()
+                            if (thread.unread) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                UnreadPill()
+                            }
+                            if (thread.isTrusted && thread.trustedUrgency != null) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                TrustedPill(thread.trustedUrgency)
+                            }
+                            if (thread.isOtp) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                OtpPill()
+                            }
+                            if (isPrivate) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                PrivatePill()
+                            }
                         }
                     }
                     if (lineIndex != null && lineCount > 1 && lineColors.isNotEmpty()) {
@@ -770,7 +774,7 @@ private fun ThreadRow(
                             lineColors = lineColors,
                             theme = theme,
                             modifier = Modifier
-                                .align(Alignment.Bottom)
+                                .align(Alignment.BottomEnd)
                                 .padding(end = 10.dp, bottom = 10.dp)
                         )
                     }
@@ -831,281 +835,6 @@ private fun ThreadRowSkeleton(
                         .clip(RoundedCornerShape(6.dp))
                         .background(shimmer.copy(alpha = alpha * 0.75f))
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AvatarCircle(text: String, theme: ThemePreferences) {
-    val initial = text.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
-    Box(
-        modifier = Modifier
-            .size(44.dp)
-            .clip(CircleShape)
-            .background(parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing)), // Reuse outgoing bubble color for avatar bg? Or Primary?
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = initial.toString(),
-            style = MaterialTheme.typography.titleMedium,
-            color = parseColorOr(MaterialTheme.colorScheme.onPrimaryContainer, theme.onBubbleOutgoing),
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-@Composable
-private fun UnreadPill() {
-    Surface(
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-        shape = CircleShape
-    ) {
-        Text(
-            text = "Unread",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-        )
-    }
-}
-
-@Composable
-private fun TrustedPill(urgency: MessageUrgency) {
-    val (label, color) = when (urgency) {
-        MessageUrgency.EMERGENCY -> "Emergency" to Color(0xFFB91C1C)
-        MessageUrgency.URGENT -> "Urgent" to Color(0xFFF59E0B)
-        MessageUrgency.STANDARD -> "Check-in" to Color(0xFF059669)
-    }
-    Surface(
-        color = color.copy(alpha = 0.12f),
-        shape = CircleShape
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = color,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-        )
-    }
-}
-
-@Composable
-private fun OtpPill() {
-    val color = Color(0xFF2563EB)
-    Surface(
-        color = color.copy(alpha = 0.12f),
-        shape = CircleShape
-    ) {
-        Text(
-            text = "2-step",
-            style = MaterialTheme.typography.labelSmall,
-            color = color,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-        )
-    }
-}
-
-@Composable
-private fun PrivatePill() {
-    Surface(
-        color = Color(0xFF2C2C2E).copy(alpha = 0.12f),
-        shape = CircleShape
-    ) {
-        Text(
-            text = "Private",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-        )
-    }
-}
-
-@Composable
-private fun SearchContactResult(
-    result: SearchResultState.Contact,
-    theme: ThemePreferences,
-    onOpen: (Long, String) -> Unit
-) {
-    Surface(
-        shape = RoundedCornerShape(14.dp),
-        tonalElevation = 1.dp,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onOpen(result.threadId, result.address) }
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            ThemeIcon(
-                iconKey = ThemeIconKey.INBOX,
-                theme = theme,
-                imageVector = Icons.Filled.Inbox,
-                contentDescription = null,
-                tint = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
-            )
-            Column {
-                Text(
-                    text = result.address.ifBlank { "Open conversation" },
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
-                )
-                Text(
-                    text = "Open conversation",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SearchResults(
-    hits: List<SmsMessageItem>,
-    theme: ThemePreferences,
-    onOpen: (Long, String) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        hits.take(5).forEach { msg ->
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                tonalElevation = 1.dp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onOpen(msg.threadId, msg.address) }
-            ) {
-                Column(Modifier.padding(12.dp)) {
-                    Text(
-                        text = msg.address.ifBlank { "Unknown sender" },
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
-                    )
-                    Text(
-                        text = msg.body,
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
-                    )
-                    Text(
-                        text = DateUtils.getRelativeTimeSpanString(
-                            msg.timestamp,
-                            System.currentTimeMillis(),
-                            DateUtils.MINUTE_IN_MILLIS
-                        ).toString(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f)
-                    )
-                }
-            }
-        }
-    }
-}
-
-private fun splitDisplay(address: String): Pair<String, String?> = splitSmsDisplayAddress(address)
-
-@Composable
-private fun TabsRow(
-    filter: InboxFilter,
-    unreadCount: Int,
-    onFilterChange: (InboxFilter) -> Unit,
-    theme: ThemePreferences
-) {
-    val scrollState = rememberScrollState()
-    val unreadBadge = unreadCount.takeIf { it > 0 }?.toString()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .selectableGroup()
-            .horizontalScroll(scrollState)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        TabText(label = "All Messages", selected = filter == InboxFilter.ALL, theme = theme) {
-            onFilterChange(InboxFilter.ALL)
-        }
-        TabText(label = "Read", selected = filter == InboxFilter.READ, theme = theme) {
-            onFilterChange(InboxFilter.READ)
-        }
-        TabText(label = "Unread", badge = unreadBadge, selected = filter == InboxFilter.UNREAD, theme = theme) {
-            onFilterChange(InboxFilter.UNREAD)
-        }
-        TabText(label = "Archived", selected = filter == InboxFilter.ARCHIVED, theme = theme) {
-            onFilterChange(InboxFilter.ARCHIVED)
-        }
-    }
-}
-
-@Composable
-private fun TabText(
-    label: String,
-    badge: String? = null,
-    selected: Boolean,
-    theme: ThemePreferences,
-    onClick: () -> Unit
-) {
-    val selectedColor = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
-    val containerColor = if (selected) {
-        selectedColor.copy(alpha = 0.16f)
-    } else {
-        parseColorOr(MaterialTheme.colorScheme.surfaceVariant, theme.backgroundColor).copy(alpha = 0.4f)
-    }
-    val borderColor = if (selected) {
-        selectedColor.copy(alpha = 0.4f)
-    } else {
-        parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.2f)
-    }
-    val contentColor = if (selected) {
-        parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground)
-    } else {
-        parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f)
-    }
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.selectable(
-            selected = selected,
-            role = Role.Tab,
-            onClick = onClick
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(999.dp))
-                .background(containerColor)
-                .border(BorderStroke(1.dp, borderColor), RoundedCornerShape(999.dp))
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                color = contentColor
-            )
-            if (badge != null) {
-                Surface(
-                    color = selectedColor.copy(alpha = 0.18f),
-                    shape = RoundedCornerShape(999.dp)
-                ) {
-                    Text(
-                        text = badge,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = selectedColor,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
             }
         }
     }
@@ -1275,6 +1004,258 @@ private fun LinePickerRow(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun AvatarCircle(
+    text: String,
+    theme: ThemePreferences,
+    avatarUrl: String? = null
+) {
+    val initial = text.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .background(parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing)),
+        contentAlignment = Alignment.Center
+    ) {
+        if (!avatarUrl.isNullOrBlank()) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(avatarUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Text(
+                text = initial,
+                style = MaterialTheme.typography.titleMedium,
+                color = parseColorOr(MaterialTheme.colorScheme.onPrimaryContainer, theme.onBubbleOutgoing),
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun UnreadPill() {
+    Surface(
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+        shape = CircleShape
+    ) {
+        Text(
+            text = "Unread",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+    }
+}
+
+@Composable
+private fun TrustedPill(urgency: MessageUrgency) {
+    val (label, color) = when (urgency) {
+        MessageUrgency.EMERGENCY -> "Emergency" to Color(0xFFB91C1C)
+        MessageUrgency.URGENT -> "Urgent" to Color(0xFFF59E0B)
+        MessageUrgency.STANDARD -> "Check-in" to Color(0xFF059669)
+    }
+    Surface(
+        color = color.copy(alpha = 0.12f),
+        shape = CircleShape
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = color,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+    }
+}
+
+@Composable
+private fun OtpPill() {
+    val color = Color(0xFF2563EB)
+    Surface(
+        color = color.copy(alpha = 0.12f),
+        shape = CircleShape
+    ) {
+        Text(
+            text = "2-step",
+            style = MaterialTheme.typography.labelSmall,
+            color = color,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+    }
+}
+
+@Composable
+private fun PrivatePill() {
+    Surface(
+        color = Color(0xFF2C2C2E).copy(alpha = 0.12f),
+        shape = CircleShape
+    ) {
+        Text(
+            text = "Private",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+    }
+}
+
+@Composable
+private fun SearchContactResult(
+    result: SearchResultState.Contact,
+    theme: ThemePreferences,
+    onOpen: (Long, String) -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        tonalElevation = 1.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onOpen(result.threadId, result.address) }
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            ThemeIcon(
+                iconKey = ThemeIconKey.INBOX,
+                theme = theme,
+                imageVector = Icons.Filled.Inbox,
+                contentDescription = null,
+                tint = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+            )
+            Column {
+                Text(
+                    text = result.address.ifBlank { "Open conversation" },
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+                )
+                Text(
+                    text = "Open conversation",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchResults(
+    hits: List<SmsMessageItem>,
+    theme: ThemePreferences,
+    onOpen: (Long, String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        hits.take(5).forEach { msg ->
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                tonalElevation = 1.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpen(msg.threadId, msg.address) }
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(
+                        text = msg.address.ifBlank { "Unknown sender" },
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+                    )
+                    Text(
+                        text = msg.body,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+                    )
+                    Text(
+                        text = DateUtils.getRelativeTimeSpanString(
+                            msg.timestamp,
+                            System.currentTimeMillis(),
+                            DateUtils.MINUTE_IN_MILLIS
+                        ).toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun splitDisplay(address: String): Pair<String, String?> = splitSmsDisplayAddress(address)
+
+@Composable
+private fun TabsRow(
+    filter: InboxFilter,
+    unreadCount: Int,
+    onFilterChange: (InboxFilter) -> Unit,
+    theme: ThemePreferences
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .selectableGroup()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TabText(label = "All Messages", selected = filter == InboxFilter.ALL, theme = theme) {
+            onFilterChange(InboxFilter.ALL)
+        }
+        TabText(label = "Read", selected = filter == InboxFilter.READ, theme = theme) {
+            onFilterChange(InboxFilter.READ)
+        }
+        TabText(label = "Unread${if (unreadCount > 0) " ($unreadCount)" else ""}", selected = filter == InboxFilter.UNREAD, theme = theme) {
+            onFilterChange(InboxFilter.UNREAD)
+        }
+        TabText(label = "Archived", selected = filter == InboxFilter.ARCHIVED, theme = theme) {
+            onFilterChange(InboxFilter.ARCHIVED)
+        }
+    }
+}
+
+@Composable
+private fun TabText(label: String, selected: Boolean, theme: ThemePreferences, onClick: () -> Unit) {
+    val selectedColor = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.selectable(
+            selected = selected,
+            role = Role.Tab,
+            onClick = onClick
+        )
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground) else parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.6f)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .height(2.dp)
+                .fillMaxWidth(0.8f)
+                .background(if (selected) selectedColor else Color.Transparent)
+        )
     }
 }
 

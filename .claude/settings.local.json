@@ -26,14 +26,7 @@
       "Bash(taskkill:*)",
       "Bash(cmd.exe /c \"taskkill /IM studio64.exe\")",
       "Bash(./gradlew:*)",
-      "Bash(claude doctor)",
-      "Bash(cat:*)",
-      "Bash(find:*)",
-      "Bash(git stash:*)",
-      "Bash(npm run build:*)",
-      "Bash(firebase deploy:*)",
-      "Bash(claude plugin marketplace add:*)",
-      "Bash(claude plugin install:*)"
+      "Bash(claude doctor)"
     ]
   }
 }

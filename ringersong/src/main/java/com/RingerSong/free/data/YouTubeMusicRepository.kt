@@ -3,7 +3,6 @@ package com.RingerSong.free.data
 import android.content.Context
 import android.util.Log
 import com.RingerSong.free.BuildConfig
-import com.RingerSong.free.util.NetworkUtils
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.Dispatchers
@@ -218,66 +217,27 @@ class YouTubeMusicRepository(private val context: Context) {
         }
     }
 
-    suspend fun downloadTrack(videoId: String): DownloadResult = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Starting YouTube download for: $videoId")
-
-        if (!NetworkUtils.isNetworkAvailable(context)) {
-            return@withContext DownloadResult.Failure(DownloadError.NetworkUnavailable)
-        }
-
-        if (BuildConfig.RAPIDAPI_KEY.isEmpty()) {
-            Log.e(TAG, "RapidAPI key not configured")
-            return@withContext DownloadResult.Failure(DownloadError.NoApiKey())
-        }
-
+    suspend fun downloadTrack(videoId: String): String? = withContext(Dispatchers.IO) {
         try {
-            val apiUrl = "https://${BuildConfig.RAPIDAPI_YOUTUBE_HOST}/get-song?videoId=${URLEncoder.encode(videoId, "UTF-8")}"
-            val request = Request.Builder()
-                .url(apiUrl)
-                .get()
-                .addHeader("x-rapidapi-key", BuildConfig.RAPIDAPI_KEY)
-                .addHeader("x-rapidapi-host", BuildConfig.RAPIDAPI_YOUTUBE_HOST)
-                .build()
+            Log.d(TAG, "Starting YouTube download for: $videoId")
 
-            val response = client.newCall(request).execute()
-            val responseBody = response.body?.string()
-
-            if (!response.isSuccessful) {
-                Log.e(TAG, "API failed: ${response.code}")
-                val error = if (response.code == 429) {
-                    DownloadError.RateLimitExceeded(response.message)
-                } else {
-                    DownloadError.ApiError(response.code, response.message)
-                }
-                return@withContext DownloadResult.Failure(error)
-            }
-
-            if (responseBody == null) {
-                Log.e(TAG, "Empty API response for video: $videoId")
-                return@withContext DownloadResult.Failure(
-                    DownloadError.ApiError(response.code, "Empty body")
-                )
-            }
-
-            val songResponse = gson.fromJson(responseBody, YouTubeSongResponse::class.java)
-            val downloadUrl = songResponse.data?.downloadUrl
-            if (downloadUrl.isNullOrBlank()) {
+            // First get song details including download URL
+            val songData = getSongDetails(videoId)
+            if (songData?.downloadUrl == null) {
                 Log.e(TAG, "No download URL for video: $videoId")
-                return@withContext DownloadResult.Failure(
-                    DownloadError.NoDownloadUrl("Missing download URL")
-                )
+                return@withContext null
             }
 
-            val audioRequest = Request.Builder().url(downloadUrl).build()
+            // Download the audio file
+            val audioRequest = Request.Builder().url(songData.downloadUrl).build()
             val audioResponse = client.newCall(audioRequest).execute()
 
             if (!audioResponse.isSuccessful) {
                 Log.e(TAG, "Audio download failed: ${audioResponse.code}")
-                return@withContext DownloadResult.Failure(
-                    DownloadError.AudioDownloadFailed(audioResponse.code, audioResponse.message)
-                )
+                return@withContext null
             }
 
+            // Save to local storage
             val musicDir = java.io.File(context.getExternalFilesDir(null), "RingerSongs")
             if (!musicDir.exists()) musicDir.mkdirs()
 
@@ -290,12 +250,11 @@ class YouTubeMusicRepository(private val context: Context) {
             }
 
             Log.d(TAG, "Downloaded YouTube track: ${localFile.absolutePath}")
-            return@withContext DownloadResult.Success(localFile.absolutePath)
+            return@withContext localFile.absolutePath
+
         } catch (e: Exception) {
             Log.e(TAG, "YouTube download error", e)
-            return@withContext DownloadResult.Failure(
-                DownloadError.UnknownError(e.message)
-            )
+            return@withContext null
         }
     }
 

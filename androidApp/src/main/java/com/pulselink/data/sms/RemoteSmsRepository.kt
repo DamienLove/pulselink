@@ -43,16 +43,12 @@ class RemoteSmsRepository @Inject constructor(
                     val threads = snapshot?.documents?.mapNotNull { doc ->
                         val threadId = doc.id.toLongOrNull() ?: return@mapNotNull null
                         val address = doc.getString("address") ?: return@mapNotNull null
-                        val unread = doc.getBoolean("unread") == true
-                        val rawUnreadCount = doc.getLong("unreadCount") ?: 0L
-                        val unreadCount = if (unread && rawUnreadCount == 0L) 1 else rawUnreadCount.toInt()
                         SmsThreadItem(
                             threadId = threadId,
                             address = address,
                             snippet = doc.getString("snippet").orEmpty(),
                             timestamp = doc.getLong("date") ?: 0L,
-                            unread = unread,
-                            unreadCount = unreadCount,
+                            unread = doc.getBoolean("unread") == true,
                             isPrivate = doc.getBoolean("isPrivate") == true,
                             isFavorite = doc.getBoolean("isFavorite") == true,
                             isTrusted = doc.getBoolean("isTrusted") == true,

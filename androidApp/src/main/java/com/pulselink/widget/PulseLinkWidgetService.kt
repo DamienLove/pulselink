@@ -76,8 +76,7 @@ class PulseLinkWidgetFactory(private val context: Context) : RemoteViewsService.
                             address = thread.address,
                             snippet = thread.snippet,
                             timestamp = thread.timestamp,
-                            unread = thread.unread,
-                            unreadCount = thread.unreadCount
+                            unread = thread.unread
                         )
                     }
                 )
@@ -205,8 +204,7 @@ class PulseLinkWidgetFactory(private val context: Context) : RemoteViewsService.
             address = address,
             snippet = snippet,
             timestamp = timestamp,
-            unread = unread,
-            unreadCount = unreadCount
+            unread = unread
         )
     }
 

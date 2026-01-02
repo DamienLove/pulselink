@@ -27,8 +27,7 @@ data class WidgetThread(
     val address: String,
     val snippet: String,
     val timestamp: Long,
-    val unread: Boolean,
-    val unreadCount: Int = 0
+    val unread: Boolean
 )
 
 object WidgetCache {

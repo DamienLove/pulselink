@@ -9,8 +9,7 @@ data class AppState(
     val songOrder: List<String> = emptyList(),
     val contacts: List<ContactEntry> = emptyList(),
     val playback: PlaybackState = PlaybackState(),
-    val theme: ThemeConfig? = null,
-    val downloadError: String? = null
+    val theme: ThemeConfig? = null
 )
 
 @Serializable
