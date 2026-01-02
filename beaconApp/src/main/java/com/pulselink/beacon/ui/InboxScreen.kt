@@ -207,40 +207,47 @@ fun InboxScreen(
                 .padding(padding)
                 .background(theme.inboxBackgroundColor)
         ) {
-            OutlinedTextField(
-                value = searchText,
-                onValueChange = {
-                    searchText = it
-                    if (it.isBlank()) onClearSearch()
-                },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = mutedTint) },
-                trailingIcon = {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = theme.frameColor.copy(alpha = 0.08f),
+                contentColor = theme.frameColor,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .height(50.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                ) {
+                    Icon(Icons.Default.Search, contentDescription = null, tint = mutedTint)
+                    Box(modifier = Modifier.weight(1f).padding(horizontal = 8.dp)) {
+                        if (searchText.isEmpty()) {
+                            Text("Search messages", color = mutedTint, style = MaterialTheme.typography.bodyLarge)
+                        }
+                        androidx.compose.foundation.text.BasicTextField(
+                            value = searchText,
+                            onValueChange = {
+                                searchText = it
+                                if (it.isBlank()) onClearSearch()
+                            },
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = theme.frameColor),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = { onSearch(searchText) }),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                     if (searchText.isNotBlank()) {
                         IconButton(onClick = {
                             searchText = ""
                             onClearSearch()
-                        }) { Icon(Icons.Default.Clear, contentDescription = "Clear", tint = mutedTint) }
+                        }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear", tint = mutedTint)
+                        }
                     }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(18.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                placeholder = { Text("Search contacts or messages") },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = theme.accentColor,
-                    unfocusedBorderColor = theme.frameColor.copy(alpha = 0.4f),
-                    focusedContainerColor = theme.inboxBackgroundColor,
-                    unfocusedContainerColor = theme.inboxBackgroundColor
-                ),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(
-                    onSearch = {
-                        onSearch(searchText)
-                    }
-                )
-            )
+                }
+            }
 
             TabsRow(
                 filter = filter,

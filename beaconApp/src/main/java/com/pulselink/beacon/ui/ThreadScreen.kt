@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -60,6 +60,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -175,13 +176,26 @@ fun ThreadScreen(
                     .weight(1f)
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                reverseLayout = true
             ) {
-                items(messages, key = { it.id }) { msg ->
+                // messages is Newest -> Oldest.
+                // reverseLayout = true means we start at bottom with index 0 (Newest).
+                // We iterate messages: Item 0 (Newest) -> Item N (Oldest).
+                // Layout fills bottom-up.
+                item { Spacer(modifier = Modifier.height(8.dp)) }
+
+                itemsIndexed(messages, key = { _, item -> item.id }) { index, msg ->
+                    val nextMsg = messages.getOrNull(index + 1)
+                    if (shouldShowDateHeader(msg.timestamp, nextMsg?.timestamp)) {
+                        DateHeader(msg.timestamp, theme)
+                    }
+
                     MessageBubble(message = msg, theme = theme)
                 }
+
                 item {
-                    if (messages.size > 3) {
+                     if (messages.size > 3) {
                         NativeAdCard(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -189,7 +203,6 @@ fun ThreadScreen(
                         )
                     }
                 }
-                item { Spacer(modifier = Modifier.height(40.dp)) }
             }
 
             Surface(
@@ -211,7 +224,13 @@ fun ThreadScreen(
                         value = draft,
                         onValueChange = { draft = it },
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text("Write your message") }
+                        placeholder = { Text("Write your message") },
+                        colors = androidx.compose.material3.TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        )
                     )
                     IconButton(
                         onClick = {
@@ -269,7 +288,23 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
     val background = if (isOutgoing) theme.outgoingColor else theme.incomingColor
     val alignment = if (isOutgoing) Alignment.CenterEnd else Alignment.CenterStart
     val frameColor = theme.frameColor
-    val bubbleShape = RoundedCornerShape(theme.bubbleRadius.dp)
+
+    // Custom Shapes for Bubble effect
+    val bubbleShape = if (isOutgoing) {
+        RoundedCornerShape(
+            topStart = theme.bubbleRadius.dp,
+            topEnd = theme.bubbleRadius.dp,
+            bottomStart = theme.bubbleRadius.dp,
+            bottomEnd = 4.dp
+        )
+    } else {
+        RoundedCornerShape(
+            topStart = theme.bubbleRadius.dp,
+            topEnd = theme.bubbleRadius.dp,
+            bottomStart = 4.dp,
+            bottomEnd = theme.bubbleRadius.dp
+        )
+    }
 
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -279,17 +314,17 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
             color = background,
             shape = bubbleShape,
             tonalElevation = 1.dp,
-            border = BorderStroke(1.dp, frameColor.copy(alpha = 0.6f)),
+            border = BorderStroke(1.dp, frameColor.copy(alpha = 0.2f)),
             modifier = Modifier
-                .fillMaxWidth(0.9f)
+                .fillMaxWidth(0.85f) // Slightly narrower for better reading
                 .clip(bubbleShape)
         ) {
             Column(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
                 Text(
                     text = message.body,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyLarge, // Larger text for readability
                     color = Color.Black
                 )
                 if (message.isMms && message.mediaParts.isNotEmpty()) {
@@ -302,20 +337,55 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(200.dp)
+                                    .clip(RoundedCornerShape(8.dp))
                             )
                         }
                 }
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = DateUtils.getRelativeTimeSpanString(
-                        message.timestamp,
-                        System.currentTimeMillis(),
-                        DateUtils.MINUTE_IN_MILLIS
-                    ).toString(),
+                    text = DateUtils.formatDateTime(LocalContext.current, message.timestamp, DateUtils.FORMAT_SHOW_TIME),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Light,
-                    color = Color.DarkGray
+                    color = Color.DarkGray.copy(alpha = 0.8f),
+                    modifier = Modifier.align(Alignment.End)
                 )
             }
         }
     }
+}
+
+@Composable
+private fun DateHeader(current: Long, theme: ThemePalette) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            color = theme.frameColor.copy(alpha = 0.1f),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(
+                text = DateUtils.getRelativeTimeSpanString(
+                    current,
+                    System.currentTimeMillis(),
+                    DateUtils.DAY_IN_MILLIS,
+                    DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_YEAR or DateUtils.FORMAT_ABBREV_MONTH
+                ).toString(),
+                style = MaterialTheme.typography.labelSmall,
+                color = theme.frameColor,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+            )
+        }
+    }
+}
+
+private fun shouldShowDateHeader(current: Long, prev: Long?): Boolean {
+    if (prev == null) return true // It's the oldest message loaded
+
+    // Compare days
+    val cDate = Instant.ofEpochMilli(current).atZone(ZoneId.systemDefault()).toLocalDate()
+    val pDate = Instant.ofEpochMilli(prev).atZone(ZoneId.systemDefault()).toLocalDate()
+    return !cDate.isEqual(pDate)
 }

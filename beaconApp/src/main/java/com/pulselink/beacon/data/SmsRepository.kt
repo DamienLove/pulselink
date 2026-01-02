@@ -54,7 +54,7 @@ class SmsRepository(private val context: Context) {
                 projection,
                 null,
                 null,
-                "${Telephony.Threads.DATE} DESC"
+                "${Telephony.Threads.DATE} DESC LIMIT $limit"
             )
         }.getOrNull() ?: return@withContext listThreadsFromSms(limit)
 
@@ -230,7 +230,7 @@ class SmsRepository(private val context: Context) {
                 projection,
                 "${Telephony.Sms.THREAD_ID}=?",
                 arrayOf(threadId.toString()),
-                "${Telephony.Sms.DATE} DESC"
+                "${Telephony.Sms.DATE} DESC LIMIT $limit"
             )
         }.getOrNull()
 
@@ -509,7 +509,7 @@ class SmsRepository(private val context: Context) {
                 projection,
                 null,
                 null,
-                "${Telephony.Sms.DATE} DESC"
+                "${Telephony.Sms.DATE} DESC LIMIT $limit"
             )
         }.getOrNull() ?: return emptyList()
 
