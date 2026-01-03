@@ -529,6 +529,20 @@ private fun ThemesRow(onPreset: (ThemePalette) -> Unit) {
                 bubbleRadius = 24f,
                 iconVariant = InboxIconVariant.Beacon
             )
+        ),
+        ThemePreset(
+            "Future Deep 3.0",
+            ThemePalette.default().copy(
+                incoming = Color(0xFF0E121E).toArgb().toLong(), // Surface
+                outgoing = Color(0xFF22D3EE).toArgb().toLong(), // Cyan
+                frame = Color(0xFFA855F7).toArgb().toLong(),    // Purple Border
+                accent = Color(0xFFA855F7).toArgb().toLong(),   // Purple Accent
+                threadBackground = Color(0xFF030407).toArgb().toLong(), // Deep Background
+                inboxBackground = Color(0xFF030407).toArgb().toLong(),
+                font = ThemeFont.Mono,
+                bubbleRadius = 24f,
+                iconVariant = InboxIconVariant.Shield
+            )
         )
     )
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
