@@ -930,6 +930,7 @@
   font-size: 0.85em;
   color: var(--muted);
   opacity: 0.8;
+}
 
 /* -------------------------------------------------------------------------- */
 /*  Redesign December 2025: calmer layout, brighter focus, better spacing     */
@@ -1214,6 +1215,15 @@
   border-radius: 12px;
   border: 1px dashed rgba(255, 255, 255, 0.12);
   background: transparent;
+}
+
+.ghost-btn.icon-only {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .login-card {

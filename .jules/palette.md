@@ -9,3 +9,7 @@
 ## 2024-05-25 - Semantic Active States
 **Learning:** Visual active states (CSS classes) often get implemented without the corresponding semantic HTML attributes (`aria-current`), leaving screen reader users guessing which view is active.
 **Action:** Ensure navigation components always pair `.active` visual classes with `aria-current="page"` (for tabs/nav) or `aria-current="true"` (for lists) to expose state to assistive technology.
+
+## 2024-05-25 - Reusable Icon Buttons
+**Learning:** Micro-interactions (like copy buttons) are frequently reused but often reimplemented with inconsistent inline styles.
+**Action:** Standardize small action buttons using a utility class (e.g., `.ghost-btn.icon-only`) to enforce consistent touch targets (32px+) and alignment without cluttering JSX.
