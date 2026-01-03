@@ -40,8 +40,8 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     private val workManager = WorkManager.getInstance(app)
 
     private companion object {
-        const val THREAD_LIMIT = Int.MAX_VALUE
-        const val MESSAGE_LIMIT = Int.MAX_VALUE
+        const val THREAD_LIMIT = 100
+        const val MESSAGE_LIMIT = 300
     }
 
     var threads by mutableStateOf<List<SmsThreadItem>>(emptyList())
@@ -54,20 +54,26 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var searchState: SearchResultState by mutableStateOf(SearchResultState.Idle)
         private set
+    var isLoading by mutableStateOf(true)
+        private set
+    var isRefreshing by mutableStateOf(false)
+        private set
 
     init {
-        refreshThreads()
+        refreshThreads(initial = true)
         viewModelScope.launch {
             repo.changes().collectLatest {
-                refreshThreads()
+                refreshThreads(initial = false)
                 currentThreadId?.let { refreshThread(it, refreshRead = false) }
             }
         }
     }
 
-    fun refreshThreads() {
+    fun refreshThreads(initial: Boolean = false) {
         viewModelScope.launch {
+            if (initial) isLoading = true else isRefreshing = true
             threads = runCatching { repo.listThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
+            if (initial) isLoading = false else isRefreshing = false
         }
     }
 
@@ -119,12 +125,6 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
             )
 
             val delay = scheduledTime - System.currentTimeMillis()
-
-            // If delay is effectively non-positive, consider it failed or send immediately?
-            // Sending immediately might be unexpected if user picked "now".
-            // But if it's in the past (e.g. user spent time in picker), we should probably fail or ask.
-            // For now, let's auto-fail if it's too far in past, or try to send if it's close.
-            // Simpler: if delay <= 0, mark as failed (as per PR feedback recommendation).
 
             if (delay <= 0) {
                 scheduledDao.insert(message.copy(status = MessageStatus.FAILED))

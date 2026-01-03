@@ -175,11 +175,10 @@ fun ThreadScreen(
                     .weight(1f)
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                reverseLayout = true
             ) {
-                items(messages, key = { it.id }) { msg ->
-                    MessageBubble(message = msg, theme = theme)
-                }
+                item { Spacer(modifier = Modifier.height(40.dp)) }
                 item {
                     if (messages.size > 3) {
                         NativeAdCard(
@@ -189,7 +188,9 @@ fun ThreadScreen(
                         )
                     }
                 }
-                item { Spacer(modifier = Modifier.height(40.dp)) }
+                items(messages, key = { it.id }) { msg ->
+                    MessageBubble(message = msg, theme = theme)
+                }
             }
 
             Surface(

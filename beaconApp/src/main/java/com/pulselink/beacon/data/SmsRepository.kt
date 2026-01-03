@@ -38,7 +38,7 @@ class SmsRepository(private val context: Context) {
 
     fun changes(): SharedFlow<Unit> = observerFlow.asSharedFlow()
 
-    suspend fun listThreads(limit: Int = 50): List<SmsThreadItem> = withContext(Dispatchers.IO) {
+    suspend fun listThreads(limit: Int = 100): List<SmsThreadItem> = withContext(Dispatchers.IO) {
         if (!hasReadPerms()) return@withContext emptyList()
         ensureObserversRegistered()
         val projection = arrayOf(

@@ -110,7 +110,9 @@ fun InboxScreen(
     notificationsSilent: Boolean,
     onOpenNotificationSettings: () -> Unit,
     filter: InboxFilter,
-    onFilterChange: (InboxFilter) -> Unit
+    onFilterChange: (InboxFilter) -> Unit,
+    isLoading: Boolean = false,
+    isRefreshing: Boolean = false
 ) {
     val host = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -151,11 +153,21 @@ fun InboxScreen(
         topBar = {
             LargeTopAppBar(
                 title = {
-                    Text(
-                        "Beacon Inbox",
-                        fontWeight = FontWeight.SemiBold,
-                        color = theme.frameColor
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "Beacon Inbox",
+                            fontWeight = FontWeight.SemiBold,
+                            color = theme.frameColor
+                        )
+                        if (isRefreshing) {
+                            Spacer(modifier = Modifier.size(12.dp))
+                            CircularProgressIndicator(
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(16.dp),
+                                color = theme.frameColor
+                            )
+                        }
+                    }
                 },
                 navigationIcon = {
                     Icon(
@@ -367,7 +379,11 @@ fun InboxScreen(
                 }
             }
 
-            if (filtered.isEmpty()) {
+            if (isLoading && filtered.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = theme.accentColor)
+                }
+            } else if (filtered.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
