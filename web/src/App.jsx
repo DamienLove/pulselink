@@ -2333,42 +2333,66 @@ function App() {
                 </div>
               </div>
               <div className="home-grid">
-                <button className="home-card" onClick={() => setActivePanel('pulselink')}>
+                <button
+                  className="home-card animate-slide-up"
+                  style={{ animationDelay: '0ms' }}
+                  onClick={() => setActivePanel('pulselink')}
+                >
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink" />
                   </div>
                   <h3>PulseLink</h3>
                   <p>Update your profile and trusted contacts.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('contacts')}>
+                <button
+                  className="home-card animate-slide-up"
+                  style={{ animationDelay: '50ms' }}
+                  onClick={() => setActivePanel('contacts')}
+                >
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink contacts" />
                   </div>
                   <h3>Contacts</h3>
                   <p>Browse all device contacts synced from your phone.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('beacon')}>
+                <button
+                  className="home-card animate-slide-up"
+                  style={{ animationDelay: '100ms' }}
+                  onClick={() => setActivePanel('beacon')}
+                >
                   <div className="home-icon beacon">
                     <img src={beaconLogo} alt="Beacon" />
                   </div>
                   <h3>Beacon Inbox</h3>
                   <p>View SMS synced from your phone.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('ringersong')}>
+                <button
+                  className="home-card animate-slide-up"
+                  style={{ animationDelay: '150ms' }}
+                  onClick={() => setActivePanel('ringersong')}
+                >
                   <div className="home-icon ringersong">
                     <img src={ringersongLogo} alt="RingerSong" />
                   </div>
                   <h3>RingerSong</h3>
                   <p>Manage ringtone progressions and streaming.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('map')}>
+                <button
+                  className="home-card animate-slide-up"
+                  style={{ animationDelay: '200ms' }}
+                  onClick={() => setActivePanel('map')}
+                >
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink map" />
                   </div>
                   <h3>Emergency Map</h3>
                   <p>Track shared locations from PulseLink alerts.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('themes')}>
+                <button
+                  className="home-card animate-slide-up"
+                  style={{ animationDelay: '250ms' }}
+                  onClick={() => setActivePanel('themes')}
+                >
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink themes" />
                   </div>
@@ -2376,7 +2400,8 @@ function App() {
                   <p>Browse, import, and publish custom themes.</p>
                 </button>
                 <button
-                  className="home-card"
+                  className="home-card animate-slide-up"
+                  style={{ animationDelay: '300ms' }}
                   onClick={() => setActivePanel('extensions')}
                   disabled={!remoteSettings.thirdPartyExtensionsEnabled}
                   title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage extensions" : "Enable 3rd-party extensions in Settings"}
