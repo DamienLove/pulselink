@@ -32,6 +32,20 @@ class LoginViewModel @Inject constructor(
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
     val authState: StateFlow<AuthState> = authManager.authState
 
+    init {
+        viewModelScope.launch {
+            authManager.authState.collect { authState ->
+                val isAnon = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true
+                _uiState.update {
+                    it.copy(
+                        isAnonymousUser = isAnon,
+                        mode = if (isAnon) LoginMode.CREATE_ACCOUNT else it.mode
+                    )
+                }
+            }
+        }
+    }
+
     fun updateEmail(value: String) {
         _uiState.update { it.copy(email = value, errorMessageRes = null, userMessageRes = null) }
     }
@@ -220,6 +234,7 @@ data class LoginUiState(
     val mode: LoginMode = LoginMode.SIGN_IN,
     val isLoading: Boolean = false,
     val isSocialLoading: Boolean = false,
+    val isAnonymousUser: Boolean = false,
     @StringRes val errorMessageRes: Int? = null,
     @StringRes val userMessageRes: Int? = null
 )

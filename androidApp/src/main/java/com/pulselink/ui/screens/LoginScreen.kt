@@ -78,18 +78,24 @@ fun LoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     val logoRes = brandLogoRes(useProBranding)
-    val baseTitle = if (state.mode == LoginMode.SIGN_IN) {
+    val baseTitle = if (state.isAnonymousUser) {
+        stringResource(R.string.login_title_upgrade_account)
+    } else if (state.mode == LoginMode.SIGN_IN) {
         stringResource(R.string.login_title_sign_in)
     } else {
         stringResource(R.string.login_title_create_account)
     }
     val title = if (useProBranding) "$baseTitle • Premium" else baseTitle
-    val subtitle = if (state.mode == LoginMode.SIGN_IN) {
+    val subtitle = if (state.isAnonymousUser) {
+        stringResource(R.string.login_subtitle_upgrade_account)
+    } else if (state.mode == LoginMode.SIGN_IN) {
         stringResource(R.string.login_subtitle_sign_in)
     } else {
         stringResource(R.string.login_subtitle_create_account)
     }
-    val ctaLabel = if (state.mode == LoginMode.SIGN_IN) {
+    val ctaLabel = if (state.isAnonymousUser) {
+        stringResource(R.string.login_cta_link_account)
+    } else if (state.mode == LoginMode.SIGN_IN) {
         stringResource(R.string.login_cta_sign_in)
     } else {
         stringResource(R.string.login_cta_create_account)
@@ -245,24 +251,26 @@ fun LoginScreen(
                     Text(text = ctaLabel)
                 }
             }
-            OutlinedButton(
-                onClick = {
-                    focusManager.clearFocus()
-                    onToggleMode()
-                },
-                enabled = !primaryLoading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-            ) {
-                Text(
-                    text = if (state.mode == LoginMode.SIGN_IN) {
-                        stringResource(R.string.login_large_toggle_create)
-                    } else {
-                        stringResource(R.string.login_large_toggle_sign_in)
+            if (!state.isAnonymousUser) {
+                OutlinedButton(
+                    onClick = {
+                        focusManager.clearFocus()
+                        onToggleMode()
                     },
-                    fontWeight = FontWeight.SemiBold
-                )
+                    enabled = !primaryLoading,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Text(
+                        text = if (state.mode == LoginMode.SIGN_IN) {
+                            stringResource(R.string.login_large_toggle_create)
+                        } else {
+                            stringResource(R.string.login_large_toggle_sign_in)
+                        },
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
             TextButton(
                 onClick = {
@@ -332,29 +340,31 @@ fun LoginScreen(
                     }
                 }
             }
-            Text(
-                text = stringResource(R.string.login_sms_only_helper),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedButton(
-                onClick = {
-                    focusManager.clearFocus()
-                    onSmsOnlyClick()
-                },
-                enabled = !primaryLoading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Sms,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp)
+            if (!state.isAnonymousUser) {
+                Text(
+                    text = stringResource(R.string.login_sms_only_helper),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Text(text = stringResource(R.string.login_sms_only_cta))
+                OutlinedButton(
+                    onClick = {
+                        focusManager.clearFocus()
+                        onSmsOnlyClick()
+                    },
+                    enabled = !primaryLoading,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Sms,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Text(text = stringResource(R.string.login_sms_only_cta))
+                }
             }
         }
     }

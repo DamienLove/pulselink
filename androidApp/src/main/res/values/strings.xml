@@ -400,8 +400,10 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="contact_detail_sound_sync_note">Changes sync automatically between linked contacts</string>
     <string name="login_title_sign_in">Sign in to PulseLink</string>
     <string name="login_title_create_account">Create your PulseLink account</string>
+    <string name="login_title_upgrade_account">Upgrade Account</string>
     <string name="login_subtitle_sign_in">Log in so your circle can reach you over data or SMS.</string>
     <string name="login_subtitle_create_account">Securely link your identity so alerts can find you anywhere.</string>
+    <string name="login_subtitle_upgrade_account">Create an account to save your data and access it on other devices.</string>
     <string name="login_email_label">Email address</string>
     <string name="login_password_label">Password</string>
     <string name="login_confirm_password_label">Confirm password</string>
@@ -409,6 +411,7 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="login_hide_password">Hide password</string>
     <string name="login_cta_sign_in">Continue</string>
     <string name="login_cta_create_account">Create account</string>
+    <string name="login_cta_link_account">Link Account</string>
     <string name="login_toggle_sign_in">Already have an account? Sign in</string>
     <string name="login_toggle_create_account">Need an account? Create one</string>
     <string name="login_forgot_password">Forgot password</string>
