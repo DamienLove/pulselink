@@ -111,7 +111,16 @@ service cloud.firestore {
            isDeviceOwner(resource.data.receiverId) ||
            isDeviceOwner(resource.data.senderId)
          );
-         allow create: if request.auth != null && isDeviceOwner(request.resource.data.senderId);
+         // Security: Sentinel - Prevent Message Injection.
+         // Enforce that the channelId matches the derived ID from sender and receiver.
+         // channelId must be "ID1_ID2" (sorted).
+         // This ensures users can only write to channels where their device (senderId) is a valid participant.
+         allow create: if request.auth != null
+                       && isDeviceOwner(request.resource.data.senderId)
+                       && (
+                         (request.resource.data.senderId < request.resource.data.receiverId && channelId == request.resource.data.senderId + "_" + request.resource.data.receiverId) ||
+                         (request.resource.data.senderId > request.resource.data.receiverId && channelId == request.resource.data.receiverId + "_" + request.resource.data.senderId)
+                       );
          allow delete: if request.auth != null && isDeviceOwner(resource.data.receiverId);
        }
     }
