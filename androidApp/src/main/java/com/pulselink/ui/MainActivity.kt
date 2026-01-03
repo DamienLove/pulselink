@@ -540,6 +540,7 @@ class MainActivity : AppCompatActivity() {
                         }
                         val beaconIntent = Intent(context, BeaconInboxActivity::class.java).apply {
                             addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                            putExtra("from_pulselink", true)
                         }
                         context.startActivity(beaconIntent)
                         showBeaconAssist = false

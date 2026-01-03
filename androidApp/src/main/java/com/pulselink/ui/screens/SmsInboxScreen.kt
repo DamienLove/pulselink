@@ -124,6 +124,7 @@ fun SmsInboxScreen(
     modifier: Modifier = Modifier,
     dateFormatter: (Long) -> String,
     isBeaconMode: Boolean = false,
+    showBackInBeacon: Boolean = false,
     onOpenSettings: () -> Unit = {},
     onOpenPrivate: () -> Unit = {},
     privateThreadIds: Set<Long> = emptySet(),
@@ -331,23 +332,36 @@ fun SmsInboxScreen(
                         }
                     },
                     navigationIcon = {
-                        Icon(
-                            painter = painterResource(
-                                id = if (isUnifiedMode) {
-                                    brandLogoRes(
-                                        usePremiumBranding = isPremium || isPro,
-                                        isUnifiedMode = true
-                                    )
-                                } else {
-                                    R.drawable.ic_beacon_inbox
-                                }
-                            ),
-                            contentDescription = "Beacon",
-                            tint = logoTint,
-                            modifier = Modifier
-                                .size(beaconCollapsedIconSize)
-                                .alpha(beaconCollapsedAlpha)
-                        )
+                        if (showBackInBeacon) {
+                            IconButton(onClick = onBack) {
+                                ThemeIcon(
+                                    iconKey = ThemeIconKey.BACK,
+                                    theme = theme,
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back",
+                                    tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor),
+                                    modifier = Modifier.size(iconSize)
+                                )
+                            }
+                        } else {
+                            Icon(
+                                painter = painterResource(
+                                    id = if (isUnifiedMode) {
+                                        brandLogoRes(
+                                            usePremiumBranding = isPremium || isPro,
+                                            isUnifiedMode = true
+                                        )
+                                    } else {
+                                        R.drawable.ic_beacon_inbox
+                                    }
+                                ),
+                                contentDescription = "Beacon",
+                                tint = logoTint,
+                                modifier = Modifier
+                                    .size(beaconCollapsedIconSize)
+                                    .alpha(beaconCollapsedAlpha)
+                            )
+                        }
                     },
                     actions = {
                         IconButton(onClick = onOpenPrivate) {
