@@ -3,6 +3,9 @@ import Shared
 #if canImport(FirebaseAuth)
 import FirebaseAuth
 #endif
+#if canImport(FirebaseFunctions)
+import FirebaseFunctions
+#endif
 
 @MainActor
 final class BeaconViewModel: ObservableObject {
@@ -130,5 +133,21 @@ final class BeaconViewModel: ObservableObject {
     func stopListeningToConversation() {
         activeMessageListener?.remove()
         activeMessageListener = nil
+    }
+
+    func deleteAccount() async throws {
+        #if canImport(FirebaseAuth) && canImport(FirebaseFunctions)
+        // Use Firebase Functions SDK for better handling of auth and regions
+        let functions = Functions.functions()
+        _ = try await functions.httpsCallable("deleteAccount").call()
+        try? Auth.auth().signOut()
+        #elseif canImport(FirebaseAuth)
+        // Fallback if Functions SDK is missing but Auth exists (unlikely in this setup but safe)
+        guard let user = Auth.auth().currentUser else { return }
+        try? await user.delete() // Simple auth deletion if cloud function not reachable via SDK
+        #else
+        // Mock success
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        #endif
     }
 }

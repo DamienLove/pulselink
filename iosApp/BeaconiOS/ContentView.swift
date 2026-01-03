@@ -241,7 +241,7 @@ private struct ConversationView: View {
     var onDisappear: (() -> Void)? = nil
 
     @State private var draft = ""
-    @AppStorage("themeColor") private var themeColor: ThemeColor = .indigo
+    @AppStorage("themeColor") private var themeColor: ThemeColor = .cyan
     @AppStorage("bubbleStyle") private var bubbleStyle: BubbleStyle = .rounded
 
     var body: some View {
@@ -299,7 +299,9 @@ private struct ConversationView: View {
 private struct SettingsTab: View {
     @ObservedObject var viewModel: BeaconViewModel
     let isPro: Bool
-    @AppStorage("themeColor") private var themeColor: ThemeColor = .indigo
+    @State private var showDeleteConfirmation = false
+    @State private var isDeleting = false
+    @AppStorage("themeColor") private var themeColor: ThemeColor = .cyan
     @AppStorage("bubbleStyle") private var bubbleStyle: BubbleStyle = .rounded
 
     var body: some View {
@@ -330,12 +332,44 @@ private struct SettingsTab: View {
                         try? FirebaseAuth.Auth.auth().signOut()
                         #endif
                     }
+                    Button("Delete Account", role: .destructive) {
+                        showDeleteConfirmation = true
+                    }
                 }
                 Section("About") {
                     Text("Beacon iOS")
                 }
             }
             .navigationTitle("Settings")
+        }
+        .alert("Delete Account", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                isDeleting = true
+                Task {
+                    do {
+                        try await viewModel.deleteAccount()
+                    } catch {
+                        // Error handling usually requires showing another alert,
+                        // but for now we just reset the state.
+                        print("Delete account error: \(error)")
+                    }
+                    isDeleting = false
+                }
+            }
+        } message: {
+            Text("This will permanently delete your account and all associated data. This action cannot be undone.")
+        }
+        .overlay {
+            if isDeleting {
+                ZStack {
+                    Color.black.opacity(0.4).ignoresSafeArea()
+                    ProgressView("Deleting...")
+                        .padding()
+                        .background(.regularMaterial)
+                        .cornerRadius(8)
+                }
+            }
         }
     }
 }
