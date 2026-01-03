@@ -992,6 +992,7 @@ const loadGoogleMaps = (() => {
 
 function App() {
   const [user, setUser] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [threads, setThreads] = useState([]);
   const [selectedThread, setSelectedThread] = useState(null);
@@ -1263,6 +1264,7 @@ function App() {
     const userRef = doc(db, "users", user.uid);
     const unsubscribe = onSnapshot(userRef, (snapshot) => {
       const data = snapshot.data() || {};
+      setUserData(data);
       setProfile({
         ownerName: data.ownerName ?? user.displayName ?? '',
         avatarUrl: data.avatarUrl ?? '',
@@ -2076,6 +2078,8 @@ function App() {
     setSelectedThread(thread);
   }, []);
 
+  const isPremium = userData?.subscriptionStatus === 'premium' || userData?.hasPremiumHistory;
+
   if (!user) {
     return (
       <div className="app-shell" style={themeVars}>
@@ -2291,9 +2295,11 @@ function App() {
                       <li>Go to Extensions Store</li>
                       <li>Enable &quot;Remote Web Access&quot;</li>
                     </ol>
-                    <div className="badge badge-premium" style={{ display: 'inline-block', marginTop: '8px', padding: '2px 8px', borderRadius: '4px', background: 'var(--accent)', color: '#fff', fontSize: '0.8em' }}>
-                      Premium Required
-                    </div>
+                    {!isPremium && (
+                      <div className="badge badge-premium" style={{ display: 'inline-block', marginTop: '8px', padding: '2px 8px', borderRadius: '4px', background: 'var(--accent)', color: '#fff', fontSize: '0.8em' }}>
+                        Premium Required
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -3283,57 +3289,78 @@ function App() {
           )}
 
           {activePanel === 'beacon' && (
-            <>
-              {selectedThread ? (
-                <>
-                  <div className="chat-header">
-                    <h3>{selectedThread.address}</h3>
+            isPremium ? (
+              <>
+                {selectedThread ? (
+                  <>
+                    <div className="chat-header">
+                      <h3>{selectedThread.address}</h3>
+                    </div>
+                    <div className="messages-list">
+                      {messageListElements}
+                      <div ref={messagesEndRef} />
+                    </div>
+                  </>
+                ) : (
+                  <div className="empty-state">
+                    <img src={beaconLogo} alt="Beacon" className="empty-logo" />
+                    <div>Select a thread or start a new message</div>
                   </div>
-                  <div className="messages-list">
-                    {messageListElements}
-                    <div ref={messagesEndRef} />
+                )}
+                <div className="composer">
+                  <div className="composer-row">
+                    <label className="composer-label" htmlFor="compose-address">To</label>
+                    <input
+                      id="compose-address"
+                      className="composer-input"
+                      type="tel"
+                      placeholder="Phone number"
+                      value={composeAddress}
+                      onChange={(e) => setComposeAddress(e.target.value)}
+                    />
                   </div>
-                </>
-              ) : (
-                <div className="empty-state">
-                  <img src={beaconLogo} alt="Beacon" className="empty-logo" />
-                  <div>Select a thread or start a new message</div>
+                  <div className="composer-row composer-actions">
+                    <textarea
+                      className="composer-textarea"
+                      placeholder="Type a message..."
+                      aria-label="Message body"
+                      value={composeBody}
+                      onChange={(e) => setComposeBody(e.target.value)}
+                    />
+                    <button
+                      onClick={handleSendMessage}
+                      disabled={isSending || isLoggingIn}
+                      className="primary-btn"
+                    >
+                      {isSending ? "Sending..." : "Send"}
+                    </button>
+                  </div>
+                  {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
+                  <div className="compose-hint">
+                    Messages are sent from your phone when it&apos;s online and signed in.
+                  </div>
                 </div>
-              )}
-              <div className="composer">
-                <div className="composer-row">
-                  <label className="composer-label" htmlFor="compose-address">To</label>
-                  <input
-                    id="compose-address"
-                    className="composer-input"
-                    type="tel"
-                    placeholder="Phone number"
-                    value={composeAddress}
-                    onChange={(e) => setComposeAddress(e.target.value)}
-                  />
+              </>
+            ) : (
+              <div className="empty-state">
+                <img src={beaconLogo} alt="Beacon" className="empty-logo" style={{ marginBottom: '24px', opacity: 1, filter: 'none' }} />
+                <h2 style={{ marginBottom: '16px' }}>Beacon Inbox</h2>
+                <div className="badge badge-premium" style={{ background: 'var(--accent)', color: '#fff', marginBottom: '24px' }}>
+                  Premium Feature
                 </div>
-                <div className="composer-row composer-actions">
-                  <textarea
-                    className="composer-textarea"
-                    placeholder="Type a message..."
-                    aria-label="Message body"
-                    value={composeBody}
-                    onChange={(e) => setComposeBody(e.target.value)}
-                  />
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={isSending || isLoggingIn}
-                    className="primary-btn"
-                  >
-                    {isSending ? "Sending..." : "Send"}
-                  </button>
-                </div>
-                {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
-                <div className="compose-hint">
-                  Messages are sent from your phone when it&apos;s online and signed in.
-                </div>
+                <p style={{ maxWidth: '400px', textAlign: 'center', lineHeight: '1.6', color: 'var(--muted)' }}>
+                  Upgrade to PulseLink Premium to access your SMS messages directly from the web.
+                  Send and receive texts even when your phone is in the other room.
+                </p>
+                <button
+                  className="primary-btn"
+                  style={{ marginTop: '32px' }}
+                  onClick={() => setActivePanel('settings')}
+                >
+                  Go to Settings
+                </button>
               </div>
-            </>
+            )
           )}
         </div>
       </div>

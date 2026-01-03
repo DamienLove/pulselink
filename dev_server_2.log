@@ -1,0 +1,11 @@
+
+> pulselink-web@0.0.0 dev /app/web
+> vite --port 5173
+
+
+  VITE v5.4.21  ready in 272 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+7:48:57 AM [vite] .env.local changed, restarting server...
+7:48:57 AM [vite] server restarted.
