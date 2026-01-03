@@ -1329,6 +1329,8 @@ class MainViewModel @Inject constructor(
             }
             appendLine()
             appendLine("App Version: $versionName ($versionCode)")
+            appendLine("Flavor: ${BuildConfig.FLAVOR}")
+            appendLine("Build Type: ${BuildConfig.BUILD_TYPE}")
             appendLine("Device: $manufacturer $model")
             appendLine("OS: Android $osVersion (API $apiLevel)")
         }

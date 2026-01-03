@@ -273,14 +273,11 @@ private fun LinkStatusSection(
                         if (hasPin) {
                             OutlinedButton(
                                 onClick = {
+                                    val subject = Uri.encode("Override Instructions")
+                                    val body = Uri.encode("You have been set as a trusted contact. Even without the PulseLink app, you can trigger an emergency alert on my phone by texting exactly:\n\n'pulselink ${contact.remotePin} emergency'\n\nto my number.")
+                                    val uriString = "mailto:${contact.email ?: ""}?subject=$subject&body=$body"
                                     val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
-                                        data = Uri.parse("mailto:")
-                                        putExtra(Intent.EXTRA_EMAIL, arrayOf(contact.email ?: ""))
-                                        putExtra(Intent.EXTRA_SUBJECT, "Override Instructions")
-                                        putExtra(
-                                            Intent.EXTRA_TEXT,
-                                            "You have been set as a trusted contact. Even without the PulseLink app, you can trigger an emergency alert on my phone by texting exactly:\n\n'pulselink ${contact.remotePin} emergency'\n\nto my number."
-                                        )
+                                        data = Uri.parse(uriString)
                                     }
                                     try {
                                         context.startActivity(emailIntent)
