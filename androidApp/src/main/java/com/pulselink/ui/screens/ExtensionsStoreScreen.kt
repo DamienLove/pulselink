@@ -1,6 +1,7 @@
 package com.pulselink.ui.screens
 
 import com.pulselink.BuildConfig
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,6 +25,8 @@ import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.WifiTethering
 import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -38,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -157,6 +161,23 @@ fun ExtensionsStoreScreen(
         )
     }
 
+    val applyEssentials = {
+        features.forEach { feature ->
+            if (feature.requiresPremium && !premiumActive) return@forEach
+            when (feature.id) {
+                "beacon", "relay", "email_backup", "otp" -> feature.onToggle(true)
+                else -> feature.onToggle(false)
+            }
+        }
+    }
+
+    val applyPowerUser = {
+        features.forEach { feature ->
+            if (feature.requiresPremium && !premiumActive) return@forEach
+            feature.onToggle(true)
+        }
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -168,27 +189,69 @@ fun ExtensionsStoreScreen(
                 }
             )
         }
-    ) { padding ->
+    ) { innerPadding ->
         Column(
             modifier = Modifier
+                .padding(innerPadding)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(padding)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
                 text = stringResource(R.string.extensions_store_header),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
             )
             Text(
                 text = stringResource(R.string.extensions_store_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+                modifier = Modifier.padding(bottom = 8.dp)
             )
 
+            // Quick Setup Section
+            Text(
+                text = stringResource(R.string.extensions_store_quick_setup_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                QuickSetupCard(
+                    modifier = Modifier.weight(1f),
+                    title = stringResource(R.string.extensions_store_quick_setup_essentials),
+                    description = stringResource(R.string.extensions_store_quick_setup_essentials_desc),
+                    icon = Icons.Filled.Bolt,
+                    onClick = applyEssentials
+                )
+                QuickSetupCard(
+                    modifier = Modifier.weight(1f),
+                    title = stringResource(R.string.extensions_store_quick_setup_power),
+                    description = stringResource(R.string.extensions_store_quick_setup_power_desc),
+                    icon = Icons.Filled.Star,
+                    onClick = applyPowerUser
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = stringResource(R.string.settings_extensions_store_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            // Feature List
+            // Using Column here because we are already in a scrollable Column.
+            // LazyVerticalGrid inside a verticalScroll Column causes crash or weird behavior unless fixed height.
+            // Since the list is short, a loop is fine.
             features.forEach { feature ->
                 FeatureCard(feature, premiumActive)
             }
@@ -196,6 +259,47 @@ fun ExtensionsStoreScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             ExtensionCTA()
+        }
+    }
+}
+
+@Composable
+fun QuickSetupCard(
+    modifier: Modifier = Modifier,
+    title: String,
+    description: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier.clickable { onClick() },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.size(32.dp)
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
+                minLines = 2
+            )
         }
     }
 }
@@ -223,20 +327,24 @@ fun FeatureCard(feature: FeatureToggle, premiumActive: Boolean) {
                         tint = if (feature.isEnabled && !locked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = stringResource(feature.titleRes),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = if (feature.isEnabled && !locked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                    )
-                    if (feature.requiresPremium) {
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = stringResource(R.string.extensions_store_premium_badge),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (locked) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = stringResource(feature.titleRes),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = if (feature.isEnabled && !locked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                            )
+                            if (feature.requiresPremium) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = stringResource(R.string.extensions_store_premium_badge),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (locked) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
                     }
                 }
                 Switch(

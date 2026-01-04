@@ -475,4 +475,56 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="widget_trigger_emergency">Emergency alert sent from widget</string>
     <string name="widget_trigger_check_in">Check-in sent from widget</string>
     <string name="widget_error_no_contacts">Add emergency contacts before using widget</string>
+
+    <!-- Extensions Store Strings -->
+    <string name="settings_extensions_store_title">Extensions Store</string>
+    <string name="settings_extensions_store_subtitle">Manage features and add-ons</string>
+    <string name="settings_extensions_store_action">Manage</string>
+
+    <string name="extensions_store_title">Extensions Store</string>
+    <string name="extensions_store_header">Customize Your Experience</string>
+    <string name="extensions_store_subtitle">Turn on only the features you need. Basic users can keep it simple, while power users can unlock everything.</string>
+
+    <string name="extension_beacon_title">Beacon Inbox</string>
+    <string name="extension_beacon_desc">A fully-featured SMS/MMS client with a futuristic design. Replaces your default SMS app.</string>
+
+    <string name="extension_relay_title">PulseLink Relay</string>
+    <string name="extension_relay_desc">Sync messages between your Android phone and other devices (like iOS or Web) over the cloud.</string>
+
+    <string name="extension_email_backup_title">Email Backup</string>
+    <string name="extension_email_backup_desc">Automatically forward critical alerts and messages to your email as a backup.</string>
+
+    <string name="extension_web_title">Remote Web Access</string>
+    <string name="extension_web_desc">View and reply to your SMS conversations from any browser securely. (Premium)</string>
+
+    <string name="extension_otp_title">Smart OTP Cleanup</string>
+    <string name="extension_otp_desc">Automatically detect and delete 2-step verification codes after 24 hours to keep your inbox clean.</string>
+
+    <string name="extension_ai_title">AI Assistant</string>
+    <string name="extension_ai_desc">Get smart summaries of long threads and help composing messages. (Premium)</string>
+
+    <string name="extension_merged_title">Unified Home</string>
+    <string name="extension_merged_desc">Merge the Beacon Inbox directly into the PulseLink home screen for a single-app experience.</string>
+
+    <string name="extension_third_party_title">Third-Party Extensions</string>
+    <string name="extension_third_party_desc">Allow experimental community plugins. Use at your own risk. (Premium)</string>
+
+    <string name="extension_crash_title">Crash Detection</string>
+    <string name="extension_crash_desc">Automatically alert your emergency contacts if a severe car crash is detected. (Premium)</string>
+
+    <string name="extensions_store_premium_badge">PREMIUM</string>
+    <string name="extensions_store_premium_hint">Requires PulseLink Premium subscription.</string>
+    <string name="extensions_store_unavailable">This feature is not available on your device.</string>
+
+    <string name="extensions_store_external_header">Want more features?</string>
+    <string name="extensions_store_external_body">We are constantly adding new extensions. Vote for the next one on our roadmap.</string>
+    <string name="extensions_store_external_action">View Roadmap</string>
+
+    <string name="settings_extensions_hint_header">Missing features?</string>
+    <string name="settings_extensions_hint_body">Some advanced features are hidden. Visit the Extensions Store to enable them.</string>
+    <string name="extensions_store_quick_setup_title">Quick Setup</string>
+    <string name="extensions_store_quick_setup_essentials">Essentials</string>
+    <string name="extensions_store_quick_setup_essentials_desc">Just the basics: Relay and Email Backup.</string>
+    <string name="extensions_store_quick_setup_power">Power User</string>
+    <string name="extensions_store_quick_setup_power_desc">Enable everything available to you.</string>
 </resources>
