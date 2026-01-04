@@ -274,6 +274,37 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => (
 });
 MapAlertItem.displayName = 'MapAlertItem';
 
+// Palette: Accessible copy button with visual feedback
+const CopyButton = ({ text, label }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  return (
+    <button
+      className="ghost-btn icon-only"
+      onClick={handleCopy}
+      aria-label={label || "Copy to clipboard"}
+      title={label || "Copy to clipboard"}
+      style={{ marginLeft: '8px', height: '24px', width: '24px', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+    >
+      {copied ? (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color: 'var(--accent)'}}><polyline points="20 6 9 17 4 12"></polyline></svg>
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2-2v1"></path></svg>
+      )}
+    </button>
+  );
+};
+
 const defaultTheme = {
   primaryColor: "#6750A4",
   secondaryColor: "#625B71",
@@ -2424,6 +2455,7 @@ function App() {
                             onClick={() => setProfile(prev => ({ ...prev, avatarId: av.id }))}
                             className={`avatar-option-btn ${profile.avatarId === av.id ? 'active' : ''}`}
                             title={av.name}
+                            aria-pressed={profile.avatarId === av.id}
                           >
                             <img src={av.src} alt={av.name} className="avatar-option-img" />
                           </button>
@@ -2433,6 +2465,7 @@ function App() {
                           className={`avatar-option-btn ${!profile.avatarId ? 'active' : ''}`}
                           title="Use Custom URL"
                           aria-label="Use custom avatar URL"
+                          aria-pressed={!profile.avatarId}
                         >
                           <LinkIcon />
                         </button>
@@ -2908,7 +2941,7 @@ function App() {
                       return (
                         <div key={themeDoc.id} className="theme-card">
                           <div className="theme-preview" style={previewStyle}>
-                            <div className="theme-preview-chat">
+                            <div className="theme-preview-chat" aria-hidden="true">
                               <div
                                 className="theme-bubble incoming"
                                 style={{
@@ -3017,7 +3050,7 @@ function App() {
                           <span className="theme-dot" style={{ background: preset.theme.primaryColor }} />
                           <strong>{preset.name}</strong>
                         </div>
-                        <div className="theme-chip-preview">
+                        <div className="theme-chip-preview" aria-hidden="true">
                           <div
                             className="theme-bubble incoming"
                             style={{
@@ -3170,7 +3203,10 @@ function App() {
                   </div>
                   <div className="settings-row">
                     <span className="settings-label">User ID</span>
-                    <span className="settings-value mono">{user.uid}</span>
+                    <div className="settings-value-row" style={{display: 'flex', alignItems: 'center'}}>
+                      <span className="settings-value mono">{user.uid}</span>
+                      <CopyButton text={user.uid} label="Copy User ID" />
+                    </div>
                   </div>
                   <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
                     Send password reset email
