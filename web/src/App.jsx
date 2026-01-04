@@ -275,28 +275,28 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => (
 MapAlertItem.displayName = 'MapAlertItem';
 
 const defaultTheme = {
-  primaryColor: "#6750A4",
-  secondaryColor: "#625B71",
-  bubbleOutgoing: "#D0BCFF",
-  bubbleIncoming: "#E8DEF8",
-  backgroundColor: "#FFFFFF",
+  primaryColor: "#22d3ee",
+  secondaryColor: "#818cf8",
+  bubbleOutgoing: "#0ea5e9",
+  bubbleIncoming: "#1e293b",
+  backgroundColor: "#020408",
   iconSizeFactor: 1.0,
   fontStyle: "Default",
-  bubbleCornerRadius: 12,
+  bubbleCornerRadius: 16,
   inboxIconVariant: "Default",
-  onBubbleOutgoing: "#000000",
-  onBubbleIncoming: "#000000",
-  onBackground: "#000000",
-  topBarColor: "#FFFFFF",
-  onTopBarColor: "#000000",
+  onBubbleOutgoing: "#030407",
+  onBubbleIncoming: "#f1f5f9",
+  onBackground: "#f1f5f9",
+  topBarColor: "#0a0f1e",
+  onTopBarColor: "#f1f5f9",
   bubbleCornerRadiusTopStart: null,
   bubbleCornerRadiusTopEnd: null,
   bubbleCornerRadiusBottomStart: null,
   bubbleCornerRadiusBottomEnd: null,
-  timestampColor: null,
-  dividerColor: null,
-  appBackgroundGradientStart: null,
-  appBackgroundGradientEnd: null,
+  timestampColor: "#94a3b8",
+  dividerColor: "#1e293b",
+  appBackgroundGradientStart: "#0f172a",
+  appBackgroundGradientEnd: "#020408",
   fontScale: 1.0,
   backgroundImageUrl: null,
   iconOverrides: {}
@@ -1617,6 +1617,29 @@ function App() {
   }, [filteredAlerts, userLocation, defaultMapCenter]);
 
   // Bolt: Wrap handlers in useCallback to ensure stable references for React.memo
+  const handleQuickAction = useCallback((action) => {
+    switch (action) {
+      case 'new_message':
+        setActivePanel('beacon');
+        setSelectedThread(null);
+        setComposeAddress('');
+        setComposeBody('');
+        setSendStatus('');
+        break;
+      case 'find_phone':
+        // Placeholder for future Find My Device feature
+        alert('Finding devices is coming in the next update.');
+        break;
+      case 'add_contact':
+        setActivePanel('pulselink');
+        setEditingContactId(null);
+        resetContactForm();
+        break;
+      default:
+        break;
+    }
+  }, []);
+
   const handleAlertFocus = useCallback((alert) => {
     setSelectedAlertId(alert.id);
     if (!mapInstanceRef.current || !window.google?.maps) return;
@@ -2322,6 +2345,18 @@ function App() {
                 <h2>Welcome back</h2>
                 <p>Choose what you want to manage on PulseLink Web.</p>
               </div>
+
+              <div className="quick-actions-bar">
+                <button className="quick-action-btn" onClick={() => handleQuickAction('new_message')}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                  New Message
+                </button>
+                <button className="quick-action-btn" onClick={() => handleQuickAction('add_contact')}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                  Add Trusted Contact
+                </button>
+              </div>
+
               {/* Web app info tooltip - fixes #236: Users need to know about web app availability */}
               {/* QA TEST: Visit web app home screen after login */}
               {/* EXPECTED: Blue info banner should be visible explaining web.pulselink.app access */}
