@@ -1073,6 +1073,7 @@ function App() {
   const [spotifyResults, setSpotifyResults] = useState([]);
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
   const [addingTrackId, setAddingTrackId] = useState(null);
+  const [isPremium, setIsPremium] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -1291,7 +1292,8 @@ function App() {
       
       // Mock status checks if fields don't exist yet, effectively unlocking for testing if user has flags
       // In production, these flags would be set by payment/backend logic
-      const isPremium = data.subscriptionStatus === 'premium' || data.hasPremiumHistory;
+      const premiumStatus = data.subscriptionStatus === 'premium' || data.hasPremiumHistory;
+      setIsPremium(premiumStatus);
       const isPro = data.subscriptionStatus === 'pro' || data.hasProHistory;
       const isBeta = data.isBetaTester === true;
       const isLoyal = tenureDays > 365;
@@ -1300,7 +1302,7 @@ function App() {
         if (currentUnlockedIds.includes(preset.id)) return;
         
         let unlocked = false;
-        if (preset.condition === 'premium' && isPremium) unlocked = true;
+        if (preset.condition === 'premium' && premiumStatus) unlocked = true;
         if (preset.condition === 'pro' && isPro) unlocked = true;
         if (preset.condition === 'beta' && isBeta) unlocked = true;
         if (preset.condition === 'loyal' && isLoyal) unlocked = true;
@@ -2279,21 +2281,28 @@ function App() {
           </div>
           {activePanel === 'beacon' ? (
             <div className="thread-list">
-              {threads.length === 0 ? (
+              {!isPremium ? (
+                 <div className="sidebar-placeholder">
+                   <div className="sidebar-tip">
+                     <strong>Premium Required</strong>
+                   </div>
+                   <div className="sidebar-tip muted">
+                     Upgrade in the mobile app to access messages on the web.
+                   </div>
+                 </div>
+              ) : !remoteSettings.remoteWebAccessEnabled ? (
+                 <div className="sidebar-placeholder">
+                   <div className="sidebar-tip">
+                     <strong>Waiting for setup...</strong>
+                   </div>
+                 </div>
+              ) : threads.length === 0 ? (
                 <div className="sidebar-placeholder">
                   <div className="sidebar-tip">
                     <strong>No conversations found</strong>
                   </div>
                   <div className="sidebar-tip muted">
-                    To see your messages here:
-                    <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
-                      <li>Open PulseLink on your phone</li>
-                      <li>Go to Extensions Store</li>
-                      <li>Enable &quot;Remote Web Access&quot;</li>
-                    </ol>
-                    <div className="badge badge-premium" style={{ display: 'inline-block', marginTop: '8px', padding: '2px 8px', borderRadius: '4px', background: 'var(--accent)', color: '#fff', fontSize: '0.8em' }}>
-                      Premium Required
-                    </div>
+                    Synced messages will appear here.
                   </div>
                 </div>
               ) : (
@@ -3284,55 +3293,77 @@ function App() {
 
           {activePanel === 'beacon' && (
             <>
-              {selectedThread ? (
+              {!isPremium ? (
+                 <div className="empty-state">
+                    <img src={beaconLogo} alt="Beacon" className="empty-logo" />
+                    <h3>Premium Required</h3>
+                    <p>Web access to messages is available for Premium users.</p>
+                    <p className="muted">Upgrade in the PulseLink Android app to unlock.</p>
+                 </div>
+              ) : !remoteSettings.remoteWebAccessEnabled ? (
+                 <div className="empty-state">
+                    <img src={beaconLogo} alt="Beacon" className="empty-logo" />
+                    <h3>Enable Web Access</h3>
+                    <p>To see your messages here:</p>
+                    <ol style={{ textAlign: 'left', display: 'inline-block', marginTop: '16px' }}>
+                        <li>Open PulseLink on your phone</li>
+                        <li>Go to Settings {'>'} PulseLink settings</li>
+                        <li>Enable &quot;Remote web access&quot;</li>
+                    </ol>
+                 </div>
+              ) : (
                 <>
-                  <div className="chat-header">
-                    <h3>{selectedThread.address}</h3>
-                  </div>
-                  <div className="messages-list">
-                    {messageListElements}
-                    <div ref={messagesEndRef} />
+                  {selectedThread ? (
+                    <>
+                      <div className="chat-header">
+                        <h3>{selectedThread.address}</h3>
+                      </div>
+                      <div className="messages-list">
+                        {messageListElements}
+                        <div ref={messagesEndRef} />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="empty-state">
+                      <img src={beaconLogo} alt="Beacon" className="empty-logo" />
+                      <div>Select a thread or start a new message</div>
+                    </div>
+                  )}
+                  <div className="composer">
+                    <div className="composer-row">
+                      <label className="composer-label" htmlFor="compose-address">To</label>
+                      <input
+                        id="compose-address"
+                        className="composer-input"
+                        type="tel"
+                        placeholder="Phone number"
+                        value={composeAddress}
+                        onChange={(e) => setComposeAddress(e.target.value)}
+                      />
+                    </div>
+                    <div className="composer-row composer-actions">
+                      <textarea
+                        className="composer-textarea"
+                        placeholder="Type a message..."
+                        aria-label="Message body"
+                        value={composeBody}
+                        onChange={(e) => setComposeBody(e.target.value)}
+                      />
+                      <button
+                        onClick={handleSendMessage}
+                        disabled={isSending || isLoggingIn}
+                        className="primary-btn"
+                      >
+                        {isSending ? "Sending..." : "Send"}
+                      </button>
+                    </div>
+                    {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
+                    <div className="compose-hint">
+                      Messages are sent from your phone when it&apos;s online and signed in.
+                    </div>
                   </div>
                 </>
-              ) : (
-                <div className="empty-state">
-                  <img src={beaconLogo} alt="Beacon" className="empty-logo" />
-                  <div>Select a thread or start a new message</div>
-                </div>
               )}
-              <div className="composer">
-                <div className="composer-row">
-                  <label className="composer-label" htmlFor="compose-address">To</label>
-                  <input
-                    id="compose-address"
-                    className="composer-input"
-                    type="tel"
-                    placeholder="Phone number"
-                    value={composeAddress}
-                    onChange={(e) => setComposeAddress(e.target.value)}
-                  />
-                </div>
-                <div className="composer-row composer-actions">
-                  <textarea
-                    className="composer-textarea"
-                    placeholder="Type a message..."
-                    aria-label="Message body"
-                    value={composeBody}
-                    onChange={(e) => setComposeBody(e.target.value)}
-                  />
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={isSending || isLoggingIn}
-                    className="primary-btn"
-                  >
-                    {isSending ? "Sending..." : "Send"}
-                  </button>
-                </div>
-                {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
-                <div className="compose-hint">
-                  Messages are sent from your phone when it&apos;s online and signed in.
-                </div>
-              </div>
             </>
           )}
         </div>
