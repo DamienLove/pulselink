@@ -45,6 +45,14 @@ struct ContentView: View {
                         Label("Settings", systemImage: "gear")
                     }
             }
+            .onAppear {
+                // Ensure tab bar appearance fits dark theme if needed
+                let appearance = UITabBarAppearance()
+                appearance.configureWithDefaultBackground()
+                appearance.backgroundColor = UIColor(RelayColors.deep)
+                UITabBar.appearance().standardAppearance = appearance
+                UITabBar.appearance().scrollEdgeAppearance = appearance
+            }
         } else {
             LoginView {
                 // Auth listener will handle transition
@@ -135,50 +143,61 @@ private struct BeaconTab: View {
 
                 Group {
                     if filter == .private && !isUnlocked {
-                    VStack(spacing: 20) {
-                        Image(systemName: "lock.circle.fill")
-                            .font(.system(size: 60))
-                            .foregroundStyle(.secondary)
-                        Text(storedPin.isEmpty ? "Setup Private Safe" : "Private Safe Locked")
-                            .font(.title2.bold())
-                        Button(storedPin.isEmpty ? "Set PIN" : "Unlock") {
-                            showPinSheet = true
+                        VStack(spacing: 20) {
+                            Image(systemName: "lock.circle.fill")
+                                .font(.system(size: 60))
+                                .foregroundStyle(.secondary)
+                            Text(storedPin.isEmpty ? "Setup Private Safe" : "Private Safe Locked")
+                                .font(.title2.bold())
+                            Button(storedPin.isEmpty ? "Set PIN" : "Unlock") {
+                                showPinSheet = true
+                            }
+                            .buttonStyle(.borderedProminent)
                         }
-                        .buttonStyle(.borderedProminent)
-                    }
-                } else {
-                    List(filteredContacts) { contact in
-                        NavigationLink(value: contact) {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(contact.name).font(.headline)
-                                    Text(contact.role).font(.caption).foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                if contact.unread > 0 {
-                                    Text("\(contact.unread)")
-                                        .font(.caption.bold())
-                                        .foregroundStyle(.white)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(themeColor.color)
-                                        .clipShape(Capsule())
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(RelayColors.deep)
+                    } else {
+                        List(filteredContacts) { contact in
+                            NavigationLink(value: contact) {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(contact.name)
+                                            .font(.headline)
+                                            .foregroundStyle(.white)
+                                        Text(contact.role)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    if contact.unread > 0 {
+                                        Text("\(contact.unread)")
+                                            .font(.caption.bold())
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(themeColor.color)
+                                            .clipShape(Capsule())
+                                    }
                                 }
                             }
+                            .listRowBackground(Color.white.opacity(0.05))
                         }
-                    }
-                    .searchable(text: $searchText)
-                    .overlay {
-                        if filteredContacts.isEmpty {
-                            ContentUnavailableView(
-                                "No conversations",
-                                systemImage: "bubble.left.and.bubble.right",
-                                description: Text("Start a new chat on your Android device.")
-                            )
+                        .scrollContentBackground(.hidden)
+                        .background(RelayColors.deep.ignoresSafeArea())
+                        .searchable(text: $searchText)
+                        .overlay {
+                            if filteredContacts.isEmpty {
+                                ContentUnavailableView(
+                                    "No conversations",
+                                    systemImage: "bubble.left.and.bubble.right",
+                                    description: Text("Start a new chat on your Android device.")
+                                )
+                            }
                         }
                     }
                 }
             }
+            .background(RelayColors.deep.ignoresSafeArea())
             .navigationDestination(for: BeaconContactCard.self) { contact in
                 ConversationView(
                     contact: contact,
@@ -241,7 +260,7 @@ private struct ConversationView: View {
     var onDisappear: (() -> Void)? = nil
 
     @State private var draft = ""
-    @AppStorage("themeColor") private var themeColor: ThemeColor = .indigo
+    @AppStorage("themeColor") private var themeColor: ThemeColor = .cyan
     @AppStorage("bubbleStyle") private var bubbleStyle: BubbleStyle = .rounded
 
     var body: some View {
@@ -255,8 +274,8 @@ private struct ConversationView: View {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(msg.text)
                                         .padding(12)
-                                        .background(msg.isIncoming ? Color(.secondarySystemBackground) : themeColor.color)
-                                        .foregroundStyle(msg.isIncoming ? .primary : .white)
+                                        .background(msg.isIncoming ? Color(.white).opacity(0.1) : themeColor.color)
+                                        .foregroundStyle(.white)
                                         .clipShape(bubbleStyle.shape)
                                     Text(msg.timestamp, style: .time)
                                         .font(.caption2)
@@ -287,10 +306,12 @@ private struct ConversationView: View {
                     Image(systemName: "paperplane.fill")
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(RelayColors.primary)
             }
             .padding()
             .background(.thinMaterial)
         }
+        .background(RelayColors.deep.ignoresSafeArea())
         .navigationTitle(contact.name)
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -299,7 +320,7 @@ private struct ConversationView: View {
 private struct SettingsTab: View {
     @ObservedObject var viewModel: BeaconViewModel
     let isPro: Bool
-    @AppStorage("themeColor") private var themeColor: ThemeColor = .indigo
+    @AppStorage("themeColor") private var themeColor: ThemeColor = .cyan
     @AppStorage("bubbleStyle") private var bubbleStyle: BubbleStyle = .rounded
 
     var body: some View {
@@ -335,6 +356,8 @@ private struct SettingsTab: View {
                     Text("Beacon iOS")
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(RelayColors.deep.ignoresSafeArea())
             .navigationTitle("Settings")
         }
     }
@@ -345,7 +368,7 @@ enum ThemeColor: String, CaseIterable {
 
     var color: Color {
         switch self {
-        case .cyan: return .cyan
+        case .cyan: return RelayColors.primary
         case .indigo: return .indigo
         case .blue: return .blue
         case .purple: return .purple
@@ -366,4 +389,10 @@ enum BubbleStyle: String, CaseIterable {
         case .capsule: return AnyShape(Capsule())
         }
     }
+}
+
+enum RelayColors {
+    static let primary = Color(red: 0.13, green: 0.83, blue: 0.93)   // Cyan (#22D3EE)
+    static let accent  = Color(red: 0.05, green: 0.65, blue: 0.91)   // Sky Blue (#0EA5E9)
+    static let deep    = Color(red: 0.04, green: 0.05, blue: 0.09)   // Future Deep (#0B0E16)
 }
