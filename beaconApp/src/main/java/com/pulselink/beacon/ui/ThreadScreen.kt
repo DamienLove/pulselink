@@ -17,12 +17,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,6 +35,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -48,7 +55,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -79,8 +88,12 @@ fun ThreadScreen(
     var showTimePicker by remember { mutableStateOf(false) }
     var selectedDateMillis by remember { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
 
     val iconTint = theme.accentColor
+    val quickReplies = remember {
+        listOf("Ok", "Yes", "No", "Thanks", "On my way!", "Can't talk now", "Call you later?")
+    }
 
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState()
@@ -196,33 +209,51 @@ fun ThreadScreen(
                 tonalElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    IconButton(onClick = {
-                        if (draft.isNotBlank()) showDatePicker = true
-                    }) {
-                        Icon(Icons.Default.Schedule, contentDescription = "Schedule", tint = iconTint)
-                    }
-                    TextField(
-                        value = draft,
-                        onValueChange = { draft = it },
-                        modifier = Modifier.weight(1f),
-                        placeholder = { Text("Write your message") }
-                    )
-                    IconButton(
-                        onClick = {
-                            val text = draft.trim()
-                            if (text.isNotEmpty()) {
-                                onSend(text)
-                                draft = ""
-                            }
-                        }
+                Column {
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(Icons.Default.Send, contentDescription = "Send", tint = iconTint)
+                        items(quickReplies) { reply ->
+                            SuggestionChip(
+                                onClick = { draft = reply },
+                                label = { Text(reply) },
+                                colors = SuggestionChipDefaults.suggestionChipColors(
+                                    containerColor = theme.inboxBackgroundColor.copy(alpha = 0.5f)
+                                )
+                            )
+                        }
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        IconButton(onClick = {
+                            if (draft.isNotBlank()) showDatePicker = true
+                        }) {
+                            Icon(Icons.Default.Schedule, contentDescription = "Schedule", tint = iconTint)
+                        }
+                        TextField(
+                            value = draft,
+                            onValueChange = { draft = it },
+                            modifier = Modifier.weight(1f),
+                            placeholder = { Text("Write your message") }
+                        )
+                        IconButton(
+                            onClick = {
+                                val text = draft.trim()
+                                if (text.isNotEmpty()) {
+                                    onSend(text)
+                                    draft = ""
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Default.Send, contentDescription = "Send", tint = iconTint)
+                        }
                     }
                 }
             }
@@ -270,6 +301,8 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
     val alignment = if (isOutgoing) Alignment.CenterEnd else Alignment.CenterStart
     val frameColor = theme.frameColor
     val bubbleShape = RoundedCornerShape(theme.bubbleRadius.dp)
+    val clipboardManager = LocalClipboardManager.current
+    val otp = remember(message.body) { extractOtp(message.body) }
 
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -305,6 +338,27 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
                             )
                         }
                 }
+                if (otp != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    AssistChip(
+                        onClick = {
+                            clipboardManager.setText(AnnotatedString(otp))
+                        },
+                        label = { Text("Copy $otp") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.ContentCopy,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = Color.White.copy(alpha = 0.8f),
+                            labelColor = Color.Black,
+                            leadingIconContentColor = Color.Black
+                        )
+                    )
+                }
                 Text(
                     text = DateUtils.getRelativeTimeSpanString(
                         message.timestamp,
@@ -318,4 +372,18 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
             }
         }
     }
+}
+
+private fun extractOtp(body: String): String? {
+    val regex = Regex("(?<!\\d)\\d{4,8}(?!\\d)")
+    // Filter out things that are obviously not OTPs if needed, but 4-8 isolated digits is a good heuristic
+    // Check if body contains common OTP keywords to reduce false positives
+    val keywords = listOf("code", "pin", "verification", "otp", "password")
+    if (keywords.none { body.contains(it, ignoreCase = true) }) {
+        // Relaxing this check because sometimes it's just "123456"
+        // But for "Best App" experience, maybe strict is better?
+        // Let's keep it simple: matches regex and body length is short (< 160 chars)
+        if (body.length > 160) return null
+    }
+    return regex.find(body)?.value
 }
