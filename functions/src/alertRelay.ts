@@ -41,6 +41,25 @@ export const alertRelay = functions.https.onCall(async (data: RelayRequest, cont
     throw new functions.https.HttpsError("invalid-argument", "No recipients provided");
   }
 
+  // Rate Limiting: Check if user has sent too many alerts recently (max 50 per 24h)
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  const recentAlertsSnapshot = await db.collection("relayAlerts")
+      .where("senderId", "==", context.auth.uid)
+      .where(
+          "createdAt",
+          ">",
+          admin.firestore.Timestamp.fromMillis(Date.now() - ONE_DAY_MS),
+      )
+      .count()
+      .get();
+
+  if (recentAlertsSnapshot.data().count >= 50) {
+    throw new functions.https.HttpsError(
+        "resource-exhausted",
+        "Daily alert limit reached.",
+    );
+  }
+
   const relayDoc = {
     message: data.message,
     severity: data.severity ?? "non_urgent",

@@ -135,6 +135,26 @@ export const sendEmailInvitation = functions.https.onCall(
           );
         }
 
+        // Rate Limiting: Check if user has sent too many invitations recently (max 50 per 24h)
+        const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+        const recentInvitesSnapshot = await admin.firestore()
+            .collection("emailInvitations")
+            .where("senderUid", "==", context.auth.uid)
+            .where(
+                "createdAt",
+                ">",
+                admin.firestore.Timestamp.fromMillis(Date.now() - ONE_DAY_MS),
+            )
+            .count()
+            .get();
+
+        if (recentInvitesSnapshot.data().count >= 50) {
+          throw new functions.https.HttpsError(
+              "resource-exhausted",
+              "Daily invitation limit reached.",
+          );
+        }
+
         // Get configuration
         const config = functions.config();
         const deepLinkBase = config.app?.deep_link_base || "https://pulselink.app";
