@@ -322,33 +322,20 @@ class RingerViewModel(application: Application) : AndroidViewModel(application) 
                 return@launch
             }
 
-            // Download the track first (handle both Spotify and YouTube)
-            onResult("Downloading ${track.name}...")
-            val downloadResult = if (track.uri!!.startsWith("youtube:")) {
-                val videoId = track.uri!!.substringAfterLast(":")
-                youtubeMusicRepo.downloadTrack(videoId)
-            } else {
-                spotifyDownloader.downloadTrack(track.uri!!)
+            // Validate URI scheme
+            val uri = track.uri
+            if (uri == null || !uri.startsWith("spotify:")) {
+                onResult("Streaming only supported for Spotify tracks")
+                return@launch
             }
 
-            val localFilePath = when (downloadResult) {
-                is DownloadResult.Success -> {
-                    clearDownloadError()
-                    downloadResult.filePath
-                }
-                is DownloadResult.Failure -> {
-                    val message = mapDownloadError(downloadResult.error)
-                    setDownloadError(message)
-                    return@launch
-                }
-            }
-
-            // Create the song entry with local file URI
-            val localFileUri = "file://$localFilePath"
+            // We now skip downloading and directly use the Spotify URI for streaming
+            // This relies on the user having a valid Spotify Premium account active on the device
             val songEntry = SongEntry(
                 id = track.id ?: java.util.UUID.randomUUID().toString(),
                 title = "${track.name ?: "Unknown Track"} - ${track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"}",
-                uri = localFileUri,
+                uri = uri, // Use the spotify:track:uri directly
+                source = SongSource.SPOTIFY,
                 durationMs = track.duration_ms,
                 addedAt = System.currentTimeMillis()
             )
@@ -365,8 +352,9 @@ class RingerViewModel(application: Application) : AndroidViewModel(application) 
             // Then sync to Firestore
             val trackData = mapOf(
                 "spotifyId" to track.id,
-                "uri" to localFileUri,
+                "uri" to track.uri, // Store the Spotify URI
                 "spotifyUri" to track.uri,
+                "source" to "SPOTIFY",
                 "title" to (track.name ?: "Unknown Track"),
                 "artist" to (track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"),
                 "durationMs" to (track.duration_ms ?: 0L),
@@ -573,25 +561,14 @@ class RingerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // === Spotify Downloader Methods ===
+    // === Spotify Downloader Methods (Deprecated/Removed for Streaming) ===
     fun downloadSpotifyTrack(spotifyUrl: String, onComplete: (String?) -> Unit) {
-        viewModelScope.launch {
-            when (val result = spotifyDownloader.downloadTrack(spotifyUrl)) {
-                is DownloadResult.Success -> {
-                    clearDownloadError()
-                    onComplete(result.filePath)
-                }
-                is DownloadResult.Failure -> {
-                    val message = mapDownloadError(result.error)
-                    setDownloadError(message)
-                    onComplete(null)
-                }
-            }
-        }
+        // No-op or log deprecation
+        onComplete(null)
     }
 
     fun isTrackOffline(spotifyUri: String): Boolean {
-        return spotifyDownloader.getLocalFilePathFromUri(spotifyUri) != null
+        return false // Always false now as we stream
     }
 
     // === YouTube Music Methods ===

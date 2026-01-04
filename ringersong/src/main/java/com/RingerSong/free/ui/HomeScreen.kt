@@ -1304,17 +1304,17 @@ private fun HowToAddMusicHelper() {
             fontWeight = FontWeight.SemiBold
         )
         Text(
-            text = "Search & add songs from Spotify or YouTube Music using the sections above. Songs will be downloaded for offline playback.",
+            text = "Search & add songs from Spotify using the section above. This feature activates your paid Spotify membership to stream the selected songs as your ringer.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "Ensure you are logged into the Spotify app on this device.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
             text = "You can also use local audio files (MP3/WAV/M4A) by selecting them from your device.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = "Tip: Share audio files from apps like Zedge to import them here.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

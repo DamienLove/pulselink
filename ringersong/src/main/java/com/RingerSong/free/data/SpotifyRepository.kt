@@ -74,13 +74,22 @@ class SpotifyRepository(
     private fun ensureToken() {
         if (accessToken != null && System.currentTimeMillis() < tokenExpiration) return
 
-        if (CLIENT_ID == "YOUR_CLIENT_ID_HERE") {
-             // For prototype purposes, we can't really throw here without breaking the app for the user immediately.
-             // We will throw a helpful error.
-             throw IOException("Please set your Spotify CLIENT_ID and CLIENT_SECRET in SpotifyRepository.kt")
+        // Prefer BuildConfig ID if available, else fall back to the constant
+        val idToUse = if (com.RingerSong.free.BuildConfig.SPOTIFY_CLIENT_ID != "YOUR_CLIENT_ID_PLACEHOLDER") {
+            com.RingerSong.free.BuildConfig.SPOTIFY_CLIENT_ID
+        } else {
+            CLIENT_ID
         }
 
-        val auth = Base64.encodeToString("$CLIENT_ID:$CLIENT_SECRET".toByteArray(), Base64.NO_WRAP)
+        if (idToUse == "YOUR_CLIENT_ID_HERE" || idToUse == "YOUR_CLIENT_ID_PLACEHOLDER") {
+             // For prototype purposes, we can't really throw here without breaking the app for the user immediately.
+             // We will throw a helpful error.
+             throw IOException("Please set your Spotify CLIENT_ID and CLIENT_SECRET")
+        }
+
+        // Note: CLIENT_SECRET is still hardcoded for now as it's not in BuildConfig,
+        // but for a real app it should be handled securely (e.g. backend proxy).
+        val auth = Base64.encodeToString("$idToUse:$CLIENT_SECRET".toByteArray(), Base64.NO_WRAP)
         val request = Request.Builder()
             .url("https://accounts.spotify.com/api/token")
             .header("Authorization", "Basic $auth")
