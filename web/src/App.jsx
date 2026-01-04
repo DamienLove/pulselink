@@ -990,6 +990,38 @@ const loadGoogleMaps = (() => {
   };
 })();
 
+// Palette: CopyButton for better UX on ID/code copying
+const CopyButton = ({ text, label }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  return (
+    <button
+      className="ghost-btn icon-only"
+      type="button"
+      onClick={handleCopy}
+      aria-label={label || "Copy to clipboard"}
+      title={label || "Copy to clipboard"}
+      style={{ width: 24, height: 24, padding: 4 }}
+    >
+      {copied ? (
+        <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color: 'var(--accent)'}}><polyline points="20 6 9 17 4 12"></polyline></svg>
+      ) : (
+        <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      )}
+    </button>
+  );
+};
+
 function App() {
   const [user, setUser] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -2908,7 +2940,7 @@ function App() {
                       return (
                         <div key={themeDoc.id} className="theme-card">
                           <div className="theme-preview" style={previewStyle}>
-                            <div className="theme-preview-chat">
+        <div className="theme-preview-chat" aria-hidden="true">
                               <div
                                 className="theme-bubble incoming"
                                 style={{
@@ -3017,7 +3049,7 @@ function App() {
                           <span className="theme-dot" style={{ background: preset.theme.primaryColor }} />
                           <strong>{preset.name}</strong>
                         </div>
-                        <div className="theme-chip-preview">
+                        <div className="theme-chip-preview" aria-hidden="true">
                           <div
                             className="theme-bubble incoming"
                             style={{
@@ -3170,7 +3202,10 @@ function App() {
                   </div>
                   <div className="settings-row">
                     <span className="settings-label">User ID</span>
-                    <span className="settings-value mono">{user.uid}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="settings-value mono">{user.uid}</span>
+                      <CopyButton text={user.uid} label="Copy User ID" />
+                    </div>
                   </div>
                   <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
                     Send password reset email
