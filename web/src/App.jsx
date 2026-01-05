@@ -3339,10 +3339,16 @@ function App() {
                   <div className="composer-row composer-actions">
                     <textarea
                       className="composer-textarea"
-                      placeholder="Type a message..."
+                      placeholder="Type a message... (Ctrl+Enter to send)"
                       aria-label="Message body"
                       value={composeBody}
                       onChange={(e) => setComposeBody(e.target.value)}
+                      onKeyDown={(e) => {
+                        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
                     />
                     <button
                       onClick={handleSendMessage}
