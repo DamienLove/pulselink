@@ -39,12 +39,11 @@
 /* App Shell */
 .app-shell {
   min-height: 100vh;
-  /* Dynamic gradient handling based on theme variables */
+  /* Let body grid background show through, just add a slight tint/vignette */
   background: radial-gradient(
-    circle at top right,
-    var(--app-gradient-start, var(--bg-accent)) 0%,
-    var(--bg) 60%,
-    var(--app-gradient-end, #000) 100%
+    circle at 50% 50%,
+    transparent 0%,
+    rgba(0,0,0,0.4) 100%
   );
   color: var(--ink);
   transition: background 0.5s ease, color 0.3s ease;
@@ -313,7 +312,7 @@
 }
 
 .home-card {
-  background: rgba(30, 41, 59, 0.4);
+  background: rgba(12, 19, 38, 0.4);
   border: 1px solid var(--glass-border);
   border-radius: 20px;
   padding: 24px;
@@ -325,26 +324,36 @@
   gap: 16px;
   position: relative;
   overflow: hidden;
+  backdrop-filter: blur(8px);
 }
 
+/* Holographic Shine Effect */
 .home-card::before {
   content: "";
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.05), transparent);
-  opacity: 0;
-  transition: opacity 0.3s;
+  top: 0; left: -100%; width: 100%; height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    rgba(34, 211, 238, 0.1),
+    transparent
+  );
+  transition: left 0.5s;
+  pointer-events: none;
+  transform: skewX(-20deg);
 }
 
 .home-card:hover {
   transform: translateY(-4px);
-  background: rgba(30, 41, 59, 0.7);
-  border-color: rgba(99, 102, 241, 0.3);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  background: rgba(12, 19, 38, 0.7);
+  border-color: var(--accent);
+  box-shadow: 0 0 30px rgba(34, 211, 238, 0.15);
 }
 
 .home-card:hover::before {
-  opacity: 1;
+  left: 100%;
+  transition: left 0.7s;
 }
 
 .home-icon {
@@ -674,6 +683,17 @@
   padding: 4px 10px;
   border-radius: 20px;
   letter-spacing: 0.02em;
+}
+
+.badge-new {
+  background: linear-gradient(135deg, var(--tertiary), #9d00e0);
+  color: white;
+  box-shadow: 0 0 10px var(--tertiary-glow);
+  text-transform: uppercase;
+  font-size: 0.65em;
+  padding: 2px 8px;
+  margin-left: 8px;
+  animation: pulse-subtle 2s infinite;
 }
 
 /* Contacts & Lists */

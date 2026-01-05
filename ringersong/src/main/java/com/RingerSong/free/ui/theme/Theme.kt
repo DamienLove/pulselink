@@ -11,7 +11,7 @@ import com.pulselink.shared.ui.theme.hexToColor
 private val LightColorScheme = lightColorScheme(
     primary = Ocean,
     secondary = Azure,
-    tertiary = Sky,
+    tertiary = NeonPurple,
     background = Mist,
     surface = Ice,
     surfaceVariant = Sky.copy(alpha = 0.35f),
@@ -30,7 +30,7 @@ private val LightColorScheme = lightColorScheme(
 private val DarkColorScheme = darkColorScheme(
     primary = Sky,
     secondary = Azure,
-    tertiary = Ice,
+    tertiary = NeonPurple,
     background = Ink,
     surface = DeepBlue,
     surfaceVariant = Ocean,

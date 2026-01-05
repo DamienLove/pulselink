@@ -12,6 +12,7 @@ private val DeepBackground = Color(0xFF05070F)
 private val DeepSurface = Color(0xFF0C1326)
 private val DeepAccent = Color(0xFF22D3EE)
 private val DeepAccentStrong = Color(0xFF0EA5E9)
+private val DeepTertiary = Color(0xFFBC13FE) // Neon Purple
 private val DeepError = Color(0xFFEF4444)
 
 object Spacing {
@@ -40,6 +41,11 @@ object Gradients {
     // Vibrant accent gradient for buttons/FABs
     val BrandGradient = Brush.linearGradient(
         colors = listOf(DeepAccent, DeepAccentStrong)
+    )
+
+    // Futuristic Holographic Gradient
+    val Holographic = Brush.linearGradient(
+        colors = listOf(DeepAccent, DeepTertiary, DeepAccentStrong)
     )
 
     val EmergencyGradient = Brush.linearGradient(

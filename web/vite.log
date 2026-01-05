@@ -2,11 +2,11 @@
 > pulselink-web@0.0.0 dev /app/web
 > vite
 
-Port 5173 is in use, trying another one...
 
-  VITE v5.4.21  ready in 269 ms
+  VITE v5.4.21  ready in 289 ms
 
-  ➜  Local:   http://localhost:5174/
+  ➜  Local:   http://localhost:5173/
   ➜  Network: use --host to expose
-rting server...
-7:42:20 PM [vite] server restarted.
+7:42:47 PM [vite] hmr update /src/App.jsx
+7:42:54 PM [vite] .env changed, restarting server...
+7:42:54 PM [vite] server restarted.

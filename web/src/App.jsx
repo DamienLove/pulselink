@@ -2362,6 +2362,16 @@ function App() {
               <span>Themes</span>
             </button>
             <button
+              className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
+              onClick={() => setActivePanel('extensions')}
+              title="Extensions"
+              aria-current={activePanel === 'extensions' ? 'page' : undefined}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+              <span>Extensions</span>
+              <span className="badge-new">NEW</span>
+            </button>
+            <button
               className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
               onClick={() => setActivePanel('settings')}
               title="Settings"
@@ -3154,22 +3164,42 @@ function App() {
             <div className="pulselink-panel">
               <div className="panel-header">
                 <h3>Extensions</h3>
-                <p>Attach third-party add-ons to PulseLink / Beacon once enabled. Web access mirrors the mobile toggle.</p>
+                <p>Enhance your PulseLink experience with powerful add-ons.</p>
               </div>
-              <div className="settings-card">
-                <p className="settings-note" style={{ marginBottom: 12 }}>
-                  Status: {remoteSettings.thirdPartyExtensionsEnabled ? "Enabled (beta)" : "Disabled"}.
-                  Turn this on in Settings to allow extensions in both the app and web.
-                </p>
-                {!remoteSettings.thirdPartyExtensionsEnabled && (
-                  <button className="primary-btn" type="button" onClick={() => setActivePanel('settings')}>
-                    Enable in Settings
-                  </button>
-                )}
-                {remoteSettings.thirdPartyExtensionsEnabled && (
-                  <div className="settings-note">
-                    Extension marketplace coming soon. Admins can still side-load trusted extensions via mobile until then.
+              <div className="home-grid">
+                <div className="home-card">
+                  <div className="home-icon beacon">
+                    <img src={beaconLogo} alt="Beacon" />
                   </div>
+                  <h3>Beacon Inbox</h3>
+                  <p>Advanced SMS handling with cross-device sync and theming.</p>
+                  <div className="badge" style={{background: 'var(--accent)', color: '#000', marginTop: 12, display: 'inline-block'}}>Installed</div>
+                </div>
+                <div className="home-card">
+                   <div className="home-icon ringersong">
+                    <img src={ringersongLogo} alt="RingerSong" />
+                  </div>
+                  <h3>RingerSong</h3>
+                  <p>Smart ringtone progressions using Spotify.</p>
+                  <div className="badge" style={{background: 'var(--accent)', color: '#000', marginTop: 12, display: 'inline-block'}}>Installed</div>
+                </div>
+                <div className="home-card" style={{opacity: 0.7}}>
+                  <div className="home-icon pulselink">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
+                  </div>
+                  <h3>PulseLink AI</h3>
+                  <p>Smart summaries and auto-replies. Coming soon.</p>
+                  <div className="badge" style={{background: 'var(--border)', color: 'var(--muted)', marginTop: 12, display: 'inline-block'}}>Coming Soon</div>
+                </div>
+                {!remoteSettings.thirdPartyExtensionsEnabled && (
+                    <div className="settings-card" style={{gridColumn: '1 / -1'}}>
+                        <h4>Enable Third-Party Extensions</h4>
+                        <p className="settings-note">Unlock the full potential of PulseLink by enabling community extensions.</p>
+                        <button className="primary-btn" onClick={() => {
+                            setRemoteSettings(prev => ({ ...prev, thirdPartyExtensionsEnabled: true }));
+                            handleRemoteSettingsSave();
+                        }}>Enable Beta Extensions</button>
+                    </div>
                 )}
               </div>
             </div>
