@@ -355,6 +355,67 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
 
 ThemeGalleryItem.displayName = 'ThemeGalleryItem';
 
+const areRingerSongsEqual = (prev, next) => {
+  return prev.song.id === next.song.id &&
+         prev.song.title === next.song.title &&
+         prev.song.artist === next.song.artist &&
+         prev.song.albumArtUrl === next.song.albumArtUrl &&
+         prev.onDelete === next.onDelete;
+};
+
+// Bolt: Optimized RingerSongItem with memo to prevent re-rendering the entire playlist
+const RingerSongItem = memo(({ song, onDelete }) => (
+  <div className="song-card">
+    {song.albumArtUrl ? (
+      <img src={song.albumArtUrl} alt="" className="song-art" />
+    ) : (
+      <div className="song-art" style={{ display: 'grid', placeItems: 'center' }}>♫</div>
+    )}
+    <div className="song-info">
+      <div className="song-title">{song.title}</div>
+      <div className="song-artist">{song.artist}</div>
+    </div>
+    <button
+      className="ghost-btn icon-only"
+      onClick={() => onDelete(song.id)}
+      title="Remove from playlist"
+      aria-label={`Remove ${song.title} from playlist`}
+      style={{ width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center', border: 'none' }}
+    >
+      <TrashIcon />
+    </button>
+  </div>
+), areRingerSongsEqual);
+RingerSongItem.displayName = 'RingerSongItem';
+
+const areSpotifyResultsEqual = (prev, next) => {
+  return prev.isAdding === next.isAdding &&
+         prev.track.id === next.track.id &&
+         prev.onAdd === next.onAdd;
+};
+
+// Bolt: Optimized SpotifyResultItem to prevent re-rendering all results when one is adding
+const SpotifyResultItem = memo(({ track, onAdd, isAdding }) => (
+  <div className="song-card">
+    <img src={track.album?.images[0]?.url} alt="" className="song-art" />
+    <div className="song-info">
+      <div className="song-title">{track.name}</div>
+      <div className="song-artist">{track.artists.map(a => a.name).join(', ')}</div>
+    </div>
+    <button
+      className="secondary-btn"
+      style={{ padding: '6px 12px', fontSize: '0.85em' }}
+      onClick={() => onAdd(track)}
+      disabled={isAdding}
+      aria-busy={isAdding}
+      aria-label={`Add ${track.name} to playlist`}
+    >
+      {isAdding ? "Adding..." : "Add"}
+    </button>
+  </div>
+), areSpotifyResultsEqual);
+SpotifyResultItem.displayName = 'SpotifyResultItem';
+
 const defaultTheme = {
   primaryColor: "#6750A4",
   secondaryColor: "#625B71",
@@ -1173,14 +1234,14 @@ function App() {
     return () => unsubscribe();
   }, [user]);
 
-  const handleDeleteRingerSong = async (songId) => {
+  const handleDeleteRingerSong = useCallback(async (songId) => {
     if (!user) return;
     try {
       await deleteDoc(doc(db, "users", user.uid, "ringer_playlist", songId));
     } catch (e) {
       console.error("Failed to delete song", e);
     }
-  };
+  }, [user]);
 
   const getSpotifyToken = async () => {
     // Sentinel: Use Cloud Function to fetch token securely, avoiding exposed secrets
@@ -1226,7 +1287,7 @@ function App() {
     }
   };
 
-  const handlePushSpotifyTrack = async (track) => {
+  const handlePushSpotifyTrack = useCallback(async (track) => {
       const target = user?.uid;
       if(!target) {
           setSettingsStatus("Please sign in to push tracks.");
@@ -1257,7 +1318,7 @@ function App() {
       } finally {
           setAddingTrackId(null);
       }
-  };
+  }, [user]);
 
   const messagesEndRef = useRef(null);
   const mapRef = useRef(null);
@@ -2855,26 +2916,11 @@ function App() {
                     ) : (
                         <div className="song-grid">
                             {ringerPlaylist.map(song => (
-                                <div key={song.id} className="song-card">
-                                    {song.albumArtUrl ? (
-                                        <img src={song.albumArtUrl} alt="" className="song-art" />
-                                    ) : (
-                                        <div className="song-art" style={{display: 'grid', placeItems: 'center'}}>♫</div>
-                                    )}
-                                    <div className="song-info">
-                                        <div className="song-title">{song.title}</div>
-                                        <div className="song-artist">{song.artist}</div>
-                                    </div>
-                                    <button
-                                        className="ghost-btn icon-only"
-                                        onClick={() => handleDeleteRingerSong(song.id)}
-                                        title="Remove from playlist"
-                                        aria-label={`Remove ${song.title} from playlist`}
-                                        style={{width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center', border: 'none'}}
-                                    >
-                                        <TrashIcon />
-                                    </button>
-                                </div>
+                                <RingerSongItem
+                                    key={song.id}
+                                    song={song}
+                                    onDelete={handleDeleteRingerSong}
+                                />
                             ))}
                         </div>
                     )}
@@ -2906,23 +2952,12 @@ function App() {
                     {spotifyResults.length > 0 && (
                         <div className="song-grid">
                             {spotifyResults.map(track => (
-                                <div key={track.id} className="song-card">
-                                    <img src={track.album?.images[0]?.url} alt="" className="song-art" />
-                                    <div className="song-info">
-                                        <div className="song-title">{track.name}</div>
-                                        <div className="song-artist">{track.artists.map(a => a.name).join(', ')}</div>
-                                    </div>
-                                    <button
-                                      className="secondary-btn"
-                                      style={{padding: '6px 12px', fontSize: '0.85em'}}
-                                      onClick={() => handlePushSpotifyTrack(track)}
-                                      disabled={addingTrackId === track.id}
-                                      aria-busy={addingTrackId === track.id}
-                                      aria-label={`Add ${track.name} to playlist`}
-                                    >
-                                        {addingTrackId === track.id ? "Adding..." : "Add"}
-                                    </button>
-                                </div>
+                                <SpotifyResultItem
+                                    key={track.id}
+                                    track={track}
+                                    onAdd={handlePushSpotifyTrack}
+                                    isAdding={addingTrackId === track.id}
+                                />
                             ))}
                         </div>
                     )}
