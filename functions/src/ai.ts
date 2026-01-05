@@ -2,7 +2,7 @@
 import {genkit, z} from "genkit";
 import {vertexAI, gemini15Flash} from "@genkit-ai/vertexai";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
-import {escapeHtml} from "./security";
+import {escapeHtml, sanitizeScalar} from "./security";
 
 const ai = genkit({
   plugins: [
@@ -24,13 +24,16 @@ export const buildSummaryPrompt = (contactName: string, messages: string[]): str
   // Sentinel: Sanitize user input against XML tag injection
   const safeMessages = messages.map((m) => sanitizeDelimiter(m, "messages"));
 
+  // Sentinel: Sanitize contact name to prevent prompt structure injection (newlines)
+  const safeContactName = sanitizeScalar(contactName);
+
   return `
 You summarize SMS threads for PulseLink Premium.
 Write a concise 1-2 sentence summary (max 240 chars).
 If the thread suggests urgency or danger, mention it.
 Do NOT invent facts. Use plain language.
 
-Contact: ${escapeHtml(contactName)}
+Contact: ${escapeHtml(safeContactName)}
 Messages:
 <messages>
 ${safeMessages.join("\n")}
