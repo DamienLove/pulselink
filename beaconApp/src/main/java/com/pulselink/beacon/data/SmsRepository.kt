@@ -58,55 +58,107 @@ class SmsRepository(private val context: Context) {
             )
         }.getOrNull() ?: return@withContext listThreadsFromSms(limit)
 
+        val rawThreads = mutableListOf<RawThreadData>()
         cursor.use { c ->
             val idIdx = c.getColumnIndexOrThrow(Telephony.Threads._ID)
             val snippetIdx = c.getColumnIndexOrThrow(Telephony.Threads.SNIPPET)
             val dateIdx = c.getColumnIndexOrThrow(Telephony.Threads.DATE)
             val readIdx = c.getColumnIndexOrThrow(Telephony.Threads.READ)
-            val items = mutableListOf<SmsThreadItem>()
+            val recipIdx = c.getColumnIndexOrThrow(Telephony.Threads.RECIPIENT_IDS)
             var count = 0
             while (c.moveToNext() && count < limit) {
-                val threadId = c.getLong(idIdx)
-                val snippet = c.getString(snippetIdx) ?: ""
-                val ts = c.getLong(dateIdx)
-                val unread = c.getInt(readIdx) == 0
-                val address = resolveThreadAddress(threadId)
-                items += SmsThreadItem(
-                    threadId = threadId,
-                    address = address,
-                    snippet = snippet,
-                    timestamp = ts,
-                    unread = unread
-                )
+                rawThreads.add(RawThreadData(
+                    id = c.getLong(idIdx),
+                    snippet = c.getString(snippetIdx) ?: "",
+                    timestamp = c.getLong(dateIdx),
+                    unread = c.getInt(readIdx) == 0,
+                    recipientIds = c.getString(recipIdx) ?: ""
+                ))
                 count++
             }
-            if (items.isNotEmpty()) return@withContext items
         }
-        return@withContext listThreadsFromSms(limit)
-    }
 
-    private fun resolveThreadAddress(threadId: Long): String {
-        addressCache[threadId]?.let { return it }
+        if (rawThreads.isEmpty()) return@withContext listThreadsFromSms(limit)
 
-        val cursor = runCatching {
-            context.contentResolver.query(
-                Telephony.Sms.CONTENT_URI,
-                arrayOf(Telephony.Sms.ADDRESS),
-                "${Telephony.Sms.THREAD_ID}=?",
-                arrayOf(threadId.toString()),
-                "${Telephony.Sms.DATE} DESC"
-            )
-        }.getOrNull() ?: return ""
+        val addressMap = resolveAddressesForThreads(rawThreads)
 
-        var result = ""
-        cursor.use { c ->
-            if (c.moveToFirst()) {
-                val addr = c.getString(c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS))
-                result = resolveAddress(addr)
+        return@withContext rawThreads.map { raw ->
+            val cachedName = addressCache[raw.id]
+            if (cachedName != null) {
+                SmsThreadItem(
+                    threadId = raw.id,
+                    address = cachedName,
+                    snippet = raw.snippet,
+                    timestamp = raw.timestamp,
+                    unread = raw.unread
+                )
+            } else {
+                val rawAddress = addressMap[raw.id] ?: ""
+                val displayName = resolveAddress(rawAddress)
+                if (displayName.isNotBlank()) {
+                    addressCache.put(raw.id, displayName)
+                }
+                SmsThreadItem(
+                    threadId = raw.id,
+                    address = displayName,
+                    snippet = raw.snippet,
+                    timestamp = raw.timestamp,
+                    unread = raw.unread
+                )
             }
         }
-        if (result.isNotBlank()) {
-            addressCache.put(threadId, result)
+    }
+
+    private data class RawThreadData(
+        val id: Long,
+        val snippet: String,
+        val timestamp: Long,
+        val unread: Boolean,
+        val recipientIds: String
+    )
+
+    private fun resolveAddressesForThreads(threads: List<RawThreadData>): Map<Long, String> {
+        val result = mutableMapOf<Long, String>()
+        val neededRecipients = mutableSetOf<Long>()
+        val threadToRecipients = mutableMapOf<Long, List<Long>>()
+
+        threads.forEach { thread ->
+            if (addressCache[thread.id] == null) {
+                val ids = thread.recipientIds.split(" ").mapNotNull { it.toLongOrNull() }
+                if (ids.isNotEmpty()) {
+                    threadToRecipients[thread.id] = ids
+                    neededRecipients.addAll(ids)
+                }
+            }
+        }
+
+        val idToAddr = mutableMapOf<Long, String>()
+        if (neededRecipients.isNotEmpty()) {
+            neededRecipients.chunked(100).forEach { chunk ->
+                val q = chunk.joinToString(",")
+                val c = runCatching {
+                    context.contentResolver.query(
+                        Uri.parse("content://mms-sms/canonical-addresses"),
+                        arrayOf("_id", "address"),
+                        "_id IN ($q)",
+                        null,
+                        null
+                    )
+                }.getOrNull()
+                c?.use {
+                    while (it.moveToNext()) {
+                        idToAddr[it.getLong(0)] = it.getString(1)
+                    }
+                }
+            }
+        }
+
+        threads.forEach { thread ->
+            val recips = threadToRecipients[thread.id]
+            if (recips != null) {
+                val rawAddr = recips.mapNotNull { idToAddr[it] }.joinToString(", ")
+                result[thread.id] = rawAddr
+            }
         }
         return result
     }

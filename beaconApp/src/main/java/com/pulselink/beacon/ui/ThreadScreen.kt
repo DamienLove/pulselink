@@ -89,6 +89,18 @@ fun ThreadScreen(
     var selectedDateMillis by remember { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+    // Ensure new messages are seen first (at bottom)
+    LaunchedEffect(messages.firstOrNull()?.id) {
+        if (messages.isNotEmpty()) {
+            // Only scroll if we are near the bottom (index 0 in reverse layout) or it's initial load
+            val firstVisible = listState.firstVisibleItemIndex
+            if (firstVisible < 2) {
+                listState.animateScrollToItem(0)
+            }
+        }
+    }
 
     val iconTint = theme.accentColor
     val quickReplies = remember {
@@ -184,6 +196,7 @@ fun ThreadScreen(
                 .background(theme.threadBackgroundColor)
         ) {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()

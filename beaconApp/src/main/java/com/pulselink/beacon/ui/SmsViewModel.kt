@@ -14,6 +14,8 @@ import androidx.work.workDataOf
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.SmsRepository
 import com.pulselink.beacon.data.SmsThreadItem
+import com.pulselink.beacon.data.InboxPreferencesRepository
+import com.pulselink.beacon.data.InboxState
 import com.pulselink.beacon.data.scheduled.BeaconDatabase
 import com.pulselink.beacon.data.scheduled.ScheduledMessage
 import com.pulselink.beacon.data.scheduled.MessageStatus
@@ -21,6 +23,7 @@ import com.pulselink.beacon.worker.ScheduledMessageWorker
 import com.pulselink.beacon.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
@@ -36,6 +39,7 @@ sealed class SearchResultState {
 class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = SmsRepository(app.applicationContext)
+    private val inboxPrefs = InboxPreferencesRepository(app.applicationContext)
     private val scheduledDao = BeaconDatabase.getDatabase(app).scheduledMessageDao()
     private val workManager = WorkManager.getInstance(app)
 
@@ -59,12 +63,24 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     var isRefreshing by mutableStateOf(false)
         private set
 
+    // Internal holder for raw threads before merging preferences
+    private var rawThreads: List<SmsThreadItem> = emptyList()
+    private var inboxState: InboxState = InboxState()
+
     init {
         refreshThreads(initial = true)
+
         viewModelScope.launch {
             repo.changes().collectLatest {
                 refreshThreads(initial = false)
                 currentThreadId?.let { refreshThread(it, refreshRead = false) }
+            }
+        }
+
+        viewModelScope.launch {
+            inboxPrefs.flow.collectLatest { state ->
+                inboxState = state
+                mergeThreads()
             }
         }
     }
@@ -72,8 +88,34 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     fun refreshThreads(initial: Boolean = false) {
         viewModelScope.launch {
             if (initial) isLoading = true else isRefreshing = true
-            threads = runCatching { repo.listThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
+            rawThreads = runCatching { repo.listThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
+            mergeThreads()
             if (initial) isLoading = false else isRefreshing = false
+        }
+    }
+
+    private fun mergeThreads() {
+        val merged = rawThreads.map { thread ->
+            thread.copy(
+                isPinned = inboxState.pinnedThreadIds.contains(thread.threadId),
+                isArchived = inboxState.archivedThreadIds.contains(thread.threadId)
+            )
+        }.sortedWith(
+            compareByDescending<SmsThreadItem> { it.isPinned }
+                .thenByDescending { it.timestamp }
+        )
+        threads = merged
+    }
+
+    fun togglePin(threadId: Long) {
+        viewModelScope.launch {
+            inboxPrefs.togglePin(threadId)
+        }
+    }
+
+    fun toggleArchive(threadId: Long) {
+        viewModelScope.launch {
+            inboxPrefs.toggleArchive(threadId)
         }
     }
 

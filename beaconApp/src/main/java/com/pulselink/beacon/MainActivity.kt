@@ -217,6 +217,8 @@ private fun BeaconNav(
                         navController.navigate("thread/$id/${Uri.encode(address)}")
                     },
                     onDeleteThread = { vm.deleteThread(it) },
+                    onTogglePin = { vm.togglePin(it) },
+                    onToggleArchive = { vm.toggleArchive(it) },
                     onRefresh = { vm.refreshThreads() },
                     onSearch = { vm.search(it) },
                     onClearSearch = { vm.clearSearch() },
