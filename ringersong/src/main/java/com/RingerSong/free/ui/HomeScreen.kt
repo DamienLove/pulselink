@@ -124,6 +124,7 @@ fun HomeScreen(
     onClearYouTubeSearch: () -> Unit,
     onAddYouTubeTrack: (SpotifyTrack) -> Unit,
     onConnectSpotify: ( (Boolean) -> Unit ) -> Unit,
+    userCapabilities: String,
     snackbarHostState: SnackbarHostState,
     onClearDownloadError: () -> Unit
 ) {
@@ -262,6 +263,7 @@ fun HomeScreen(
             ) {
                 SpotifySection(
                     state = searchState,
+                    userCapabilities = userCapabilities,
                     onQueryChange = onQueryChange,
                     onSearch = onSearch,
                     onClear = onClearSearch,
@@ -682,6 +684,7 @@ private fun TracksSection(
 @Composable
 private fun SpotifySection(
     state: SpotifySearchState,
+    userCapabilities: String,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
     onClear: () -> Unit,
@@ -694,16 +697,37 @@ private fun SpotifySection(
     SectionCard(modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = "Add from Spotify",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Add from Spotify",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (userCapabilities != "Unknown") {
+                        Text(
+                            text = if (userCapabilities == "Premium") "Premium" else "Free Account",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (userCapabilities == "Premium") Color(0xFF1DB954) else MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
                 Text(
                     text = "Search for tracks on Spotify. Songs will be streamed directly from your Spotify App.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (userCapabilities == "Free") {
+                    Text(
+                        text = "⚠️ Free accounts may experience random playback (shuffle mode) due to Spotify restrictions.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
 
             Button(
@@ -726,7 +750,7 @@ private fun SpotifySection(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Connecting...")
                 } else {
-                    Text("Connect Spotify")
+                    Text(if (userCapabilities == "Unknown") "Connect Spotify" else "Refresh Connection")
                 }
             }
 

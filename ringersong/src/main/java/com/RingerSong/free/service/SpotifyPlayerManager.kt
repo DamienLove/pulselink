@@ -81,4 +81,20 @@ class SpotifyPlayerManager @Inject constructor(
         SpotifyAppRemote.disconnect(spotifyAppRemote)
         spotifyAppRemote = null
     }
+
+    suspend fun getUserCapabilities(): String = suspendCancellableCoroutine { continuation ->
+        if (spotifyAppRemote?.isConnected != true) {
+            continuation.resume("Not Connected")
+            return@suspendCancellableCoroutine
+        }
+
+        spotifyAppRemote?.userApi?.capabilities?.setResultCallback { capabilities ->
+            val canPlayOnDemand = capabilities.canPlayOnDemand
+            Log.d(TAG, "User capabilities: canPlayOnDemand=$canPlayOnDemand")
+            continuation.resume(if (canPlayOnDemand) "Premium" else "Free")
+        }?.setErrorCallback {
+            Log.e(TAG, "Error getting capabilities", it)
+            continuation.resume("Error")
+        }
+    }
 }

@@ -90,10 +90,15 @@ private fun AppNavHost(
             )
         }
         composable(Routes.Home) {
+            // Check capabilities on load
+            LaunchedEffect(Unit) {
+                 viewModel.checkSpotifyCapabilities()
+            }
             HomeScreen(
                 state = viewModel.state.collectAsStateWithLifecycle().value,
                 searchState = viewModel.searchState.collectAsStateWithLifecycle().value,
                 youtubeSearchState = viewModel.youtubeSearchState.collectAsStateWithLifecycle().value,
+                userCapabilities = viewModel.userCapabilities.collectAsStateWithLifecycle().value,
                 onOpenSettings = {
                     activity?.let { AdServices.showInterstitial(it) }
                     navController.navigate(Routes.Settings)

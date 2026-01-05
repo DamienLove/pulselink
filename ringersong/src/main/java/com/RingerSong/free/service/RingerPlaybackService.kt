@@ -36,6 +36,7 @@ class RingerPlaybackService : Service() {
     private var mediaPlayer: MediaPlayer? = null
     private var audioManager: AudioManager? = null
     private var originalRingerVolume = -1
+    private var originalMusicVolume = -1
     private var isPlaying = false
 
     companion object {
@@ -81,6 +82,9 @@ class RingerPlaybackService : Service() {
             if (originalRingerVolume == -1) {
                 originalRingerVolume = am.getStreamVolume(AudioManager.STREAM_RING)
                 Log.d(TAG, "Captured original ringer volume: $originalRingerVolume")
+
+                // Sync Music Volume to Ringer Volume (so user can hear the music even if media is muted)
+                syncMusicVolumeToRingerLevel(am, originalRingerVolume)
             } else {
                 Log.d(TAG, "Already captured ringer volume: $originalRingerVolume")
             }
@@ -101,6 +105,32 @@ class RingerPlaybackService : Service() {
 
             // Request Audio Focus to ensure our music plays over anything else
             requestAudioFocus()
+        }
+    }
+
+    private fun syncMusicVolumeToRingerLevel(am: AudioManager, targetRingerVol: Int) {
+        try {
+            val ringerMax = am.getStreamMaxVolume(AudioManager.STREAM_RING)
+            val musicMax = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+
+            // Avoid division by zero
+            if (ringerMax == 0) return
+
+            val ratio = targetRingerVol.toFloat() / ringerMax.toFloat()
+            val targetMusicVol = (ratio * musicMax).toInt()
+
+            // Ensure at least some volume if ringer was on (e.g. if ratio is small but non-zero)
+            val finalVol = if (targetRingerVol > 0 && targetMusicVol == 0) 1 else targetMusicVol
+
+            // Capture original music volume
+            if (originalMusicVolume == -1) {
+                originalMusicVolume = am.getStreamVolume(AudioManager.STREAM_MUSIC)
+            }
+
+            am.setStreamVolume(AudioManager.STREAM_MUSIC, finalVol, 0)
+            Log.d(TAG, "Synced music volume to $finalVol (ringer was $targetRingerVol/$ringerMax)")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error syncing music volume", e)
         }
     }
 
@@ -149,6 +179,16 @@ class RingerPlaybackService : Service() {
             }
             originalRingerVolume = -1
         }
+
+        if (originalMusicVolume != -1) {
+            try {
+                audioManager?.setStreamVolume(AudioManager.STREAM_MUSIC, originalMusicVolume, 0)
+                Log.d(TAG, "Restored music volume to $originalMusicVolume")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error restoring music volume", e)
+            }
+            originalMusicVolume = -1
+        }
         abandonAudioFocus()
     }
 
@@ -161,9 +201,22 @@ class RingerPlaybackService : Service() {
                 return@launch
             }
 
-            // Simple random logic for now.
-            // In future: Check contact-specific assignments
-            val song = state.songs.random()
+            // Determine which song to play
+            val song: SongEntry = if (state.settings.shuffle) {
+                state.songs.random()
+            } else {
+                // Progression logic: Use the saved global playlist index
+                val currentIndex = state.playback.globalPlaylistIndex
+                // Ensure index is valid
+                val validIndex = if (currentIndex in state.songs.indices) currentIndex else 0
+                val nextSong = state.songs[validIndex]
+
+                // Advance the index for next time (loop back to 0 if at end)
+                val nextIndex = (validIndex + 1) % state.songs.size
+                appStateStore.update { it.copy(playback = it.playback.copy(globalPlaylistIndex = nextIndex)) }
+
+                nextSong
+            }
 
             Log.d(TAG, "Selected song: ${song.title} (${song.source})")
 

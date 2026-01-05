@@ -77,6 +77,9 @@ class RingerViewModel @Inject constructor(
     private val _currentUser = MutableStateFlow(auth.currentUser)
     val currentUser: StateFlow<com.google.firebase.auth.FirebaseUser?> = _currentUser.asStateFlow()
 
+    private val _userCapabilities = MutableStateFlow("Unknown")
+    val userCapabilities: StateFlow<String> = _userCapabilities.asStateFlow()
+
     private val spotifyRepository = SpotifyRepository(
         OkHttpClient.Builder()
             .callTimeout(20, TimeUnit.SECONDS)
@@ -318,7 +321,16 @@ class RingerViewModel @Inject constructor(
     fun connectToSpotify(onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
             val success = spotifyPlayerManager.connect(showAuthView = true)
+            if (success) {
+                _userCapabilities.value = spotifyPlayerManager.getUserCapabilities()
+            }
             onResult(success)
+        }
+    }
+
+    fun checkSpotifyCapabilities() {
+        viewModelScope.launch {
+            _userCapabilities.value = spotifyPlayerManager.getUserCapabilities()
         }
     }
 
