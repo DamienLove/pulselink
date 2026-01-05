@@ -3319,11 +3319,18 @@ function App() {
                     aria-label="Message body"
                     value={composeBody}
                     onChange={(e) => setComposeBody(e.target.value)}
+                    onKeyDown={(e) => {
+                      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
                   />
                   <button
                     onClick={handleSendMessage}
                     disabled={isSending || isLoggingIn}
                     className="primary-btn"
+                    title="Press Ctrl+Enter to send"
                   >
                     {isSending ? "Sending..." : "Send"}
                   </button>
