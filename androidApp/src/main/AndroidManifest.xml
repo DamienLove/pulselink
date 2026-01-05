@@ -547,6 +547,7 @@
         <receiver
             android:name=".widget.PulseLinkWidgetProvider"
             android:exported="true"
+            android:icon="@drawable/widget_logo"
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

@@ -1337,6 +1337,11 @@ class MainViewModel @Inject constructor(
 
         // Always direct to the canonical bug-report site (opens in-app WebView/Custom Tab)
         return Uri.parse("https://damiennichols.com/report-bug/")
+            .buildUpon()
+            .appendQueryParameter("summary", subjectSuffix)
+            .appendQueryParameter("body", formattedBody)
+            .appendQueryParameter("email", bugReportData.userEmail)
+            .build()
     }
 
     private fun ensureSoundDefaults(settings: com.pulselink.domain.model.PulseLinkSettings): com.pulselink.domain.model.PulseLinkSettings {
