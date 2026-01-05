@@ -388,6 +388,11 @@ private struct SettingsTab: View {
                 Section("Alerts") {
                     Toggle("Override Do Not Disturb", isOn: $viewModel.overrideDND)
                     Toggle("Max volume on urgent", isOn: $viewModel.maxVolumeOnUrgent)
+                    if viewModel.overrideDND {
+                        Text("Requires Critical Alerts permission. Enabling this will prompt for permission if not already granted.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Section("Account") {
                     Button("Sign Out", role: .destructive) {
@@ -452,7 +457,7 @@ private struct Card<Content: View>: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.thinMaterial)
+        .background(RelayColors.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }
@@ -538,6 +543,8 @@ enum RelayColors {
     static let primary = Color(red: 0.13, green: 0.83, blue: 0.93)   // Cyan (#22D3EE)
     static let accent  = Color(red: 0.05, green: 0.65, blue: 0.91)   // Sky Blue (#0EA5E9)
     static let deep    = Color(red: 0.04, green: 0.05, blue: 0.09)   // Future Deep (#0B0E16)
+    // Slightly lighter than deep, with opacity to allow background to bleed through if needed, simulating glass
+    static let cardBackground = Color(red: 0.09, green: 0.11, blue: 0.15).opacity(0.8)
 }
 
 #Preview {
