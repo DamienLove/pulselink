@@ -25,6 +25,9 @@ class SmsRepository(private val context: Context) {
     @Volatile private var observersRegistered = false
     private val observerFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val otpRegex = Regex("\\b\\d{4,8}\\b")
+    // Very basic heuristics
+    private val promoKeywords = listOf("offer", "discount", "sale", "save", "buy", "coupon", "code", "limited time", "deal")
+    private val transactionKeywords = listOf("debited", "credited", "acct", "spent", "txn", "bank", "stmt", "balance", "withdrawal", "payment", "received", "sent")
 
     private val addressCache = LruCache<Long, String>(ADDRESS_CACHE_SIZE)
     private val contactCache = LruCache<String, String>(CONTACT_CACHE_SIZE)
@@ -76,13 +79,40 @@ class SmsRepository(private val context: Context) {
                     address = address,
                     snippet = snippet,
                     timestamp = ts,
-                    unread = unread
+                    unread = unread,
+                    category = categorizeThread(address, snippet)
                 )
                 count++
             }
             if (items.isNotEmpty()) return@withContext items
         }
         return@withContext listThreadsFromSms(limit)
+    }
+
+    private fun categorizeThread(address: String, snippet: String): ThreadCategory {
+        // 1. OTP Check
+        if (otpRegex.containsMatchIn(snippet) && (snippet.contains("code", true) || snippet.contains("otp", true) || snippet.contains("verification", true))) {
+            return ThreadCategory.OTP
+        }
+
+        // 2. Shortcodes often imply business (transactions/promos)
+        // If address has alphanumeric characters or is short (< 8 digits)
+        val isShortCodeOrAlpha = address.length < 8 || address.any { it.isLetter() }
+
+        if (isShortCodeOrAlpha) {
+            if (transactionKeywords.any { snippet.contains(it, ignoreCase = true) }) {
+                return ThreadCategory.TRANSACTIONS
+            }
+            if (promoKeywords.any { snippet.contains(it, ignoreCase = true) }) {
+                return ThreadCategory.PROMOTIONS
+            }
+            // Default shortcodes to Transactions if ambiguous, or Promos?
+            // Often shortcodes are notifications. Let's say Transactions.
+            return ThreadCategory.TRANSACTIONS
+        }
+
+        // 3. Fallback to Personal
+        return ThreadCategory.PERSONAL
     }
 
     private fun resolveThreadAddress(threadId: Long): String {
@@ -534,7 +564,8 @@ class SmsRepository(private val context: Context) {
                     address = address,
                     snippet = body,
                     timestamp = ts,
-                    unread = unread
+                    unread = unread,
+                    category = categorizeThread(address, body)
                 )
                 count++
             }

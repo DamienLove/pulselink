@@ -1,5 +1,12 @@
 package com.pulselink.beacon.data
 
+enum class ThreadCategory {
+    PERSONAL,
+    TRANSACTIONS,
+    PROMOTIONS,
+    OTP
+}
+
 data class SmsThreadItem(
     val threadId: Long,
     val address: String,
@@ -7,7 +14,8 @@ data class SmsThreadItem(
     val timestamp: Long,
     val unread: Boolean,
     val isPinned: Boolean = false,
-    val isArchived: Boolean = false
+    val isArchived: Boolean = false,
+    val category: ThreadCategory = ThreadCategory.PERSONAL
 )
 
 data class SmsMessageItem(

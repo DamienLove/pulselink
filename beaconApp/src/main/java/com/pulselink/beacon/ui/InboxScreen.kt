@@ -123,11 +123,10 @@ fun InboxScreen(
     val filtered = remember(filter, threads) {
         threads.filter { thread ->
             when (filter) {
-                // ALL and ARCHIVED modes are pre-filtered by the Repository query.
-                // We trust the repository to return the correct set (Inbox/Pinned vs Archived).
-                InboxFilter.ALL -> true
-                InboxFilter.READ -> !thread.unread
-                InboxFilter.UNREAD -> thread.unread
+                InboxFilter.ALL -> true // Shows all except archived (handled by repo/upstream filtering usually)
+                InboxFilter.PERSONAL -> thread.category == com.pulselink.beacon.data.ThreadCategory.PERSONAL
+                InboxFilter.TRANSACTIONS -> thread.category == com.pulselink.beacon.data.ThreadCategory.TRANSACTIONS || thread.category == com.pulselink.beacon.data.ThreadCategory.OTP
+                InboxFilter.PROMOTIONS -> thread.category == com.pulselink.beacon.data.ThreadCategory.PROMOTIONS
                 InboxFilter.ARCHIVED -> true
             }
         }
@@ -397,14 +396,17 @@ fun InboxScreen(
                             tint = iconTint,
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
-                        Text("No messages yet")
+                        Text("No messages here")
                         Text(
                             when (filter) {
-                                InboxFilter.UNREAD -> "No unread messages."
-                                InboxFilter.READ -> "No read messages."
+                                InboxFilter.PERSONAL -> "No personal messages found."
+                                InboxFilter.TRANSACTIONS -> "No transaction updates found."
+                                InboxFilter.PROMOTIONS -> "No offers or promotions found."
+                                InboxFilter.ARCHIVED -> "Archive is empty."
                                 else -> "New texts will appear here once Beacon is the default SMS app."
                             },
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray
                         )
                     }
                 }
@@ -666,33 +668,43 @@ private fun TabsRow(
     onFilterChange: (InboxFilter) -> Unit,
     theme: ThemePalette
 ) {
-    Row(
+    androidx.compose.foundation.lazy.LazyRow(
         modifier = Modifier
             .fillMaxWidth()
             .selectableGroup()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(vertical = 8.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TabText(label = "All", selected = filter == InboxFilter.ALL, theme = theme) {
-            onFilterChange(InboxFilter.ALL)
+        item {
+            TabText(label = "All", selected = filter == InboxFilter.ALL, theme = theme) {
+                onFilterChange(InboxFilter.ALL)
+            }
         }
-        TabText(label = "Read", selected = filter == InboxFilter.READ, theme = theme) {
-            onFilterChange(InboxFilter.READ)
+        item {
+            TabText(label = "Personal", selected = filter == InboxFilter.PERSONAL, theme = theme) {
+                onFilterChange(InboxFilter.PERSONAL)
+            }
         }
-        TabText(
-            label = "Unread${if (unreadCount > 0) " ($unreadCount)" else ""}",
-            selected = filter == InboxFilter.UNREAD,
-            theme = theme
-        ) {
-            onFilterChange(InboxFilter.UNREAD)
+        item {
+            TabText(label = "Transactions", selected = filter == InboxFilter.TRANSACTIONS, theme = theme) {
+                onFilterChange(InboxFilter.TRANSACTIONS)
+            }
         }
-        TabText(
-            label = "Archived",
-            selected = filter == InboxFilter.ARCHIVED,
-            theme = theme
-        ) {
-            onFilterChange(InboxFilter.ARCHIVED)
+        item {
+            TabText(label = "Offers", selected = filter == InboxFilter.PROMOTIONS, theme = theme) {
+                onFilterChange(InboxFilter.PROMOTIONS)
+            }
+        }
+        item {
+            TabText(
+                label = "Archived",
+                selected = filter == InboxFilter.ARCHIVED,
+                theme = theme
+            ) {
+                onFilterChange(InboxFilter.ARCHIVED)
+            }
         }
     }
 }
@@ -723,4 +735,4 @@ private fun TabText(label: String, selected: Boolean, theme: ThemePalette, onCli
     }
 }
 
-enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED }
+enum class InboxFilter { ALL, PERSONAL, TRANSACTIONS, PROMOTIONS, ARCHIVED }
