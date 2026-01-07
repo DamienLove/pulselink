@@ -33,3 +33,4 @@ export {
   handlePlayStoreRTDN,
 } from "./billing";
 export {getSpotifyAccessToken} from "./spotify";
+export {submitExtension, onExtensionSubmitted} from "./extensions";

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello World Extension</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: transparent;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 { margin-bottom: 10px; }
+        p { color: #aaa; }
+        button {
+            background: #22d3ee;
+            color: #0b0e16;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        button:hover { background: #0ea5e9; }
+    </style>
+</head>
+<body>
+    <h1>Hello, PulseLink!</h1>
+    <p>This is a sample extension running in an iframe.</p>
+    <button id="pingBtn">Ping Host</button>
+
+    <script>
+        // Security: Get the parent origin to target postMessage
+        // In this local sample, we expect the parent to be the same origin.
+        // For external extensions, this should be configured or passed in.
+        const targetOrigin = window.location.ancestorOrigins && window.location.ancestorOrigins.length > 0
+            ? window.location.ancestorOrigins[0]
+            : window.location.origin;
+
+        document.getElementById("pingBtn").addEventListener("click", () => {
+            if (window.parent) {
+                // Security: Target specific origin instead of "*"
+                window.parent.postMessage({ type: "EXTENSION_PING", payload: { timestamp: Date.now() } }, targetOrigin);
+            }
+        });
+
+        window.addEventListener("message", (event) => {
+            // Security: Validate origin
+            if (event.origin !== targetOrigin) return;
+
+            if (event.data && event.data.type === "HOST_PONG") {
+                const btn = document.getElementById("pingBtn");
+                btn.textContent = "Pong Received!";
+                setTimeout(() => btn.textContent = "Ping Host", 2000);
+            }
+        });
+    </script>
+</body>
+</html>

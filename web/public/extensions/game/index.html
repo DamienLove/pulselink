@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pulse Clicker</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #0b0e16;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            user-select: none;
+        }
+        .score { font-size: 4em; font-weight: bold; margin-bottom: 20px; color: #22d3ee; }
+        .btn {
+            background: radial-gradient(circle, #22d3ee 0%, #0ea5e9 100%);
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(34, 211, 238, 0.5);
+            transition: transform 0.1s;
+        }
+        .btn:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+    <div class="score" id="score">0</div>
+    <button class="btn" id="clickBtn"></button>
+    <p>Tap the Pulse!</p>
+
+    <script>
+        let score = 0;
+        const scoreEl = document.getElementById("score");
+
+        // Security: Target specific origin
+        const targetOrigin = window.location.ancestorOrigins && window.location.ancestorOrigins.length > 0
+            ? window.location.ancestorOrigins[0]
+            : window.location.origin;
+
+        document.getElementById("clickBtn").addEventListener("click", () => {
+            score++;
+            scoreEl.textContent = score;
+            if (score % 10 === 0 && window.parent) {
+                 window.parent.postMessage({ type: "EXTENSION_SCORE_UPDATE", payload: { score } }, targetOrigin);
+            }
+        });
+    </script>
+</body>
+</html>

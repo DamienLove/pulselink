@@ -1,0 +1,9 @@
+{
+  "id": "com.pulselink.extensions.helloworld",
+  "name": "Hello World",
+  "version": "1.0.0",
+  "description": "A simple Hello World extension.",
+  "author": "PulseLink Dev",
+  "entry_point": "index.html",
+  "permissions": []
+}

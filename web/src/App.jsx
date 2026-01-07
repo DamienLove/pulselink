@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
+import ExtensionRunner from './components/ExtensionRunner';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -58,7 +59,7 @@ const TrashIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="no
 const LinkIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
 const CopyIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>;
 const CheckIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
-const Spinner = () => <span className="spinner" aria-hidden="true" />;
+export const Spinner = () => <span className="spinner" aria-hidden="true" />;
 
 const CopyButton = ({ text, label = "Copy" }) => {
   const [copied, setCopied] = useState(false);
@@ -1217,6 +1218,13 @@ function App() {
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
   const [addingTrackId, setAddingTrackId] = useState(null);
 
+  // Extensions State
+  const [activeExtension, setActiveExtension] = useState(null); // { id, url, name }
+  const [devExtensionUrl, setDevExtensionUrl] = useState('http://localhost:5173/extensions/helloworld/manifest.json');
+  // eslint-disable-next-line no-unused-vars
+  const [installedExtensions, setInstalledExtensions] = useState([]);
+  const [extensionStatus, setExtensionStatus] = useState('');
+
   useEffect(() => {
     if (!user) {
       setRingerPlaylist([]);
@@ -2229,7 +2237,78 @@ function App() {
     setSelectedThread(thread);
   }, []);
 
+  const handleLoadExtension = async (manifestUrl) => {
+      setExtensionStatus("Loading extension manifest...");
+      try {
+          // Validate URL format
+          if (!manifestUrl || typeof manifestUrl !== 'string') throw new Error("Invalid URL");
+
+          let url = manifestUrl.trim();
+
+          // Allow relative paths for local testing, but ensure they don't escape
+          if (url.startsWith('/')) {
+              // Basic path traversal check (simple)
+              if (url.includes('..')) throw new Error("Invalid path");
+              url = window.location.origin + url;
+          } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
+              throw new Error("URL must start with http:// or https://");
+          }
+
+          // Timeout wrapper for fetch
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
+          try {
+              const response = await fetch(url, { signal: controller.signal });
+              clearTimeout(timeoutId);
+
+              if (!response.ok) throw new Error(`Failed to load manifest: ${response.status}`);
+              const manifest = await response.json();
+
+              if (!manifest.id || !manifest.name) throw new Error("Invalid manifest: Missing ID or Name");
+              if (!manifest.entry_point) throw new Error("Invalid manifest: Missing entry_point");
+
+              // Resolve entry point relative to manifest URL
+              // Security: ensure baseUrl is valid
+              const baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
+              let entryUrl = manifest.entry_point;
+
+              if (!entryUrl.startsWith('http')) {
+                  // Construct absolute URL
+                  entryUrl = new URL(entryUrl, baseUrl).href;
+              }
+
+              setActiveExtension({
+                  id: manifest.id,
+                  name: manifest.name,
+                  url: entryUrl
+              });
+              setExtensionStatus("");
+              setActivePanel('extension_runner');
+          } catch (e) {
+              clearTimeout(timeoutId);
+              if (e.name === 'AbortError') throw new Error("Request timed out");
+              throw e;
+          }
+      } catch (e) {
+          setExtensionStatus("Error: " + e.message);
+      }
+  };
+
   const isPremium = userData?.subscriptionStatus === 'premium' || userData?.hasPremiumHistory;
+
+  if (activePanel === 'extension_runner' && activeExtension) {
+      return (
+        <div className="app-shell" style={themeVars}>
+            <ExtensionRunner
+                extension={activeExtension}
+                user={user}
+                profile={profile}
+                onClose={() => setActivePanel('extensions')}
+            />
+        </div>
+      );
+  }
 
   if (!user) {
     return (
@@ -3226,7 +3305,7 @@ function App() {
                   <p>Smart summaries and auto-replies. Coming soon.</p>
                   <div className="badge" style={{background: 'var(--border)', color: 'var(--muted)', marginTop: 12, display: 'inline-block'}}>Coming Soon</div>
                 </div>
-                {!remoteSettings.thirdPartyExtensionsEnabled && (
+                {!remoteSettings.thirdPartyExtensionsEnabled ? (
                     <div className="settings-card" style={{gridColumn: '1 / -1'}}>
                         <h4>Enable Third-Party Extensions</h4>
                         <p className="settings-note">Unlock the full potential of PulseLink by enabling community extensions.</p>
@@ -3234,6 +3313,33 @@ function App() {
                             setRemoteSettings(prev => ({ ...prev, thirdPartyExtensionsEnabled: true }));
                             handleRemoteSettingsSave();
                         }}>Enable Beta Extensions</button>
+                    </div>
+                ) : (
+                    <div className="settings-card" style={{gridColumn: '1 / -1'}}>
+                        <h4>Developer Mode</h4>
+                        <p className="settings-note">Load an extension from a URL (manifest.json).</p>
+                        <div className="search-container">
+                            <div className="search-input-wrapper">
+                                <input
+                                    className="login-input"
+                                    value={devExtensionUrl}
+                                    onChange={(e) => setDevExtensionUrl(e.target.value)}
+                                    placeholder="http://localhost:3000/manifest.json"
+                                />
+                                <button className="primary-btn" onClick={() => handleLoadExtension(devExtensionUrl)}>
+                                    Load
+                                </button>
+                            </div>
+                        </div>
+                        {extensionStatus && <div className="settings-status" role="status" aria-live="polite">{extensionStatus}</div>}
+
+                        <h4 style={{marginTop: 20}}>Local Samples</h4>
+                        <div className="theme-grid">
+                            <button className="theme-chip" onClick={() => handleLoadExtension('/extensions/helloworld/manifest.json')}>
+                                <div className="theme-chip-title"><strong>Hello World</strong></div>
+                                <div className="theme-chip-preview" style={{padding: 5, fontSize: '0.8em'}}>Basic Sample</div>
+                            </button>
+                        </div>
                     </div>
                 )}
               </div>

@@ -1,0 +1,9 @@
+{
+  "id": "com.pulselink.extensions.clicker",
+  "name": "Pulse Clicker",
+  "version": "1.0.0",
+  "description": "A simple clicker game.",
+  "author": "PulseLink Dev",
+  "entry_point": "index.html",
+  "permissions": []
+}

@@ -415,6 +415,21 @@ private fun ExtensionCTA() {
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            // Placeholder for Developer Mode on Android
+            if (BuildConfig.DEBUG) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Developer Mode",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "To test 3rd party extensions on Android, use the Web Client or wait for the upcoming Android Dev Menu update.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
