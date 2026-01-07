@@ -256,44 +256,63 @@ const buildAlertSnippet = (body = '') => {
 };
 
 // Bolt: Optimized MapAlertItem to prevent re-renders of the alert list
-const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => (
-  <div
-    className={`map-item ${isActive ? 'active' : ''}`}
-    onClick={() => onFocus(alert)}
-    role="button"
-    tabIndex={0}
-    onKeyDown={(event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        onFocus(alert);
-      }
-    }}
-  >
-    <div className="map-item-header">
-      <div className="map-item-title">{alert.address}</div>
-      <span
-        className="map-badge"
-        style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
-      >
-        {alertBadgeCopy[alert.severity] ?? 'Alert'}
-      </span>
+const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
+  const [isClearing, setIsClearing] = useState(false);
+
+  const handleClear = useCallback(async (event) => {
+    event.stopPropagation();
+    setIsClearing(true);
+    try {
+      await onClear(alert.id);
+    } catch (e) {
+      console.error(e);
+      setIsClearing(false);
+    }
+  }, [alert.id, onClear]);
+
+  return (
+    <div
+      className={`map-item ${isActive ? 'active' : ''}`}
+      onClick={() => onFocus(alert)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onFocus(alert);
+        }
+      }}
+    >
+      <div className="map-item-header">
+        <div className="map-item-title">{alert.address}</div>
+        <span
+          className="map-badge"
+          style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
+        >
+          {alertBadgeCopy[alert.severity] ?? 'Alert'}
+        </span>
+      </div>
+      <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
+      <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
+      <div className="map-item-actions">
+        <button
+          className="secondary-btn"
+          type="button"
+          onClick={handleClear}
+          disabled={isClearing}
+          aria-label={`Clear alert from ${alert.address}`}
+        >
+          {isClearing ? (
+            <>
+              <Spinner />
+              Clearing...
+            </>
+          ) : 'Clear'}
+        </button>
+      </div>
     </div>
-    <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
-    <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
-    <div className="map-item-actions">
-      <button
-        className="secondary-btn"
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onClear(alert.id);
-        }}
-      >
-        Clear
-      </button>
-    </div>
-  </div>
-), (prev, next) => {
+  );
+}, (prev, next) => {
   return prev.isActive === next.isActive &&
     prev.alert.id === next.alert.id &&
     prev.alert.address === next.alert.address &&
@@ -1136,6 +1155,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [threads, setThreads] = useState([]);
   const [legacyThreads, setLegacyThreads] = useState([]);
   const [lineThreads, setLineThreads] = useState({});
