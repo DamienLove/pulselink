@@ -279,8 +279,6 @@ private fun LinkStatusSection(
                                         val subject = Uri.encode(rawSubject)
                                         val body = Uri.encode(rawBody)
                                         data = Uri.parse("mailto:${contact.email ?: ""}?subject=$subject&body=$body")
-                                        putExtra(Intent.EXTRA_SUBJECT, rawSubject)
-                                        putExtra(Intent.EXTRA_TEXT, rawBody)
                                     }
                                     try {
                                         context.startActivity(emailIntent)

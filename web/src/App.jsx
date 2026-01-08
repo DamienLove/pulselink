@@ -1155,8 +1155,6 @@ function App() {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  // eslint-disable-next-line no-unused-vars
-  const [threads, setThreads] = useState([]);
   const [legacyThreads, setLegacyThreads] = useState([]);
   const [lineThreads, setLineThreads] = useState({});
   const [lines, setLines] = useState([]);
@@ -2253,14 +2251,14 @@ function App() {
     }
   };
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await signOut(auth);
     setSelectedThread(null);
     setComposeAddress('');
     setComposeBody('');
     setSendStatus('');
     setActivePanel('home');
-  };
+  }, []);
 
   const handleSendMessage = async () => {
     if (!user) return;
@@ -2314,6 +2312,21 @@ function App() {
     const current = chosenLine ? lineThreads[chosenLine] || [] : [];
     return current.sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
   }, [lineInboxMode, activeLineId, lines, lineThreads, combinedThreads]);
+
+  // Bolt: Memoize thread list elements to prevent re-rendering on every compose keystroke.
+  // Note: handleThreadSelect is stable (useCallback) but included for exhaustive-deps correctness.
+  // Note: selectedThread?.id is used to avoid re-rendering the whole list when non-visual props of selectedThread change.
+  const threadListElements = useMemo(() => (
+    activeLineThreads.map(thread => (
+      <ThreadItem
+        key={thread.id}
+        thread={thread}
+        isActive={selectedThread?.id === thread.id}
+        onSelect={handleThreadSelect}
+        showPreviews={showPreviews}
+      />
+    ))
+  ), [activeLineThreads, selectedThread?.id, handleThreadSelect, showPreviews]);
 
   const isPremium = userData?.subscriptionStatus === 'premium' || userData?.hasPremiumHistory;
 
@@ -2570,15 +2583,7 @@ function App() {
                   </div>
                 </div>
               ) : (
-                activeLineThreads.map(thread => (
-                  <ThreadItem
-                    key={thread.id}
-                    thread={thread}
-                    isActive={selectedThread?.id === thread.id}
-                    onSelect={handleThreadSelect}
-                    showPreviews={showPreviews}
-                  />
-                ))
+                threadListElements
               )}
             </div>
           ) : (
