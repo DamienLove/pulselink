@@ -35,7 +35,6 @@ class SmsRepository(private val context: Context) {
         private const val CONTACT_CACHE_SIZE = 1000
 
         // Classification Regex
-        private val NUMERIC_REGEX = Regex("[^0-9]")
         private val TRANSACTION_KEYWORDS = listOf(
             "otp", "code", "bank", "debit", "credit", "acct", "txn", "verify",
             "password", "login", "auth", "bill", "invoice", "due", "paid"
@@ -156,18 +155,22 @@ class SmsRepository(private val context: Context) {
 
     private fun classifyThread(address: String, snippet: String): ThreadCategory {
         val body = snippet.lowercase()
-        val hasSpace = address.contains(" ")
 
-        // Refined Classification:
-        // A "Real Phone Number" should generally not have letters.
-        // If it has letters, it's likely a Shortcode or Sender ID (e.g. "HDFC2U").
-        // Exception: Contact names have letters and spaces ("John Doe").
+        // Reliable check: Resolved contacts always have the bullet separator
+        val isResolvedContact = address.contains(" \u2022 ")
 
+        if (isResolvedContact) {
+            return ThreadCategory.PERSONAL
+        }
+
+        // If not a contact, check raw address properties
         val hasLetters = address.any { it.isLetter() }
-        val isContactName = hasSpace && hasLetters
-        val isNumericNumber = !hasLetters && address.any { it.isDigit() } && address.length >= 3
 
-        if (isContactName || isNumericNumber) {
+        // If it has letters, it is likely a Sender ID (e.g. "HDFC2U", "VK-DOT") -> Not Personal
+        // If it has NO letters (only digits/symbols), it is a phone number -> Personal
+        // Exception: Short codes (e.g., 56734) are Transactional, not Personal. Standard numbers are usually > 6 digits.
+        val digitCount = address.count { it.isDigit() }
+        if (!hasLetters && digitCount > 6) {
             return ThreadCategory.PERSONAL
         }
 
