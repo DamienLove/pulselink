@@ -256,6 +256,7 @@ const buildAlertSnippet = (body = '') => {
 };
 
 // Bolt: Optimized MapAlertItem to prevent re-renders of the alert list
+// Note: onFocus and onClear are assumed to be stable references (useCallback in parent)
 const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
   const [isClearing, setIsClearing] = useState(false);
 
@@ -264,8 +265,11 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
     setIsClearing(true);
     try {
       await onClear(alert.id);
+      // Successful clear will trigger list update and this component will likely unmount
+      // or re-render. If it stays, we keep clearing state true to prevent double clicks.
     } catch (e) {
       console.error(e);
+      // Reset state on error so user can retry
       setIsClearing(false);
     }
   }, [alert.id, onClear]);
@@ -301,6 +305,7 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
           onClick={handleClear}
           disabled={isClearing}
           aria-label={`Clear alert from ${alert.address}`}
+          aria-busy={isClearing}
         >
           {isClearing ? (
             <>
@@ -1874,7 +1879,10 @@ function App() {
       );
     } catch (error) {
       console.error('Failed to clear alert', error);
-      setAlertStatus(error?.message ?? 'Unable to clear alert.');
+      const message = error?.message ?? 'Unable to clear alert.';
+      setAlertStatus(message);
+      // Re-throw so child component can handle state
+      throw new Error(message);
     }
   }, [user]);
 
@@ -2251,14 +2259,14 @@ function App() {
     }
   };
 
-  const handleLogout = useCallback(async () => {
+  const handleLogout = async () => {
     await signOut(auth);
     setSelectedThread(null);
     setComposeAddress('');
     setComposeBody('');
     setSendStatus('');
     setActivePanel('home');
-  }, []);
+  };
 
   const handleSendMessage = async () => {
     if (!user) return;
@@ -2312,21 +2320,6 @@ function App() {
     const current = chosenLine ? lineThreads[chosenLine] || [] : [];
     return current.sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
   }, [lineInboxMode, activeLineId, lines, lineThreads, combinedThreads]);
-
-  // Bolt: Memoize thread list elements to prevent re-rendering on every compose keystroke.
-  // Note: handleThreadSelect is stable (useCallback) but included for exhaustive-deps correctness.
-  // Note: selectedThread?.id is used to avoid re-rendering the whole list when non-visual props of selectedThread change.
-  const threadListElements = useMemo(() => (
-    activeLineThreads.map(thread => (
-      <ThreadItem
-        key={thread.id}
-        thread={thread}
-        isActive={selectedThread?.id === thread.id}
-        onSelect={handleThreadSelect}
-        showPreviews={showPreviews}
-      />
-    ))
-  ), [activeLineThreads, selectedThread?.id, handleThreadSelect, showPreviews]);
 
   const isPremium = userData?.subscriptionStatus === 'premium' || userData?.hasPremiumHistory;
 
@@ -2583,7 +2576,15 @@ function App() {
                   </div>
                 </div>
               ) : (
-                threadListElements
+                activeLineThreads.map(thread => (
+                  <ThreadItem
+                    key={thread.id}
+                    thread={thread}
+                    isActive={selectedThread?.id === thread.id}
+                    onSelect={handleThreadSelect}
+                    showPreviews={showPreviews}
+                  />
+                ))
               )}
             </div>
           ) : (

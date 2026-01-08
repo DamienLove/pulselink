@@ -528,6 +528,12 @@
   transform: translateY(-1px);
 }
 
+.secondary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* Spinner for loading states */
 .spinner {
   display: inline-block;
