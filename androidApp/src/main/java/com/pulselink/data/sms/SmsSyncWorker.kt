@@ -97,6 +97,32 @@ class SmsSyncWorker @AssistedInject constructor(
             val threads = smsRepository.listThreads(limit = 50)
             val lineThreadsRef = lineRef.collection("threads")
 
+            // Identify existing threads in Firestore to delete those that are no longer present (or dropped out of top 50)
+            // This prevents "ghost threads" that were deleted on the device from persisting on the web.
+            val existingThreadDocs = runCatching { lineThreadsRef.get().await() }.getOrNull()
+            val existingThreadIds = existingThreadDocs?.documents?.map { it.id }?.toSet() ?: emptySet()
+            val currentThreadIds = threads.map { it.threadId.toString() }.toSet()
+
+            // Delete threads that are in Firestore but not in the current sync list
+            val threadsToDelete = existingThreadIds - currentThreadIds
+            if (threadsToDelete.isNotEmpty()) {
+                val batch = firestore.batch()
+                var batchCount = 0
+                threadsToDelete.forEach { threadId ->
+                    batch.delete(lineThreadsRef.document(threadId))
+                    batchCount++
+                    // Batch limit is 500
+                    if (batchCount >= 450) {
+                        batch.commit().await()
+                        batch = firestore.batch()
+                        batchCount = 0
+                    }
+                }
+                if (batchCount > 0) {
+                    batch.commit().await()
+                }
+            }
+
             for (thread in threads) {
                 val lineThreadDoc = lineThreadsRef.document(thread.threadId.toString())
 

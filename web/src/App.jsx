@@ -1729,7 +1729,24 @@ function App() {
           .map(doc => ({ id: doc.id, ...doc.data() }))
           .filter(line => line.disabled !== true);
         setLines(lineItems);
+
+        // Attach listeners for new/active lines
         lineItems.forEach(line => attachLine(line.id));
+
+        // Detach listeners for removed or disabled lines
+        const activeIds = new Set(lineItems.map(l => l.id));
+        for (const [id, unsub] of threadUnsubs) {
+          if (!activeIds.has(id)) {
+            unsub();
+            threadUnsubs.delete(id);
+            setLineThreads(prev => {
+              const next = { ...prev };
+              delete next[id];
+              return next;
+            });
+          }
+        }
+
         setIsLoadingThreads(false);
       });
 

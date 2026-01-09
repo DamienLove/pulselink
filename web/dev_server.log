@@ -3,11 +3,7 @@
 > vite --port 5173
 
 
-  VITE v5.4.21  ready in 294 ms
+  VITE v5.4.21  ready in 287 ms
 
   ➜  Local:   http://localhost:5173/
   ➜  Network: use --host to expose
-5:37:35 AM [vite] hmr update /src/AppTest.jsx
-5:37:39 AM [vite] hmr update /src/AppTest.jsx
-5:37:50 AM [vite] hmr update /src/AppTest.jsx
- ELIFECYCLE  Command failed.
