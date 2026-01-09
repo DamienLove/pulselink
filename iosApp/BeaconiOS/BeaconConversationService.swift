@@ -32,8 +32,8 @@ final class MockBeaconConversationProvider: BeaconConversationProvider {
         let c2 = BeaconContactCard(threadId: "2", name: "Morgan Lee", address: "5559876543", role: "Family", presence: .recent, unread: 0, isFavorite: false, isPrivate: true, isTrusted: true)
 
         store[c1] = [
-            BeaconConversationMessage(sender: "Alex", text: "Hey, how are you?", timestamp: Date().addingTimeInterval(-3600), isIncoming: true, isUrgent: false),
-            BeaconConversationMessage(sender: "You", text: "I'm good!", timestamp: Date().addingTimeInterval(-3500), isIncoming: false, isUrgent: false)
+            BeaconConversationMessage(id: UUID().uuidString, sender: "Alex", text: "Hey, how are you?", timestamp: Date().addingTimeInterval(-3600), isIncoming: true, isUrgent: false),
+            BeaconConversationMessage(id: UUID().uuidString, sender: "You", text: "I'm good!", timestamp: Date().addingTimeInterval(-3500), isIncoming: false, isUrgent: false)
         ]
         store[c2] = []
     }
@@ -106,6 +106,7 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
                         let date = Date(timeIntervalSince1970: TimeInterval(timestamp) / 1000.0)
 
                         let msg = BeaconConversationMessage(
+                            id: msgDoc.documentID,
                             sender: type == 1 ? address : "You",
                             text: msgData["body"] as? String ?? "",
                             timestamp: date,
@@ -166,6 +167,7 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
                     let date = Date(timeIntervalSince1970: TimeInterval(timestamp) / 1000.0)
 
                     return BeaconConversationMessage(
+                        id: doc.documentID,
                         sender: type == 1 ? contact.address : "You",
                         text: data["body"] as? String ?? "",
                         timestamp: date,

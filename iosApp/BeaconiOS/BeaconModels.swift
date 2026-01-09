@@ -26,7 +26,7 @@ struct BeaconContactCard: Identifiable, Hashable {
 }
 
 struct BeaconConversationMessage: Identifiable {
-    let id = UUID()
+    let id: String
     let sender: String
     let text: String
     let timestamp: Date

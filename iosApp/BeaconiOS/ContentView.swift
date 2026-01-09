@@ -172,11 +172,12 @@ private struct BeaconTab: View {
                         .searchable(text: $searchText)
                         .overlay {
                             if filteredContacts.isEmpty {
-                                ContentUnavailableView(
-                                    "No conversations",
-                                    systemImage: "bubble.left.and.bubble.right",
-                                    description: Text("Start a new chat on your Android device.")
-                                )
+                                ContentUnavailableView {
+                                    Label("No conversations", systemImage: "bubble.left.and.bubble.right")
+                                        .foregroundStyle(RelayColors.primary)
+                                } description: {
+                                    Text("Start a new chat on your Android device.")
+                                }
                             }
                         }
                     }

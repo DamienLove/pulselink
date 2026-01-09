@@ -15,7 +15,7 @@ struct LoginView: View {
         VStack(spacing: 20) {
             Image(systemName: "antenna.radiowaves.left.and.right")
                 .font(.system(size: 60))
-                .foregroundStyle(.blue)
+                .foregroundStyle(RelayColors.primary)
                 .padding(.bottom, 20)
 
             Text("Beacon")
@@ -58,6 +58,7 @@ struct LoginView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
+            .tint(RelayColors.accent)
             .disabled(isBusy || email.isEmpty || password.isEmpty)
             .padding(.horizontal)
 

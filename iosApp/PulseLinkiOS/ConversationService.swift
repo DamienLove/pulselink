@@ -124,6 +124,7 @@ final class FirestoreConversationProvider: ConversationProvider {
                         let date = Date(timeIntervalSince1970: TimeInterval(timestamp) / 1000.0)
 
                         let msg = ConversationMessage(
+                            id: msgDoc.documentID,
                             sender: type == 1 ? address : "You",
                             text: msgData["body"] as? String ?? "",
                             timestamp: date,
@@ -190,6 +191,7 @@ final class FirestoreConversationProvider: ConversationProvider {
                     let date = Date(timeIntervalSince1970: TimeInterval(timestamp) / 1000.0)
 
                     return ConversationMessage(
+                        id: doc.documentID,
                         sender: type == 1 ? contact.address : "You",
                         text: data["body"] as? String ?? "",
                         timestamp: date,
