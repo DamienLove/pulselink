@@ -22,6 +22,7 @@ enum Presence: String {
 struct ContactCard: Identifiable, Hashable {
     let id = UUID()
     let threadId: String
+    var lineId: String? = nil
     let name: String
     let address: String // Phone number or unique ID
     let role: String

@@ -15,6 +15,7 @@ enum BeaconPresence: String {
 struct BeaconContactCard: Identifiable, Hashable {
     let id = UUID()
     let threadId: String
+    var lineId: String? = nil
     let name: String
     let address: String
     let role: String
