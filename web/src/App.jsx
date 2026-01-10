@@ -332,11 +332,23 @@ MapAlertItem.displayName = 'MapAlertItem';
 
 // Bolt: Optimized ThemeGalleryItem to prevent re-renders when list doesn't change
 const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
+  const [isImporting, setIsImporting] = useState(false);
   const previewTheme = normalizeTheme(themeDoc.theme || {});
   const previewStyle = buildThemePreviewStyle(previewTheme);
   const authorLabel = themeDoc.anonymous
     ? 'Anonymous'
     : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
+
+  const handleImport = useCallback(async () => {
+    setIsImporting(true);
+    try {
+      await onImport(themeDoc);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsImporting(false);
+    }
+  }, [onImport, themeDoc]);
 
   return (
     <div className="theme-card">
@@ -369,10 +381,17 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
       <button
         className="primary-btn"
         type="button"
-        onClick={() => onImport(themeDoc)}
+        onClick={handleImport}
+        disabled={isImporting}
+        aria-busy={isImporting}
         aria-label={`Import theme ${themeDoc.name || 'Untitled'}`}
       >
-        Import
+        {isImporting ? (
+          <>
+            <Spinner />
+            Importing...
+          </>
+        ) : 'Import'}
       </button>
     </div>
   );
