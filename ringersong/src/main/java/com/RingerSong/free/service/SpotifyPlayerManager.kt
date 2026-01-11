@@ -57,24 +57,50 @@ class SpotifyPlayerManager @Inject constructor(
         })
     }
 
-    suspend fun playUri(uri: String): Boolean {
+    suspend fun playUri(uri: String, startMs: Long = 0): Boolean {
         if (spotifyAppRemote?.isConnected != true) {
             // Attempt silent connection first
             if (!connect(showAuthView = false)) return false
         }
 
-        return try {
-            spotifyAppRemote?.playerApi?.play(uri)
-            Log.d(TAG, "Sent play command for $uri")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Error playing URI", e)
-            false
+        return suspendCancellableCoroutine { continuation ->
+            val playerApi = spotifyAppRemote?.playerApi
+            if (playerApi == null) {
+                continuation.resume(false)
+                return@suspendCancellableCoroutine
+            }
+
+            playerApi.play(uri).setResultCallback {
+                Log.d(TAG, "Sent play command for $uri")
+                if (startMs > 0) {
+                     playerApi.seekTo(startMs).setResultCallback {
+                         Log.d(TAG, "Sent seek command for $startMs")
+                         continuation.resume(true)
+                     }.setErrorCallback { e ->
+                         Log.e(TAG, "Error seeking to $startMs", e)
+                         // Resume true anyway as play succeeded, though seek failed
+                         continuation.resume(true)
+                     }
+                } else {
+                    continuation.resume(true)
+                }
+            }.setErrorCallback { e ->
+                Log.e(TAG, "Error playing URI", e)
+                continuation.resume(false)
+            }
         }
     }
 
     fun pause() {
-        spotifyAppRemote?.playerApi?.pause()
+        if (spotifyAppRemote?.isConnected == true) {
+             spotifyAppRemote?.playerApi?.pause()?.setResultCallback {
+                 Log.d(TAG, "Sent pause command")
+             }?.setErrorCallback { e ->
+                 Log.e(TAG, "Error sending pause command", e)
+             }
+        } else {
+            Log.w(TAG, "Cannot pause: Spotify not connected")
+        }
     }
 
     fun disconnect() {

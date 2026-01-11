@@ -3,9 +3,11 @@ package com.RingerSong.free.receiver
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.telephony.TelephonyManager
 import android.util.Log
 import com.RingerSong.free.data.AppStateStore
+import com.RingerSong.free.service.RingerPlaybackService
 import com.RingerSong.free.service.RingtoneSegmentManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -16,6 +18,9 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class CallStateReceiver : BroadcastReceiver() {
+
+    @Inject lateinit var appStateStore: AppStateStore
+
     companion object {
         private const val TAG = "CallStateReceiver"
         private var lastState = TelephonyManager.EXTRA_STATE_IDLE
@@ -28,29 +33,60 @@ class CallStateReceiver : BroadcastReceiver() {
         val phoneState = intent.getStringExtra(TelephonyManager.EXTRA_STATE) ?: return
         Log.d(TAG, "Phone state: $phoneState (last: $lastState)")
 
-        // Set the NEXT ringtone when call ends (not during ringing - too late!)
         when (phoneState) {
-            TelephonyManager.EXTRA_STATE_IDLE -> {
-                // Call ended - set the next ringtone for the NEXT call
-                if (lastState == TelephonyManager.EXTRA_STATE_OFFHOOK ||
-                    lastState == TelephonyManager.EXTRA_STATE_RINGING) {
-                    Log.d(TAG, "Call ended - setting NEXT ringtone")
+            TelephonyManager.EXTRA_STATE_RINGING -> {
+                val number = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
+                Log.d(TAG, "RINGING from: $number - Starting RingerPlaybackService")
 
+                // Start the playback service immediately to silence default ringer and play stream
+                val serviceIntent = Intent(context, RingerPlaybackService::class.java).apply {
+                    action = RingerPlaybackService.ACTION_PLAY_SEGMENT
+                    putExtra(RingerPlaybackService.EXTRA_PHONE_NUMBER, number)
+                }
+
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        context.startForegroundService(serviceIntent)
+                    } else {
+                        context.startService(serviceIntent)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to start service (likely Android 12+ background restriction)", e)
+                    // Fallback or retry logic could go here, but for now we log and proceed safely.
+                }
+            }
+
+            TelephonyManager.EXTRA_STATE_IDLE -> {
+                // Call ended or rejected
+                if (lastState == TelephonyManager.EXTRA_STATE_RINGING ||
+                    lastState == TelephonyManager.EXTRA_STATE_OFFHOOK) {
+
+                    Log.d(TAG, "Call ended - Stopping RingerPlaybackService")
+                    val serviceIntent = Intent(context, RingerPlaybackService::class.java).apply {
+                        action = RingerPlaybackService.ACTION_STOP_PLAYBACK
+                    }
+                    try {
+                        context.startService(serviceIntent)
+                    } catch (e: Exception) {
+                         Log.e(TAG, "Failed to send STOP intent", e)
+                    }
+
+                    // We still keep the "Next Ringtone" logic for fallback/LOCAL support if needed,
+                    // but for Streaming, the service handles it.
                     val pending = goAsync()
+                    // Use IO dispatcher for database/disk operations
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
-                            val store = AppStateStore(context)
-                            val ringtoneManager = RingtoneSegmentManager(context, store)
+                            val ringtoneManager = RingtoneSegmentManager(context, appStateStore)
 
                             // Check if enabled
-                            val state = store.stateFlow.first()
+                            val state = appStateStore.stateFlow.first()
                             if (!state.settings.enabled) {
-                                Log.w(TAG, "RingerSong is disabled")
-                                pending.finish()
+                                Log.d(TAG, "RingerSong is disabled, skipping next ringtone setup")
                                 return@launch
                             }
 
-                            // Set the NEXT ringtone (for the next incoming call)
+                            // Set the NEXT ringtone (for the next incoming call) - mostly relevant for LOCAL files
                             ringtoneManager.setRingtoneForIncomingCall(null)
 
                             // Cleanup old segments
@@ -61,11 +97,18 @@ class CallStateReceiver : BroadcastReceiver() {
                     }
                 }
             }
-            TelephonyManager.EXTRA_STATE_RINGING -> {
-                val number = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
-                Log.d(TAG, "RINGING from: $number (ringtone already set)")
-                // The ringtone is already set from the previous call or initial setup
-                // Just log that we received the call
+
+            TelephonyManager.EXTRA_STATE_OFFHOOK -> {
+                // User answered the call. Stop ringing.
+                Log.d(TAG, "Call Answered - Stopping RingerPlaybackService")
+                val serviceIntent = Intent(context, RingerPlaybackService::class.java).apply {
+                    action = RingerPlaybackService.ACTION_STOP_PLAYBACK
+                }
+                try {
+                    context.startService(serviceIntent)
+                } catch (e: Exception) {
+                     Log.e(TAG, "Failed to send STOP intent", e)
+                }
             }
         }
 

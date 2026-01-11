@@ -77,6 +77,18 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     var userMessage by mutableStateOf<String?>(null)
         private set
 
+    // Delayed Send
+    var pendingMessage by mutableStateOf<PendingMessage?>(null)
+        private set
+
+    data class PendingMessage(
+        val body: String,
+        val timestamp: Long,
+        val targetTime: Long
+    )
+
+    private var delayedSendJob: Job? = null
+
     // Internal holder for raw threads before merging preferences
     private var rawThreads: List<SmsThreadItem> = emptyList()
     private var inboxState: InboxState = InboxState()
@@ -246,6 +258,40 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
             if (refreshRead) runCatching { repo.markThreadRead(threadId) }
         }
+    }
+
+    fun sendDelayedMessage(body: String, delaySeconds: Int = 5) {
+        // If there is already a pending message, send it immediately before starting the new one
+        if (pendingMessage != null) {
+             sendNow()
+        }
+
+        val now = System.currentTimeMillis()
+        val target = now + (delaySeconds * 1000)
+
+        pendingMessage = PendingMessage(body, now, target)
+
+        delayedSendJob = viewModelScope.launch {
+            delay(delaySeconds * 1000L)
+            // Re-check pendingMessage to ensure we are sending the correct one
+            // (Though sendNow clears it, so strictly speaking this job should be cancelled if sendNow was called externally)
+            if (pendingMessage?.timestamp == now) {
+                sendMessage(body)
+                pendingMessage = null
+            }
+        }
+    }
+
+    fun cancelDelayedMessage() {
+        delayedSendJob?.cancel()
+        pendingMessage = null
+    }
+
+    fun sendNow() {
+        val msg = pendingMessage ?: return
+        delayedSendJob?.cancel()
+        sendMessage(msg.body)
+        pendingMessage = null
     }
 
     fun sendMessage(body: String) {

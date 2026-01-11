@@ -28,7 +28,7 @@ class SmsSyncManager @Inject constructor(
         if (!isStarted.compareAndSet(false, true)) return
 
         smsRepository.changes()
-            .debounce(2000L) // Debounce for 2 seconds to batch rapid changes
+            .debounce(500L) // Debounce for 0.5 seconds to batch rapid changes
             .onEach {
                 try {
                     val settings = settingsRepository.settings.first()

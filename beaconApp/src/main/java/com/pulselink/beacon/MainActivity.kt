@@ -256,8 +256,11 @@ private fun BeaconNav(
                         address = address.ifBlank { "Unknown" },
                         uiItems = vm.uiMessages,
                         theme = contactTheme,
+                        pendingMessage = vm.pendingMessage,
                         onBack = { navController.popBackStack() },
-                        onSend = { vm.sendMessage(it) },
+                        onSend = { vm.sendDelayedMessage(it) },
+                        onCancelPending = { vm.cancelDelayedMessage() },
+                        onSendNow = { vm.sendNow() },
                         onScheduleMessage = { body, time ->
                             vm.scheduleMessage(body, time)
                         },

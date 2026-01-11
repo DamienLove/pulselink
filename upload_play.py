@@ -11,17 +11,33 @@ creds = service_account.Credentials.from_service_account_file(
     scopes=['https://www.googleapis.com/auth/androidpublisher']
 )
 service = build('androidpublisher', 'v3', credentials=creds)
+DEFAULT_RETRIES = 5
 
 def upload_and_release(package, aab_path, version_code, name):
     print(f"-- {package} uploading {aab_path}")
     edit = service.edits().insert(body={}, packageName=package).execute()
     edit_id = edit['id']
-    media = MediaFileUpload(aab_path, mimetype='application/octet-stream', resumable=True)
-    bundle = service.edits().bundles().upload(
+    media = MediaFileUpload(
+        aab_path,
+        mimetype='application/octet-stream',
+        resumable=True,
+        chunksize=4 * 1024 * 1024,  # 4MB chunks to reduce timeout risk
+    )
+    upload = service.edits().bundles().upload(
         packageName=package,
         editId=edit_id,
-        media_body=media
-    ).execute()
+        media_body=media,
+    )
+    bundle = None
+    while bundle is None:
+        try:
+            status, bundle = upload.next_chunk(num_retries=DEFAULT_RETRIES)
+            if status:
+                pct = int(status.progress() * 100)
+                print(f"  upload progress {pct}%")
+        except TimeoutError:
+            print("  timeout during upload chunk, retrying...")
+            continue
     uploaded_vc = int(bundle['versionCode'])
     if uploaded_vc != version_code:
         print(f"warning: uploaded versionCode {uploaded_vc} != expected {version_code}")
@@ -36,12 +52,12 @@ def upload_and_release(package, aab_path, version_code, name):
             editId=edit_id,
             track=track,
             body={'releases': [release]}
-        ).execute()
+        ).execute(num_retries=DEFAULT_RETRIES)
         print(f"  set track {track}")
-    service.edits().commit(packageName=package, editId=edit_id).execute()
+    service.edits().commit(packageName=package, editId=edit_id).execute(num_retries=DEFAULT_RETRIES)
     print(f"  committed edit {edit_id}")
 
 base = pathlib.Path('C:/Projects/pulselink/disposable_aabs')
-upload_and_release('com.free.pulselink', str(base/'androidApp-free-release-v128.aab'), 128, 'v128')
-upload_and_release('com.pulselink.pro', str(base/'androidApp-pro-release-v128.aab'), 128, 'v128')
+upload_and_release('com.free.pulselink', str(base/'androidApp-free-release-v129.aab'), 129, 'v129')
+upload_and_release('com.pulselink.pro', str(base/'androidApp-pro-release-v129.aab'), 129, 'v129')
 
