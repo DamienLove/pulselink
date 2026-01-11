@@ -13,43 +13,6 @@ protocol BeaconConversationProvider {
     func send(message: BeaconConversationMessage, to contact: BeaconContactCard) async throws
 }
 
-#if canImport(FirebaseFirestore)
-// ListenerRegistration is available
-class CompositeListener: ListenerRegistration {
-    private var listeners: [ListenerRegistration] = []
-
-    func add(_ listener: ListenerRegistration) {
-        listeners.append(listener)
-    }
-
-    func remove() {
-        listeners.forEach { $0.remove() }
-        listeners.removeAll()
-    }
-}
-class WrapperListener: ListenerRegistration {
-    let composite: ListenerRegistration
-    let cleanup: () -> Void
-
-    init(composite: ListenerRegistration, cleanup: @escaping () -> Void) {
-        self.composite = composite
-        self.cleanup = cleanup
-    }
-
-    func remove() {
-        composite.remove()
-        cleanup()
-    }
-}
-#else
-protocol ListenerRegistration {
-    func remove()
-}
-class MockListener: ListenerRegistration {
-    func remove() {}
-}
-#endif
-
 final class MockBeaconConversationProvider: BeaconConversationProvider {
     private var store: [BeaconContactCard: [BeaconConversationMessage]] = [:]
 
@@ -92,6 +55,7 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
 
     private var legacyContacts: [BeaconContactCard] = []
     private var lineContacts: [BeaconContactCard] = []
+    private let queue = DispatchQueue(label: "com.pulselink.beacon.provider", attributes: .concurrent)
 
     init(userId: String) {
         self.userId = userId
@@ -113,41 +77,65 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
         let composite = CompositeListener()
 
         // 1. Legacy
-        let legacyListener = legacyThreadsCollection.addSnapshotListener { [weak self] snapshot, _ in
+        let legacyListener = legacyThreadsCollection.addSnapshotListener { [weak self] snapshot, error in
+            if let error = error {
+                print("Error listening to legacy threads: \(error.localizedDescription)")
+                return
+            }
             guard let self = self, let documents = snapshot?.documents else { return }
-            self.legacyContacts = self.parseContacts(documents, lineId: nil)
-            self.mergeAndNotify(onChange: onChange)
+            self.queue.async(flags: .barrier) {
+                self.legacyContacts = self.parseContacts(documents, lineId: nil)
+                self.mergeAndNotify(onChange: onChange)
+            }
         }
         composite.add(legacyListener)
 
         // 2. Lines
         var currentLineThreadsListener: ListenerRegistration?
-        let linesListener = linesCollection.addSnapshotListener { [weak self] snapshot, _ in
+        let listenerQueue = DispatchQueue(label: "com.pulselink.beacon.lineListener")
+
+        let linesListener = linesCollection.addSnapshotListener { [weak self] snapshot, error in
+            if let error = error {
+                print("Error listening to lines: \(error.localizedDescription)")
+                return
+            }
             guard let self = self else { return }
             let lines = snapshot?.documents ?? []
 
-            if lines.isEmpty {
-                self.lineContacts = []
-                self.mergeAndNotify(onChange: onChange)
+            listenerQueue.async {
+                if lines.isEmpty {
+                    self.queue.async(flags: .barrier) {
+                        self.lineContacts = []
+                        self.mergeAndNotify(onChange: onChange)
+                    }
+                    currentLineThreadsListener?.remove()
+                    currentLineThreadsListener = nil
+                    return
+                }
+
+                let firstLineId = lines[0].documentID
                 currentLineThreadsListener?.remove()
-                currentLineThreadsListener = nil
-                return
-            }
 
-            let firstLineId = lines[0].documentID
-            currentLineThreadsListener?.remove()
-
-            let threadsRef = self.linesCollection.document(firstLineId).collection("threads")
-            currentLineThreadsListener = threadsRef.addSnapshotListener { [weak self] threadSnap, _ in
-                guard let self = self, let threadDocs = threadSnap?.documents else { return }
-                self.lineContacts = self.parseContacts(threadDocs, lineId: firstLineId)
-                self.mergeAndNotify(onChange: onChange)
+                let threadsRef = self.linesCollection.document(firstLineId).collection("threads")
+                currentLineThreadsListener = threadsRef.addSnapshotListener { [weak self] threadSnap, error in
+                    if let error = error {
+                        print("Error listening to line threads: \(error.localizedDescription)")
+                        return
+                    }
+                    guard let self = self, let threadDocs = threadSnap?.documents else { return }
+                    self.queue.async(flags: .barrier) {
+                        self.lineContacts = self.parseContacts(threadDocs, lineId: firstLineId)
+                        self.mergeAndNotify(onChange: onChange)
+                    }
+                }
             }
         }
         composite.add(linesListener)
 
         return WrapperListener(composite: composite) {
-            currentLineThreadsListener?.remove()
+            listenerQueue.sync {
+                currentLineThreadsListener?.remove()
+            }
         }
     }
 
@@ -190,7 +178,9 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
                 result.append(c)
             }
         }
-        onChange(result)
+        DispatchQueue.main.async {
+            onChange(result)
+        }
     }
 
     func listenToMessages(for contact: BeaconContactCard, onChange: @escaping ([BeaconConversationMessage]) -> Void) -> ListenerRegistration? {
@@ -205,6 +195,10 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
             .order(by: "date", descending: false)
             .limit(to: 50)
             .addSnapshotListener { snapshot, error in
+                if let error = error {
+                    print("Error listening to messages: \(error.localizedDescription)")
+                    return
+                }
                 guard let documents = snapshot?.documents else { return }
 
                 let messages = documents.compactMap { doc -> BeaconConversationMessage? in
@@ -226,6 +220,13 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
     }
 
     func send(message: BeaconConversationMessage, to contact: BeaconContactCard) async throws {
+        guard !contact.address.isEmpty, contact.address != "Unknown" else {
+            throw NSError(domain: "Beacon", code: 400, userInfo: [NSLocalizedDescriptionKey: "Invalid contact address"])
+        }
+        guard !message.text.isEmpty else {
+            throw NSError(domain: "Beacon", code: 400, userInfo: [NSLocalizedDescriptionKey: "Message body cannot be empty"])
+        }
+
         var docData: [String: Any] = [
             "address": contact.address,
             "body": message.text,
