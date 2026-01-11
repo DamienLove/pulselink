@@ -1728,7 +1728,25 @@ function App() {
         const lineItems = snapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
           .filter(line => line.disabled !== true);
+
         setLines(lineItems);
+
+        // Remove subscriptions for lines that are no longer present or disabled
+        const activeLineIds = new Set(lineItems.map(l => l.id));
+        for (const [id, unsub] of threadUnsubs) {
+          if (!activeLineIds.has(id)) {
+            unsub();
+            threadUnsubs.delete(id);
+            // Also clear the data for this line from state
+            setLineThreads((prev) => {
+              const next = { ...prev };
+              delete next[id];
+              return next;
+            });
+          }
+        }
+
+        // Attach new subscriptions
         lineItems.forEach(line => attachLine(line.id));
         setIsLoadingThreads(false);
       });
