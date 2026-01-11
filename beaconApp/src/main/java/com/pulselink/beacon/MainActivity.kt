@@ -247,9 +247,15 @@ private fun BeaconNav(
             ) { backStackEntry ->
                 val threadId = backStackEntry.arguments?.getLong("threadId") ?: 0L
                 val address = backStackEntry.arguments?.getString("address")?.let { Uri.decode(it) } ?: ""
+
+                // Load draft state
+                var initialDraft by remember { mutableStateOf<String?>(null) }
                 LaunchedEffect(threadId) {
                     vm.openThread(threadId, address)
+                    // Preload draft for this thread
+                    initialDraft = vm.getDraft(threadId)
                 }
+
                 val contactTheme = themeState.forAddress(address)
                 BeaconTheme(theme = contactTheme) {
                     ThreadScreen(
@@ -275,7 +281,16 @@ private fun BeaconNav(
                                 data = Uri.parse("tel:$address")
                             }
                             context.startActivity(intent)
-                        }
+                        },
+                        // Wired up new actions
+                        onBlockThread = { vm.blockThread(address) },
+                        onStarMessage = { vm.starMessage(it) },
+                        onUnstarMessage = { vm.unstarMessage(it) },
+                        onSaveDraft = { text ->
+                            // Debouncing is handled in ViewModel or UI effect, passing through directly here
+                            vm.saveDraft(threadId, text)
+                        },
+                        initialDraft = initialDraft
                     )
                 }
             }

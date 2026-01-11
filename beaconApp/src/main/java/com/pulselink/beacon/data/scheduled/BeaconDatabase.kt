@@ -5,9 +5,19 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [ScheduledMessage::class], version = 1, exportSchema = true)
+@Database(
+    entities = [
+        ScheduledMessage::class,
+        BlockedContact::class,
+        StarredMessage::class,
+        ThreadDraft::class
+    ],
+    version = 2,
+    exportSchema = true
+)
 abstract class BeaconDatabase : RoomDatabase() {
     abstract fun scheduledMessageDao(): ScheduledMessageDao
+    abstract fun extrasDao(): ExtrasDao
 
     companion object {
         @Volatile

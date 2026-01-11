@@ -24,7 +24,7 @@ object ThreadDateUtils {
         "Questioned" to "❓"
     )
 
-    fun mapMessagesToUi(messages: List<SmsMessageItem>): List<ThreadUiItem> {
+    fun mapMessagesToUi(messages: List<SmsMessageItem>, starredIds: Set<Long> = emptySet()): List<ThreadUiItem> {
         if (messages.isEmpty()) return emptyList()
 
         // Input messages are sorted NEWEST -> OLDEST (Desc).
@@ -83,7 +83,7 @@ object ThreadDateUtils {
                 pendingReactions.remove(body)
             }
 
-            uiItems.add(ThreadUiItem.Message(msg, myReactions))
+            uiItems.add(ThreadUiItem.Message(msg, myReactions, isStarred = starredIds.contains(msg.id)))
         }
 
         // Add final header for the oldest group

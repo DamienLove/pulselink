@@ -17,6 +17,9 @@ import com.pulselink.beacon.data.SmsThreadItem
 import com.pulselink.beacon.data.InboxPreferencesRepository
 import com.pulselink.beacon.data.InboxState
 import com.pulselink.beacon.data.scheduled.BeaconDatabase
+import com.pulselink.beacon.data.scheduled.BlockedContact
+import com.pulselink.beacon.data.scheduled.StarredMessage
+import com.pulselink.beacon.data.scheduled.ThreadDraft
 import com.pulselink.beacon.data.scheduled.ScheduledMessage
 import com.pulselink.beacon.data.scheduled.MessageStatus
 import com.pulselink.beacon.worker.ScheduledMessageWorker
@@ -42,20 +45,20 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = SmsRepository(app.applicationContext)
     private val inboxPrefs = InboxPreferencesRepository(app.applicationContext)
-    private val scheduledDao = BeaconDatabase.getDatabase(app).scheduledMessageDao()
+    private val db = BeaconDatabase.getDatabase(app)
+    private val scheduledDao = db.scheduledMessageDao()
+    private val extrasDao = db.extrasDao()
     private val workManager = WorkManager.getInstance(app)
 
     private companion object {
-        const val THREAD_LIMIT = 500 // Increased from 100
+        const val THREAD_LIMIT = 500
         const val MESSAGE_LIMIT = 300
     }
 
     var threads by mutableStateOf<List<SmsThreadItem>>(emptyList())
         private set
-    // Changed to hold UiItems for display
     var uiMessages by mutableStateOf<List<ThreadUiItem>>(emptyList())
         private set
-    // Keep raw messages for internal logic
     private var rawMessages = emptyList<SmsMessageItem>()
 
     var currentThreadId by mutableStateOf<Long?>(null)
@@ -77,7 +80,6 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     var userMessage by mutableStateOf<String?>(null)
         private set
 
-    // Delayed Send
     var pendingMessage by mutableStateOf<PendingMessage?>(null)
         private set
 
@@ -88,15 +90,16 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     )
 
     private var delayedSendJob: Job? = null
-
-    // Internal holder for raw threads before merging preferences
     private var rawThreads: List<SmsThreadItem> = emptyList()
     private var inboxState: InboxState = InboxState()
+    private var blockedContacts: Set<String> = emptySet()
+    private var starredMessageIds: Set<Long> = emptySet()
 
     private var searchJob: Job? = null
 
     init {
         refreshThreads(initial = true)
+        refreshExtras()
 
         viewModelScope.launch {
             repo.changes().collectLatest {
@@ -113,10 +116,19 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun refreshExtras() {
+        viewModelScope.launch(Dispatchers.IO) {
+            blockedContacts = extrasDao.getAllBlockedContacts().map { it.address }.toSet()
+            starredMessageIds = extrasDao.getAllStarredMessageIds().toSet()
+            mergeThreads() // re-merge to filter blocked
+            // If in thread view, refresh to show stars
+            currentThreadId?.let { refreshThread(it, refreshRead = false) }
+        }
+    }
+
     fun refreshThreads(initial: Boolean = false) {
         viewModelScope.launch {
             if (initial) isLoading = true else isRefreshing = true
-            // Run on IO
             rawThreads = runCatching { repo.listThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
             mergeThreads()
             if (initial) isLoading = false else isRefreshing = false
@@ -124,24 +136,84 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun mergeThreads() {
-        // Optimized sorting
-        val merged = rawThreads.map { thread ->
-            val isPinned = inboxState.pinnedThreadIds.contains(thread.threadId)
-            // Only copy if needed
-            if (isPinned != thread.isPinned || inboxState.archivedThreadIds.contains(thread.threadId) != thread.isArchived) {
-                thread.copy(
-                    isPinned = isPinned,
-                    isArchived = inboxState.archivedThreadIds.contains(thread.threadId)
-                )
-            } else {
-                thread
+        val merged = rawThreads.asSequence()
+            .filter { !blockedContacts.contains(it.address) } // Filter blocked
+            .map { thread ->
+                val isPinned = inboxState.pinnedThreadIds.contains(thread.threadId)
+                if (isPinned != thread.isPinned || inboxState.archivedThreadIds.contains(thread.threadId) != thread.isArchived) {
+                    thread.copy(
+                        isPinned = isPinned,
+                        isArchived = inboxState.archivedThreadIds.contains(thread.threadId)
+                    )
+                } else {
+                    thread
+                }
             }
-        }.sortedWith(
-            compareByDescending<SmsThreadItem> { it.isPinned }
-                .thenByDescending { it.timestamp }
-        )
+            .sortedWith(
+                compareByDescending<SmsThreadItem> { it.isPinned }
+                    .thenByDescending { it.timestamp }
+            )
+            .toList()
         threads = merged
     }
+
+    // --- Actions ---
+
+    fun blockThread(address: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            extrasDao.blockContact(BlockedContact(address))
+            withContext(Dispatchers.Main) {
+                userMessage = "Blocked $address"
+                refreshExtras()
+            }
+        }
+    }
+
+    fun unblockThread(address: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            extrasDao.unblockContact(address)
+            withContext(Dispatchers.Main) {
+                userMessage = "Unblocked $address"
+                refreshExtras()
+            }
+        }
+    }
+
+    fun starMessage(messageId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            extrasDao.starMessage(StarredMessage(messageId))
+            withContext(Dispatchers.Main) {
+                refreshExtras() // This will trigger UI update
+            }
+        }
+    }
+
+    fun unstarMessage(messageId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            extrasDao.unstarMessage(messageId)
+            withContext(Dispatchers.Main) {
+                refreshExtras()
+            }
+        }
+    }
+
+    suspend fun getDraft(threadId: Long): String? {
+        return withContext(Dispatchers.IO) {
+            extrasDao.getDraft(threadId)
+        }
+    }
+
+    fun saveDraft(threadId: Long, text: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (text.isBlank()) {
+                extrasDao.deleteDraft(threadId)
+            } else {
+                extrasDao.saveDraft(ThreadDraft(threadId, text))
+            }
+        }
+    }
+
+    // --- Standard Methods ---
 
     fun togglePin(threadId: Long) {
         viewModelScope.launch {
@@ -253,15 +325,13 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             rawMessages = runCatching { repo.messagesForThread(threadId, limit = MESSAGE_LIMIT) }
                 .getOrElse { emptyList() }
-            // Transform for UI (Group by Date)
-            uiMessages = ThreadDateUtils.mapMessagesToUi(rawMessages)
+            uiMessages = ThreadDateUtils.mapMessagesToUi(rawMessages, starredMessageIds)
 
             if (refreshRead) runCatching { repo.markThreadRead(threadId) }
         }
     }
 
     fun sendDelayedMessage(body: String, delaySeconds: Int = 5) {
-        // If there is already a pending message, send it immediately before starting the new one
         if (pendingMessage != null) {
              sendNow()
         }
@@ -273,8 +343,6 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
         delayedSendJob = viewModelScope.launch {
             delay(delaySeconds * 1000L)
-            // Re-check pendingMessage to ensure we are sending the correct one
-            // (Though sendNow clears it, so strictly speaking this job should be cancelled if sendNow was called externally)
             if (pendingMessage?.timestamp == now) {
                 sendMessage(body)
                 pendingMessage = null
@@ -303,6 +371,8 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
             if (ok) {
                 withContext(Dispatchers.Main) {
                     currentThreadId?.let { refreshThread(it, refreshRead = true) }
+                    // Clear draft if sent
+                    saveDraft(currentThreadId ?: 0L, "")
                 }
             }
         }
@@ -331,6 +401,8 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                     .build()
                 workManager.enqueue(request)
             }
+            // Clear draft
+            saveDraft(currentThreadId ?: 0L, "")
         }
     }
 
@@ -351,7 +423,6 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
 
-        // Debounce
         searchJob = viewModelScope.launch(Dispatchers.IO) {
             delay(300)
             withContext(Dispatchers.Main) { searchState = SearchResultState.Searching }
