@@ -135,6 +135,22 @@ const areMessagesEqual = (prev, next) => {
 // or when new messages arrive (which creates new object references).
 const MessageItem = memo(({ msg, showPreviews }) => (
   <div className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
+    {showPreviews && (msg.imageUrl || (msg.attachments && msg.attachments.length > 0)) && (
+      <div className="message-attachments">
+        {msg.imageUrl && (
+           <img src={msg.imageUrl} alt="Attachment" className="message-image" onClick={() => window.open(msg.imageUrl, '_blank')} />
+        )}
+        {msg.attachments && msg.attachments.map((att, idx) => (
+           att.type?.startsWith('image/') ? (
+             <img key={idx} src={att.url} alt="Attachment" className="message-image" onClick={() => window.open(att.url, '_blank')} />
+           ) : (
+             <a key={idx} href={att.url} target="_blank" rel="noopener noreferrer" className="message-file">
+               📄 {att.name || 'File'}
+             </a>
+           )
+        ))}
+      </div>
+    )}
     <div className="message-bubble">
       {showPreviews ? msg.body : '••••••'}
     </div>
@@ -1410,12 +1426,17 @@ const Sidebar = memo(({
   isLoadingThreads,
   threadCount,
   threadListElements,
-  isPremium
+  isPremium,
+  remoteSettings
 }) => (
   <div className="sidebar">
     <div className="sidebar-header">
       <div className="sidebar-brand">
-        <img src={logo} alt="PulseLink Suite" className="brand-logo small" />
+        <img
+          src={remoteSettings?.mergedExperienceEnabled ? beaconLogo : logo}
+          alt="PulseLink Suite"
+          className="brand-logo small"
+        />
         <div>
           <div className="brand-title">PulseLink Suite</div>
           <div className="brand-subtitle">{tierLabel} Web Access</div>
@@ -3975,6 +3996,7 @@ function App() {
                   { id: 'aiSummariesEnabled', name: 'PulseLink AI', desc: 'Smart summaries and urgency detection for your chats.', icon: <SmartToyIcon />, premium: true },
                   { id: 'remoteWebAccessEnabled', name: 'Remote Web Access', desc: 'Sync messages and contacts to this web portal.', icon: logo, isImg: true, premium: true },
                   { id: 'crashDetectionEnabled', name: 'Crash Detection', desc: 'Detects car crashes and notifies emergency contacts.', icon: <CarCrashIcon />, premium: true },
+                  { id: 'mergedExperienceEnabled', name: 'Unified Home', desc: 'Merge PulseLink and Beacon features into a single navigation experience.', icon: logo, isImg: true, premium: true },
                   { id: 'thirdPartyExtensionsEnabled', name: '3rd Party Extensions', desc: 'Allow community-built plugins (Beta).', icon: <ExtensionIcon />, premium: true }
                 ].map(ext => {
                   const isEnabled = remoteSettings[ext.id];
