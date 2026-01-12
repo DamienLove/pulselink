@@ -2292,58 +2292,101 @@ function App() {
     );
   }, [activePanel, userLocation]);
 
+  // Bolt: Optimized map marker reconciliation to prevent full re-render flickering
   useEffect(() => {
     if (!mapInstanceRef.current || !window.google?.maps) return;
-    mapMarkersRef.current.forEach((marker) => marker.setMap(null));
-    mapMarkersRef.current.clear();
-    if (mapHomeMarkerRef.current) {
-      mapHomeMarkerRef.current.setMap(null);
-      mapHomeMarkerRef.current = null;
-    }
 
+    // 1. Handle Home Marker (User Location) when no alerts
     if (!filteredAlerts.length) {
+      if (mapMarkersRef.current.size > 0) {
+        mapMarkersRef.current.forEach((marker) => marker.setMap(null));
+        mapMarkersRef.current.clear();
+      }
+
       const center = userLocation ?? defaultMapCenter;
       mapInstanceRef.current.setCenter(center);
       mapInstanceRef.current.setZoom(userLocation ? 12 : 3);
       if (userLocation) {
-        mapHomeMarkerRef.current = new window.google.maps.Marker({
-          position: center,
-          map: mapInstanceRef.current,
-          title: 'Your location',
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            fillColor: '#3b82f6',
-            fillOpacity: 0.9,
-            strokeColor: '#0b0e16',
-            strokeWeight: 2,
-            scale: 7
-          }
-        });
+        if (!mapHomeMarkerRef.current) {
+          mapHomeMarkerRef.current = new window.google.maps.Marker({
+            position: center,
+            map: mapInstanceRef.current,
+            title: 'Your location',
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              fillColor: '#3b82f6',
+              fillOpacity: 0.9,
+              strokeColor: '#0b0e16',
+              strokeWeight: 2,
+              scale: 7
+            }
+          });
+        } else {
+          mapHomeMarkerRef.current.setPosition(center);
+          mapHomeMarkerRef.current.setMap(mapInstanceRef.current);
+        }
+      } else {
+        if (mapHomeMarkerRef.current) mapHomeMarkerRef.current.setMap(null);
       }
       return;
     }
 
+    // We have alerts, so hide Home marker
+    if (mapHomeMarkerRef.current) {
+      mapHomeMarkerRef.current.setMap(null);
+    }
+
     const bounds = new window.google.maps.LatLngBounds();
+    const activeIds = new Set();
+    let markersChanged = false;
+
     filteredAlerts.forEach((alert) => {
+      activeIds.add(alert.id);
+      bounds.extend({ lat: alert.lat, lng: alert.lng });
+
+      let marker = mapMarkersRef.current.get(alert.id);
       const color = alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent;
-      const marker = new window.google.maps.Marker({
-        position: { lat: alert.lat, lng: alert.lng },
-        map: mapInstanceRef.current,
-        title: `${alertBadgeCopy[alert.severity] ?? 'Alert'} from ${alert.address}`,
-        icon: {
+      const title = `${alertBadgeCopy[alert.severity] ?? 'Alert'} from ${alert.address}`;
+
+      if (!marker) {
+        // Create new marker
+        markersChanged = true;
+        marker = new window.google.maps.Marker({
+          position: { lat: alert.lat, lng: alert.lng },
+          map: mapInstanceRef.current,
+          title: title,
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            fillColor: color,
+            fillOpacity: 0.9,
+            strokeColor: '#0b0e16',
+            strokeWeight: 2,
+            scale: 8
+          }
+        });
+        mapMarkersRef.current.set(alert.id, marker);
+      } else {
+        // Update existing marker properties to handle data changes (position, color, title)
+        marker.setPosition({ lat: alert.lat, lng: alert.lng });
+        marker.setTitle(title);
+        // Note: setIcon causes a re-render of the marker, but it's cheaper than full recreation
+        // We could optimize by checking if properties changed, but this is already much better.
+        marker.setIcon({
           path: window.google.maps.SymbolPath.CIRCLE,
           fillColor: color,
           fillOpacity: 0.9,
           strokeColor: '#0b0e16',
           strokeWeight: 2,
           scale: 8
-        }
-      });
+        });
+      }
+
+      // Always update listener to ensure it captures the current 'alert' object from closure
+      window.google.maps.event.clearListeners(marker, 'click');
       marker.addListener('click', () => {
         if (!mapInfoRef.current) {
           mapInfoRef.current = new window.google.maps.InfoWindow();
         }
-        // Sentinel: Escape user input to prevent XSS in InfoWindow
         const safeType = escapeHtml(alertBadgeCopy[alert.severity] ?? 'Alert');
         const safeAddress = escapeHtml(alert.address);
         const safeDate = escapeHtml(new Date(alert.date).toLocaleString());
@@ -2357,10 +2400,30 @@ function App() {
         );
         mapInfoRef.current.open(mapInstanceRef.current, marker);
       });
-      mapMarkersRef.current.set(alert.id, marker);
-      bounds.extend({ lat: alert.lat, lng: alert.lng });
     });
-    mapInstanceRef.current.fitBounds(bounds);
+
+    // Remove stale markers
+    const idsToRemove = [];
+    mapMarkersRef.current.forEach((_, id) => {
+      if (!activeIds.has(id)) {
+        idsToRemove.push(id);
+      }
+    });
+
+    if (idsToRemove.length > 0) {
+      markersChanged = true;
+      idsToRemove.forEach((id) => {
+        const marker = mapMarkersRef.current.get(id);
+        marker.setMap(null);
+        mapMarkersRef.current.delete(id);
+      });
+    }
+
+    // Only fit bounds if markers changed (added/removed) or if we haven't fit bounds yet
+    // This prevents map from snapping back to bounds when user pans but only listeners updated
+    if (markersChanged || !mapInstanceRef.current.getBounds()) {
+      mapInstanceRef.current.fitBounds(bounds);
+    }
   }, [filteredAlerts, userLocation, defaultMapCenter]);
 
   // Bolt: Wrap handlers in useCallback to ensure stable references for React.memo
@@ -2892,9 +2955,6 @@ function App() {
   const handleNewThread = useCallback(() => {
     setActivePanel('beacon');
     setSelectedThread(null);
-    setComposeAddress('');
-    setComposeBody('');
-    setSendStatus('');
   }, []);
 
   // Bolt: Stable handler to prevent ghost content when switching threads
