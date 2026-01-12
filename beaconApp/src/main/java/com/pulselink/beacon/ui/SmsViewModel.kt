@@ -14,6 +14,7 @@ import androidx.work.workDataOf
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.SmsRepository
 import com.pulselink.beacon.data.SmsThreadItem
+import com.pulselink.beacon.data.DeviceContact
 import com.pulselink.beacon.data.InboxPreferencesRepository
 import com.pulselink.beacon.data.InboxState
 import com.pulselink.beacon.data.scheduled.BeaconDatabase
@@ -57,6 +58,9 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         private set
     // Keep raw messages for internal logic
     private var rawMessages = emptyList<SmsMessageItem>()
+
+    var contacts by mutableStateOf<List<DeviceContact>>(emptyList())
+        private set
 
     var currentThreadId by mutableStateOf<Long?>(null)
         private set
@@ -137,6 +141,10 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
             if (initial) isLoading = true else isRefreshing = true
             // Run on IO
             rawThreads = runCatching { repo.listThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
+
+            // Also refresh contacts if needed
+            contacts = runCatching { repo.getDeviceContacts() }.getOrElse { emptyList() }
+
             mergeThreads()
             if (initial) isLoading = false else isRefreshing = false
         }

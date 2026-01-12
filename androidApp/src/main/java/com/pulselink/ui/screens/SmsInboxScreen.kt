@@ -1240,8 +1240,10 @@ fun TabsRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TabText(label = "All", selected = filter == InboxFilter.ALL, theme = theme) {
-            onFilterChange(InboxFilter.ALL)
+        if (!isUnifiedMode) {
+            TabText(label = "All", selected = filter == InboxFilter.ALL, theme = theme) {
+                onFilterChange(InboxFilter.ALL)
+            }
         }
         if (isUnifiedMode) {
             TabText(label = "2-step", selected = filter == InboxFilter.OTP, theme = theme) {

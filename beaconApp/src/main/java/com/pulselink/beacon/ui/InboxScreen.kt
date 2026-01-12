@@ -134,7 +134,8 @@ fun InboxScreen(
     onPinSelected: () -> Unit = {},
     onMarkAsUnread: (Long) -> Unit = {},
     userMessage: String? = null,
-    onClearUserMessage: () -> Unit = {}
+    onClearUserMessage: () -> Unit = {},
+    contacts: List<com.pulselink.beacon.data.DeviceContact> = emptyList()
 ) {
     val host = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -370,6 +371,27 @@ fun InboxScreen(
                 } else if (isLoading && filtered.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = theme.accentColor)
+                    }
+                } else if (filter == InboxFilter.CONTACTS) {
+                    if (contacts.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("No contacts found", color = theme.textColor.copy(alpha = 0.6f))
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            itemsIndexed(contacts, key = { _, item -> item.id }) { index, contact ->
+                                ContactRow(
+                                    contact = contact,
+                                    theme = theme,
+                                    onClick = { onOpenThread(0L, contact.address) }
+                                )
+                            }
+                        }
                     }
                 } else if (filtered.isEmpty()) {
                     EmptyState(filter, theme, iconTint)
@@ -838,6 +860,7 @@ private fun TabsRow(
         TabChip("Personal", filter == InboxFilter.PERSONAL, theme) { onFilterChange(InboxFilter.PERSONAL) }
         TabChip("Transactions", filter == InboxFilter.TRANSACTIONS, theme) { onFilterChange(InboxFilter.TRANSACTIONS) }
         TabChip("Promotions", filter == InboxFilter.PROMOTIONS, theme) { onFilterChange(InboxFilter.PROMOTIONS) }
+        TabChip("Contacts", filter == InboxFilter.CONTACTS, theme) { onFilterChange(InboxFilter.CONTACTS) }
         TabChip("Unread${if(unreadCount > 0) " ($unreadCount)" else ""}", filter == InboxFilter.UNREAD, theme) { onFilterChange(InboxFilter.UNREAD) }
         TabChip("Archived", filter == InboxFilter.ARCHIVED, theme) { onFilterChange(InboxFilter.ARCHIVED) }
     }
@@ -860,4 +883,52 @@ private fun TabChip(label: String, selected: Boolean, theme: ThemePalette, onCli
     }
 }
 
-enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED, PERSONAL, TRANSACTIONS, PROMOTIONS }
+@Composable
+private fun ContactRow(
+    contact: com.pulselink.beacon.data.DeviceContact,
+    theme: ThemePalette,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(theme.bubbleRadius.dp),
+        color = theme.inboxBackgroundColor,
+        border = androidx.compose.foundation.BorderStroke(1.dp, theme.frameColor.copy(alpha = 0.1f)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(theme.accentColor.copy(alpha = 0.1f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = contact.name.firstOrNull()?.toString() ?: "#",
+                    color = theme.accentColor,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Column {
+                Text(
+                    text = contact.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = theme.textColor,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = contact.address,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = theme.textColor.copy(alpha = 0.7f)
+                )
+            }
+        }
+    }
+}
+
+enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED, PERSONAL, TRANSACTIONS, PROMOTIONS, CONTACTS }

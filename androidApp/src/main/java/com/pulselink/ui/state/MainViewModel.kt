@@ -1412,12 +1412,12 @@ class MainViewModel @Inject constructor(
 
         val subjectSuffix = bugReportData.summary.ifBlank { "General issue" }
 
-        // Always direct to the canonical bug-report site (opens in-app WebView/Custom Tab)
-        return Uri.parse("https://damiennichols.com/report-bug/")
+        // Direct to GitHub Issues
+        return Uri.parse("https://github.com/DamienLove/pulselink/issues/new")
             .buildUpon()
-            .appendQueryParameter("summary", subjectSuffix)
+            .appendQueryParameter("title", subjectSuffix)
             .appendQueryParameter("body", formattedBody)
-            .appendQueryParameter("email", bugReportData.userEmail)
+            .appendQueryParameter("labels", "bug")
             .build()
     }
 

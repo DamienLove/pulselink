@@ -805,6 +805,56 @@ class SmsRepository(private val context: Context) {
         val unread: Boolean
     )
 
+    suspend fun getDeviceContacts(): List<DeviceContact> = withContext(Dispatchers.IO) {
+        if (!hasReadPerms()) return@withContext emptyList()
+        val contacts = mutableListOf<DeviceContact>()
+        val projection = arrayOf(
+            ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+            ContactsContract.CommonDataKinds.Phone.NUMBER,
+            ContactsContract.CommonDataKinds.Phone.PHOTO_URI,
+            ContactsContract.CommonDataKinds.Phone.CONTACT_ID
+        )
+        val cursor = runCatching {
+            context.contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                projection,
+                null,
+                null,
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC"
+            )
+        }.getOrNull()
+
+        cursor?.use { c ->
+            val nameIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+            val numIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+            val photoIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.PHOTO_URI)
+            val idIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID)
+
+            val seenNumbers = HashSet<String>()
+
+            while (c.moveToNext()) {
+                val name = c.getString(nameIdx) ?: continue
+                val number = c.getString(numIdx) ?: continue
+                val normalized = number.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+
+                if (!seenNumbers.add(normalized)) continue
+
+                val photo = c.getString(photoIdx)
+                val id = c.getLong(idIdx)
+
+                contacts.add(
+                    DeviceContact(
+                        id = id,
+                        name = name,
+                        address = number,
+                        photoUri = photo
+                    )
+                )
+            }
+        }
+        return@withContext contacts
+    }
+
     private fun resolveAddressesForStrings(rawAddresses: List<String>): Map<String, String> {
         val result = mutableMapOf<String, String>()
         val toLookup = mutableSetOf<String>()

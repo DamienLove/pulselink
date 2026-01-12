@@ -66,6 +66,7 @@ class SpotifyDownloaderRepository(private val context: Context) {
                     .get()
                     .addHeader("x-rapidapi-key", BuildConfig.RAPIDAPI_KEY)
                     .addHeader("x-rapidapi-host", BuildConfig.RAPIDAPI_SPOTIFY_HOST)
+                    .addHeader("User-Agent", "PulseLink-RingerSong/1.0 Android")
                     .build()
 
                 val response = client.newCall(request).execute()
