@@ -10,20 +10,20 @@ import androidx.room.Query
 @Entity(tableName = "blocked_contacts")
 data class BlockedContact(
     @PrimaryKey val address: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long
 )
 
 @Entity(tableName = "starred_messages")
 data class StarredMessage(
     @PrimaryKey val messageId: Long,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long
 )
 
 @Entity(tableName = "thread_drafts")
 data class ThreadDraft(
     @PrimaryKey val threadId: Long,
     val text: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long
 )
 
 @Dao
@@ -32,8 +32,9 @@ interface ExtrasDao {
     @Query("SELECT * FROM blocked_contacts")
     suspend fun getAllBlockedContacts(): List<BlockedContact>
 
-    @Query("SELECT COUNT(*) FROM blocked_contacts WHERE address = :address")
-    suspend fun isBlocked(address: String): Int
+    // Optimized check
+    @Query("SELECT EXISTS(SELECT 1 FROM blocked_contacts WHERE address = :address)")
+    suspend fun isBlocked(address: String): Boolean
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun blockContact(contact: BlockedContact)

@@ -118,11 +118,18 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refreshExtras() {
         viewModelScope.launch(Dispatchers.IO) {
-            blockedContacts = extrasDao.getAllBlockedContacts().map { it.address }.toSet()
-            starredMessageIds = extrasDao.getAllStarredMessageIds().toSet()
-            mergeThreads() // re-merge to filter blocked
-            // If in thread view, refresh to show stars
-            currentThreadId?.let { refreshThread(it, refreshRead = false) }
+            val blocked = runCatching { extrasDao.getAllBlockedContacts().map { it.address }.toSet() }
+                .getOrElse { emptySet() }
+            val starred = runCatching { extrasDao.getAllStarredMessageIds().toSet() }
+                .getOrElse { emptySet() }
+
+            withContext(Dispatchers.Main) {
+                blockedContacts = blocked
+                starredMessageIds = starred
+                mergeThreads() // re-merge to filter blocked
+                // If in thread view, refresh to show stars
+                currentThreadId?.let { refreshThread(it, refreshRead = false) }
+            }
         }
     }
 
@@ -161,54 +168,78 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun blockThread(address: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            extrasDao.blockContact(BlockedContact(address))
-            withContext(Dispatchers.Main) {
-                userMessage = "Blocked $address"
-                refreshExtras()
+            try {
+                extrasDao.blockContact(BlockedContact(address, System.currentTimeMillis()))
+                withContext(Dispatchers.Main) {
+                    userMessage = "Blocked $address"
+                    refreshExtras()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    userMessage = "Failed to block: ${e.message}"
+                }
             }
         }
     }
 
     fun unblockThread(address: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            extrasDao.unblockContact(address)
-            withContext(Dispatchers.Main) {
-                userMessage = "Unblocked $address"
-                refreshExtras()
+            try {
+                extrasDao.unblockContact(address)
+                withContext(Dispatchers.Main) {
+                    userMessage = "Unblocked $address"
+                    refreshExtras()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    userMessage = "Failed to unblock: ${e.message}"
+                }
             }
         }
     }
 
     fun starMessage(messageId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
-            extrasDao.starMessage(StarredMessage(messageId))
-            withContext(Dispatchers.Main) {
-                refreshExtras() // This will trigger UI update
+            try {
+                extrasDao.starMessage(StarredMessage(messageId, System.currentTimeMillis()))
+                withContext(Dispatchers.Main) {
+                    refreshExtras() // This will trigger UI update
+                }
+            } catch (e: Exception) {
+                // Silent fail or log
             }
         }
     }
 
     fun unstarMessage(messageId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
-            extrasDao.unstarMessage(messageId)
-            withContext(Dispatchers.Main) {
-                refreshExtras()
+            try {
+                extrasDao.unstarMessage(messageId)
+                withContext(Dispatchers.Main) {
+                    refreshExtras()
+                }
+            } catch (e: Exception) {
+                // Silent fail
             }
         }
     }
 
     suspend fun getDraft(threadId: Long): String? {
         return withContext(Dispatchers.IO) {
-            extrasDao.getDraft(threadId)
+             runCatching { extrasDao.getDraft(threadId) }.getOrNull()
         }
     }
 
     fun saveDraft(threadId: Long, text: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            if (text.isBlank()) {
-                extrasDao.deleteDraft(threadId)
-            } else {
-                extrasDao.saveDraft(ThreadDraft(threadId, text))
+            try {
+                if (text.isBlank()) {
+                    extrasDao.deleteDraft(threadId)
+                } else {
+                    extrasDao.saveDraft(ThreadDraft(threadId, text, System.currentTimeMillis()))
+                }
+            } catch (e: Exception) {
+                // Silent fail
             }
         }
     }
