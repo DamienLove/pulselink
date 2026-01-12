@@ -3479,7 +3479,11 @@ function App() {
                       />
                     ))}
                     {filteredThemes.length === 0 && (
-                      <div className="theme-empty">No themes yet. Be the first to publish!</div>
+                      <div className="theme-empty">
+                        {themeSearch.trim()
+                          ? `No themes match "${themeSearch}".`
+                          : "No themes yet. Be the first to publish!"}
+                      </div>
                     )}
                   </div>
                   {themeGalleryStatus && <div className="settings-status" role="status" aria-live="polite">{themeGalleryStatus}</div>}
