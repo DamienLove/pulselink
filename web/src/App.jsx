@@ -1708,6 +1708,9 @@ function App() {
   const [addingTrackId, setAddingTrackId] = useState(null);
   const [showDevTools, setShowDevTools] = useState(false);
   const [settingsSearch, setSettingsSearch] = useState('');
+  const [isSavingContact, setIsSavingContact] = useState(false);
+  const [isSavingTheme, setIsSavingTheme] = useState(false);
+  const [isPublishingTheme, setIsPublishingTheme] = useState(false);
 
   const subscriptionStatus = userData?.subscriptionStatus;
   const isPremiumUser = useMemo(() => {
@@ -1902,7 +1905,7 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setIsLoggingIn(false);
-      setActivePanel(currentUser ? 'home' : 'home');
+      setActivePanel('home');
     });
     return () => unsubscribe();
   }, []);
@@ -2564,6 +2567,7 @@ function App() {
       setContactStatus("Display name is required.");
       return;
     }
+    setIsSavingContact(true);
     setContactStatus("Saving contact...");
     try {
       const payload = {
@@ -2593,6 +2597,8 @@ function App() {
     } catch (error) {
       console.error("Contact save failed", error);
       setContactStatus(error?.message ?? "Contact save failed.");
+    } finally {
+      setIsSavingContact(false);
     }
   };
 
@@ -2621,6 +2627,7 @@ function App() {
   const handleApplyPreset = useCallback(async (presetTheme) => {
     if (!user) return;
     const normalized = normalizeTheme(presetTheme);
+    setIsSavingTheme(true);
     setThemeStatus("Updating theme...");
     try {
       await setDoc(
@@ -2640,6 +2647,8 @@ function App() {
     } catch (error) {
       console.error("Theme update failed", error);
       setThemeStatus(error?.message ?? "Theme update failed.");
+    } finally {
+      setIsSavingTheme(false);
     }
   }, [user]);
 
@@ -2656,6 +2665,7 @@ function App() {
       setThemePublishStatus("Theme name is required.");
       return;
     }
+    setIsPublishingTheme(true);
     setThemePublishStatus("Publishing theme...");
     const backgroundImageUrl = themePublishForm.backgroundImageUrl.trim();
     const normalized = normalizeTheme({
@@ -2701,6 +2711,8 @@ function App() {
     } catch (error) {
       console.error("Theme publish failed", error);
       setThemePublishStatus(error?.message ?? "Theme publish failed.");
+    } finally {
+      setIsPublishingTheme(false);
     }
   };
 
@@ -2892,9 +2904,6 @@ function App() {
   const handleNewThread = useCallback(() => {
     setActivePanel('beacon');
     setSelectedThread(null);
-    setComposeAddress('');
-    setComposeBody('');
-    setSendStatus('');
   }, []);
 
   // Bolt: Stable handler to prevent ghost content when switching threads
@@ -3515,8 +3524,18 @@ function App() {
                     Allow remote sound changes
                   </label>
                   <div className="contact-actions">
-                    <button className="primary-btn" onClick={handleSaveContact}>
-                      {editingContactId ? 'Update contact' : 'Add contact'}
+                    <button
+                      className="primary-btn"
+                      onClick={handleSaveContact}
+                      disabled={isSavingContact}
+                      aria-busy={isSavingContact}
+                    >
+                      {isSavingContact ? (
+                        <>
+                          <Spinner />
+                          {editingContactId ? 'Updating...' : 'Saving...'}
+                        </>
+                      ) : (editingContactId ? 'Update contact' : 'Add contact')}
                     </button>
                     <button className="ghost-btn" onClick={resetContactForm}>
                       Clear
@@ -3833,8 +3852,19 @@ function App() {
                   <p className="settings-note">
                     Suggested max: 1920x1080 and under 1.5MB. Image themes require approval.
                   </p>
-                  <button className="primary-btn" type="button" onClick={handlePublishTheme}>
-                    Publish theme
+                  <button
+                    className="primary-btn"
+                    type="button"
+                    onClick={handlePublishTheme}
+                    disabled={isPublishingTheme}
+                    aria-busy={isPublishingTheme}
+                  >
+                    {isPublishingTheme ? (
+                      <>
+                        <Spinner />
+                        Publishing...
+                      </>
+                    ) : 'Publish theme'}
                   </button>
                   {themePublishStatus && <div className="settings-status" role="status" aria-live="polite">{themePublishStatus}</div>}
                 </div>
@@ -3930,8 +3960,19 @@ function App() {
                       </label>
                     ))}
                   </div>
-                  <button className="primary-btn" type="button" onClick={() => handleApplyPreset(themePrefs)}>
-                    Save theme
+                  <button
+                    className="primary-btn"
+                    type="button"
+                    onClick={() => handleApplyPreset(themePrefs)}
+                    disabled={isSavingTheme}
+                    aria-busy={isSavingTheme}
+                  >
+                    {isSavingTheme ? (
+                      <>
+                        <Spinner />
+                        Saving...
+                      </>
+                    ) : 'Save theme'}
                   </button>
                   {themeStatus && <div className="settings-status" role="status" aria-live="polite">{themeStatus}</div>}
                 </div>
