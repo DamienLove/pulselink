@@ -11,14 +11,6 @@ final class DeviceManager {
 
     private init() {}
 
-    var tier: String {
-        #if PRO
-        return "pro"
-        #else
-        return "free"
-        #endif
-    }
-
     @MainActor
     func registerDevice() async {
         #if canImport(FirebaseFirestore)
@@ -40,7 +32,6 @@ final class DeviceManager {
             "model": UIDevice.current.model,
             "platform": "iOS",
             "app": "PulseLink",
-            "tier": tier,
             "fcmToken": token ?? "",
             "updatedAt": FieldValue.serverTimestamp()
         ]
