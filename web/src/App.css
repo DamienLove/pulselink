@@ -1,4 +1,4 @@
-/* PulseLink Suite - Future Deep v3 UI System */
+/* PulseLink Suite - Future Deep v3.1 UI System */
 
 /* -------------------------------------------------------------------------- */
 /*  Core Layout & Utilities                                                   */
@@ -11,8 +11,6 @@
   position: relative;
   overflow: hidden;
 }
-
-/* Vignette & Noise handled in index.css on body, but app-shell reinforces z-index */
 
 .skip-link {
   position: absolute;
@@ -51,7 +49,7 @@
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: rgba(5, 7, 15, 0.6);
+  background: rgba(5, 7, 15, 0.5); /* More transparent */
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border-right: 1px solid var(--glass-border);
@@ -72,7 +70,7 @@
 .brand-logo.small {
   width: 40px;
   height: 40px;
-  filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.3));
+  filter: drop-shadow(0 0 15px rgba(34, 211, 238, 0.4)); /* Stronger glow */
 }
 
 .brand-title {
@@ -150,6 +148,16 @@
   filter: drop-shadow(0 0 5px var(--accent));
 }
 
+.badge-new {
+  margin-left: auto;
+  background: var(--accent);
+  color: #000;
+  font-size: 0.65em;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
 .sidebar-footer {
   padding: 16px;
   border-top: 1px solid var(--glass-border);
@@ -195,11 +203,12 @@
   font-size: 2.5em;
   font-weight: 700;
   margin: 0 0 8px 0;
-  /* Gradient Text */
+  /* Radiant Gradient Text */
   background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: -0.03em;
+  filter: drop-shadow(0 0 20px rgba(255,255,255,0.1));
 }
 
 .panel-header p {
@@ -235,7 +244,7 @@
   backdrop-filter: blur(12px);
 }
 
-/* Holographic Shine */
+/* Enhanced Holographic Shine */
 .home-card::after {
   content: "";
   position: absolute;
@@ -244,7 +253,7 @@
     90deg,
     transparent,
     rgba(255, 255, 255, 0.05),
-    rgba(34, 211, 238, 0.1),
+    rgba(34, 211, 238, 0.15),
     transparent
   );
   transform: skewX(-20deg);
@@ -253,14 +262,17 @@
 }
 
 .home-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(34, 211, 238, 0.4);
-  background: rgba(34, 211, 238, 0.04);
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+  transform: translateY(-6px);
+  border-color: rgba(34, 211, 238, 0.5);
+  background: rgba(34, 211, 238, 0.06);
+  box-shadow:
+    0 20px 40px -10px rgba(0, 0, 0, 0.6),
+    0 0 20px rgba(34, 211, 238, 0.1); /* Glow */
 }
 
 .home-card:hover::after {
   left: 200%;
+  transition: left 0.8s ease-in-out;
 }
 
 .home-icon {
@@ -273,6 +285,14 @@
   color: var(--accent);
   margin-bottom: 8px;
   border: 1px solid rgba(34, 211, 238, 0.2);
+  transition: all 0.3s ease;
+}
+
+.home-card:hover .home-icon {
+  background: var(--accent);
+  color: #000;
+  box-shadow: 0 0 15px var(--accent-glow);
+  transform: scale(1.05);
 }
 
 .home-icon img, .home-icon svg {
@@ -313,6 +333,7 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+  backdrop-filter: blur(var(--glass-blur));
 }
 
 .settings-card h4 {
@@ -336,7 +357,7 @@
 .login-input,
 .composer-input,
 .composer-textarea {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.3);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 14px 16px;
@@ -374,7 +395,7 @@
 
 .settings-toggle:hover {
   background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .settings-toggle input[type="checkbox"] {
@@ -420,12 +441,27 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.primary-btn::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(rgba(255,255,255,0.2), transparent);
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 
 .primary-btn:hover {
   background: var(--accent-strong);
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px -8px rgba(34, 211, 238, 0.6);
+  box-shadow: 0 12px 28px -8px rgba(34, 211, 238, 0.8);
+}
+
+.primary-btn:hover::after {
+  opacity: 1;
 }
 
 .primary-btn:active {
@@ -456,8 +492,9 @@
 
 .secondary-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
   transform: translateY(-1px);
+  color: #fff;
 }
 
 .ghost-btn {
@@ -528,7 +565,7 @@
   width: 80px;
   height: 80px;
   margin-bottom: 24px;
-  filter: drop-shadow(0 0 20px rgba(34, 211, 238, 0.4));
+  filter: drop-shadow(0 0 30px rgba(34, 211, 238, 0.6)); /* Intensified glow */
 }
 
 .login-form {
@@ -641,8 +678,8 @@
 }
 
 .thread-item.active {
-  background: rgba(34, 211, 238, 0.08);
-  border-color: rgba(34, 211, 238, 0.15);
+  background: rgba(34, 211, 238, 0.1);
+  border-color: rgba(34, 211, 238, 0.2);
 }
 
 .thread-name {
@@ -1019,15 +1056,16 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  background: rgba(34, 211, 238, 0.15);
-  border: 1px solid rgba(34, 211, 238, 0.3);
-  padding: 16px;
+  background: rgba(34, 211, 238, 0.1);
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  padding: 20px;
   border-radius: 16px;
   margin-bottom: 32px;
   color: var(--ink);
   font-size: 0.95em;
   line-height: 1.5;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(8px);
 }
 
 .web-app-hint .hint-icon {

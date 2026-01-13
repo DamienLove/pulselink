@@ -96,6 +96,13 @@ import com.pulselink.beacon.ui.ads.NativeAdCard
 import com.pulselink.beacon.R
 import kotlinx.coroutines.launch
 
+val GlassBorder = Brush.verticalGradient(
+    colors = listOf(
+        Color.White.copy(alpha = 0.15f),
+        Color.White.copy(alpha = 0.05f)
+    )
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InboxScreen(
@@ -808,10 +815,11 @@ private fun ThreadRow(
     Surface(
         shape = RoundedCornerShape(theme.bubbleRadius.dp),
         tonalElevation = if (isSelected) 4.dp else if (thread.unread) 2.dp else 0.dp,
-        border = androidx.compose.foundation.BorderStroke(
-            width = if (isSelected) 2.dp else 0.dp,
-            color = if (isSelected) theme.accentColor else Color.Transparent
-        ),
+        border = if (isSelected) {
+            androidx.compose.foundation.BorderStroke(2.dp, theme.accentColor)
+        } else {
+            androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
+        },
         color = if (isSelected) theme.accentColor.copy(alpha = 0.1f) else theme.inboxBackgroundColor,
         modifier = Modifier
             .fillMaxWidth()

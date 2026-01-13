@@ -78,6 +78,21 @@ object Gradients {
         )
     )
 
+    val GlassSurface = Brush.verticalGradient(
+        colors = listOf(
+            Color.White.copy(alpha = 0.1f),
+            Color.White.copy(alpha = 0.03f)
+        )
+    )
+
+    val NeonBorder = Brush.horizontalGradient(
+        colors = listOf(
+            DeepAccent.copy(alpha = 0.5f),
+            DeepAccentStrong.copy(alpha = 0.8f),
+            DeepAccent.copy(alpha = 0.5f)
+        )
+    )
+
     val SurfaceShine = Brush.linearGradient(
         colors = listOf(
             Color.White.copy(alpha = 0.0f),

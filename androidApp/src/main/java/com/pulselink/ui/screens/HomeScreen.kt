@@ -126,6 +126,7 @@ import com.pulselink.domain.model.ThemePreferences
 import com.pulselink.ui.ads.NativeAdCard
 import com.pulselink.ui.branding.brandLogoRes
 import com.pulselink.ui.state.PulseLinkUiState
+import com.pulselink.ui.theme.Gradients
 import com.pulselink.util.parseColorOr
 import kotlinx.coroutines.launch
 import org.burnoutcrew.reorderable.ReorderableItem
@@ -1019,10 +1020,17 @@ private fun QuickActionTile(
             .height(tileHeight)
             .clip(shape)
             .background(background)
+            .border(BorderStroke(1.dp, Gradients.GlassBorder), shape)
             .alpha(if (enabled) 1f else 0.4f)
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
+        // Inner sheen
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Gradients.SurfaceShine)
+        )
         Text(
             text = label,
             style = (if (compact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium)
@@ -1411,7 +1419,7 @@ private fun ContactRow(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = if (isDragging) 8.dp else 0.dp),
         shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))
+        border = BorderStroke(1.dp, Gradients.GlassBorder)
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             Row(

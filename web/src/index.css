@@ -45,7 +45,7 @@
 }
 
 :root {
-  /* Core Palette: "Future Deep v3" */
+  /* Core Palette: "Future Deep v3" - Refined */
   --bg: #05070f;
   --bg-accent: #0a0e17;
   --surface: #0e121e;
@@ -55,11 +55,11 @@
   --ink: #f0f4ff;
   --ink-dim: #b0b8d1;
   --muted: #6b7a99;
-  --ink-muted: #6b7a99; /* Consistency alias */
+  --ink-muted: #6b7a99;
 
-  /* Accents */
+  /* Accents - Neon Cyan & Sky Blue */
   --accent: #22d3ee;        /* Primary Cyan */
-  --accent-glow: rgba(34, 211, 238, 0.5);
+  --accent-glow: rgba(34, 211, 238, 0.6);
   --accent-strong: #0ea5e9;
 
   --secondary: #00f3ff;     /* Neon Cyan Alt */
@@ -75,7 +75,7 @@
   /* Glassmorphism */
   --glass-bg: rgba(5, 7, 15, 0.7);
   --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-highlight: rgba(255, 255, 255, 0.12); /* New Highlight Token */
+  --glass-highlight: rgba(255, 255, 255, 0.12);
   --glass-blur: 24px;
 
   /* Shadows */
@@ -116,22 +116,21 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /*
-   "Alive" Background v3:
-   - Deep radial gradient
-   - Subtle grid
-   - Noise overlay (simulated via grain)
-   - Slow "breathing" animation
+   "Alive" Background v3.1:
+   - Smoother top-down light source (ellipse at top)
+   - Reduced breathing intensity for less distraction
+   - Deeper blacks at the bottom
 */
 body {
   background-color: var(--bg);
   background-image:
-      radial-gradient(circle at 50% 0%, var(--bg-radial-start) 0%, transparent 80%),
-      radial-gradient(circle at 85% 90%, rgba(188, 19, 254, 0.04) 0%, transparent 45%),
-      linear-gradient(rgba(34, 211, 238, 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(34, 211, 238, 0.03) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 60px 60px, 60px 60px;
+      radial-gradient(ellipse at 50% 0%, var(--bg-radial-start) 0%, transparent 70%),
+      radial-gradient(circle at 85% 90%, rgba(188, 19, 254, 0.05) 0%, transparent 45%),
+      linear-gradient(rgba(34, 211, 238, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(34, 211, 238, 0.02) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 80px 80px, 80px 80px;
   background-attachment: fixed;
-  animation: breathe 24s ease-in-out infinite alternate;
+  animation: breathe 30s ease-in-out infinite alternate;
 }
 
 /* Subtle Vignette Overlay */
@@ -139,12 +138,12 @@ body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background: radial-gradient(circle at center, transparent 20%, rgba(0,0,0,0.5) 100%);
+  background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.6) 100%);
   pointer-events: none;
   z-index: 0;
 }
 
-/* Film Grain / Noise Overlay */
+/* Film Grain / Noise Overlay - Tuned down */
 .noise-overlay {
   position: fixed;
   inset: 0;
@@ -152,7 +151,7 @@ body::after {
   height: 100%;
   pointer-events: none;
   z-index: 9999;
-  opacity: 0.035;
+  opacity: 0.025; /* Slightly less noise */
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
 }
 
@@ -161,10 +160,10 @@ body::after {
     background-position: 50% 0%, 85% 90%, 0 0, 0 0;
   }
   50% {
-    background-position: 50% 10%, 80% 85%, 0 0, 0 0; /* Slight shift down/left */
+    background-position: 50% 5%, 80% 85%, 0 0, 0 0;
   }
   100% {
-    background-position: 50% 0%, 90% 95%, 0 0, 0 0; /* Slight shift right/down */
+    background-position: 50% 0%, 90% 95%, 0 0, 0 0;
   }
 }
 
@@ -187,21 +186,28 @@ select {
   outline: none;
 }
 
-/* Ultra-thin "Stealth" Scrollbar */
+::selection {
+  background: var(--accent);
+  color: #000;
+}
+
+/* Ultra-thin "Stealth" Scrollbar - Refined */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 4px;
+  border: 2px solid transparent; /* Creates padding effect */
+  background-clip: content-box;
   transition: background 0.2s;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 211, 238, 0.4); /* Cyan hint on hover */
+  background-color: rgba(34, 211, 238, 0.4);
 }
 
 /* Global Animation Keyframes */

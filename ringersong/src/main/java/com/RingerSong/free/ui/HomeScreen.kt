@@ -98,6 +98,14 @@ import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.nativead.NativeAdView
 import kotlin.math.roundToInt
+import androidx.compose.foundation.BorderStroke
+
+private val GlassBorder = Brush.verticalGradient(
+    listOf(
+        Color.White.copy(alpha = 0.15f),
+        Color.White.copy(alpha = 0.05f)
+    )
+)
 
 @Composable
 fun HomeScreen(
@@ -1351,7 +1359,8 @@ private fun SectionCard(
         modifier = modifier
             .fillMaxWidth()
             .shadow(8.dp, RoundedCornerShape(20.dp)),
-        shape = RoundedCornerShape(20.dp)
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, GlassBorder)
     ) {
         Column(
             modifier = Modifier
@@ -1371,16 +1380,18 @@ private fun SectionCard(
 
 @Composable
 private fun BoxScope.MusicBackdrop() {
+    val primary = MaterialTheme.colorScheme.primary
+    val secondary = MaterialTheme.colorScheme.secondary
     Canvas(modifier = Modifier.fillMaxSize()) {
         val width = size.width
         val height = size.height
         drawCircle(
-            color = Color(0xFFB6D7F2).copy(alpha = 0.35f),
+            color = primary.copy(alpha = 0.15f),
             radius = width * 0.55f,
             center = androidx.compose.ui.geometry.Offset(width * 0.85f, height * 0.1f)
         )
         drawCircle(
-            color = Color(0xFF7CB2E4).copy(alpha = 0.25f),
+            color = secondary.copy(alpha = 0.1f),
             radius = width * 0.45f,
             center = androidx.compose.ui.geometry.Offset(width * 0.1f, height * 0.2f)
         )

@@ -110,6 +110,7 @@ import com.pulselink.ui.model.MessageRecipient
 import com.pulselink.ui.branding.beaconBrandName
 import com.pulselink.ui.branding.brandLogoRes
 import com.pulselink.ui.branding.unifiedBrandName
+import com.pulselink.ui.theme.Gradients
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -788,7 +789,14 @@ internal fun ThreadRow(
     val surfaceColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor)
     val outlineColor = onBackgroundColor
         .copy(alpha = if (thread.unread) 0.14f else 0.08f)
-    val borderColor = if (thread.unread) primary.copy(alpha = 0.22f) else outlineColor
+
+    // PulseLink v3.1: Use correct BorderStroke type based on unread status
+    // Note: unread uses solid color, read uses GlassBorder brush
+    val threadBorder = if (thread.unread) {
+        BorderStroke(1.dp, primary.copy(alpha = 0.22f))
+    } else {
+        BorderStroke(1.dp, Gradients.GlassBorder)
+    }
 
     SwipeToDismissBox(
         state = dismissState,
@@ -840,7 +848,7 @@ internal fun ThreadRow(
                 tonalElevation = if (thread.unread) 2.dp else 1.dp,
                 shape = RoundedCornerShape(18.dp),
                 color = surfaceColor,
-                border = BorderStroke(1.dp, borderColor)
+                border = threadBorder
             ) {
                 Row(
                     modifier = Modifier.padding(12.dp),
