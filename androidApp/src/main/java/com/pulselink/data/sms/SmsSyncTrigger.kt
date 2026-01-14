@@ -26,7 +26,7 @@ class SmsSyncTrigger @Inject constructor(
 
         WorkManager.getInstance(context).enqueueUniqueWork(
             "SmsSyncOnDemand",
-            ExistingWorkPolicy.REPLACE,
+            ExistingWorkPolicy.APPEND_OR_REPLACE,
             syncRequest
         )
     }

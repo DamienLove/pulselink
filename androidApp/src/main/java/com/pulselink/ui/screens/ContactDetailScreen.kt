@@ -276,9 +276,9 @@ private fun LinkStatusSection(
                                     val rawSubject = "Override Instructions"
                                     val rawBody = "You have been set as a trusted contact. Even without the PulseLink app, you can trigger an emergency alert on my phone by texting exactly:\n\n'pulselink ${contact.remotePin} emergency'\n\nto my number."
                                     val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
-                                        val subject = Uri.encode(rawSubject)
-                                        val body = Uri.encode(rawBody)
-                                        data = Uri.parse("mailto:${contact.email ?: ""}?subject=$subject&body=$body")
+                                        val encodedSubject = java.net.URLEncoder.encode(rawSubject, "UTF-8").replace("+", "%20")
+                                        val encodedBody = java.net.URLEncoder.encode(rawBody, "UTF-8").replace("+", "%20")
+                                        data = Uri.parse("mailto:${contact.email ?: ""}?subject=$encodedSubject&body=$encodedBody")
                                     }
                                     try {
                                         context.startActivity(emailIntent)

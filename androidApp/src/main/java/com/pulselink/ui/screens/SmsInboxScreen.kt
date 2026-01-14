@@ -1240,34 +1240,43 @@ fun TabsRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TabText(label = "All", selected = filter == InboxFilter.ALL, theme = theme) {
-            onFilterChange(InboxFilter.ALL)
+        val toggleFilter: (InboxFilter) -> Unit = { target ->
+            if (isUnifiedMode && filter == target) {
+                onFilterChange(InboxFilter.ALL)
+            } else {
+                onFilterChange(target)
+            }
+        }
+        if (!isUnifiedMode) {
+            TabText(label = "All", selected = filter == InboxFilter.ALL, theme = theme) {
+                toggleFilter(InboxFilter.ALL)
+            }
         }
         if (isUnifiedMode) {
             TabText(label = "2-step", selected = filter == InboxFilter.OTP, theme = theme) {
-                onFilterChange(InboxFilter.OTP)
+                toggleFilter(InboxFilter.OTP)
             }
             TabText(label = "Trusted", selected = filter == InboxFilter.TRUSTED, theme = theme) {
-                onFilterChange(InboxFilter.TRUSTED)
+                toggleFilter(InboxFilter.TRUSTED)
             }
             TabText(label = "Favorites", selected = filter == InboxFilter.FAVORITES, theme = theme) {
-                onFilterChange(InboxFilter.FAVORITES)
+                toggleFilter(InboxFilter.FAVORITES)
             }
             TabText(label = "Private", selected = filter == InboxFilter.PRIVATE, theme = theme) {
-                onFilterChange(InboxFilter.PRIVATE)
+                toggleFilter(InboxFilter.PRIVATE)
             }
             TabText(label = "Contacts", selected = filter == InboxFilter.CONTACTS, theme = theme) {
-                onFilterChange(InboxFilter.CONTACTS)
+                toggleFilter(InboxFilter.CONTACTS)
             }
         }
         TabText(label = "Read", selected = filter == InboxFilter.READ, theme = theme) {
-            onFilterChange(InboxFilter.READ)
+            toggleFilter(InboxFilter.READ)
         }
         TabText(label = "Unread", badge = unreadBadge, selected = filter == InboxFilter.UNREAD, theme = theme) {
-            onFilterChange(InboxFilter.UNREAD)
+            toggleFilter(InboxFilter.UNREAD)
         }
         TabText(label = "Archived", selected = filter == InboxFilter.ARCHIVED, theme = theme) {
-            onFilterChange(InboxFilter.ARCHIVED)
+            toggleFilter(InboxFilter.ARCHIVED)
         }
     }
 }

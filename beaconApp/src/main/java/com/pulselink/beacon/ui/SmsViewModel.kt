@@ -18,6 +18,7 @@ import com.pulselink.beacon.data.InboxPreferencesRepository
 import com.pulselink.beacon.data.InboxState
 import com.pulselink.beacon.data.scheduled.BeaconDatabase
 import com.pulselink.beacon.data.scheduled.ScheduledMessage
+import com.pulselink.beacon.data.scheduled.MessageReaction
 import com.pulselink.beacon.data.scheduled.MessageStatus
 import com.pulselink.beacon.worker.ScheduledMessageWorker
 import com.pulselink.beacon.util.ThreadDateUtils
@@ -43,10 +44,11 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = SmsRepository(app.applicationContext)
     private val inboxPrefs = InboxPreferencesRepository(app.applicationContext)
     private val scheduledDao = BeaconDatabase.getDatabase(app).scheduledMessageDao()
+    private val reactionDao = BeaconDatabase.getDatabase(app).reactionDao()
     private val workManager = WorkManager.getInstance(app)
 
     private companion object {
-        const val THREAD_LIMIT = 500 // Increased from 100
+        const val THREAD_LIMIT = 100
         const val MESSAGE_LIMIT = 300
     }
 
@@ -55,6 +57,10 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     // Changed to hold UiItems for display
     var uiMessages by mutableStateOf<List<ThreadUiItem>>(emptyList())
         private set
+
+    var reactions by mutableStateOf<Map<Long, List<MessageReaction>>>(emptyMap())
+        private set
+
     // Keep raw messages for internal logic
     private var rawMessages = emptyList<SmsMessageItem>()
 
@@ -77,9 +83,32 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     var userMessage by mutableStateOf<String?>(null)
         private set
 
+    // Delayed Send
+    var pendingMessage by mutableStateOf<PendingMessage?>(null)
+        private set
+
+    data class PendingMessage(
+        val body: String,
+        val timestamp: Long,
+        val targetTime: Long
+    )
+
+    private var delayedSendJob: Job? = null
+    private var reactionJob: Job? = null
+
     // Internal holder for raw threads before merging preferences
     private var rawThreads: List<SmsThreadItem> = emptyList()
     private var inboxState: InboxState = InboxState()
+
+    val delayedSendTimeout: Int get() = inboxState.delayedSendTimeout
+
+    // Filtered state
+    var filteredThreads by mutableStateOf<List<SmsThreadItem>>(emptyList())
+        private set
+    var currentFilter by mutableStateOf(InboxFilter.ALL)
+        private set
+    var currentSearchText by mutableStateOf("")
+        private set
 
     private var searchJob: Job? = null
 
@@ -99,6 +128,17 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                 mergeThreads()
             }
         }
+    }
+
+    fun updateFilter(filter: InboxFilter) {
+        currentFilter = filter
+        updateFilteredList()
+    }
+
+    fun updateSearchText(text: String) {
+        currentSearchText = text
+        updateFilteredList()
+        search(text) // Trigger full search logic too
     }
 
     fun refreshThreads(initial: Boolean = false) {
@@ -129,6 +169,36 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                 .thenByDescending { it.timestamp }
         )
         threads = merged
+        updateFilteredList()
+    }
+
+    private fun updateFilteredList() {
+        viewModelScope.launch(Dispatchers.Default) {
+            val list = threads
+            val filter = currentFilter
+            val search = currentSearchText
+
+            val result = if (search.isNotBlank()) {
+                // If searching, show all non-archived matching items in the main list
+                // (Though SearchResults UI might handle this, keeping list consistent is good)
+                list.filter {
+                    !it.isArchived && (it.address.contains(search, true) || it.snippet.contains(search, true))
+                }
+            } else {
+                 when (filter) {
+                    InboxFilter.ALL -> list.filter { !it.isArchived }
+                    InboxFilter.READ -> list.filter { !it.unread && !it.isArchived }
+                    InboxFilter.UNREAD -> list.filter { it.unread && !it.isArchived }
+                    InboxFilter.PERSONAL -> list.filter { it.category == ThreadCategory.PERSONAL && !it.isArchived }
+                    InboxFilter.TRANSACTIONS -> list.filter { it.category == ThreadCategory.TRANSACTIONS && !it.isArchived }
+                    InboxFilter.PROMOTIONS -> list.filter { it.category == ThreadCategory.PROMOTIONS && !it.isArchived }
+                    InboxFilter.ARCHIVED -> list.filter { it.isArchived }
+                }
+            }
+            withContext(Dispatchers.Main) {
+                filteredThreads = result
+            }
+        }
     }
 
     fun togglePin(threadId: Long) {
@@ -244,8 +314,108 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
             // Transform for UI (Group by Date)
             uiMessages = ThreadDateUtils.mapMessagesToUi(rawMessages)
 
+            // Load reactions
+            reactionJob?.cancel()
+            val ids = rawMessages.map { it.id }
+            if (ids.isNotEmpty()) {
+                reactionJob = launch {
+                    reactionDao.getReactionsForMessages(ids).collectLatest { list ->
+                        reactions = list.groupBy { it.messageId }
+                    }
+                }
+            } else {
+                reactions = emptyMap()
+            }
+
             if (refreshRead) runCatching { repo.markThreadRead(threadId) }
         }
+    }
+
+    fun addReaction(messageId: Long, emoji: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            // Toggle local reaction
+            val current = reactions[messageId]?.find { it.emoji == emoji }
+            if (current != null) {
+                reactionDao.removeReaction(messageId, emoji)
+            } else {
+                reactionDao.insert(MessageReaction(messageId = messageId, emoji = emoji))
+
+                // Send "Tapback" SMS text
+                // "Liked a message", "Loved...", etc.
+                // Standard: "Liked " + original text (truncated)
+                val originalMsg = rawMessages.find { it.id == messageId }
+                if (originalMsg != null && !originalMsg.outgoing) {
+                    // Only send Tapback if we are reacting to SOMEONE ELSE'S message
+                    // Reacting to our own message locally is fine, but sending "Liked my own message" is weird.
+                    val prefix = when(emoji) {
+                        "👍" -> "Liked"
+                        "❤️" -> "Loved"
+                        "😂" -> "Laughed at"
+                        "😮" -> "Questioned" // Or Surprised
+                        "😢" -> "Emphasized" // Or Sad
+                        "👎" -> "Disliked"
+                        else -> "Reacted $emoji to"
+                    }
+                    val snippet = if (originalMsg.body.length > 20) originalMsg.body.take(20) + "..." else originalMsg.body
+                    val tapbackBody = "$prefix \"$snippet\""
+
+                    // Send it
+                    // NOTE: In a real app we might want to delay this or confirm.
+                    val ok = runCatching { repo.sendSms(originalMsg.address, tapbackBody) }.getOrDefault(false)
+                    if (ok) {
+                         withContext(Dispatchers.Main) {
+                             currentThreadId?.let { refreshThread(it, refreshRead = true) }
+                         }
+                    }
+                }
+            }
+        }
+    }
+
+    fun setDelayedSendTimeout(seconds: Int) {
+        viewModelScope.launch {
+            inboxPrefs.setDelayedSendTimeout(seconds)
+        }
+    }
+
+    fun sendDelayedMessage(body: String) {
+        val delaySeconds = delayedSendTimeout
+        if (delaySeconds <= 0) {
+            sendMessage(body)
+            return
+        }
+
+        // If there is already a pending message, send it immediately before starting the new one
+        if (pendingMessage != null) {
+             sendNow()
+        }
+
+        val now = System.currentTimeMillis()
+        val target = now + (delaySeconds * 1000)
+
+        pendingMessage = PendingMessage(body, now, target)
+
+        delayedSendJob = viewModelScope.launch {
+            delay(delaySeconds * 1000L)
+            // Re-check pendingMessage to ensure we are sending the correct one
+            // (Though sendNow clears it, so strictly speaking this job should be cancelled if sendNow was called externally)
+            if (pendingMessage?.timestamp == now) {
+                sendMessage(body)
+                pendingMessage = null
+            }
+        }
+    }
+
+    fun cancelDelayedMessage() {
+        delayedSendJob?.cancel()
+        pendingMessage = null
+    }
+
+    fun sendNow() {
+        val msg = pendingMessage ?: return
+        delayedSendJob?.cancel()
+        sendMessage(msg.body)
+        pendingMessage = null
     }
 
     fun sendMessage(body: String) {

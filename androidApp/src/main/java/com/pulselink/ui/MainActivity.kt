@@ -1696,6 +1696,8 @@ class MainActivity : AppCompatActivity() {
                             onToggleAiSummaries = viewModel::setAiSummariesEnabled,
                             onToggleMergedExperience = viewModel::setMergedExperienceEnabled,
                             onToggleThirdPartyExtensions = viewModel::setThirdPartyExtensionsEnabled,
+                            onTogglePrivateSafe = viewModel::setPrivateSafeEnabled,
+                            onToggleSmartReplies = viewModel::setSmartRepliesEnabled,
                             onBack = { navController.popBackStack() }
                         )
                     }
@@ -2178,7 +2180,8 @@ class MainActivity : AppCompatActivity() {
                             aiSummaryEnabled = premiumActive && state.settings.aiSummariesEnabled,
                             aiComposeEnabled = premiumActive && state.settings.aiComposeEnabled && isAuthenticated,
                             aiSignInRequired = !isAuthenticated,
-                            onRequestAiSignIn = { navController.navigate("login") }
+                            onRequestAiSignIn = { navController.navigate("login") },
+                            smartRepliesEnabled = state.settings.smartRepliesEnabled
                         )
                     }
                     composable("settings_help") {

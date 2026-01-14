@@ -515,6 +515,20 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="extension_crash_title">Crash Detection</string>
     <string name="extension_crash_desc">Automatically alert your emergency contacts if a severe car crash is detected. (Premium)</string>
 
+    <string name="extension_private_safe_title">Private Safe</string>
+    <string name="extension_private_safe_desc">Lock sensitive conversations behind a PIN and hide them from the main inbox.</string>
+
+    <string name="extension_smart_replies_title">Smart Replies</string>
+    <string name="extension_smart_replies_desc">Show quick response chips (e.g., "Yes", "No", "Thanks") above the message input.</string>
+
+    <string-array name="smart_replies_defaults">
+        <item>Yes</item>
+        <item>No</item>
+        <item>Thanks</item>
+        <item>On my way</item>
+        <item>OK</item>
+    </string-array>
+
     <string name="extensions_store_premium_badge">PREMIUM</string>
     <string name="extensions_store_premium_hint">Requires PulseLink Premium subscription.</string>
     <string name="extensions_store_unavailable">This feature is not available on your device.</string>

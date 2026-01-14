@@ -108,6 +108,19 @@ class FirebaseAuthManager @Inject constructor(
         }
     }
 
+    suspend fun linkWithGoogle(idToken: String): Result<FirebaseUser> {
+        return runCatching {
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
+            val user = auth.currentUser?.linkWithCredential(credential)?.await()?.user
+                ?: error("Google account linking succeeded without user payload")
+            updateAuthState(user)
+            Log.i(TAG, "Google account linking success uid=${user.uid}")
+            user
+        }.onFailure { error ->
+            Log.w(TAG, "Google account linking failed", error)
+        }
+    }
+
     suspend fun signInWithApple(activity: ComponentActivity): Result<FirebaseUser> {
         return runCatching {
             val provider = OAuthProvider.newBuilder("apple.com").apply {

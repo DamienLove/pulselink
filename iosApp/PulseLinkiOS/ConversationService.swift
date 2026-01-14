@@ -14,14 +14,21 @@ protocol ConversationProvider {
     func send(message: ConversationMessage, to contact: ContactCard) async throws
 }
 
-// Wrapper for ListenerRegistration to be platform-agnostic if needed,
-// but since we import FirebaseFirestore, we can use it directly or return an opaque object.
-// For simplicity in this environment, we use 'Any' or just return the Firebase object if available,
-// or a dummy closure wrapper.
 #if canImport(FirebaseFirestore)
-// ListenerRegistration is provided by FirebaseFirestore
-// MockListener conforms to Firebase's ListenerRegistration for InMemoryConversationProvider
 // ListenerRegistration is available from FirebaseFirestore
+// CompositeListener helps manage multiple listeners (legacy + lines)
+class CompositeListener: ListenerRegistration {
+    private var listeners: [ListenerRegistration] = []
+
+    func add(_ listener: ListenerRegistration) {
+        listeners.append(listener)
+    }
+
+    func remove() {
+        listeners.forEach { $0.remove() }
+        listeners.removeAll()
+    }
+}
 class MockListener: ListenerRegistration {
     func remove() {}
 }
@@ -30,6 +37,9 @@ protocol ListenerRegistration {
     func remove()
 }
 class MockListener: ListenerRegistration {
+    func remove() {}
+}
+class CompositeListener: ListenerRegistration {
     func remove() {}
 }
 #endif
@@ -78,103 +88,147 @@ final class FirestoreConversationProvider: ConversationProvider {
     private let db = Firestore.firestore()
     private let userId: String
 
+    // Internal state to hold merged contacts from legacy and lines
+    private var legacyContacts: [ContactCard] = []
+    // Map lineId to list of contacts
+    private var lineContacts: [String: [ContactCard]] = [:]
+
     init(userId: String) {
         self.userId = userId
     }
 
     // Android Path: users/{uid}/synced_threads
-    private var threadsCollection: CollectionReference {
+    private var legacyThreadsCollection: CollectionReference {
         db.collection("users").document(userId).collection("synced_threads")
     }
 
+    private var linesCollection: CollectionReference {
+        db.collection("users").document(userId).collection("lines")
+    }
+
     func loadConversations() async throws -> [ContactCard: [ConversationMessage]] {
-        // 1. Fetch threads
-        let threadsSnapshot = try await threadsCollection.getDocuments()
-
-        // 2. Fetch messages in parallel using TaskGroup
-        return try await withThrowingTaskGroup(of: (ContactCard, [ConversationMessage]).self) { group in
-            for threadDoc in threadsSnapshot.documents {
-                group.addTask {
-                    let data = threadDoc.data()
-                    let address = data["address"] as? String ?? "Unknown"
-                    // Use display name if available, otherwise fall back to address
-                    let name = data["display_name"] as? String ?? address
-                    let contact = ContactCard(
-                        threadId: threadDoc.documentID,
-                        name: name,
-                        address: address,
-                        role: "Contact",
-                        presence: .offline,
-                        unread: data["unread"] as? Int ?? 0,
-                        isFavorite: data["isFavorite"] as? Bool ?? false,
-                        isPrivate: data["isPrivate"] as? Bool ?? false,
-                        isTrusted: data["isTrusted"] as? Bool ?? false
-                    )
-
-                    let messagesSnapshot = try await threadDoc.reference.collection("messages")
-                        .order(by: "date", descending: false)
-                        .limit(to: 50)
-                        .getDocuments()
-
-                    var messages: [ConversationMessage] = []
-                    for msgDoc in messagesSnapshot.documents {
-                        let msgData = msgDoc.data()
-                        let type = msgData["type"] as? Int ?? 1 // 1=in, 2=out
-                        let timestamp = msgData["date"] as? Int64 ?? 0
-                        let date = Date(timeIntervalSince1970: TimeInterval(timestamp) / 1000.0)
-
-                        let msg = ConversationMessage(
-                            sender: type == 1 ? address : "You",
-                            text: msgData["body"] as? String ?? "",
-                            timestamp: date,
-                            isIncoming: type == 1,
-                            isUrgent: false
-                        )
-                        messages.append(msg)
-                    }
-                    return (contact, messages)
-                }
-            }
-
-            var result: [ContactCard: [ConversationMessage]] = [:]
-            for try await (contact, messages) in group {
-                result[contact] = messages
-            }
-            return result
-        }
+        return [:] // Not primarily used in realtime UI flow
     }
 
     func listenToConversations(onChange: @escaping ([ContactCard]) -> Void) -> ListenerRegistration? {
-        return threadsCollection.addSnapshotListener { snapshot, error in
-            guard let documents = snapshot?.documents else {
-                print("Error listening to threads: \(error?.localizedDescription ?? "Unknown")")
-                return
+        let composite = CompositeListener()
+
+        // 1. Listen to Legacy Synced Threads
+        let legacyListener = legacyThreadsCollection.addSnapshotListener { [weak self] snapshot, _ in
+            guard let self = self, let documents = snapshot?.documents else { return }
+            self.legacyContacts = self.parseContacts(documents, lineId: nil)
+            self.mergeAndNotify(onChange: onChange)
+        }
+        composite.add(legacyListener)
+
+        // 2. Listen to Lines collection to discover active devices/lines
+        // We maintain a map of listeners for each discovered line.
+        var lineListeners: [String: ListenerRegistration] = [:]
+
+        // This listener watches for changes in the 'lines' collection (added/removed lines)
+        let linesListener = linesCollection.addSnapshotListener { [weak self] snapshot, _ in
+            guard let self = self, let lines = snapshot?.documents else { return }
+
+            let currentLineIds = Set(lines.map { $0.documentID })
+
+            // Remove listeners for deleted lines
+            for (lineId, listener) in lineListeners {
+                if !currentLineIds.contains(lineId) {
+                    listener.remove()
+                    lineListeners.removeValue(forKey: lineId)
+                    self.lineContacts.removeValue(forKey: lineId)
+                }
             }
 
-            let contacts = documents.compactMap { doc -> ContactCard? in
-                let data = doc.data()
-                let address = data["address"] as? String ?? "Unknown"
-                let name = data["display_name"] as? String ?? address
-
-                return ContactCard(
-                    threadId: doc.documentID,
-                    name: name,
-                    address: address,
-                    role: "Contact",
-                    presence: .offline, // Presence logic requires separate listeners or logic
-                    unread: data["unread"] as? Int ?? 0,
-                    isFavorite: data["isFavorite"] as? Bool ?? false,
-                    isPrivate: data["isPrivate"] as? Bool ?? false,
-                    isTrusted: data["isTrusted"] as? Bool ?? false
-                )
+            // Add listeners for new lines
+            for lineDoc in lines {
+                let lineId = lineDoc.documentID
+                if lineListeners[lineId] == nil {
+                    let threadsRef = self.linesCollection.document(lineId).collection("threads")
+                    let listener = threadsRef.addSnapshotListener { [weak self] threadSnap, _ in
+                        guard let self = self, let threadDocs = threadSnap?.documents else { return }
+                        self.lineContacts[lineId] = self.parseContacts(threadDocs, lineId: lineId)
+                        self.mergeAndNotify(onChange: onChange)
+                    }
+                    lineListeners[lineId] = listener
+                }
             }
-            onChange(contacts)
+
+            // If we have lines but no contacts yet (e.g. empty lines), trigger update
+            // (or if all lines were removed)
+            self.mergeAndNotify(onChange: onChange)
+        }
+        composite.add(linesListener)
+
+        // When the composite listener is removed (e.g. user logs out), we must also remove all the dynamic line listeners.
+        let wrapper = WrapperListener(composite: composite) {
+            lineListeners.values.forEach { $0.remove() }
+            lineListeners.removeAll()
+        }
+        return wrapper
+    }
+
+    private func parseContacts(_ documents: [QueryDocumentSnapshot], lineId: String?) -> [ContactCard] {
+        return documents.compactMap { doc -> ContactCard? in
+            let data = doc.data()
+            let address = data["address"] as? String ?? "Unknown"
+            // Android SmaSyncWorker populates display_name
+            let name = data["display_name"] as? String ?? address
+
+            return ContactCard(
+                threadId: doc.documentID,
+                lineId: lineId,
+                name: name,
+                address: address,
+                role: "Contact",
+                presence: .offline,
+                unread: data["unread"] as? Int ?? 0,
+                isFavorite: data["isFavorite"] as? Bool ?? false,
+                isPrivate: data["isPrivate"] as? Bool ?? false,
+                isTrusted: data["isTrusted"] as? Bool ?? false
+            )
         }
     }
 
+    private func mergeAndNotify(onChange: @escaping ([ContactCard]) -> Void) {
+        // Merge legacy and line contacts.
+        var seen = Set<String>()
+        var result: [ContactCard] = []
+
+        // Flatten all line contacts
+        let allLineContacts = lineContacts.values.flatMap { $0 }
+
+        // Prioritize Line contacts
+        for c in allLineContacts {
+            let key = c.address // Use address to dedup logical conversations
+            if !seen.contains(key) {
+                seen.insert(key)
+                result.append(c)
+            }
+        }
+
+        // Add Legacy contacts if not seen
+        for c in legacyContacts {
+            let key = c.address
+            if !seen.contains(key) {
+                seen.insert(key)
+                result.append(c)
+            }
+        }
+
+        onChange(result)
+    }
+
     func listenToMessages(for contact: ContactCard, onChange: @escaping ([ConversationMessage]) -> Void) -> ListenerRegistration? {
-        let threadRef = threadsCollection.document(contact.threadId)
-        return threadRef.collection("messages")
+        // Determine path based on lineId
+        let collectionRef: CollectionReference
+        if let lineId = contact.lineId {
+            collectionRef = linesCollection.document(lineId).collection("threads").document(contact.threadId).collection("messages")
+        } else {
+            collectionRef = legacyThreadsCollection.document(contact.threadId).collection("messages")
+        }
+
+        return collectionRef
             .order(by: "date", descending: false)
             .limit(to: 50)
             .addSnapshotListener { snapshot, error in
@@ -190,6 +244,7 @@ final class FirestoreConversationProvider: ConversationProvider {
                     let date = Date(timeIntervalSince1970: TimeInterval(timestamp) / 1000.0)
 
                     return ConversationMessage(
+                        id: doc.documentID,
                         sender: type == 1 ? contact.address : "You",
                         text: data["body"] as? String ?? "",
                         timestamp: date,
@@ -202,13 +257,17 @@ final class FirestoreConversationProvider: ConversationProvider {
     }
 
     func send(message: ConversationMessage, to contact: ContactCard) async throws {
-        // Use contact.address (phone number) instead of contact.name (display name)
-        let docData: [String: Any] = [
+        // Include lineId in outbox if available
+        var docData: [String: Any] = [
             "address": contact.address,
             "body": message.text,
             "date": Int64(message.timestamp.timeIntervalSince1970 * 1000),
             "sender": "iOS"
         ]
+
+        if let lineId = contact.lineId {
+            docData["lineId"] = lineId
+        }
 
         try await db.collection("users").document(userId)
             .collection("outbox").addDocument(data: docData)
@@ -220,4 +279,19 @@ final class FirestoreConversationProvider: ConversationProvider {
     func listenToMessages(for contact: ContactCard, onChange: @escaping ([ConversationMessage]) -> Void) -> ListenerRegistration? { return nil }
     func send(message: ConversationMessage, to contact: ContactCard) async throws {}
     #endif
+}
+
+class WrapperListener: ListenerRegistration {
+    let composite: ListenerRegistration
+    let cleanup: () -> Void
+
+    init(composite: ListenerRegistration, cleanup: @escaping () -> Void) {
+        self.composite = composite
+        self.cleanup = cleanup
+    }
+
+    func remove() {
+        composite.remove()
+        cleanup()
+    }
 }

@@ -11,21 +11,32 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ThemePreferences
+import com.pulselink.ui.components.ThemeIcon
+import com.pulselink.ui.components.ThemeIconKey
 import com.pulselink.util.parseColorOr
 
 @Composable
@@ -34,10 +45,18 @@ fun BeaconContactsScreen(
     theme: ThemePreferences,
     hasContactsPermission: Boolean,
     onRequestContactsPermission: () -> Unit,
-    onSelect: (Contact) -> Unit
+    onSelect: (Contact) -> Unit,
+    searchQuery: String = "",
+    onSearchChange: (String) -> Unit = {},
+    onClearSearch: () -> Unit = {}
 ) {
     val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
     val onPrimary = parseColorOr(MaterialTheme.colorScheme.onPrimary, theme.onBubbleOutgoing)
+    val onBackgroundColor = parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onTopBarColor)
+    val onBackgroundMuted = parseColorOr(
+        MaterialTheme.colorScheme.onSurfaceVariant,
+        theme.onBubbleIncoming
+    )
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -57,7 +76,62 @@ fun BeaconContactsScreen(
                 Text(
                     text = "Phone & Google contacts. Tap to view or edit.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBubbleIncoming)
+                    color = onBackgroundMuted
+                )
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = {
+                        onSearchChange(it)
+                        if (it.isBlank()) {
+                            onClearSearch()
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    placeholder = { Text("Search contacts") },
+                    leadingIcon = {
+                        ThemeIcon(
+                            iconKey = ThemeIconKey.SEARCH,
+                            theme = theme,
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = null
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotBlank()) {
+                            IconButton(onClick = {
+                                onSearchChange("")
+                                onClearSearch()
+                            }) {
+                                ThemeIcon(
+                                    iconKey = ThemeIconKey.CLOSE,
+                                    theme = theme,
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = "Clear"
+                                )
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { onSearchChange(searchQuery) }),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = primary,
+                        unfocusedBorderColor = onBackgroundMuted.copy(alpha = 0.4f),
+                        focusedContainerColor = parseColorOr(
+                            MaterialTheme.colorScheme.surface,
+                            theme.backgroundColor
+                        ),
+                        unfocusedContainerColor = parseColorOr(
+                            MaterialTheme.colorScheme.surface,
+                            theme.backgroundColor
+                        ),
+                        focusedTextColor = onBackgroundColor,
+                        unfocusedTextColor = onBackgroundColor,
+                        cursorColor = primary
+                    ),
+                    shape = RoundedCornerShape(18.dp)
                 )
 
                 if (!hasContactsPermission) {
@@ -91,7 +165,7 @@ fun BeaconContactsScreen(
                 }
 
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(contacts.sortedBy { it.displayName.lowercase() }) { contact ->
+                items(contacts) { contact ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -137,13 +211,13 @@ fun BeaconContactsScreen(
                 if (contacts.isEmpty()) {
                     item {
                         Text(
-                            text = if (hasContactsPermission) {
-                                "No contacts found. Add contacts on your phone or sync Google contacts."
-                            } else {
-                                "Contacts are hidden until you allow access."
+                            text = when {
+                                !hasContactsPermission -> "Contacts are hidden until you allow access."
+                                searchQuery.isNotBlank() -> "No contacts match \"$searchQuery\"."
+                                else -> "No contacts found. Add contacts on your phone or sync Google contacts."
                             },
                             style = MaterialTheme.typography.bodyMedium,
-                            color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBubbleIncoming)
+                            color = onBackgroundMuted
                         )
                     }
                 }

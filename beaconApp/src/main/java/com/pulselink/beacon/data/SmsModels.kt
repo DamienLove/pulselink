@@ -34,5 +34,6 @@ data class MmsPart(
 
 data class InboxState(
     val pinnedThreadIds: Set<Long> = emptySet(),
-    val archivedThreadIds: Set<Long> = emptySet()
+    val archivedThreadIds: Set<Long> = emptySet(),
+    val delayedSendTimeout: Int = 5
 )

@@ -190,7 +190,10 @@ private fun BeaconNav(
         ) {
             composable("inbox") {
                     InboxScreen(
-                        threads = vm.threads,
+                        threads = vm.filteredThreads,
+                        filter = vm.currentFilter,
+                        onFilterChange = { vm.updateFilter(it) },
+                        searchText = vm.currentSearchText,
                         theme = themeState.global,
                         searchState = vm.searchState,
                         isDefaultSms = isDefaultSms,
@@ -220,8 +223,8 @@ private fun BeaconNav(
                     onTogglePin = { vm.togglePin(it) },
                     onToggleArchive = { vm.toggleArchive(it) },
                     onRefresh = { vm.refreshThreads() },
-                    onSearch = { vm.search(it) },
-                    onClearSearch = { vm.clearSearch() },
+                    onSearch = { vm.updateSearchText(it) },
+                    onClearSearch = { vm.updateSearchText("") },
                     onCustomize = { navController.navigate("customize?address=") },
                     onCompose = { navController.navigate("newMessage") },
                     onOpenNotifications = { navController.navigate("notifications") },
@@ -236,7 +239,9 @@ private fun BeaconNav(
                     onPinSelected = { vm.pinSelected() },
                     onMarkAsUnread = { vm.markAsUnread(it) },
                     userMessage = vm.userMessage,
-                    onClearUserMessage = { vm.clearUserMessage() }
+                    onClearUserMessage = { vm.clearUserMessage() },
+                    delayedSendTimeout = vm.delayedSendTimeout,
+                    onSetDelayedSendTimeout = { vm.setDelayedSendTimeout(it) }
                 )
             }
             composable(
@@ -255,9 +260,13 @@ private fun BeaconNav(
                     ThreadScreen(
                         address = address.ifBlank { "Unknown" },
                         uiItems = vm.uiMessages,
+                        reactions = vm.reactions,
                         theme = contactTheme,
+                        pendingMessage = vm.pendingMessage,
                         onBack = { navController.popBackStack() },
-                        onSend = { vm.sendMessage(it) },
+                        onSend = { vm.sendDelayedMessage(it) },
+                        onCancelPending = { vm.cancelDelayedMessage() },
+                        onSendNow = { vm.sendNow() },
                         onScheduleMessage = { body, time ->
                             vm.scheduleMessage(body, time)
                         },
@@ -272,7 +281,8 @@ private fun BeaconNav(
                                 data = Uri.parse("tel:$address")
                             }
                             context.startActivity(intent)
-                        }
+                        },
+                        onReact = { msgId, emoji -> vm.addReaction(msgId, emoji) }
                     )
                 }
             }

@@ -62,6 +62,11 @@ android {
             "SPOTIFY_CLIENT_ID",
             "\"${localProps.getProperty("spotify.client.id", "YOUR_CLIENT_ID_PLACEHOLDER")}\""
         )
+        buildConfigField(
+            "String",
+            "SPOTIFY_CLIENT_SECRET",
+            "\"${localProps.getProperty("spotify.client.secret", "YOUR_CLIENT_SECRET_PLACEHOLDER")}\""
+        )
         buildConfigField("String", "REDIRECT_SCHEME", "\"com.RingerSong.free\"")
         buildConfigField("String", "REDIRECT_HOST", "\"callback\"")
     }

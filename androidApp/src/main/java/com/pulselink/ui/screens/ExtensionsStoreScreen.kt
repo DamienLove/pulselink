@@ -22,6 +22,8 @@ import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Laptop
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.WifiTethering
 import androidx.compose.material.icons.filled.Extension
@@ -73,6 +75,8 @@ fun ExtensionsStoreScreen(
     onToggleAiSummaries: (Boolean) -> Unit,
     onToggleThirdPartyExtensions: (Boolean) -> Unit,
     onToggleMergedExperience: (Boolean) -> Unit,
+    onTogglePrivateSafe: (Boolean) -> Unit,
+    onToggleSmartReplies: (Boolean) -> Unit,
     onBack: () -> Unit
 ) {
     val premiumActive = remember(settings) {
@@ -104,6 +108,22 @@ fun ExtensionsStoreScreen(
                 icon = Icons.Filled.Email,
                 isEnabled = settings.emailFallbackEnabled,
                 onToggle = onToggleEmailFallback
+            ),
+            FeatureToggle(
+                id = "private_safe",
+                titleRes = R.string.extension_private_safe_title,
+                descriptionRes = R.string.extension_private_safe_desc,
+                icon = Icons.Filled.Lock, // Reusing existing Lock icon
+                isEnabled = settings.privateSafeEnabled,
+                onToggle = onTogglePrivateSafe
+            ),
+            FeatureToggle(
+                id = "smart_replies",
+                titleRes = R.string.extension_smart_replies_title,
+                descriptionRes = R.string.extension_smart_replies_desc,
+                icon = Icons.Filled.Message, // Reusing existing Message icon
+                isEnabled = settings.smartRepliesEnabled,
+                onToggle = onToggleSmartReplies
             ),
             FeatureToggle(
                 id = "web",
@@ -165,7 +185,7 @@ fun ExtensionsStoreScreen(
         features.forEach { feature ->
             if (feature.requiresPremium && !premiumActive) return@forEach
             when (feature.id) {
-                "beacon", "relay", "email_backup", "otp" -> feature.onToggle(true)
+                "beacon", "relay", "email_backup", "otp", "smart_replies" -> feature.onToggle(true)
                 else -> feature.onToggle(false)
             }
         }

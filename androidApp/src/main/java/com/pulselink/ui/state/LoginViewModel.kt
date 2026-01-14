@@ -152,7 +152,12 @@ class LoginViewModel @Inject constructor(
     fun handleGoogleIdToken(idToken: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isSocialLoading = true, errorMessageRes = null, userMessageRes = null) }
-            val result = authManager.signInWithGoogle(idToken)
+            val state = _uiState.value
+            val result = if (state.isAnonymousUser) {
+                authManager.linkWithGoogle(idToken)
+            } else {
+                authManager.signInWithGoogle(idToken)
+            }
             _uiState.update {
                 val loginError = result.exceptionOrNull()?.toLoginError()
                 it.copy(

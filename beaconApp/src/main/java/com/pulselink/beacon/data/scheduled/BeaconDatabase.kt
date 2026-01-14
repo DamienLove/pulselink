@@ -5,9 +5,19 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [ScheduledMessage::class], version = 1, exportSchema = true)
+import androidx.room.AutoMigration
+
+@Database(
+    entities = [ScheduledMessage::class, MessageReaction::class],
+    version = 2,
+    exportSchema = true,
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2)
+    ]
+)
 abstract class BeaconDatabase : RoomDatabase() {
     abstract fun scheduledMessageDao(): ScheduledMessageDao
+    abstract fun reactionDao(): MessageReactionDao
 
     companion object {
         @Volatile
@@ -20,6 +30,7 @@ abstract class BeaconDatabase : RoomDatabase() {
                     BeaconDatabase::class.java,
                     "beacon_database"
                 )
+                // Fallback is still good to have if migration fails for some reason
                 .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance

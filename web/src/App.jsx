@@ -59,8 +59,21 @@ const TrashIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="no
 const LinkIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
 const CopyIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>;
 const CheckIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
+const SmartToyIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h4Z"/><rect x="4" y="10" width="16" height="8" rx="2"/><path d="M9 22v-4"/><path d="M15 22v-4"/><circle cx="8" cy="14" r="1" fill="currentColor"/><circle cx="16" cy="14" r="1" fill="currentColor"/></svg>;
+const DeleteSweepIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
+const EmailIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>;
+const CarCrashIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 16H9m10 0h3v-3.15M17 12.89l1.45-1.45M9 16.02L6.68 18.34M4.34 20.68L2 23M9 12V8h6v4"/><rect x="4" y="16" width="10" height="6" rx="2"/><path d="M14 10l-2-3-2 3"/></svg>;
+const CloudSyncIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.61 16.95A5 5 0 0 0 18 10h-1.26a8 8 0 0 0-14.33 6"/><polyline points="1 20 5 20 5 16"/><path d="M1 20a9 9 0 0 0 9 9 9 9 0 0 0 4-10"/><polyline points="23 4 19 4 19 8"/><path d="M23 4a9 9 0 0 0-9-9 9 9 0 0 0-4 10"/></svg>;
+const ExtensionIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.5 11a2.5 2.5 0 0 1 0 5 2.5 2.5 0 0 1-5 0V11h5Z"/><path d="M8 11V6a2.5 2.5 0 0 1 5 0 2.5 2.5 0 0 1 0 5H8Z"/><path d="M11 8h5a2.5 2.5 0 0 1 0 5 2.5 2.5 0 0 1-5 0v-5Z"/><path d="M12 21a9 9 0 0 0 9-9 9 9 0 0 0-9-9 9 9 0 0 0-9 9 9 9 0 0 0 9 9Z"/></svg>;
+const BoltIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>;
+const StarIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
+const LockIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>;
+const MessageSquareIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>;
 const Spinner = ({ className = '', style = {} }) => (
-  <span className={`spinner ${className}`} style={style} aria-hidden="true" />
+  <svg className={`spinner ${className}`} style={style} viewBox="0 0 50 50" aria-hidden="true">
+    <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="5" opacity="0.2" />
+    <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="5" strokeDasharray="80" strokeDashoffset="60" strokeLinecap="round" />
+  </svg>
 );
 
 const CopyButton = ({ text, label = "Copy" }) => {
@@ -106,7 +119,7 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
     className={`thread-item ${isActive ? 'active' : ''}`}
     onClick={() => onSelect(thread)}
     aria-current={isActive ? 'true' : undefined}
-    aria-label={`Select conversation with ${thread.display_name || thread.address}`}
+    aria-label={`Select conversation with ${thread.display_name || thread.address}${showPreviews && thread.snippet ? `, ${thread.snippet}` : ''}`}
   >
     <div className="thread-name">{thread.display_name || thread.address}</div>
     <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
@@ -128,6 +141,11 @@ const areMessagesEqual = (prev, next) => {
 const MessageItem = memo(({ msg, showPreviews }) => (
   <div className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
     <div className="message-bubble">
+      {msg.imageUrl && (
+        <div className="message-image-container">
+          <img src={msg.imageUrl} alt="Attachment" className="message-image" loading="lazy" />
+        </div>
+      )}
       {showPreviews ? msg.body : '••••••'}
     </div>
     <div className="message-time">
@@ -216,6 +234,13 @@ const TrustedContactRow = memo(({ contact, isConfirmingDelete, onEdit, onDeleteR
           onClick={() => onDeleteConfirm(contact.id)}
           aria-label={`Confirm remove ${contact.displayName}`}
           onBlur={onDeleteCancel}
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              onDeleteCancel();
+            }
+          }}
         >
           Confirm?
         </button>
@@ -330,13 +355,56 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
 });
 MapAlertItem.displayName = 'MapAlertItem';
 
+// Bolt: Custom comparator for ThemeGalleryItem to handle Firestore object reference changes
+const areThemeGalleryItemsEqual = (prev, next) => {
+  if (prev.onImport !== next.onImport) return false;
+  const p = prev.themeDoc;
+  const n = next.themeDoc;
+  if (p === n) return true;
+  if (p.id !== n.id) return false;
+
+  // Bolt: Check updatedAt if available (handling Firestore Timestamps)
+  const getMillis = (t) => {
+    if (!t) return 0;
+    if (typeof t === 'number') return t;
+    if (typeof t.toMillis === 'function') return t.toMillis();
+    if (typeof t.seconds === 'number') return t.seconds * 1000;
+    return 0;
+  };
+
+  const pTime = getMillis(p.updatedAt);
+  const nTime = getMillis(n.updatedAt);
+  if (pTime > 0 && nTime > 0) {
+    return pTime === nTime;
+  }
+
+  // Fallback to deep check if timestamps are missing/invalid
+  return p.name === n.name &&
+         p.authorName === n.authorName &&
+         p.authorHandle === n.authorHandle &&
+         p.anonymous === n.anonymous &&
+         JSON.stringify(p.theme) === JSON.stringify(n.theme);
+};
+
 // Bolt: Optimized ThemeGalleryItem to prevent re-renders when list doesn't change
 const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
+  const [isImporting, setIsImporting] = useState(false);
   const previewTheme = normalizeTheme(themeDoc.theme || {});
   const previewStyle = buildThemePreviewStyle(previewTheme);
   const authorLabel = themeDoc.anonymous
     ? 'Anonymous'
     : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
+
+  const handleImport = useCallback(async () => {
+    setIsImporting(true);
+    try {
+      await onImport(themeDoc);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsImporting(false);
+    }
+  }, [onImport, themeDoc]);
 
   return (
     <div className="theme-card">
@@ -369,16 +437,21 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
       <button
         className="primary-btn"
         type="button"
-        onClick={() => onImport(themeDoc)}
+        onClick={handleImport}
+        disabled={isImporting}
+        aria-busy={isImporting}
         aria-label={`Import theme ${themeDoc.name || 'Untitled'}`}
       >
-        Import
+        {isImporting ? (
+          <>
+            <Spinner />
+            Importing...
+          </>
+        ) : 'Import'}
       </button>
     </div>
   );
-}, (prev, next) => {
-  return prev.themeDoc === next.themeDoc && prev.onImport === next.onImport;
-});
+}, areThemeGalleryItemsEqual);
 
 ThemeGalleryItem.displayName = 'ThemeGalleryItem';
 
@@ -387,6 +460,7 @@ const ThemePresetItem = memo(({ preset, onApply }) => (
   <button
     className="theme-chip"
     onClick={() => onApply(preset.theme)}
+    aria-label={`Apply ${preset.name} theme`}
   >
     <div className="theme-chip-title">
       <span className="theme-dot" style={{ background: preset.theme.primaryColor }} />
@@ -502,27 +576,142 @@ const SpotifyResultItem = memo(({ track, onAdd, isAdding }) => (
 ), areSpotifyResultsEqual);
 SpotifyResultItem.displayName = 'SpotifyResultItem';
 
+// Bolt: MessageComposer extracted to prevent App re-renders on typing
+const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn }) => {
+  const [address, setAddress] = useState('');
+  const [body, setBody] = useState('');
+  const [lineId, setLineId] = useState('');
+  const [status, setStatus] = useState('');
+  const [isSending, setIsSending] = useState(false);
+
+  useEffect(() => {
+    if (selectedThread) {
+      setAddress(selectedThread.address || '');
+      setLineId(selectedThread.lineId || '');
+    } else {
+      setAddress('');
+      // When clearing (New message), reset lineId to empty to allow user selection or fallback
+      setLineId('');
+    }
+    setBody('');
+    setStatus('');
+  }, [selectedThread]);
+
+  const handleSendMessage = async () => {
+    if (!user) return;
+    const cleanAddress = address.trim();
+    const cleanBody = body.trim();
+    const effectiveLineId = lineInboxMode === 'PER_LINE' ? (lineId || activeLineId || lines[0]?.id || null) : null;
+
+    if (!cleanAddress || !cleanBody) {
+      setStatus("Add a phone number and message.");
+      return;
+    }
+    setIsSending(true);
+    setStatus('');
+    try {
+      await addDoc(collection(db, "users", user.uid, "outbox"), {
+        address: cleanAddress,
+        body: cleanBody,
+        createdAt: serverTimestamp(),
+        source: "web",
+        lineId: effectiveLineId
+      });
+      setBody('');
+      setStatus("Queued for sending from your device.");
+    } catch (error) {
+      console.error("Send failed", error);
+      setStatus("Send failed. Try again.");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <div className="composer">
+      <div className="composer-row">
+        <label className="composer-label" htmlFor="compose-address">To</label>
+        <input
+          id="compose-address"
+          className="composer-input"
+          type="tel"
+          placeholder="Phone number"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+        />
+      </div>
+      {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
+        <div className="composer-row">
+          <label className="composer-label" htmlFor="compose-line">Send from</label>
+          <select
+            id="compose-line"
+            className="composer-input"
+            value={lineId}
+            onChange={(e) => setLineId(e.target.value)}
+          >
+            <option value="">Primary device</option>
+            {lines.map(line => (
+              <option key={line.id} value={line.id}>
+                {(line.label || line.phoneNumber || line.id.slice(0, 6))}
+                {line.primaryDeviceId ? ' • primary' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      <div className="composer-row composer-actions">
+        <textarea
+          className="composer-textarea"
+          placeholder="Type a message... (Ctrl+Enter to send)"
+          aria-label="Message body"
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          onKeyDown={(e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+              e.preventDefault();
+              handleSendMessage();
+            }
+          }}
+        />
+        <button
+          onClick={handleSendMessage}
+          disabled={isSending || isLoggingIn}
+          className="primary-btn"
+        >
+          {isSending ? "Sending..." : "Send"}
+        </button>
+      </div>
+      {status && <div className="compose-status" role="status" aria-live="polite">{status}</div>}
+      <div className="compose-hint">
+        Messages are sent from your phone when it&apos;s online and signed in.
+      </div>
+    </div>
+  );
+});
+
+MessageComposer.displayName = 'MessageComposer';
+
 const defaultTheme = {
-  primaryColor: "#6750A4",
-  secondaryColor: "#625B71",
-  bubbleOutgoing: "#D0BCFF",
-  bubbleIncoming: "#E8DEF8",
-  backgroundColor: "#FFFFFF",
+  primaryColor: "#22D3EE",
+  secondaryColor: "#0EA5E9",
+  bubbleOutgoing: "#22D3EE",
+  bubbleIncoming: "#161B2E",
+  backgroundColor: "#05070F",
   iconSizeFactor: 1.0,
   fontStyle: "Default",
-  bubbleCornerRadius: 12,
-  inboxIconVariant: "Default",
-  onBubbleOutgoing: "#000000",
-  onBubbleIncoming: "#000000",
-  onBackground: "#000000",
-  topBarColor: "#FFFFFF",
-  onTopBarColor: "#000000",
+  bubbleCornerRadius: 22,
+  inboxIconVariant: "Beacon",
+  onBubbleOutgoing: "#04060C",
+  onBubbleIncoming: "#EEF2FB",
+  onBackground: "#EEF2FB",
+  topBarColor: "#0C1326",
+  onTopBarColor: "#EEF2FB",
   bubbleCornerRadiusTopStart: null,
   bubbleCornerRadiusTopEnd: null,
   bubbleCornerRadiusBottomStart: null,
   bubbleCornerRadiusBottomEnd: null,
-  timestampColor: null,
-  dividerColor: null,
+  timestampColor: "#9FB3C8",
+  dividerColor: "#1E293B",
   appBackgroundGradientStart: null,
   appBackgroundGradientEnd: null,
   fontScale: 1.0,
@@ -1218,6 +1407,213 @@ const loadGoogleMaps = (() => {
   };
 })();
 
+// Bolt: Optimized Sidebar to prevent re-renders on high-frequency parent updates (typing)
+const Sidebar = memo(({
+  activePanel,
+  setActivePanel,
+  tierLabel,
+  handleLogout, // Bolt: Explicitly included for logout functionality
+  handleNewThread, // Bolt: Explicitly included for new conversation
+  lines, // Bolt: Explicitly included for multi-line support
+  activeLineId,
+  setActiveLineId,
+  lineInboxMode,
+  isLoadingThreads,
+  threadCount,
+  threadListElements,
+  isPremium,
+  navLogo,
+  brandTitle
+}) => (
+  <div className="sidebar">
+    <div className="sidebar-header">
+      <div className="sidebar-brand">
+        <img src={navLogo || logo} alt="PulseLink Suite" className="brand-logo small" />
+        <div>
+          <div className="brand-title">{brandTitle || "PulseLink Suite"}</div>
+          <div className="brand-subtitle">{tierLabel} Web Access</div>
+        </div>
+      </div>
+      <div className="sidebar-actions">
+        {activePanel === 'beacon' && (
+          <button
+            onClick={handleNewThread}
+            className="secondary-btn"
+            aria-label="Start new conversation"
+          >
+            New
+          </button>
+        )}
+        <button onClick={handleLogout} className="ghost-btn">Logout</button>
+      </div>
+    </div>
+    <div className="sidebar-nav">
+      <button
+        className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
+        onClick={() => setActivePanel('home')}
+        title="Home"
+        aria-label="Home"
+        aria-current={activePanel === 'home' ? 'page' : undefined}
+      >
+        <HomeIcon />
+        <span>Home</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
+        onClick={() => setActivePanel('pulselink')}
+        title="PulseLink"
+        aria-label="PulseLink"
+        aria-current={activePanel === 'pulselink' ? 'page' : undefined}
+      >
+        <img src={logo} alt="PulseLink" />
+        <span>PulseLink</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
+        onClick={() => setActivePanel('beacon')}
+        title="Beacon"
+        aria-label="Beacon"
+        aria-current={activePanel === 'beacon' ? 'page' : undefined}
+      >
+        <img src={beaconLogo} alt="Beacon" />
+        <span>Beacon</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
+        onClick={() => setActivePanel('ringersong')}
+        title="RingerSong"
+        aria-label="RingerSong"
+        aria-current={activePanel === 'ringersong' ? 'page' : undefined}
+      >
+        <img src={ringersongLogo} alt="RingerSong" />
+        <span>RingerSong</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
+        onClick={() => setActivePanel('map')}
+        title="Map"
+        aria-label="Map"
+        aria-current={activePanel === 'map' ? 'page' : undefined}
+      >
+        <MapIcon />
+        <span>Map</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
+        onClick={() => setActivePanel('contacts')}
+        title="Contacts"
+        aria-label="Contacts"
+        aria-current={activePanel === 'contacts' ? 'page' : undefined}
+      >
+        <ContactIcon />
+        <span>Contacts</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
+        onClick={() => setActivePanel('themes')}
+        title="Themes"
+        aria-label="Themes"
+        aria-current={activePanel === 'themes' ? 'page' : undefined}
+      >
+        <ThemeIcon />
+        <span>Themes</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
+        onClick={() => setActivePanel('extensions')}
+        title="Extensions"
+        aria-label="Extensions"
+        aria-current={activePanel === 'extensions' ? 'page' : undefined}
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        <span>Extensions</span>
+        <span className="badge-new">NEW</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
+        onClick={() => setActivePanel('settings')}
+        title="Settings"
+        aria-label="Settings"
+        aria-current={activePanel === 'settings' ? 'page' : undefined}
+      >
+        <SettingsIcon />
+        <span>Settings</span>
+      </button>
+    </div>
+    {activePanel === 'beacon' ? (
+      <div className="thread-list">
+        {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
+          <div className="line-tabs" aria-label="Device lines">
+            <button
+              className={`chip ${!activeLineId ? 'active' : ''}`}
+              onClick={() => setActiveLineId(null)}
+            >
+              All
+            </button>
+            {lines.map((line) => (
+              <button
+                key={line.id}
+                className={`chip ${activeLineId === line.id ? 'active' : ''}`}
+                onClick={() => setActiveLineId(line.id)}
+                title={line.phoneNumber || 'Line'}
+              >
+                {line.label || line.phoneNumber || line.id.slice(0, 6)}
+              </button>
+            ))}
+          </div>
+        )}
+        {isLoadingThreads ? (
+          <div className="sidebar-placeholder">
+            <Spinner />
+            <div className="sidebar-tip muted">Loading conversations...</div>
+          </div>
+        ) : threadCount === 0 ? (
+          <div className="sidebar-placeholder">
+            <div className="sidebar-tip">
+              <strong>No conversations found</strong>
+            </div>
+            <div className="sidebar-tip muted">
+              To see your messages here:
+              <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
+                <li>Open PulseLink on your phone</li>
+                <li>Go to Extensions Store</li>
+                <li>Enable &quot;Remote Web Access&quot;</li>
+              </ol>
+              {!isPremium && (
+                <div className="badge badge-premium" style={{ display: 'inline-block', marginTop: '8px', padding: '2px 8px', borderRadius: '4px', background: 'var(--accent)', color: '#fff', fontSize: '0.8em' }}>
+                  Premium Required
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          threadListElements
+        )}
+      </div>
+    ) : (
+      <div className="sidebar-placeholder">
+        <div className="sidebar-tip">Use the tiles on Home to jump into PulseLink or Beacon.</div>
+        <div className="sidebar-tip muted">Theme and settings sync to your device.</div>
+      </div>
+    )}
+  </div>
+), (prev, next) => {
+  // Bolt: Ensure strict equality checks for all props to prevent unnecessary re-renders
+  return prev.activePanel === next.activePanel &&
+         prev.tierLabel === next.tierLabel &&
+         prev.isLoadingThreads === next.isLoadingThreads &&
+         prev.threadCount === next.threadCount &&
+         prev.lines === next.lines &&
+         prev.activeLineId === next.activeLineId &&
+         prev.lineInboxMode === next.lineInboxMode &&
+         prev.isPremium === next.isPremium &&
+         prev.threadListElements === next.threadListElements &&
+         prev.navLogo === next.navLogo &&
+         prev.brandTitle === next.brandTitle;
+});
+
+Sidebar.displayName = 'Sidebar';
+
 function App() {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
@@ -1255,6 +1651,7 @@ function App() {
   });
   const [editingContactId, setEditingContactId] = useState(null);
   const [contactStatus, setContactStatus] = useState('');
+  const [isSavingContact, setIsSavingContact] = useState(false);
   const [profileStatus, setProfileStatus] = useState('');
   const [themePrefs, setThemePrefs] = useState(defaultTheme);
   const [themeStatus, setThemeStatus] = useState('');
@@ -1269,11 +1666,21 @@ function App() {
     backgroundImageUrl: ''
   });
   const [themePublishStatus, setThemePublishStatus] = useState('');
+  const [isPublishingTheme, setIsPublishingTheme] = useState(false);
   const [remoteSettings, setRemoteSettings] = useState({
     remoteWebAccessEnabled: false,
     autoUpdateContactInfo: true,
     timeFormat: 'AUTO',
-    thirdPartyExtensionsEnabled: true
+    thirdPartyExtensionsEnabled: true,
+    beaconLauncherEnabled: false,
+    otpCleanupEnabled: false,
+    emailFallbackEnabled: false,
+    crashDetectionEnabled: false,
+    aiSummariesEnabled: false,
+    firebaseMessagingEnabled: true,
+    mergedExperienceEnabled: false,
+    privateSafeEnabled: false,
+    smartRepliesEnabled: true
   });
   const [devExtensions, setDevExtensions] = useState(() => {
     const saved = localStorage.getItem('pulselink.devExtensions');
@@ -1304,11 +1711,6 @@ function App() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
-  const [composeAddress, setComposeAddress] = useState('');
-  const [composeBody, setComposeBody] = useState('');
-  const [sendLineId, setSendLineId] = useState('');
-  const [sendStatus, setSendStatus] = useState('');
-  const [isSending, setIsSending] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [activePanel, setActivePanel] = useState('home');
   const [alertLocations, setAlertLocations] = useState([]);
@@ -1334,6 +1736,7 @@ function App() {
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
   const [addingTrackId, setAddingTrackId] = useState(null);
   const [showDevTools, setShowDevTools] = useState(false);
+  const [settingsSearch, setSettingsSearch] = useState('');
 
   const subscriptionStatus = userData?.subscriptionStatus;
   const isPremiumUser = useMemo(() => {
@@ -1498,22 +1901,31 @@ function App() {
     const term = contactSearch.trim().toLowerCase();
     if (!term) return deviceContacts;
     return deviceContacts.filter((contact) => {
-      const values = [
-        contact.displayName,
-        contact.phoneNumber,
-        contact.email,
-        ...(contact.additionalPhones || []),
-        ...(contact.additionalEmails || [])
-      ];
-      return values.some((value) =>
-        (value ?? '').toString().toLowerCase().includes(term)
-      );
+      // Bolt: Direct property checks avoid creating intermediate arrays (GC pressure)
+      // and .some() callback overhead during high-frequency typing events.
+      if ((contact.displayName ?? '').toString().toLowerCase().includes(term)) return true;
+      if ((contact.phoneNumber ?? '').toString().toLowerCase().includes(term)) return true;
+      if ((contact.email ?? '').toString().toLowerCase().includes(term)) return true;
+
+      const addPhones = contact.additionalPhones;
+      if (Array.isArray(addPhones)) {
+        for (let i = 0; i < addPhones.length; i++) {
+          if ((addPhones[i] ?? '').toString().toLowerCase().includes(term)) return true;
+        }
+      }
+
+      const addEmails = contact.additionalEmails;
+      if (Array.isArray(addEmails)) {
+        for (let i = 0; i < addEmails.length; i++) {
+          if ((addEmails[i] ?? '').toString().toLowerCase().includes(term)) return true;
+        }
+      }
+
+      return false;
     });
   }, [deviceContacts, contactSearch]);
 
   // Bolt: Memoize list elements to avoid re-creating them on every render
-  // const threadListElements = useMemo(() => { ... }); // removed unused
-
   const messageListElements = useMemo(() => (
     messages.map(msg => (
       <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} />
@@ -1530,7 +1942,9 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setIsLoggingIn(false);
-      setActivePanel(currentUser ? 'home' : 'home');
+      if (currentUser) {
+        setActivePanel('home');
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -1575,7 +1989,16 @@ function App() {
         remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? isPremium,
         autoUpdateContactInfo: data.autoUpdateContactInfo ?? true,
         timeFormat: data.timeFormat ?? 'AUTO',
-        thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? true
+        thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? true,
+        beaconLauncherEnabled: data.beaconLauncherEnabled ?? false,
+        otpCleanupEnabled: data.otpCleanupEnabled ?? false,
+        emailFallbackEnabled: data.emailFallbackEnabled ?? false,
+        crashDetectionEnabled: data.crashDetectionEnabled ?? false,
+        aiSummariesEnabled: data.aiSummariesEnabled ?? false,
+        firebaseMessagingEnabled: data.firebaseMessagingEnabled ?? true,
+        mergedExperienceEnabled: data.mergedExperienceEnabled ?? false,
+        privateSafeEnabled: data.privateSafeEnabled ?? false,
+        smartRepliesEnabled: data.smartRepliesEnabled ?? true
       });
       if (data.lineInboxMode) setLineInboxMode(data.lineInboxMode);
       if (data.activeLineId) setActiveLineId(data.activeLineId);
@@ -1621,7 +2044,6 @@ function App() {
       if (newUnlocks.length > 0) {
         updates.unlockedThemeIds = [...currentUnlockedIds, ...newUnlocks];
       }
-      // Removed unused setUnlockedThemes call
 
       if (newAvatarUnlocks.length > 0) {
         updates.unlockedAvatarIds = [...currentUnlockedAvatars, ...newAvatarUnlocks];
@@ -1729,7 +2151,29 @@ function App() {
           .map(doc => ({ id: doc.id, ...doc.data() }))
           .filter(line => line.disabled !== true);
         setLines(lineItems);
+
+        // Attach listeners for new/active lines
         lineItems.forEach(line => attachLine(line.id));
+
+        // Detach listeners for removed or disabled lines
+        const activeIds = new Set(lineItems.map(l => l.id));
+        // Safe iteration: collect IDs to remove first
+        const idsToRemove = Array.from(threadUnsubs.keys()).filter(id => !activeIds.has(id));
+
+        if (idsToRemove.length > 0) {
+          idsToRemove.forEach(id => {
+            const unsub = threadUnsubs.get(id);
+            if (unsub) unsub();
+            threadUnsubs.delete(id);
+          });
+
+          setLineThreads(prev => {
+            const next = { ...prev };
+            idsToRemove.forEach(id => delete next[id]);
+            return next;
+          });
+        }
+
         setIsLoadingThreads(false);
       });
 
@@ -1789,13 +2233,6 @@ function App() {
     }
   }, [user, selectedThread, isPremiumUser, remoteSettings.remoteWebAccessEnabled]);
 
-  useEffect(() => {
-    if (selectedThread?.address) {
-      setComposeAddress(selectedThread.address);
-    }
-    setComposeBody('');
-    setSendStatus('');
-  }, [selectedThread?.address]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -1899,53 +2336,92 @@ function App() {
     );
   }, [activePanel, userLocation]);
 
+  // Bolt: Optimized map marker reconciliation to prevent full re-render/flicker on every update
   useEffect(() => {
     if (!mapInstanceRef.current || !window.google?.maps) return;
-    mapMarkersRef.current.forEach((marker) => marker.setMap(null));
-    mapMarkersRef.current.clear();
-    if (mapHomeMarkerRef.current) {
-      mapHomeMarkerRef.current.setMap(null);
-      mapHomeMarkerRef.current = null;
-    }
 
+    // 1. Handle Home Marker (User Location) when no alerts
     if (!filteredAlerts.length) {
+      // Clear all alert markers since we are in "Home Mode"
+      if (mapMarkersRef.current.size > 0) {
+        mapMarkersRef.current.forEach((marker) => marker.setMap(null));
+        mapMarkersRef.current.clear();
+      }
+
       const center = userLocation ?? defaultMapCenter;
       mapInstanceRef.current.setCenter(center);
       mapInstanceRef.current.setZoom(userLocation ? 12 : 3);
+
       if (userLocation) {
-        mapHomeMarkerRef.current = new window.google.maps.Marker({
-          position: center,
-          map: mapInstanceRef.current,
-          title: 'Your location',
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            fillColor: '#3b82f6',
-            fillOpacity: 0.9,
-            strokeColor: '#0b0e16',
-            strokeWeight: 2,
-            scale: 7
-          }
-        });
+        if (!mapHomeMarkerRef.current) {
+          mapHomeMarkerRef.current = new window.google.maps.Marker({
+            position: center,
+            map: mapInstanceRef.current,
+            title: 'Your location',
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              fillColor: '#3b82f6',
+              fillOpacity: 0.9,
+              strokeColor: '#0b0e16',
+              strokeWeight: 2,
+              scale: 7
+            }
+          });
+        } else {
+          mapHomeMarkerRef.current.setPosition(center);
+          mapHomeMarkerRef.current.setMap(mapInstanceRef.current);
+        }
+      } else {
+        if (mapHomeMarkerRef.current) mapHomeMarkerRef.current.setMap(null);
       }
       return;
     }
 
+    // We have alerts, so hide Home marker
+    if (mapHomeMarkerRef.current) {
+      mapHomeMarkerRef.current.setMap(null);
+    }
+
+    // 2. Reconcile Alert Markers (Diffing)
     const bounds = new window.google.maps.LatLngBounds();
+    const activeIds = new Set();
+    let markersChanged = false;
+
     filteredAlerts.forEach((alert) => {
-      const color = alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent;
-      const marker = new window.google.maps.Marker({
-        position: { lat: alert.lat, lng: alert.lng },
-        map: mapInstanceRef.current,
-        title: `${alertBadgeCopy[alert.severity] ?? 'Alert'} from ${alert.address}`,
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          fillColor: color,
-          fillOpacity: 0.9,
-          strokeColor: '#0b0e16',
-          strokeWeight: 2,
-          scale: 8
+      activeIds.add(alert.id);
+      bounds.extend({ lat: alert.lat, lng: alert.lng });
+
+      let marker = mapMarkersRef.current.get(alert.id);
+
+      if (!marker) {
+        // Create new marker
+        markersChanged = true;
+        const color = alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent;
+        marker = new window.google.maps.Marker({
+          position: { lat: alert.lat, lng: alert.lng },
+          map: mapInstanceRef.current,
+          title: `${alertBadgeCopy[alert.severity] ?? 'Alert'} from ${alert.address}`,
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            fillColor: color,
+            fillOpacity: 0.9,
+            strokeColor: '#0b0e16',
+            strokeWeight: 2,
+            scale: 8
+          }
+        });
+        mapMarkersRef.current.set(alert.id, marker);
+      } else {
+        // Ensure marker is on map (in case it was hidden previously, though unlikely here)
+        if (marker.getMap() !== mapInstanceRef.current) {
+          marker.setMap(mapInstanceRef.current);
         }
-      });
+        // Could update position here if alerts move, but assuming static for performance
+      }
+
+      // Always update listener to capture fresh closure variables (alert data)
+      // This is cheaper than recreating the marker
+      window.google.maps.event.clearListeners(marker, 'click');
       marker.addListener('click', () => {
         if (!mapInfoRef.current) {
           mapInfoRef.current = new window.google.maps.InfoWindow();
@@ -1964,10 +2440,30 @@ function App() {
         );
         mapInfoRef.current.open(mapInstanceRef.current, marker);
       });
-      mapMarkersRef.current.set(alert.id, marker);
-      bounds.extend({ lat: alert.lat, lng: alert.lng });
     });
-    mapInstanceRef.current.fitBounds(bounds);
+
+    // Remove stale markers
+    const idsToRemove = [];
+    mapMarkersRef.current.forEach((_, id) => {
+      if (!activeIds.has(id)) {
+        idsToRemove.push(id);
+      }
+    });
+
+    if (idsToRemove.length > 0) {
+      markersChanged = true;
+      idsToRemove.forEach((id) => {
+        const marker = mapMarkersRef.current.get(id);
+        marker.setMap(null);
+        mapMarkersRef.current.delete(id);
+      });
+    }
+
+    // Only fit bounds if markers changed (added/removed) or first load to avoid disrupting user panning
+    // Use getBounds() check to detect first load
+    if (markersChanged || !mapInstanceRef.current.getBounds()) {
+      mapInstanceRef.current.fitBounds(bounds);
+    }
   }, [filteredAlerts, userLocation, defaultMapCenter]);
 
   // Bolt: Wrap handlers in useCallback to ensure stable references for React.memo
@@ -2171,6 +2667,7 @@ function App() {
       setContactStatus("Display name is required.");
       return;
     }
+    setIsSavingContact(true);
     setContactStatus("Saving contact...");
     try {
       const payload = {
@@ -2200,6 +2697,8 @@ function App() {
     } catch (error) {
       console.error("Contact save failed", error);
       setContactStatus(error?.message ?? "Contact save failed.");
+    } finally {
+      setIsSavingContact(false);
     }
   };
 
@@ -2263,6 +2762,7 @@ function App() {
       setThemePublishStatus("Theme name is required.");
       return;
     }
+    setIsPublishingTheme(true);
     setThemePublishStatus("Publishing theme...");
     const backgroundImageUrl = themePublishForm.backgroundImageUrl.trim();
     const normalized = normalizeTheme({
@@ -2308,6 +2808,8 @@ function App() {
     } catch (error) {
       console.error("Theme publish failed", error);
       setThemePublishStatus(error?.message ?? "Theme publish failed.");
+    } finally {
+      setIsPublishingTheme(false);
     }
   };
 
@@ -2320,6 +2822,16 @@ function App() {
         remoteWebAccessEnabled: remoteSettings.remoteWebAccessEnabled,
         autoUpdateContactInfo: remoteSettings.autoUpdateContactInfo,
         timeFormat: remoteSettings.timeFormat,
+        thirdPartyExtensionsEnabled: remoteSettings.thirdPartyExtensionsEnabled,
+        beaconLauncherEnabled: remoteSettings.beaconLauncherEnabled,
+        otpCleanupEnabled: remoteSettings.otpCleanupEnabled,
+        emailFallbackEnabled: remoteSettings.emailFallbackEnabled,
+        crashDetectionEnabled: remoteSettings.crashDetectionEnabled,
+        aiSummariesEnabled: remoteSettings.aiSummariesEnabled,
+        firebaseMessagingEnabled: remoteSettings.firebaseMessagingEnabled,
+        mergedExperienceEnabled: remoteSettings.mergedExperienceEnabled,
+        privateSafeEnabled: remoteSettings.privateSafeEnabled,
+        smartRepliesEnabled: remoteSettings.smartRepliesEnabled,
         settingsUpdatedAt: serverTimestamp()
       }, { merge: true });
       setRemoteSettingsStatus("Settings updated.");
@@ -2330,6 +2842,52 @@ function App() {
       setIsSavingSettings(false);
     }
   };
+
+  const handleQuickSetup = async (mode) => {
+    if (!user) return;
+    const isEssentials = mode === 'essentials';
+    const isPower = mode === 'power';
+
+    // Logic mirroring Android
+    const newSettings = { ...remoteSettings };
+
+    if (isEssentials) {
+      newSettings.beaconLauncherEnabled = true;
+      newSettings.firebaseMessagingEnabled = true;
+      newSettings.emailFallbackEnabled = true;
+      newSettings.otpCleanupEnabled = true;
+      newSettings.aiSummariesEnabled = false;
+      newSettings.remoteWebAccessEnabled = false;
+      newSettings.crashDetectionEnabled = false;
+      newSettings.mergedExperienceEnabled = false;
+      newSettings.privateSafeEnabled = false;
+      newSettings.smartRepliesEnabled = true;
+    } else if (isPower) {
+      newSettings.beaconLauncherEnabled = true;
+      newSettings.firebaseMessagingEnabled = true;
+      newSettings.emailFallbackEnabled = true;
+      newSettings.otpCleanupEnabled = true;
+      newSettings.aiSummariesEnabled = isPremiumUser; // Check premium
+      newSettings.remoteWebAccessEnabled = isPremiumUser;
+      newSettings.crashDetectionEnabled = isPremiumUser;
+      newSettings.mergedExperienceEnabled = true;
+      newSettings.thirdPartyExtensionsEnabled = true;
+      newSettings.privateSafeEnabled = true;
+      newSettings.smartRepliesEnabled = true;
+    }
+
+    setRemoteSettings(newSettings);
+    // Auto-save
+    try {
+      await setDoc(doc(db, "users", user.uid), {
+        ...newSettings,
+        settingsUpdatedAt: serverTimestamp()
+      }, { merge: true });
+    } catch (e) {
+      console.error("Quick setup failed", e);
+    }
+  };
+
   const handleAddExtension = (e) => {
     e?.preventDefault();
     if (!extensionForm.name.trim()) {
@@ -2442,40 +3000,14 @@ function App() {
   const handleLogout = useCallback(async () => {
     await signOut(auth);
     setSelectedThread(null);
-    setComposeAddress('');
-    setComposeBody('');
-    setSendStatus('');
     setActivePanel('home');
   }, []);
 
-  const handleSendMessage = async () => {
-    if (!user) return;
-    const address = composeAddress.trim();
-    const body = composeBody.trim();
-    const effectiveLineId = lineInboxMode === 'PER_LINE' ? (sendLineId || activeLineId || lines[0]?.id || null) : null;
-    if (!address || !body) {
-      setSendStatus("Add a phone number and message.");
-      return;
-    }
-    setIsSending(true);
-    setSendStatus('');
-    try {
-      await addDoc(collection(db, "users", user.uid, "outbox"), {
-        address,
-        body,
-        createdAt: serverTimestamp(),
-        source: "web",
-        lineId: effectiveLineId
-      });
-      setComposeBody('');
-      setSendStatus("Queued for sending from your device.");
-    } catch (error) {
-      console.error("Send failed", error);
-      setSendStatus("Send failed. Try again.");
-    } finally {
-      setIsSending(false);
-    }
-  };
+  // Bolt: Stable handler for new thread button
+  const handleNewThread = useCallback(() => {
+    setActivePanel('beacon');
+    setSelectedThread(null);
+  }, []);
 
   // Bolt: Stable handler to prevent ghost content when switching threads
   const handleThreadSelect = useCallback((thread) => {
@@ -2483,7 +3015,6 @@ function App() {
     setSelectedThread(thread);
     if (thread?.lineId) {
       setActiveLineId((prev) => prev ?? thread.lineId);
-      setSendLineId(thread.lineId);
     }
   }, []);
 
@@ -2503,7 +3034,7 @@ function App() {
     if (lineInboxMode === 'COMBINED') return combinedThreads;
     const chosenLine = activeLineId || lines[0]?.id || null;
     const current = chosenLine ? lineThreads[chosenLine] || [] : [];
-    return current.sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
+    return [...current].sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
   }, [lineInboxMode, activeLineId, lines, lineThreads, combinedThreads]);
 
   // Bolt: Memoize thread list elements to prevent re-rendering on every compose keystroke.
@@ -2524,9 +3055,17 @@ function App() {
   const isPremium = isPremiumUser;
   const tierLabel = isPremiumUser ? 'Premium' : (isProUser ? 'Pro' : 'Free');
 
+  const navLogo = useMemo(() => {
+     if (remoteSettings.mergedExperienceEnabled) {
+         return beaconLogo;
+     }
+     return logo;
+  }, [remoteSettings.mergedExperienceEnabled]);
+
   if (!user) {
     return (
       <div className="app-shell" style={themeVars}>
+        <div className="noise-overlay" />
         {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
         <a href="#main-content" className="skip-link">Skip to main content</a>
         <div className="container login-container" id="main-content">
@@ -2622,178 +3161,28 @@ function App() {
 
   return (
     <div className="app-shell" style={themeVars}>
+      <div className="noise-overlay" />
       {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <div className="app-container">
-        <div className="sidebar">
-          <div className="sidebar-header">
-            <div className="sidebar-brand">
-              <img src={logo} alt="PulseLink Suite" className="brand-logo small" />
-              <div>
-                <div className="brand-title">PulseLink Suite</div>
-                <div className="brand-subtitle">{tierLabel} Web Access</div>        
-              </div>
-            </div>
-            <div className="sidebar-actions">
-              {activePanel === 'beacon' && (
-                <button
-                  onClick={() => {
-                    setActivePanel('beacon');
-                    setSelectedThread(null);
-                    setComposeAddress('');
-                    setComposeBody('');
-                    setSendStatus('');
-                  }}
-                  className="secondary-btn"
-                  aria-label="Start new conversation"
-                >
-                  New
-                </button>
-              )}
-              <button onClick={handleLogout} className="ghost-btn">Logout</button>
-            </div>
-          </div>
-          <div className="sidebar-nav">
-            <button
-              className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
-              onClick={() => setActivePanel('home')}
-              title="Home"
-              aria-current={activePanel === 'home' ? 'page' : undefined}
-            >
-              <HomeIcon />
-              <span>Home</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
-              onClick={() => setActivePanel('pulselink')}
-              title="PulseLink"
-              aria-current={activePanel === 'pulselink' ? 'page' : undefined}
-            >
-              <img src={logo} alt="PulseLink" />
-              <span>PulseLink</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
-              onClick={() => setActivePanel('beacon')}
-              title="Beacon"
-              aria-current={activePanel === 'beacon' ? 'page' : undefined}
-            >
-              <img src={beaconLogo} alt="Beacon" />
-              <span>Beacon</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
-              onClick={() => setActivePanel('ringersong')}
-              title="RingerSong"
-              aria-current={activePanel === 'ringersong' ? 'page' : undefined}
-            >
-              <img src={ringersongLogo} alt="RingerSong" />
-              <span>RingerSong</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
-              onClick={() => setActivePanel('map')}
-              title="Map"
-              aria-current={activePanel === 'map' ? 'page' : undefined}
-            >
-              <MapIcon />
-              <span>Map</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
-              onClick={() => setActivePanel('contacts')}
-              title="Contacts"
-              aria-current={activePanel === 'contacts' ? 'page' : undefined}
-            >
-              <ContactIcon />
-              <span>Contacts</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
-              onClick={() => setActivePanel('themes')}
-              title="Themes"
-              aria-current={activePanel === 'themes' ? 'page' : undefined}
-            >
-              <ThemeIcon />
-              <span>Themes</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
-              onClick={() => setActivePanel('extensions')}
-              title="Extensions"
-              aria-current={activePanel === 'extensions' ? 'page' : undefined}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-              <span>Extensions</span>
-              <span className="badge-new">NEW</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
-              onClick={() => setActivePanel('settings')}
-              title="Settings"
-              aria-current={activePanel === 'settings' ? 'page' : undefined}
-            >
-              <SettingsIcon />
-              <span>Settings</span>
-            </button>
-          </div>
-          {activePanel === 'beacon' ? (
-            <div className="thread-list">
-              {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
-                <div className="line-tabs" aria-label="Device lines">
-                  <button
-                    className={`chip ${!activeLineId ? 'active' : ''}`}
-                    onClick={() => setActiveLineId(null)}
-                  >
-                    All
-                  </button>
-                  {lines.map((line) => (
-                    <button
-                      key={line.id}
-                      className={`chip ${activeLineId === line.id ? 'active' : ''}`}
-                      onClick={() => setActiveLineId(line.id)}
-                      title={line.phoneNumber || 'Line'}
-                    >
-                      {line.label || line.phoneNumber || line.id.slice(0, 6)}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {isLoadingThreads ? (
-                <div className="sidebar-placeholder">
-                  <Spinner />
-                  <div className="sidebar-tip muted">Loading conversations...</div>
-                </div>
-              ) : activeLineThreads.length === 0 ? (
-                <div className="sidebar-placeholder">
-                  <div className="sidebar-tip">
-                    <strong>No conversations found</strong>
-                  </div>
-                  <div className="sidebar-tip muted">
-                    To see your messages here:
-                    <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
-                      <li>Open PulseLink on your phone</li>
-                      <li>Go to Extensions Store</li>
-                      <li>Enable &quot;Remote Web Access&quot;</li>
-                    </ol>
-                    {!isPremium && (
-                      <div className="badge badge-premium" style={{ display: 'inline-block', marginTop: '8px', padding: '2px 8px', borderRadius: '4px', background: 'var(--accent)', color: '#fff', fontSize: '0.8em' }}>
-                        Premium Required
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                threadListElements
-              )}
-            </div>
-          ) : (
-            <div className="sidebar-placeholder">
-              <div className="sidebar-tip">Use the tiles on Home to jump into PulseLink or Beacon.</div>
-              <div className="sidebar-tip muted">Theme and settings sync to your device.</div>
-            </div>
-          )}
-        </div>
+        <Sidebar
+          activePanel={activePanel}
+          setActivePanel={setActivePanel}
+          tierLabel={tierLabel}
+          handleLogout={handleLogout}
+          handleNewThread={handleNewThread}
+          lines={lines}
+          activeLineId={activeLineId}
+          setActiveLineId={setActiveLineId}
+          lineInboxMode={lineInboxMode}
+          isLoadingThreads={isLoadingThreads}
+          threadCount={activeLineThreads.length}
+          threadListElements={threadListElements}
+          isPremium={isPremium}
+          remoteSettings={remoteSettings}
+          navLogo={navLogo}
+          brandTitle={remoteSettings.mergedExperienceEnabled ? "PulseLink Unified" : "PulseLink Suite"}
+        />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
             <div className="home-panel">
@@ -3072,10 +3461,20 @@ function App() {
                     Allow remote sound changes
                   </label>
                   <div className="contact-actions">
-                    <button className="primary-btn" onClick={handleSaveContact}>
-                      {editingContactId ? 'Update contact' : 'Add contact'}
+                    <button
+                      className="primary-btn"
+                      onClick={handleSaveContact}
+                      disabled={isSavingContact}
+                      aria-busy={isSavingContact}
+                    >
+                      {isSavingContact ? (
+                        <>
+                          <Spinner />
+                          {editingContactId ? 'Updating...' : 'Saving...'}
+                        </>
+                      ) : (editingContactId ? 'Update contact' : 'Add contact')}
                     </button>
-                    <button className="ghost-btn" onClick={resetContactForm}>
+                    <button className="ghost-btn" onClick={resetContactForm} disabled={isSavingContact}>
                       Clear
                     </button>
                   </div>
@@ -3095,13 +3494,25 @@ function App() {
                 <div className="contact-count">
                   {filteredDeviceContacts.length} contact{filteredDeviceContacts.length === 1 ? '' : 's'}
                 </div>
-                <input
-                  className="login-input contact-search"
-                  placeholder="Search by name, phone, or email"
-                  aria-label="Search contacts"
-                  value={contactSearch}
-                  onChange={(e) => setContactSearch(e.target.value)}
-                />
+                <div className="sidebar-actions" style={{ flex: 1 }}>
+                  <input
+                    className="login-input contact-search"
+                    placeholder="Search by name, phone, or email"
+                    aria-label="Search contacts"
+                    value={contactSearch}
+                    onChange={(e) => setContactSearch(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  {contactSearch && (
+                    <button
+                      className="secondary-btn"
+                      onClick={() => setContactSearch('')}
+                      aria-label="Clear search"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="contact-list contact-list--full">
                 {contactListElements}
@@ -3322,7 +3733,9 @@ function App() {
                       />
                     ))}
                     {filteredThemes.length === 0 && (
-                      <div className="theme-empty">No themes yet. Be the first to publish!</div>
+                      <div className="theme-empty">
+                        No themes found.
+                      </div>
                     )}
                   </div>
                   {themeGalleryStatus && <div className="settings-status" role="status" aria-live="polite">{themeGalleryStatus}</div>}
@@ -3376,8 +3789,19 @@ function App() {
                   <p className="settings-note">
                     Suggested max: 1920x1080 and under 1.5MB. Image themes require approval.
                   </p>
-                  <button className="primary-btn" type="button" onClick={handlePublishTheme}>
-                    Publish theme
+                  <button
+                    className="primary-btn"
+                    type="button"
+                    onClick={handlePublishTheme}
+                    disabled={isPublishingTheme}
+                    aria-busy={isPublishingTheme}
+                  >
+                    {isPublishingTheme ? (
+                      <>
+                        <Spinner />
+                        Publishing...
+                      </>
+                    ) : 'Publish theme'}
                   </button>
                   {themePublishStatus && <div className="settings-status" role="status" aria-live="polite">{themePublishStatus}</div>}
                 </div>
@@ -3488,42 +3912,87 @@ function App() {
                 <h3>Extensions</h3>
                 <p>Enhance your PulseLink experience with powerful add-ons.</p>
               </div>
-              <div className="home-grid">
-                <div className="home-card">
-                  <div className="home-icon beacon">
-                    <img src={beaconLogo} alt="Beacon" />
-                  </div>
-                  <h3>Beacon Inbox</h3>
-                  <p>Advanced SMS handling with cross-device sync and theming.</p>
-                  <div className="badge" style={{background: 'var(--accent)', color: '#000', marginTop: 12, display: 'inline-block'}}>Installed</div>
-                </div>
-                <div className="home-card">
-                   <div className="home-icon ringersong">
-                    <img src={ringersongLogo} alt="RingerSong" />
-                  </div>
-                  <h3>RingerSong</h3>
-                  <p>Smart ringtone progressions using Spotify.</p>
-                  <div className="badge" style={{background: 'var(--accent)', color: '#000', marginTop: 12, display: 'inline-block'}}>Installed</div>
-                </div>
-                <div className="home-card" style={{opacity: 0.7}}>
-                  <div className="home-icon pulselink">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
-                  </div>
-                  <h3>PulseLink AI</h3>
-                  <p>Smart summaries and auto-replies. Coming soon.</p>
-                  <div className="badge" style={{background: 'var(--border)', color: 'var(--muted)', marginTop: 12, display: 'inline-block'}}>Coming Soon</div>
-                </div>
-                {!remoteSettings.thirdPartyExtensionsEnabled && (
-                    <div className="settings-card" style={{gridColumn: '1 / -1'}}>
-                        <h4>Enable Third-Party Extensions</h4>
-                        <p className="settings-note">Unlock the full potential of PulseLink by enabling community extensions.</p>
-                        <button className="primary-btn" onClick={() => {
-                            setRemoteSettings(prev => ({ ...prev, thirdPartyExtensionsEnabled: true }));
-                        handleRemoteSettingsSave();
-                        }}>Enable Beta Extensions</button>
+
+              <div className="settings-card" style={{marginBottom: 20}}>
+                <h4>Quick Setup</h4>
+                <div className="settings-row" style={{alignItems: 'stretch', gap: 16}}>
+                  <button className="home-card" style={{margin: 0, flex: 1, textAlign: 'left', alignItems: 'flex-start'}} onClick={() => handleQuickSetup('essentials')}>
+                    <div className="home-icon" style={{width: 40, height: 40, background: 'rgba(34, 211, 238, 0.1)', color: 'var(--accent)'}}>
+                      <BoltIcon />
                     </div>
-                )}
+                    <h4 style={{marginTop: 8}}>Essentials</h4>
+                    <p style={{fontSize: '0.9em', color: 'var(--muted)', margin: 0}}>Just the basics: Beacon, Relay, Email Backup, and OTP Cleanup.</p>
+                  </button>
+                  <button className="home-card" style={{margin: 0, flex: 1, textAlign: 'left', alignItems: 'flex-start'}} onClick={() => handleQuickSetup('power')}>
+                    <div className="home-icon" style={{width: 40, height: 40, background: 'rgba(34, 211, 238, 0.1)', color: 'var(--accent)'}}>
+                      <StarIcon />
+                    </div>
+                    <h4 style={{marginTop: 8}}>Power User</h4>
+                    <p style={{fontSize: '0.9em', color: 'var(--muted)', margin: 0}}>Everything enabled: AI, Crash Detection, Web Access, and more.</p>
+                  </button>
+                </div>
               </div>
+
+              <div className="home-grid">
+                {[
+                  { id: 'beaconLauncherEnabled', name: 'Beacon Inbox', desc: 'Separate launcher icon for quick access to your SMS inbox.', icon: beaconLogo, isImg: true },
+                  { id: 'firebaseMessagingEnabled', name: 'Firebase Relay', desc: 'Faster messaging between PulseLink users.', icon: <CloudSyncIcon /> },
+                  { id: 'emailFallbackEnabled', name: 'Email Backup', desc: 'Forward urgent alerts to email if SMS fails.', icon: <EmailIcon /> },
+                  { id: 'privateSafeEnabled', name: 'Private Safe', desc: 'Lock and hide sensitive conversations.', icon: <LockIcon /> },
+                  { id: 'smartRepliesEnabled', name: 'Smart Replies', desc: 'One-tap suggestion chips for incoming messages.', icon: <MessageSquareIcon /> },
+                  { id: 'otpCleanupEnabled', name: 'Smart OTP Cleanup', desc: 'Automatically deletes one-time passwords after 24 hours.', icon: <DeleteSweepIcon /> },
+                  { id: 'aiSummariesEnabled', name: 'PulseLink AI', desc: 'Smart summaries and urgency detection for your chats.', icon: <SmartToyIcon />, premium: true },
+                  { id: 'remoteWebAccessEnabled', name: 'Remote Web Access', desc: 'Sync messages and contacts to this web portal.', icon: logo, isImg: true, premium: true },
+                  { id: 'crashDetectionEnabled', name: 'Crash Detection', desc: 'Detects car crashes and notifies emergency contacts.', icon: <CarCrashIcon />, premium: true },
+                  { id: 'mergedExperienceEnabled', name: 'Unified Home', desc: 'Merge PulseLink and Beacon navigation into a single simplified experience.', icon: <HomeIcon />, premium: true },
+                  { id: 'thirdPartyExtensionsEnabled', name: '3rd Party Extensions', desc: 'Allow community-built plugins (Beta).', icon: <ExtensionIcon />, premium: true }
+                ].map(ext => {
+                  const isEnabled = remoteSettings[ext.id];
+                  const isLocked = ext.premium && !isPremiumUser;
+
+                  return (
+                    <div className="home-card" key={ext.id} style={{ opacity: isLocked ? 0.6 : 1, position: 'relative' }}>
+                      <div className="home-icon" style={{
+                         background: ext.isImg ? 'transparent' : 'rgba(255, 255, 255, 0.05)',
+                         display: 'grid',
+                         placeItems: 'center'
+                      }}>
+                        {ext.isImg ? <img src={ext.icon} alt={ext.name} /> : ext.icon}
+                      </div>
+                      <h3 style={{marginTop: 12, marginBottom: 4}}>{ext.name}</h3>
+                      <p style={{marginBottom: 16, minHeight: 40}}>{ext.desc}</p>
+
+                      {isLocked ? (
+                        <div className="badge badge-premium" style={{background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)'}}>
+                          Premium Required
+                        </div>
+                      ) : (
+                        <button
+                          className={isEnabled ? "secondary-btn" : "primary-btn"}
+                          style={{width: '100%'}}
+                          onClick={() => {
+                            setRemoteSettings(prev => ({ ...prev, [ext.id]: !prev[ext.id] }));
+                            // We trigger a save after a short delay or user leaves, but here we can just auto-save for UX
+                            // But handleRemoteSettingsSave uses current state, so we need to wait for state update or pass new state
+                            // Better to just update state and let user click specific save or use effect.
+                            // Actually, let's use a specialized save or the existing save button in Settings.
+                            // But users expect "Install/Remove" to be immediate.
+                            // We can duplicate the save logic here.
+                             const next = { ...remoteSettings, [ext.id]: !isEnabled };
+                             setDoc(doc(db, "users", user.uid), {
+                               ...next,
+                               settingsUpdatedAt: serverTimestamp()
+                             }, { merge: true });
+                          }}
+                        >
+                          {isEnabled ? "Remove" : "Install"}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
               <div className="settings-card">
                 <h4>Developer sandbox</h4>
                 <p className="settings-note">Add webhook-style extensions that run against your own account. Stored locally so you can iterate safely.</p>
@@ -3578,126 +4047,177 @@ function App() {
                 <h3>Settings</h3>
                 <p>Manage account details and shared preferences.</p>
               </div>
-              <div className="settings-grid">
-                <div className="settings-card">
-                  <h4>Account</h4>
-                  <div className="settings-row">
-                    <span className="settings-label">Signed in as</span>
-                    <span className="settings-value">{user.email || 'Unknown'}</span>
-                  </div>
-                  <div className="settings-row">
-                    <span className="settings-label">User ID</span>
-                    <span className="settings-value mono">
-                      {user.uid}
-                      <CopyButton text={user.uid} label="Copy User ID" />
-                    </span>
-                  </div>
-                  <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
-                    Send password reset email
-                  </button>
-                  {settingsStatus && <div className="settings-status" role="status" aria-live="polite">{settingsStatus}</div>}
-                </div>
-                <div className="settings-card">
-                  <h4>Web preferences</h4>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={showPreviews}
-                      onChange={(e) => setShowPreviews(e.target.checked)}
-                    />
-                    Show message previews
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={autoScroll}
-                      onChange={(e) => setAutoScroll(e.target.checked)}
-                    />
-                    Auto-scroll to latest message
-                  </label>
-                  <p className="settings-note">
-                    Preferences apply to this browser only.
-                  </p>
-                </div>
-                <div className="settings-card">
-                  <h4>PulseLink settings</h4>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.remoteWebAccessEnabled}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, remoteWebAccessEnabled: e.target.checked }))}
-                    />
-                    Enable remote web access
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.autoUpdateContactInfo}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, autoUpdateContactInfo: e.target.checked }))}
-                    />
-                    Auto-update contact info
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.thirdPartyExtensionsEnabled}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, thirdPartyExtensionsEnabled: e.target.checked }))}
-                    />
-                    Enable 3rd-party extensions (beta)
-                  </label>
-                  <label className="login-field">
-                    Time format
-                    <select
-                      className="login-input"
-                      value={remoteSettings.timeFormat}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, timeFormat: e.target.value }))}
-                    >
-                      <option value="AUTO">Auto</option>
-                      <option value="TWELVE_HOUR">12-hour</option>
-                      <option value="TWENTY_FOUR_HOUR">24-hour</option>
-                    </select>
-                  </label>
+
+              <div className="settings-search-container">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{opacity: 0.5}}>
+                  <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input
+                  className="settings-search-input"
+                  placeholder="Search settings..."
+                  aria-label="Search settings"
+                  value={settingsSearch}
+                  onChange={(e) => setSettingsSearch(e.target.value)}
+                />
+                {settingsSearch && (
                   <button
-                    className="secondary-btn"
-                    type="button"
-                    onClick={handleRemoteSettingsSave}
-                    disabled={isSavingSettings}
-                    aria-busy={isSavingSettings}
+                    className="ghost-btn icon-only"
+                    onClick={() => setSettingsSearch('')}
+                    aria-label="Clear search"
+                    title="Clear search"
+                    style={{ width: '28px', height: '28px' }}
                   >
-                    {isSavingSettings ? (
-                      <>
-                        <Spinner />
-                        Saving...
-                      </>
-                    ) : 'Save PulseLink settings'}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
                   </button>
-                  {remoteSettingsStatus && <div className="settings-status" role="status" aria-live="polite">{remoteSettingsStatus}</div>}
-                </div>
-                <div className="settings-card">
-                  <h4>Account data</h4>
-                  <p className="settings-note">
-                    Delete account removes your login and all cloud data. Clear data keeps your login but deletes synced content.
-                  </p>
-                  <div className="contact-actions">
-                    <button
-                      className="secondary-btn"
-                      type="button"
-                      onClick={handleDeleteAccountData}
-                      disabled={!!deleteAction}
-                    >
-                      {deleteAction === 'data' ? "Clearing..." : "Clear cloud data"}
-                    </button>
-                    <button
-                      className="primary-btn"
-                      type="button"
-                      onClick={handleDeleteAccount}
-                      disabled={!!deleteAction}
-                    >
-                      {deleteAction === 'account' ? "Deleting..." : "Delete account"}
-                    </button>
-                  </div>
-                  {deleteStatus && <div className="settings-status" role="status" aria-live="polite">{deleteStatus}</div>}
-                </div>
+                )}
+              </div>
+
+              <div className="settings-grid">
+                {(() => {
+                  const term = settingsSearch.toLowerCase().trim();
+                  const show = (keywords) => {
+                    if (!term) return true;
+                    return keywords.some(k => k.includes(term));
+                  };
+
+                  return (
+                    <>
+                      {show(['account', 'email', 'user id', 'password', 'reset', 'sign out', 'logout', 'profile']) && (
+                        <div className="settings-card">
+                          <h4>Account</h4>
+                          <div className="settings-row">
+                            <span className="settings-label">Signed in as</span>
+                            <span className="settings-value">{user.email || 'Unknown'}</span>
+                          </div>
+                          <div className="settings-row">
+                            <span className="settings-label">User ID</span>
+                            <span className="settings-value mono">
+                              {user.uid}
+                              <CopyButton text={user.uid} label="Copy User ID" />
+                            </span>
+                          </div>
+                          <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
+                            Send password reset email
+                          </button>
+                          {settingsStatus && <div className="settings-status" role="status" aria-live="polite">{settingsStatus}</div>}
+                        </div>
+                      )}
+
+                      {show(['web', 'previews', 'scroll', 'auto-scroll', 'message previews', 'browser']) && (
+                        <div className="settings-card">
+                          <h4>Web preferences</h4>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={showPreviews}
+                              onChange={(e) => setShowPreviews(e.target.checked)}
+                            />
+                            Show message previews
+                          </label>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={autoScroll}
+                              onChange={(e) => setAutoScroll(e.target.checked)}
+                            />
+                            Auto-scroll to latest message
+                          </label>
+                          <p className="settings-note">
+                            Preferences apply to this browser only.
+                          </p>
+                        </div>
+                      )}
+
+                      {show(['pulselink', 'remote', 'web access', 'contact info', 'extensions', '3rd party', 'time format', 'sync']) && (
+                        <div className="settings-card">
+                          <h4>PulseLink settings</h4>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={remoteSettings.remoteWebAccessEnabled}
+                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, remoteWebAccessEnabled: e.target.checked }))}
+                            />
+                            Enable remote web access
+                          </label>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={remoteSettings.autoUpdateContactInfo}
+                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, autoUpdateContactInfo: e.target.checked }))}
+                            />
+                            Auto-update contact info
+                          </label>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={remoteSettings.thirdPartyExtensionsEnabled}
+                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, thirdPartyExtensionsEnabled: e.target.checked }))}
+                            />
+                            Enable 3rd-party extensions (beta)
+                          </label>
+                          <label className="login-field">
+                            Time format
+                            <select
+                              className="login-input"
+                              value={remoteSettings.timeFormat}
+                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, timeFormat: e.target.value }))}
+                            >
+                              <option value="AUTO">Auto</option>
+                              <option value="TWELVE_HOUR">12-hour</option>
+                              <option value="TWENTY_FOUR_HOUR">24-hour</option>
+                            </select>
+                          </label>
+                          <button
+                            className="secondary-btn"
+                            type="button"
+                            onClick={handleRemoteSettingsSave}
+                            disabled={isSavingSettings}
+                            aria-busy={isSavingSettings}
+                          >
+                            {isSavingSettings ? (
+                              <>
+                                <Spinner />
+                                Saving...
+                              </>
+                            ) : 'Save PulseLink settings'}
+                          </button>
+                          {remoteSettingsStatus && <div className="settings-status" role="status" aria-live="polite">{remoteSettingsStatus}</div>}
+                        </div>
+                      )}
+
+                      {show(['data', 'delete', 'clear', 'cloud', 'account data', 'remove', 'privacy']) && (
+                        <div className="settings-card">
+                          <h4>Account data</h4>
+                          <p className="settings-note">
+                            Delete account removes your login and all cloud data. Clear data keeps your login but deletes synced content.
+                          </p>
+                          <div className="contact-actions">
+                            <button
+                              className="secondary-btn"
+                              type="button"
+                              onClick={handleDeleteAccountData}
+                              disabled={!!deleteAction}
+                            >
+                              {deleteAction === 'data' ? "Clearing..." : "Clear cloud data"}
+                            </button>
+                            <button
+                              className="primary-btn"
+                              type="button"
+                              onClick={handleDeleteAccount}
+                              disabled={!!deleteAction}
+                            >
+                              {deleteAction === 'account' ? "Deleting..." : "Delete account"}
+                            </button>
+                          </div>
+                          {deleteStatus && <div className="settings-status" role="status" aria-live="polite">{deleteStatus}</div>}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -3751,64 +4271,15 @@ function App() {
                     <div>Select a thread or start a new message</div>
                   </div>
                 )}
-                <div className="composer">
-                  <div className="composer-row">
-                    <label className="composer-label" htmlFor="compose-address">To</label>
-                    <input
-                      id="compose-address"
-                      className="composer-input"
-                      type="tel"
-                      placeholder="Phone number"
-                      value={composeAddress}
-                      onChange={(e) => setComposeAddress(e.target.value)}
-                    />
-                  </div>
-                  {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
-                    <div className="composer-row">
-                      <label className="composer-label" htmlFor="compose-line">Send from</label>
-                      <select
-                        id="compose-line"
-                        className="composer-input"
-                        value={sendLineId || ''}
-                        onChange={(e) => setSendLineId(e.target.value)}
-                      >
-                        <option value="">Primary device</option>
-                        {lines.map(line => (
-                          <option key={line.id} value={line.id}>
-                            {(line.label || line.phoneNumber || line.id.slice(0, 6))}
-                            {line.primaryDeviceId ? ' • primary' : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  <div className="composer-row composer-actions">
-                    <textarea
-                      className="composer-textarea"
-                      placeholder="Type a message... (Ctrl+Enter to send)"
-                      aria-label="Message body"
-                      value={composeBody}
-                      onChange={(e) => setComposeBody(e.target.value)}
-                      onKeyDown={(e) => {
-                        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                          e.preventDefault();
-                          handleSendMessage();
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={handleSendMessage}
-                      disabled={isSending || isLoggingIn}
-                      className="primary-btn"
-                    >
-                      {isSending ? "Sending..." : "Send"}
-                    </button>
-                  </div>
-                  {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
-                  <div className="compose-hint">
-                    Messages are sent from your phone when it&apos;s online and signed in.
-                  </div>
-                </div>
+                <MessageComposer
+                  user={user}
+                  db={db}
+                  selectedThread={selectedThread}
+                  lineInboxMode={lineInboxMode}
+                  activeLineId={activeLineId}
+                  lines={lines}
+                  isLoggingIn={isLoggingIn}
+                />
               </>
             ) : (
               <div className="empty-state">

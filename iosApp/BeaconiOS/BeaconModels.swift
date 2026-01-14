@@ -15,6 +15,7 @@ enum BeaconPresence: String {
 struct BeaconContactCard: Identifiable, Hashable {
     let id = UUID()
     let threadId: String
+    var lineId: String? = nil
     let name: String
     let address: String
     let role: String
@@ -26,7 +27,7 @@ struct BeaconContactCard: Identifiable, Hashable {
 }
 
 struct BeaconConversationMessage: Identifiable {
-    let id = UUID()
+    let id: String
     let sender: String
     let text: String
     let timestamp: Date

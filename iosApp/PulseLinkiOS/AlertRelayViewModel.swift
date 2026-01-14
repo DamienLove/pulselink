@@ -22,6 +22,7 @@ enum Presence: String {
 struct ContactCard: Identifiable, Hashable {
     let id = UUID()
     let threadId: String
+    var lineId: String? = nil
     let name: String
     let address: String // Phone number or unique ID
     let role: String
@@ -33,7 +34,7 @@ struct ContactCard: Identifiable, Hashable {
 }
 
 struct ConversationMessage: Identifiable {
-    let id = UUID()
+    let id: String
     let sender: String
     let text: String
     let timestamp: Date
@@ -200,6 +201,7 @@ final class AlertRelayViewModel: ObservableObject {
 
     func sendMessage(to contact: ContactCard, text: String, urgent: Bool) {
         let message = ConversationMessage(
+            id: UUID().uuidString,
             sender: "You",
             text: text,
             timestamp: Date(),

@@ -13,11 +13,19 @@ class InboxPreferencesRepository(private val context: Context) {
 
     private val pinnedKey = stringPreferencesKey("pinned_threads")
     private val archivedKey = stringPreferencesKey("archived_threads")
+    private val delayedSendKey = androidx.datastore.preferences.core.intPreferencesKey("delayed_send_timeout")
 
     val flow: Flow<InboxState> = context.inboxDataStore.data.map { prefs ->
         val pinned = decodeSet(prefs[pinnedKey])
         val archived = decodeSet(prefs[archivedKey])
-        InboxState(pinnedThreadIds = pinned, archivedThreadIds = archived)
+        val delayedSend = prefs[delayedSendKey] ?: 5
+        InboxState(pinnedThreadIds = pinned, archivedThreadIds = archived, delayedSendTimeout = delayedSend)
+    }
+
+    suspend fun setDelayedSendTimeout(seconds: Int) {
+        context.inboxDataStore.edit { prefs ->
+            prefs[delayedSendKey] = seconds.coerceIn(0, 30)
+        }
     }
 
     suspend fun togglePin(threadId: Long) {

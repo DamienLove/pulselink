@@ -8,6 +8,7 @@ import android.os.Build
 import android.provider.Telephony
 import android.telephony.SmsMessage
 import com.pulselink.beacon.data.MessageNotificationPreferences
+import com.pulselink.beacon.data.SmsSyncManager
 import com.pulselink.beacon.notifications.MessageNotificationManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +37,11 @@ class SmsReceiver : BroadcastReceiver() {
                 val body = msgs.joinToString(separator = "") { it.displayMessageBody }.trim()
                 if (origin.isNotBlank() && body.isNotBlank()) {
                     val timestamp = msgs.maxOfOrNull { it.timestampMillis } ?: System.currentTimeMillis()
+
+                    runCatching {
+                        SmsSyncManager.getInstance(context).syncIncoming(origin, body, timestamp)
+                    }
+
                     val settings = MessageNotificationPreferences(context).getConfig()
                     val threadId = runCatching {
                         Telephony.Threads.getOrCreateThreadId(context, origin)

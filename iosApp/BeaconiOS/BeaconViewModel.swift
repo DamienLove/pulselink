@@ -91,6 +91,7 @@ final class BeaconViewModel: ObservableObject {
 
     func sendMessage(to contact: BeaconContactCard, text: String) {
         let message = BeaconConversationMessage(
+            id: UUID().uuidString,
             sender: "You",
             text: text,
             timestamp: Date(),

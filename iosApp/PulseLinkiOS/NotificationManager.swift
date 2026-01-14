@@ -1,6 +1,7 @@
 import Foundation
 import UserNotifications
 import AVFoundation
+import AudioToolbox
 
 final class NotificationManager {
     static let shared = NotificationManager()

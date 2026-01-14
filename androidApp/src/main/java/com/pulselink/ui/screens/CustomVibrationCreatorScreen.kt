@@ -4,7 +4,6 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,7 +47,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -56,6 +54,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import java.util.UUID
+
+private data class VibrationTap(
+    val startTime: Long,
+    val duration: Long
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,68 +73,54 @@ fun CustomVibrationCreatorScreen(
     var showSaveDialog by remember { mutableStateOf(false) }
     var patternName by remember { mutableStateOf("") }
     var recordingStartTime by remember { mutableLongStateOf(0L) }
-    var lastEventTime by remember { mutableLongStateOf(0L) }
-    val tapTimestamps = remember { mutableStateListOf<Long>() }
+    val tapEvents = remember { mutableStateListOf<VibrationTap>() }
     var elapsedTime by remember { mutableLongStateOf(0L) }
     val maxRecordingTime = 5000L // 5 seconds max
-
-    // Update elapsed time while recording
-    LaunchedEffect(isRecording) {
-        while (isRecording) {
-            elapsedTime = System.currentTimeMillis() - recordingStartTime
-            if (elapsedTime >= maxRecordingTime) {
-                isRecording = false
-            }
-            delay(50)
-        }
-    }
+    val minPulseMs = 50L
+    val maxPulseMs = 1500L
+    val minGapMs = 50L
 
     fun startRecording() {
-        tapTimestamps.clear()
+        tapEvents.clear()
         recordingStartTime = System.currentTimeMillis()
-        lastEventTime = recordingStartTime
         isRecording = true
         elapsedTime = 0L
     }
 
     fun stopRecording() {
         isRecording = false
-        if (tapTimestamps.size >= 2) {
+        if (tapEvents.isNotEmpty()) {
             showSaveDialog = true
         }
     }
 
-    fun handleTap() {
-        if (!isRecording) return
-
-        val now = System.currentTimeMillis()
-        tapTimestamps.add(now)
-        lastEventTime = now
-
-        // Vibrate briefly for feedback
-        vibrator?.let {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                it.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
-            } else {
-                @Suppress("DEPRECATION")
-                it.vibrate(50)
+    // Update elapsed time while recording
+    LaunchedEffect(isRecording) {
+        while (isRecording) {
+            elapsedTime = System.currentTimeMillis() - recordingStartTime
+            if (elapsedTime >= maxRecordingTime) {
+                stopRecording()
             }
+            delay(50)
         }
     }
 
     fun buildPattern(): LongArray {
-        if (tapTimestamps.size < 2) return longArrayOf(0, 300)
+        if (tapEvents.isEmpty()) return longArrayOf(0, 300)
 
         val pattern = mutableListOf<Long>()
         pattern.add(0) // Initial delay
 
-        for (i in 0 until tapTimestamps.size) {
-            val vibrationDuration = 100L
+        for (i in 0 until tapEvents.size) {
+            val tap = tapEvents[i]
+            val vibrationDuration = tap.duration.coerceIn(minPulseMs, maxPulseMs)
             pattern.add(vibrationDuration)
 
-            if (i < tapTimestamps.size - 1) {
-                val gapDuration = (tapTimestamps[i + 1] - tapTimestamps[i]) - vibrationDuration
-                pattern.add(gapDuration.coerceAtLeast(50))
+            if (i < tapEvents.size - 1) {
+                val next = tapEvents[i + 1]
+                val gapDuration = (next.startTime - (tap.startTime + vibrationDuration))
+                    .coerceAtLeast(minGapMs)
+                pattern.add(gapDuration)
             }
         }
 
@@ -216,7 +205,27 @@ fun CustomVibrationCreatorScreen(
                     .scale(tapButtonScale)
                     .pointerInput(isRecording) {
                         detectTapGestures(
-                            onTap = { if (isRecording) handleTap() }
+                            onPress = {
+                                if (!isRecording) return@detectTapGestures
+                                val pressStart = System.currentTimeMillis()
+                                vibrator?.let {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                        it.vibrate(
+                                            VibrationEffect.createOneShot(
+                                                minPulseMs,
+                                                VibrationEffect.DEFAULT_AMPLITUDE
+                                            )
+                                        )
+                                    } else {
+                                        @Suppress("DEPRECATION")
+                                        it.vibrate(minPulseMs)
+                                    }
+                                }
+                                tryAwaitRelease()
+                                val duration = (System.currentTimeMillis() - pressStart)
+                                    .coerceIn(minPulseMs, maxPulseMs)
+                                tapEvents.add(VibrationTap(pressStart, duration))
+                            }
                         )
                     },
                 shape = CircleShape,
@@ -252,9 +261,9 @@ fun CustomVibrationCreatorScreen(
                             else
                                 MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        if (isRecording && tapTimestamps.isNotEmpty()) {
+                        if (isRecording && tapEvents.isNotEmpty()) {
                             Text(
-                                text = "${tapTimestamps.size} taps",
+                                text = "${tapEvents.size} taps",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -278,7 +287,7 @@ fun CustomVibrationCreatorScreen(
                         Text("START", modifier = Modifier.padding(start = 8.dp))
                     }
 
-                    if (tapTimestamps.isNotEmpty()) {
+                    if (tapEvents.isNotEmpty()) {
                         OutlinedButton(
                             onClick = { testPattern() },
                             modifier = Modifier.weight(1f)
@@ -317,7 +326,7 @@ fun CustomVibrationCreatorScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Created ${tapTimestamps.size} vibrations",
+                        text = "Created ${tapEvents.size} vibrations",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -330,7 +339,6 @@ fun CustomVibrationCreatorScreen(
                             val pattern = buildPattern()
                             onSave(patternName, pattern)
                             showSaveDialog = false
-                            onBack()
                         }
                     },
                     enabled = patternName.isNotBlank()

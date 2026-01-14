@@ -1,47 +1,103 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+@font-face {
+  font-family: 'Inter';
+  src: url('./assets/fonts/Inter-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('./assets/fonts/Inter-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('./assets/fonts/Inter-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('./assets/fonts/Inter-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('./assets/fonts/SpaceGrotesk-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('./assets/fonts/SpaceGrotesk-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('./assets/fonts/SpaceGrotesk-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
-  /* Core Palette: "Future Deep v3" */
-  --bg: #05070f;
-  --bg-accent: #0a0e17;
-  --surface: #0e121e;
-  --surface-alt: #161b2e;
+  /* Core Palette: "Future Deep v4" - Richer blacks, vibrant accents */
+  --bg: #03050a; /* Deeper black */
+  --bg-accent: #080b14;
+  --surface: #0b101b;
+  --surface-alt: #131826;
 
   /* Text & Ink */
-  --ink: #f0f4ff;
-  --ink-dim: #b0b8d1;
-  --muted: #6b7a99;
-  --ink-muted: #6b7a99; /* Consistency alias */
+  --ink: #f0f6fc;
+  --ink-dim: #c9d1d9;
+  --muted: #8b949e;
+  --ink-muted: #8b949e;
 
-  /* Accents */
+  /* Accents - Neon Cyan & Electric Purple */
   --accent: #22d3ee;        /* Primary Cyan */
-  --accent-glow: rgba(34, 211, 238, 0.5);
+  --accent-glow: rgba(34, 211, 238, 0.6);
   --accent-strong: #0ea5e9;
+  --accent-dim: rgba(34, 211, 238, 0.1);
 
   --secondary: #00f3ff;     /* Neon Cyan Alt */
-  --secondary-glow: rgba(0, 243, 255, 0.4);
+  --secondary-glow: rgba(0, 243, 255, 0.5);
 
   --tertiary: #bc13fe;      /* Neon Purple */
-  --tertiary-glow: rgba(188, 19, 254, 0.4);
+  --tertiary-glow: rgba(188, 19, 254, 0.5);
+
+  --danger: #ff4757;
+  --success: #2ed573;
 
   --border: rgba(255, 255, 255, 0.08);
   --border-light: rgba(255, 255, 255, 0.15);
-  --bg-radial-start: #0f1623;
+  --bg-radial-start: #0a0f1c;
 
-  /* Glassmorphism */
-  --glass-bg: rgba(5, 7, 15, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-highlight: rgba(255, 255, 255, 0.12); /* New Highlight Token */
-  --glass-blur: 24px;
+  /* Glassmorphism Refined */
+  --glass-bg: rgba(3, 5, 10, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-highlight: rgba(255, 255, 255, 0.08);
+  --glass-blur: 20px;
 
   /* Shadows */
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
   --shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.8);
-  --shadow-soft: 0 12px 24px -8px rgba(0, 0, 0, 0.6);
-  --glow: 0 0 30px var(--accent-glow);
+  --shadow-lg: 0 32px 64px -12px rgba(0, 0, 0, 0.9);
+  --shadow-glow: 0 0 30px var(--accent-glow);
 
   /* Typography */
-  --font-display: "Space Grotesk", sans-serif;
-  --font-body: "DM Sans", sans-serif;
+  --font-display: "Space Grotesk", system-ui, -apple-system, sans-serif;
+  --font-body: "Inter", "DM Sans", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", "Cascadia Code", monospace;
 
   font-family: var(--font-body);
@@ -59,31 +115,40 @@
   box-sizing: border-box;
 }
 
+::selection {
+  background: rgba(34, 211, 238, 0.25);
+  color: var(--ink);
+  text-shadow: 0 0 8px var(--accent);
+}
+
 html, body {
   height: 100%;
   width: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden; /* App handles scrolling */
+  overflow: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
 }
 
 /*
-   "Alive" Background v3:
-   - Deep radial gradient
-   - Subtle grid
-   - Noise overlay (simulated via grain)
-   - Slow "breathing" animation
+   "Alive" Background v4:
+   - Smoother transitions
+   - Deeper depth
 */
 body {
   background-color: var(--bg);
   background-image:
-      radial-gradient(circle at 50% 0%, var(--bg-radial-start) 0%, transparent 80%),
-      radial-gradient(circle at 85% 90%, rgba(188, 19, 254, 0.04) 0%, transparent 45%),
-      linear-gradient(rgba(34, 211, 238, 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(34, 211, 238, 0.03) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 60px 60px, 60px 60px;
+      radial-gradient(circle at 50% 0%, var(--bg-radial-start) 0%, transparent 70%),
+      radial-gradient(circle at 85% 90%, rgba(188, 19, 254, 0.03) 0%, transparent 40%),
+      linear-gradient(rgba(34, 211, 238, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(34, 211, 238, 0.02) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 80px 80px, 80px 80px;
   background-attachment: fixed;
-  animation: breathe 24s ease-in-out infinite alternate;
+  animation: breathe 30s ease-in-out infinite alternate;
 }
 
 /* Subtle Vignette Overlay */
@@ -91,20 +156,29 @@ body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background: radial-gradient(circle at center, transparent 20%, rgba(0,0,0,0.5) 100%);
+  background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.6) 100%);
   pointer-events: none;
   z-index: 0;
+}
+
+/* Film Grain / Noise Overlay */
+.noise-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
 }
 
 @keyframes breathe {
   0% {
     background-position: 50% 0%, 85% 90%, 0 0, 0 0;
   }
-  50% {
-    background-position: 50% 10%, 80% 85%, 0 0, 0 0; /* Slight shift down/left */
-  }
   100% {
-    background-position: 50% 0%, 90% 95%, 0 0, 0 0; /* Slight shift right/down */
+    background-position: 50% 15%, 80% 95%, 0 0, 0 0;
   }
 }
 
@@ -127,21 +201,27 @@ select {
   outline: none;
 }
 
-/* Ultra-thin "Stealth" Scrollbar */
+/* Adaptive Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 4px;
-  transition: background 0.2s;
+  border: 2px solid transparent; /* Padding effect */
+  background-clip: content-box;
+  transition: background 0.2s, border 0.2s;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 211, 238, 0.4); /* Cyan hint on hover */
+  background-color: var(--accent);
+  border: 0 solid transparent; /* Expands on hover */
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* Global Animation Keyframes */
@@ -151,8 +231,13 @@ select {
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(24px); }
+  from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes scaleIn {
@@ -166,8 +251,21 @@ select {
   100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
 }
 
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 /* Utility Classes */
 .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
-.animate-slide-up { animation: slideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.animate-scale-in { animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.animate-slide-up { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-scale-in { animation: scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 .mono { font-family: var(--font-mono); }
+
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow);
+}

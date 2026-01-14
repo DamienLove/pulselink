@@ -11,6 +11,14 @@ final class BeaconDeviceManager {
 
     private init() {}
 
+    var tier: String {
+        #if PRO
+        return "pro"
+        #else
+        return "free"
+        #endif
+    }
+
     @MainActor
     func registerDevice() async {
         #if canImport(FirebaseFirestore)
@@ -32,6 +40,7 @@ final class BeaconDeviceManager {
             "model": UIDevice.current.model,
             "platform": "iOS",
             "app": "Beacon",
+            "tier": tier,
             "fcmToken": token ?? "",
             "updatedAt": FieldValue.serverTimestamp()
         ]

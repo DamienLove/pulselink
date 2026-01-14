@@ -376,8 +376,9 @@ class RingerViewModel @Inject constructor(
 
                 // Keep the YouTube URI format so RingerPlaybackService knows it's a YouTube song
                 // The service will look up the downloaded file path when needed
+                val songId = UUID.randomUUID().toString()
                 val songEntry = SongEntry(
-                    id = track.id ?: java.util.UUID.randomUUID().toString(),
+                    id = songId,
                     title = "${track.name ?: "Unknown Track"} - ${track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"}",
                     uri = track.uri!!,  // Keep "youtube:video:VIDEO_ID" format
                     source = SongSource.YOUTUBE_MUSIC,  // Mark as YouTube Music, not LOCAL
@@ -393,27 +394,60 @@ class RingerViewModel @Inject constructor(
                         current.copy(songs = updatedSongs, songOrder = updatedOrder)
                     }
                 }
-                onResult("Added ${track.name} (Downloaded from YouTube Music)")
+
+                // Sync YouTube track to Firestore
+                val trackData = mapOf(
+                    "youtubeId" to track.id,
+                    "uri" to track.uri,
+                    "source" to SongSource.YOUTUBE_MUSIC.name,
+                    "title" to (track.name ?: "Unknown Track"),
+                    "artist" to (track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"),
+                    "durationMs" to (track.duration_ms ?: 0L),
+                    "addedAt" to com.google.firebase.Timestamp.now(),
+                    "downloaded" to true
+                )
+
+                db.collection("users").document(uid).collection("ringer_playlist")
+                    .add(trackData)
+                    .addOnSuccessListener {
+                        onResult("Added ${track.name} (Downloaded from YouTube Music)")
+                    }
+                    .addOnFailureListener { e ->
+                         // Revert local state if sync fails
+                        viewModelScope.launch {
+                            withContext(Dispatchers.IO) {
+                                store.update { current ->
+                                    val updatedSongs = current.songs.filter { it.id != songEntry.id }
+                                    val updatedOrder = current.songOrder.filter { it != songEntry.id }
+                                    current.copy(songs = updatedSongs, songOrder = updatedOrder)
+                                }
+                            }
+                        }
+                        onResult("Failed to sync YouTube track: ${e.message}")
+                    }
                 return@launch
             }
 
-            onResult("Downloading ${track.name} for offline playback...")
-            val downloadResult = spotifyDownloader.downloadTrack(track.uri!!)
-            val localPath = when (downloadResult) {
-                is DownloadResult.Success -> {
-                    clearDownloadError()
-                    downloadResult.filePath
-                }
-                is DownloadResult.Failure -> {
-                    val message = mapDownloadError(downloadResult.error)
-                    setDownloadError(message)
-                    onResult("Download failed: $message")
+            // STREAMING MODE: No download required for Spotify.
+            // We rely on the user's installed Spotify app and Premium subscription (or Free with restrictions).
+            onResult("Checking Spotify connection...")
+
+            // Verify Spotify capabilities before adding
+            val capabilities = spotifyPlayerManager.getUserCapabilities()
+            if (capabilities == "Error" || capabilities == "Not Connected") {
+                // Try to connect once
+                val connected = spotifyPlayerManager.connect(showAuthView = true)
+                if (!connected) {
+                    onResult("Error: Could not connect to Spotify App. Please ensure Spotify is installed and logged in.")
                     return@launch
                 }
             }
 
+            onResult("Adding ${track.name} for streaming...")
+
+            val songId = UUID.randomUUID().toString()
             val songEntry = SongEntry(
-                id = track.id ?: java.util.UUID.randomUUID().toString(),        
+                id = songId,
                 title = "${track.name ?: "Unknown Track"} - ${track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"}",
                 uri = track.uri!!,
                 source = SongSource.SPOTIFY,
@@ -440,14 +474,14 @@ class RingerViewModel @Inject constructor(
                 "artist" to (track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"),
                 "durationMs" to (track.duration_ms ?: 0L),
                 "addedAt" to com.google.firebase.Timestamp.now(),
-                "localPath" to localPath,
-                "downloaded" to true
+                "localPath" to null, // No local path for streaming
+                "downloaded" to false
             )
 
-            db.collection("users").document(uid).collection("ringer_playlist")  
+            db.collection("users").document(uid).collection("ringer_playlist")
                 .add(trackData)
                 .addOnSuccessListener {
-                    onResult("Added ${track.name} (Downloaded for offline ringer)")
+                    onResult("Added ${track.name} (Streaming enabled)")
                 }
                 .addOnFailureListener { e ->
                     // Revert local state if sync fails

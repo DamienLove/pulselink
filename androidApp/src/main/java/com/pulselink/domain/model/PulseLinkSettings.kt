@@ -73,7 +73,10 @@ data class PulseLinkSettings(
     val defaultSendLineId: String? = null,
     val lineSendPreference: LineSendPreference = LineSendPreference.LAST_USED,
     val threadLineOverrides: Map<String, String> = emptyMap(),
-    val devicePhoneNumber: String? = null
+    val devicePhoneNumber: String? = null,
+    // Extensions
+    val privateSafeEnabled: Boolean = false,
+    val smartRepliesEnabled: Boolean = false
 ) {
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)
         .map { it.trim().lowercase() }

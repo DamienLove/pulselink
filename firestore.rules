@@ -94,7 +94,9 @@ service cloud.firestore {
     }
 
     match /callerIdCache/{phoneNumber} {
-      allow read: if request.auth != null;
+      // Security: Sentinel - Restrict access to single document lookups (get).
+      // Prevent bulk listing/enumeration of the cache (list).
+      allow get: if request.auth != null;
       // Security: Sentinel - Prevent cache poisoning.
       // Clients cannot be trusted to write shared global cache data.
       // Writes must be handled by a trusted backend (Cloud Function).

@@ -67,30 +67,32 @@ object UnifiedLauncherManager {
             if (unifiedEnabled) {
                 Log.d(TAG, "Enabling unified mode")
                 // Enable unified launcher; keep MainActivity enabled so the alias can open
-                enable(pm, targetUnified, "unified target")
+                // Use killApp=true for the unified target to force launcher refresh
+                enable(pm, targetUnified, "unified target", killApp = true)
                 enable(pm, main, "MainActivity")
+
+                // Verify the target unified component was enabled before hiding other icons.
+                delay(100) // Small delay to allow launcher to process
+                if (!isComponentEnabled(pm, targetUnified)) {
+                    Log.w(TAG, "Target unified component not enabled after first attempt. Retrying...")
+                    enable(pm, targetUnified, "unified target (retry)", killApp = true)
+                    delay(100)
+                }
+                if (!isComponentEnabled(pm, targetUnified)) {
+                    Log.e(TAG, "Failed to enable unified component after retry.")
+                    // Fallback: ensure at least the PulseLink launcher icon stays visible
+                    enable(pm, pulseLinkLauncher, "PulseLinkLauncher (fallback)")
+                    enable(pm, inbox, "InboxLauncherActivity (fallback)")
+                    enable(pm, main, "MainActivity (fallback)")
+                    return false
+                }
+
+                // Now that unified is confirmed, hide the other launchers.
                 disable(pm, pulseLinkLauncher, "PulseLinkLauncher")
                 disable(pm, inbox, "InboxLauncherActivity")
                 beaconVariants.forEach { disable(pm, it, "beacon variant") }
                 unifiedTargets.values.filterNot { it == targetUnified }.forEach {
                     disable(pm, it, "other unified target")
-                }
-
-                // Verify the target unified component was enabled
-                delay(100) // Small delay to allow launcher to process
-                val state = pm.getComponentEnabledSetting(targetUnified)
-                if (!state.isEnabledOrDefault()) {
-                    Log.w(TAG, "Target unified component not enabled after first attempt. State: $state. Retrying...")
-                    enable(pm, targetUnified, "unified target (retry)")
-                    delay(100)
-                    val retryState = pm.getComponentEnabledSetting(targetUnified)
-                    if (!retryState.isEnabledOrDefault()) {
-                        Log.e(TAG, "Failed to enable unified component after retry. State: $retryState")
-                        // Fallback: ensure at least the PulseLink launcher icon stays visible
-                        enable(pm, pulseLinkLauncher, "PulseLinkLauncher (fallback)")
-                        enable(pm, main, "MainActivity (fallback)")
-                        return false
-                    }
                 }
                 Log.d(TAG, "Unified mode enabled successfully")
             } else {
@@ -121,12 +123,18 @@ object UnifiedLauncherManager {
         }
     }
 
-    private fun enable(pm: PackageManager, component: ComponentName, label: String) {
-        Log.d(TAG, "Enabling $label: ${component.className}")
+    private fun enable(
+        pm: PackageManager,
+        component: ComponentName,
+        label: String,
+        killApp: Boolean = false
+    ) {
+        Log.d(TAG, "Enabling $label: ${component.className} (killApp=$killApp)")
+        val flags = if (killApp) 0 else PackageManager.DONT_KILL_APP
         pm.setComponentEnabledSetting(
             component,
             PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-            PackageManager.DONT_KILL_APP
+            flags
         )
     }
 
@@ -139,11 +147,11 @@ object UnifiedLauncherManager {
         )
     }
 
-    /**
-     * Some OEM launchers report DEFAULT (0) even after enabling an alias.
-     * Treat DEFAULT as acceptable to avoid false negatives.
-     */
-    private fun Int.isEnabledOrDefault(): Boolean =
-        this == PackageManager.COMPONENT_ENABLED_STATE_ENABLED ||
-            this == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
+    private fun isComponentEnabled(pm: PackageManager, component: ComponentName): Boolean =
+        try {
+            pm.getActivityInfo(component, 0).enabled
+        } catch (e: Exception) {
+            Log.w(TAG, "Unable to read component enabled state for ${component.className}", e)
+            false
+        }
 }

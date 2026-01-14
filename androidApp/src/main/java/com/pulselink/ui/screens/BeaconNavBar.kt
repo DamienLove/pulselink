@@ -25,7 +25,8 @@ import com.pulselink.util.parseColorOr
 fun BeaconNavBar(
     currentRoute: BeaconNavRoute,
     onNavigate: (BeaconNavRoute) -> Unit,
-    theme: ThemePreferences
+    theme: ThemePreferences,
+    privateSafeEnabled: Boolean = false
 ) {
     val selectedColor = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
     val unselectedColor = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onTopBarColor).copy(alpha = 0.7f)
@@ -84,13 +85,15 @@ fun BeaconNavBar(
             label = { Text("Archived") },
             colors = itemColors
         )
-        NavigationBarItem(
-            selected = currentRoute == BeaconNavRoute.Private,
-            onClick = { onNavigate(BeaconNavRoute.Private) },
-            icon = { Icon(Icons.Filled.Lock, contentDescription = "Private", modifier = Modifier.size(iconSize)) },
-            label = { Text("Private") },
-            colors = itemColors
-        )
+        if (privateSafeEnabled) {
+            NavigationBarItem(
+                selected = currentRoute == BeaconNavRoute.Private,
+                onClick = { onNavigate(BeaconNavRoute.Private) },
+                icon = { Icon(Icons.Filled.Lock, contentDescription = "Private", modifier = Modifier.size(iconSize)) },
+                label = { Text("Private") },
+                colors = itemColors
+            )
+        }
     }
 }
 

@@ -215,23 +215,30 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             firebaseAuthManager.authState.collect { state ->
                 val user = (state as? AuthState.Authenticated)?.user
-                if (user != null && !user.isAnonymous) {
-                    syncProfileFromCloud(user)
+                if (user != null) {
                     syncContactsFromCloud(user, forcePushLocal = true)
-                    linkManager.syncLinksOnLogin()
-                    startRemoteSettingsListener(user)
-                    val settings = settingsRepository.settings.first()
-                    if (settings.remoteWebAccessEnabled) {
-                        triggerWebSync("Login")
-                    }
-                    val currentPhone = user.phoneNumber
-                    val currentEmail = user.email
-                    if (currentPhone != lastKnownPhone || currentEmail != lastKnownEmail) {
-                        linkManager.broadcastProfileUpdate()
-                        lastKnownPhone = currentPhone
-                        lastKnownEmail = currentEmail
-                        settingsRepository.setLastKnownPhone(currentPhone)
-                        settingsRepository.setLastKnownEmail(currentEmail)
+                    if (!user.isAnonymous) {
+                        syncProfileFromCloud(user)
+                        linkManager.syncLinksOnLogin()
+                        startRemoteSettingsListener(user)
+                        val settings = settingsRepository.settings.first()
+                        if (settings.remoteWebAccessEnabled) {
+                            triggerWebSync("Login")
+                        }
+                        val currentPhone = user.phoneNumber
+                        val currentEmail = user.email
+                        if (currentPhone != lastKnownPhone || currentEmail != lastKnownEmail) {
+                            linkManager.broadcastProfileUpdate()
+                            lastKnownPhone = currentPhone
+                            lastKnownEmail = currentEmail
+                            settingsRepository.setLastKnownPhone(currentPhone)
+                            settingsRepository.setLastKnownEmail(currentEmail)
+                        }
+                    } else {
+                        remoteSettingsListener?.remove()
+                        remoteSettingsListener = null
+                        remoteSettingsUserId = null
+                        pushedThemeFromDevice = false
                     }
                 } else {
                     remoteSettingsListener?.remove()
@@ -269,7 +276,7 @@ class MainViewModel @Inject constructor(
             }
 
             // Mirror to cloud for authenticated users
-            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+            firebaseAuthManager.currentUser()?.let { user ->
                 upsertContactInCloud(user, storedContact)
             }
 
@@ -310,7 +317,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             val contact = contactRepository.getContact(id)
             contact?.let {
-                (firebaseAuthManager.currentUser()?.takeIf { user -> !user.isAnonymous })?.let { user ->
+                firebaseAuthManager.currentUser()?.let { user ->
                     deleteContactInCloud(user, it)
                 }
                 blockedContactRepository.block(
@@ -360,12 +367,14 @@ class MainViewModel @Inject constructor(
     fun syncContactsNow() {
         viewModelScope.launch {
             val user = firebaseAuthManager.currentUser()
-            if (user == null || user.isAnonymous) {
-                Log.i(TAG, "Manual sync skipped: no signed-in user")
+            if (user == null) {
+                Log.i(TAG, "Manual sync skipped: no authenticated user")
                 return@launch
             }
             syncContactsFromCloud(user, forcePushLocal = true)
-            linkManager.syncLinksOnLogin()
+            if (!user.isAnonymous) {
+                linkManager.syncLinksOnLogin()
+            }
         }
         // Also trigger SMS sync if applicable
         if (BuildConfig.PREMIUM_FEATURES) {
@@ -816,6 +825,19 @@ class MainViewModel @Inject constructor(
                 val remoteWebAccess = snapshot.getBoolean("remoteWebAccessEnabled")
                 val autoUpdate = snapshot.getBoolean("autoUpdateContactInfo")
                 val timeFormatRaw = snapshot.getString("timeFormat")
+
+                // Extensions
+                val beaconLauncher = snapshot.getBoolean("beaconLauncherEnabled")
+                val firebaseMessaging = snapshot.getBoolean("firebaseMessagingEnabled")
+                val emailFallback = snapshot.getBoolean("emailFallbackEnabled")
+                val otpCleanup = snapshot.getBoolean("otpCleanupEnabled")
+                val aiSummaries = snapshot.getBoolean("aiSummariesEnabled")
+                val crashDetection = snapshot.getBoolean("crashDetectionEnabled")
+                val thirdParty = snapshot.getBoolean("thirdPartyExtensionsEnabled")
+                val mergedExperience = snapshot.getBoolean("mergedExperienceEnabled")
+                val privateSafe = snapshot.getBoolean("privateSafeEnabled")
+                val smartReplies = snapshot.getBoolean("smartRepliesEnabled")
+
                 viewModelScope.launch {
                     val current = settingsRepository.settings.first()
                     if (themeMap != null) {
@@ -847,6 +869,23 @@ class MainViewModel @Inject constructor(
                             }
                         }
                     }
+
+                    // Sync Extensions
+                    beaconLauncher?.let {
+                        if (it != current.beaconLauncherEnabled) {
+                            settingsRepository.setBeaconLauncherEnabled(it)
+                            applyInboxIconVariant(current.themePreferences.inboxIconVariant, enabled = it)
+                        }
+                    }
+                    firebaseMessaging?.let { if (it != current.firebaseMessagingEnabled) settingsRepository.setFirebaseMessagingEnabled(it) }
+                    emailFallback?.let { if (it != current.emailFallbackEnabled) settingsRepository.setEmailFallbackEnabled(it) }
+                    otpCleanup?.let { if (it != current.otpCleanupEnabled) settingsRepository.setOtpCleanupEnabled(it) }
+                    aiSummaries?.let { if (it != current.aiSummariesEnabled) settingsRepository.setAiSummariesEnabled(it) }
+                    crashDetection?.let { if (it != current.crashDetectionEnabled) settingsRepository.setCrashDetectionEnabled(it) }
+                    thirdParty?.let { if (it != current.thirdPartyExtensionsEnabled) settingsRepository.setThirdPartyExtensionsEnabled(it) }
+                    mergedExperience?.let { if (it != current.mergedExperienceEnabled) settingsRepository.setMergedExperienceEnabled(it) }
+                    privateSafe?.let { if (it != current.privateSafeEnabled) settingsRepository.update { s -> s.copy(privateSafeEnabled = it) } }
+                    smartReplies?.let { if (it != current.smartRepliesEnabled) settingsRepository.update { s -> s.copy(smartRepliesEnabled = it) } }
                 }
             }
     }
@@ -1406,23 +1445,20 @@ class MainViewModel @Inject constructor(
             }
             appendLine()
             appendLine("App Version: $versionName ($versionCode)")
+            appendLine("Build Flavor: ${if (BuildConfig.PREMIUM_FEATURES) "Premium" else if (BuildConfig.PRO_FEATURES) "Pro" else "Free"}")
             appendLine("Device: $manufacturer $model")
             appendLine("OS: Android $osVersion (API $apiLevel)")
         }
 
         val subjectSuffix = bugReportData.summary.ifBlank { "General issue" }
 
-        // Always direct to the canonical bug-report site (opens in-app WebView/Custom Tab)
-        return Uri.parse("https://damiennichols.com/report-bug/")
+        // Direct to GitHub issue form so users land on the correct bug report page.
+        return Uri.parse(BUG_REPORT_PAGE_URL)
             .buildUpon()
-            .appendQueryParameter("summary", subjectSuffix)
+            .appendQueryParameter("title", subjectSuffix)
             .appendQueryParameter("body", formattedBody)
-            .appendQueryParameter("email", bugReportData.userEmail)
             .build()
     }
-
-    private fun decodeStringList(field: Any?): List<String> =
-        (field as? List<*>)?.mapNotNull { it?.toString()?.trim() }?.filter { it.isNotBlank() }.orEmpty()
 
     private fun restoreTrustedContactsFromCloudIfMissing() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -1430,42 +1466,7 @@ class MainViewModel @Inject constructor(
             if (local.isNotEmpty()) return@launch
             val user = firebaseAuthManager.currentUser() ?: return@launch
             runCatching {
-                val snapshot = firestore.collection(COLLECTION_USERS)
-                    .document(user.uid)
-                    .collection(COLLECTION_TRUSTED_CONTACTS)
-                    .get()
-                    .await()
-                val restored = snapshot.documents.mapNotNull { doc ->
-                    val name = doc.getString("displayName") ?: return@mapNotNull null
-                    val phone = doc.getString("phoneNumber").orEmpty()
-                    Contact(
-                        displayName = name,
-                        phoneNumber = phone,
-                        email = doc.getString("email"),
-                        additionalPhones = decodeStringList(doc.get("additionalPhones")),
-                        additionalEmails = decodeStringList(doc.get("additionalEmails")),
-                        escalationTier = doc.getString("escalationTier")
-                            ?.let { runCatching { EscalationTier.valueOf(it) }.getOrNull() }
-                            ?: EscalationTier.EMERGENCY,
-                        includeLocation = doc.getBoolean("includeLocation") ?: true,
-                        autoCall = doc.getBoolean("autoCall") ?: false,
-                        emergencySoundKey = doc.getString("emergencySoundKey"),
-                        checkInSoundKey = doc.getString("checkInSoundKey"),
-                        contactOrder = doc.getLong("contactOrder")?.toInt() ?: 0,
-                        linkStatus = doc.getString("linkStatus")
-                            ?.let { runCatching { LinkStatus.valueOf(it) }.getOrNull() }
-                            ?: LinkStatus.NONE,
-                        linkCode = doc.getString("linkCode"),
-                        remoteDeviceId = doc.getString("remoteDeviceId"),
-                        allowRemoteOverride = doc.getBoolean("allowRemoteOverride") ?: true,
-                        allowRemoteSoundChange = doc.getBoolean("allowRemoteSoundChange") ?: false,
-                        pendingApproval = doc.getBoolean("pendingApproval") ?: false,
-                        remoteUid = doc.getString("remoteUid")
-                    )
-                }
-                if (restored.isNotEmpty()) {
-                    restored.sortedBy { it.contactOrder }.forEach { contactRepository.upsert(it) }
-                }
+                syncContactsFromCloud(user, forcePushLocal = true)
             }.onFailure { error ->
                 Log.w(TAG, "Unable to restore trusted contacts from cloud", error)
             }
@@ -1580,6 +1581,9 @@ class MainViewModel @Inject constructor(
     fun setOtpCleanupEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setOtpCleanupEnabled(enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("otpCleanupEnabled" to enabled))
+            }
         }
     }
 
@@ -1619,6 +1623,9 @@ class MainViewModel @Inject constructor(
             settingsRepository.setBeaconLauncherEnabled(enabled)
             val variant = settingsRepository.settings.first().themePreferences.inboxIconVariant
             applyInboxIconVariant(variant, enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("beaconLauncherEnabled" to enabled))
+            }
         }
     }
 
@@ -1637,24 +1644,36 @@ class MainViewModel @Inject constructor(
     fun setFirebaseMessagingEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setFirebaseMessagingEnabled(enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("firebaseMessagingEnabled" to enabled))
+            }
         }
     }
 
     fun setEmailFallbackEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setEmailFallbackEnabled(enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("emailFallbackEnabled" to enabled))
+            }
         }
     }
 
     fun setThirdPartyExtensionsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setThirdPartyExtensionsEnabled(enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("thirdPartyExtensionsEnabled" to enabled))
+            }
         }
     }
 
     fun setMergedExperienceEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setMergedExperienceEnabled(enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("mergedExperienceEnabled" to enabled))
+            }
         }
     }
 
@@ -1671,12 +1690,18 @@ class MainViewModel @Inject constructor(
     fun setCrashDetectionEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setCrashDetectionEnabled(enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("crashDetectionEnabled" to enabled))
+            }
         }
     }
 
     fun setAiSummariesEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setAiSummariesEnabled(enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("aiSummariesEnabled" to enabled))
+            }
         }
     }
 
@@ -1701,6 +1726,24 @@ class MainViewModel @Inject constructor(
     fun setAiUrgencyIncludeUnknown(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setAiUrgencyIncludeUnknown(enabled)
+        }
+    }
+
+    fun setPrivateSafeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.update { it.copy(privateSafeEnabled = enabled) }
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("privateSafeEnabled" to enabled))
+            }
+        }
+    }
+
+    fun setSmartRepliesEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.update { it.copy(smartRepliesEnabled = enabled) }
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("smartRepliesEnabled" to enabled))
+            }
         }
     }
 
