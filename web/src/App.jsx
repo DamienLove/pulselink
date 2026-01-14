@@ -3970,6 +3970,7 @@ function App() {
                         <button
                           className={isEnabled ? "secondary-btn" : "primary-btn"}
                           style={{width: '100%'}}
+                          aria-label={`${isEnabled ? "Remove" : "Install"} ${ext.name} extension`}
                           onClick={() => {
                             setRemoteSettings(prev => ({ ...prev, [ext.id]: !prev[ext.id] }));
                             // We trigger a save after a short delay or user leaves, but here we can just auto-save for UX
