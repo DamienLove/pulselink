@@ -8,8 +8,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,10 +39,16 @@ import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -91,6 +98,9 @@ import java.time.LocalTime
 import java.time.ZoneId
 import android.content.Intent
 import android.net.Uri
+import kotlinx.coroutines.delay
+
+private const val DRAFT_SAVE_DEBOUNCE_MS = 500L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,15 +117,41 @@ fun ThreadScreen(
     onDeleteThread: () -> Unit,
     onEditNotificationSound: () -> Unit,
     onCustomize: () -> Unit,
-    onCall: () -> Unit = {}
+    onCall: () -> Unit = {},
+    // New Actions
+    onBlockThread: () -> Unit = {},
+    onStarMessage: (Long) -> Unit = {},
+    onUnstarMessage: (Long) -> Unit = {},
+    onSaveDraft: (String) -> Unit = {},
+    initialDraft: String? = null
 ) {
-    var draft by remember { mutableStateOf("") }
+    // Initialize draft with empty string if null, but update when initialDraft loads
+    var draft by remember { mutableStateOf(initialDraft ?: "") }
+    var lastSavedDraft by remember { mutableStateOf(initialDraft ?: "") }
+
+    // If initialDraft comes in later (async load), update local state if it was empty
+    LaunchedEffect(initialDraft) {
+        if (initialDraft != null && draft.isBlank()) {
+            draft = initialDraft
+            lastSavedDraft = initialDraft
+        }
+    }
+
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var selectedDateMillis by remember { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+    // Save draft with debounce
+    LaunchedEffect(draft) {
+        delay(DRAFT_SAVE_DEBOUNCE_MS)
+        if (draft != lastSavedDraft) {
+             onSaveDraft(draft)
+             lastSavedDraft = draft
+        }
+    }
 
     // Constants
     val SCROLL_THRESHOLD_ITEMS = 2
@@ -129,7 +165,6 @@ fun ThreadScreen(
     }
 
     // Auto-scroll logic for new messages
-    // Trigger only when the size changes or the latest item ID changes
     val latestItemId = uiItems.firstOrNull()?.let {
         when(it) {
             is ThreadUiItem.Message -> it.message.id
@@ -138,7 +173,6 @@ fun ThreadScreen(
     }
     LaunchedEffect(uiItems.size, latestItemId) {
         if (uiItems.isNotEmpty()) {
-             // If near bottom, auto-scroll to show new message
              if (listState.firstVisibleItemIndex < AUTO_SCROLL_THRESHOLD) {
                 listState.animateScrollToItem(0)
              }
@@ -219,14 +253,31 @@ fun ThreadScreen(
                     IconButton(onClick = onCall) {
                         Icon(Icons.Default.Call, contentDescription = "Call", tint = iconTint)
                     }
-                    IconButton(onClick = onCustomize) {
-                        Icon(Icons.Default.Palette, contentDescription = "Customize theme", tint = iconTint)
+                    var showMenu by remember { mutableStateOf(false) }
+                    IconButton(onClick = { showMenu = true }) {
+                         Icon(Icons.Default.MoreVert, contentDescription = "Options", tint = iconTint)
                     }
-                    IconButton(onClick = onEditNotificationSound) {
-                        Icon(Icons.Default.NotificationsActive, contentDescription = "Notification sound", tint = iconTint)
-                    }
-                    IconButton(onClick = onDeleteThread) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete thread", tint = iconTint)
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Customize") },
+                            leadingIcon = { Icon(Icons.Default.Palette, null) },
+                            onClick = { onCustomize(); showMenu = false }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Notification Sound") },
+                            leadingIcon = { Icon(Icons.Default.NotificationsActive, null) },
+                            onClick = { onEditNotificationSound(); showMenu = false }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Block Number") },
+                            leadingIcon = { Icon(Icons.Default.Block, null) },
+                            onClick = { onBlockThread(); showMenu = false; onBack() }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Delete Thread") },
+                            leadingIcon = { Icon(Icons.Default.Delete, null) },
+                            onClick = { onDeleteThread(); showMenu = false }
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -271,7 +322,14 @@ fun ThreadScreen(
                     }
                 ) { item ->
                     when (item) {
-                        is ThreadUiItem.Message -> MessageBubble(message = item.message, theme = theme)
+                        is ThreadUiItem.Message -> MessageBubble(
+                            message = item.message,
+                            reactions = item.reactions,
+                            isStarred = item.isStarred,
+                            theme = theme,
+                            onStar = { onStarMessage(item.message.id) },
+                            onUnstar = { onUnstarMessage(item.message.id) }
+                        )
                         is ThreadUiItem.DateHeader -> DateHeader(date = item.date, theme = theme)
                     }
                 }
@@ -484,8 +542,16 @@ fun TimePickerDialog(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MessageBubble(message: SmsMessageItem, reactions: List<Reaction> = emptyList(), theme: ThemePalette) {
+private fun MessageBubble(
+    message: SmsMessageItem,
+    reactions: List<Reaction> = emptyList(),
+    isStarred: Boolean,
+    theme: ThemePalette,
+    onStar: () -> Unit,
+    onUnstar: () -> Unit
+) {
     val isOutgoing = message.outgoing
     val background = if (isOutgoing) theme.outgoingColor else theme.incomingColor
     val alignment = if (isOutgoing) Alignment.CenterEnd else Alignment.CenterStart
@@ -514,6 +580,8 @@ private fun MessageBubble(message: SmsMessageItem, reactions: List<Reaction> = e
     val extractedUrl = remember(message.body) { LinkPreviewHelper.extractUrl(message.body) }
     val context = LocalContext.current
 
+    var showMenu by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -528,7 +596,10 @@ private fun MessageBubble(message: SmsMessageItem, reactions: List<Reaction> = e
                 .width(if (message.body.length > 40) 300.dp else Box.Unspecified) // Limit width for long text
                 .padding(horizontal = 0.dp)
                 .clip(bubbleShape)
-                .clickable { /* Toggle timestamp expansion? */ }
+                .combinedClickable(
+                    onClick = { /* Toggle timestamp */ },
+                    onLongClick = { showMenu = true }
+                )
         ) {
             Column(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
@@ -547,6 +618,30 @@ private fun MessageBubble(message: SmsMessageItem, reactions: List<Reaction> = e
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                         }
+                }
+
+                // Dropdown Menu for Message Actions
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Copy Text") },
+                        leadingIcon = { Icon(Icons.Default.ContentCopy, null) },
+                        onClick = {
+                            clipboardManager.setText(AnnotatedString(message.body))
+                            Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
+                            showMenu = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(if (isStarred) "Unstar" else "Star Message") },
+                        leadingIcon = { Icon(if (isStarred) Icons.Default.Star else Icons.Default.StarBorder, null) },
+                        onClick = {
+                            if (isStarred) onUnstar() else onStar()
+                            showMenu = false
+                        }
+                    )
                 }
 
                 Text(
@@ -596,11 +691,19 @@ private fun MessageBubble(message: SmsMessageItem, reactions: List<Reaction> = e
                     )
                 }
 
-                // Timestamp
+                // Timestamp & Star
                 Row(
                     modifier = Modifier.padding(top = 4.dp).align(Alignment.End),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (isStarred) {
+                        Icon(
+                            Icons.Default.Star,
+                            contentDescription = "Starred",
+                            tint = (if (isOutgoing) theme.onBubbleOutgoing else theme.onBubbleIncoming).copy(alpha = 0.7f),
+                            modifier = Modifier.size(12.dp).padding(end = 4.dp)
+                        )
+                    }
                     Text(
                         text = formatMessageTime(message.timestamp),
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),

@@ -3,9 +3,13 @@ package com.pulselink.beacon
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -17,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import com.google.android.gms.ads.MobileAds
@@ -247,36 +252,62 @@ private fun BeaconNav(
             ) { backStackEntry ->
                 val threadId = backStackEntry.arguments?.getLong("threadId") ?: 0L
                 val address = backStackEntry.arguments?.getString("address")?.let { Uri.decode(it) } ?: ""
+
+                // Load draft state
+                var initialDraft by remember { mutableStateOf<String?>(null) }
+                var isDraftLoading by remember { mutableStateOf(true) }
+
                 LaunchedEffect(threadId) {
                     vm.openThread(threadId, address)
+                    // Preload draft for this thread
+                    initialDraft = vm.getDraft(threadId)
+                    isDraftLoading = false
                 }
-                val contactTheme = themeState.forAddress(address)
-                BeaconTheme(theme = contactTheme) {
-                    ThreadScreen(
-                        address = address.ifBlank { "Unknown" },
-                        uiItems = vm.uiMessages,
-                        theme = contactTheme,
-                        pendingMessage = vm.pendingMessage,
-                        onBack = { navController.popBackStack() },
-                        onSend = { vm.sendDelayedMessage(it) },
-                        onCancelPending = { vm.cancelDelayedMessage() },
-                        onSendNow = { vm.sendNow() },
-                        onScheduleMessage = { body, time ->
-                            vm.scheduleMessage(body, time)
-                        },
-                        onDeleteThread = {
-                            vm.deleteThread(threadId)
-                            navController.popBackStack()
-                        },
-                        onCustomize = { navController.navigate("customize?address=${Uri.encode(address)}") },
-                        onEditNotificationSound = { navController.navigate("notifications?address=${Uri.encode(address)}") },
-                        onCall = {
-                            val intent = Intent(Intent.ACTION_DIAL).apply {
-                                data = Uri.parse("tel:$address")
-                            }
-                            context.startActivity(intent)
-                        }
-                    )
+
+                if (!isDraftLoading) {
+                    val contactTheme = themeState.forAddress(address)
+                    BeaconTheme(theme = contactTheme) {
+                        ThreadScreen(
+                            address = address.ifBlank { "Unknown" },
+                            uiItems = vm.uiMessages,
+                            theme = contactTheme,
+                            pendingMessage = vm.pendingMessage,
+                            onBack = { navController.popBackStack() },
+                            onSend = { vm.sendDelayedMessage(it) },
+                            onCancelPending = { vm.cancelDelayedMessage() },
+                            onSendNow = { vm.sendNow() },
+                            onScheduleMessage = { body, time ->
+                                vm.scheduleMessage(body, time)
+                            },
+                            onDeleteThread = {
+                                vm.deleteThread(threadId)
+                                navController.popBackStack()
+                            },
+                            onCustomize = { navController.navigate("customize?address=${Uri.encode(address)}") },
+                            onEditNotificationSound = { navController.navigate("notifications?address=${Uri.encode(address)}") },
+                            onCall = {
+                                val intent = Intent(Intent.ACTION_DIAL).apply {
+                                    data = Uri.parse("tel:$address")
+                                }
+                                context.startActivity(intent)
+                            },
+                            // Wired up new actions
+                            onBlockThread = { vm.blockThread(address) },
+                            onStarMessage = { vm.starMessage(it) },
+                            onUnstarMessage = { vm.unstarMessage(it) },
+                            onSaveDraft = { text ->
+                                vm.saveDraft(threadId, text)
+                            },
+                            initialDraft = initialDraft
+                        )
+                    }
+                } else {
+                    Box(modifier = Modifier.fillMaxSize().background(themeState.global.threadBackgroundColor)) {
+                         CircularProgressIndicator(
+                             modifier = Modifier.align(Alignment.Center),
+                             color = themeState.global.accentColor
+                         )
+                    }
                 }
             }
             composable(

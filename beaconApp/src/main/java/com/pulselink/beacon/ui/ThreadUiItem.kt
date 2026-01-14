@@ -9,6 +9,10 @@ data class Reaction(
 )
 
 sealed class ThreadUiItem {
-    data class Message(val message: SmsMessageItem, val reactions: List<Reaction> = emptyList()) : ThreadUiItem()
+    data class Message(
+        val message: SmsMessageItem,
+        val reactions: List<Reaction> = emptyList(),
+        val isStarred: Boolean = false
+    ) : ThreadUiItem()
     data class DateHeader(val date: String) : ThreadUiItem()
 }
