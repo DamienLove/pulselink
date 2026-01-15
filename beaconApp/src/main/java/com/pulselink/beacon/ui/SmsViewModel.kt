@@ -160,12 +160,12 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateFilter(filter: InboxFilter) {
         currentFilter = filter
-        updateFilteredList()
+        viewModelScope.launch { updateFilteredList() }
     }
 
     fun updateSearchText(text: String) {
         currentSearchText = text
-        updateFilteredList()
+        viewModelScope.launch { updateFilteredList() }
         search(text) // Trigger full search logic too
     }
 
@@ -179,40 +179,46 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun mergeThreads() {
-        // Optimized sorting and filtering blocked
-        val merged = rawThreads.asSequence()
-            .filter { !blockedNumbers.contains(it.address) } // Naive normalization check, ideally normalize 'it.address' too
-            .map { thread ->
-                val isPinned = inboxState.pinnedThreadIds.contains(thread.threadId)
-                // Only copy if needed
-                if (isPinned != thread.isPinned || inboxState.archivedThreadIds.contains(thread.threadId) != thread.isArchived) {
-                    thread.copy(
-                        isPinned = isPinned,
-                        isArchived = inboxState.archivedThreadIds.contains(thread.threadId)
-                    )
-                } else {
-                    thread
+    private suspend fun mergeThreads() {
+        val currentRaw = rawThreads
+        val currentBlocked = blockedNumbers
+        val currentInboxState = inboxState
+
+        val merged = withContext(Dispatchers.Default) {
+            // Optimized sorting and filtering blocked
+            currentRaw.asSequence()
+                .filter { !currentBlocked.contains(it.address) } // Naive normalization check, ideally normalize 'it.address' too
+                .map { thread ->
+                    val isPinned = currentInboxState.pinnedThreadIds.contains(thread.threadId)
+                    // Only copy if needed
+                    if (isPinned != thread.isPinned || currentInboxState.archivedThreadIds.contains(thread.threadId) != thread.isArchived) {
+                        thread.copy(
+                            isPinned = isPinned,
+                            isArchived = currentInboxState.archivedThreadIds.contains(thread.threadId)
+                        )
+                    } else {
+                        thread
+                    }
                 }
-            }
-            .sortedWith(
-                compareByDescending<SmsThreadItem> { it.isPinned }
-                    .thenByDescending { it.timestamp }
-            )
-            .toList()
+                .sortedWith(
+                    compareByDescending<SmsThreadItem> { it.isPinned }
+                        .thenByDescending { it.timestamp }
+                )
+                .toList()
+        }
         threads = merged
         updateFilteredList()
     }
 
-    private fun updateFilteredList() {
-        viewModelScope.launch(Dispatchers.Default) {
-            val list = threads
-            val filter = currentFilter
-            val search = currentSearchText
+    private suspend fun updateFilteredList() {
+        val list = threads
+        val filter = currentFilter
+        val search = currentSearchText
+        val stars = threadsWithStars
 
-            val result = if (search.isNotBlank()) {
+        val result = withContext(Dispatchers.Default) {
+            if (search.isNotBlank()) {
                 // If searching, show all non-archived matching items in the main list
-                // (Though SearchResults UI might handle this, keeping list consistent is good)
                 list.filter {
                     !it.isArchived && (it.address.contains(search, true) || it.snippet.contains(search, true))
                 }
@@ -221,17 +227,15 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                     InboxFilter.ALL -> list.filter { !it.isArchived }
                     InboxFilter.READ -> list.filter { !it.unread && !it.isArchived }
                     InboxFilter.UNREAD -> list.filter { it.unread && !it.isArchived }
-                    InboxFilter.STARRED -> list.filter { threadsWithStars.contains(it.threadId) && !it.isArchived }
+                    InboxFilter.STARRED -> list.filter { stars.contains(it.threadId) && !it.isArchived }
                     InboxFilter.PERSONAL -> list.filter { it.category == ThreadCategory.PERSONAL && !it.isArchived }
                     InboxFilter.TRANSACTIONS -> list.filter { it.category == ThreadCategory.TRANSACTIONS && !it.isArchived }
                     InboxFilter.PROMOTIONS -> list.filter { it.category == ThreadCategory.PROMOTIONS && !it.isArchived }
                     InboxFilter.ARCHIVED -> list.filter { it.isArchived }
                 }
             }
-            withContext(Dispatchers.Main) {
-                filteredThreads = result
-            }
         }
+        filteredThreads = result
     }
 
     fun togglePin(threadId: Long) {

@@ -79,7 +79,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -95,6 +94,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.border
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.SmsThreadItem
 import com.pulselink.beacon.data.ThemePalette
@@ -206,7 +206,6 @@ fun InboxScreen(
     // Use passed threads which are already filtered by ViewModel
     val filtered = threads
 
-    // Calculate unread count (this might be inaccurate if threads is filtered by search, but okay for now)
     // Calculate unread count
     val unreadCount = remember(threads) { threads.count { it.unread && !it.isArchived } }
     val mutedTint = theme.frameColor.copy(alpha = 0.7f)
@@ -219,7 +218,6 @@ fun InboxScreen(
             navigatedFromSearch = true
             onOpenThread(searchState.threadId, searchState.address)
             onClearSearch()
-            // searchText = "" // Avoid loop if managed by VM
         } else if (searchState !is SearchResultState.Contact) {
             navigatedFromSearch = false
         }
@@ -632,68 +630,6 @@ private fun EmptyState(filter: InboxFilter, theme: ThemePalette, iconTint: Color
         }
     }
 }
-
-// ... PermissionsBanners, SearchResults, SwipeableThreadRow, ThreadRow, LetterAvatar ...
-// These remain mostly the same but could benefit from subtle tweaks if I had more space
-// I'll keep them as is for now as the major UI polish was in TopBar and EmptyState/Tabs
-
-// ...
-
-@Composable
-private fun TabsRow(
-    filter: InboxFilter,
-    unreadCount: Int,
-    onFilterChange: (InboxFilter) -> Unit,
-    theme: ThemePalette
-) {
-    val scrollState = rememberScrollState()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .selectableGroup()
-            .horizontalScroll(scrollState)
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Compact Tabs
-        TabChip("All", filter == InboxFilter.ALL, theme) { onFilterChange(InboxFilter.ALL) }
-        TabChip("Personal", filter == InboxFilter.PERSONAL, theme) { onFilterChange(InboxFilter.PERSONAL) }
-        TabChip("Transactions", filter == InboxFilter.TRANSACTIONS, theme) { onFilterChange(InboxFilter.TRANSACTIONS) }
-        TabChip("Promotions", filter == InboxFilter.PROMOTIONS, theme) { onFilterChange(InboxFilter.PROMOTIONS) }
-        TabChip("Unread${if(unreadCount > 0) " ($unreadCount)" else ""}", filter == InboxFilter.UNREAD, theme) { onFilterChange(InboxFilter.UNREAD) }
-        TabChip("Archived", filter == InboxFilter.ARCHIVED, theme) { onFilterChange(InboxFilter.ARCHIVED) }
-    }
-}
-
-@Composable
-private fun TabChip(label: String, selected: Boolean, theme: ThemePalette, onClick: () -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = if (selected) theme.accentColor.copy(alpha = 0.15f) else Color.Transparent,
-        border = if (selected)
-                    BorderStroke(1.dp, theme.accentColor.copy(alpha = 0.6f))
-                 else
-                    BorderStroke(1.dp, theme.frameColor.copy(alpha = 0.15f)),
-        modifier = Modifier.selectable(selected = selected, role = Role.Tab, onClick = onClick)
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            color = if (selected) theme.accentColor else theme.frameColor.copy(alpha = 0.7f),
-            fontWeight = if(selected) FontWeight.SemiBold else FontWeight.Normal,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-    }
-}
-
-// Helper needed as I used it in EmptyState
-// Brush is already imported
-
-enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED, PERSONAL, TRANSACTIONS, PROMOTIONS }
-
-// Missing composables need to be re-added or the file will be incomplete.
-// I will just copy the rest of the file content I saw earlier to ensure it's valid.
 
 @Composable
 private fun PermissionsBanners(
@@ -1115,7 +1051,6 @@ private fun TabsRow(
         TabChip("Personal", filter == InboxFilter.PERSONAL, theme) { onFilterChange(InboxFilter.PERSONAL) }
         TabChip("Transactions", filter == InboxFilter.TRANSACTIONS, theme) { onFilterChange(InboxFilter.TRANSACTIONS) }
         TabChip("Promotions", filter == InboxFilter.PROMOTIONS, theme) { onFilterChange(InboxFilter.PROMOTIONS) }
-        TabChip("Unread${if(unreadCount > 0) " ($unreadCount)" else ""}", filter == InboxFilter.UNREAD, theme) { onFilterChange(InboxFilter.UNREAD) }
         TabChip("Starred", filter == InboxFilter.STARRED, theme) { onFilterChange(InboxFilter.STARRED) }
         TabChip("Archived", filter == InboxFilter.ARCHIVED, theme) { onFilterChange(InboxFilter.ARCHIVED) }
     }
