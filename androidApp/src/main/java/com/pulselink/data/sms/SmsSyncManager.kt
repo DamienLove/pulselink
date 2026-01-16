@@ -18,11 +18,17 @@ import java.util.concurrent.atomic.AtomicBoolean
 @Singleton
 class SmsSyncManager @Inject constructor(
     private val smsRepository: SmsRepository,
-    private val smsSyncTrigger: SmsSyncTrigger,
+    private val smsCloudSync: SmsCloudSync,
     private val settingsRepository: SettingsRepository
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val isStarted = AtomicBoolean(false)
+
+    fun triggerSync() {
+        scope.launch(Dispatchers.IO) {
+            smsCloudSync.sync()
+        }
+    }
 
     @OptIn(FlowPreview::class)
     fun start() {
@@ -36,7 +42,7 @@ class SmsSyncManager @Inject constructor(
                     val settings = settingsRepository.settings.first()
                     if (settings.remoteWebAccessEnabled) {
                         Log.d(TAG, "Repository changed, triggering web sync")
-                        smsSyncTrigger.triggerSync()
+                        smsCloudSync.sync()
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error checking settings for sync", e)
@@ -53,7 +59,7 @@ class SmsSyncManager @Inject constructor(
             }
             .onEach {
                 Log.d(TAG, "Settings changed (premium/web), triggering sync worker")
-                smsSyncTrigger.triggerSync()
+                smsCloudSync.sync()
             }
             .launchIn(scope)
     }

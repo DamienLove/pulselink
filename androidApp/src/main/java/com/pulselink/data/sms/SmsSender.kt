@@ -22,8 +22,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 class SmsSender @Inject constructor(
     @ApplicationContext private val context: Context,
     private val smsManager: SmsManager,
-    private val smsStore: SmsStore,
-    private val smsSyncTrigger: SmsSyncTrigger
+    private val smsStore: SmsStore
 ) {
 
     private val pendingRequests = ConcurrentHashMap<String, CompletableDeferred<Boolean>>()
@@ -114,8 +113,6 @@ class SmsSender @Inject constructor(
             when (action) {
                 ACTION_SMS_SENT -> {
                     pending?.rowId?.let { smsStore.markOutgoingSent(it) }
-                    // Trigger immediate sync to cloud when message sent
-                    smsSyncTrigger.triggerSync()
                 }
                 ACTION_SMS_DELIVERED -> pending?.rowId?.let { smsStore.markOutgoingDelivered(it) }
             }
