@@ -4,19 +4,20 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-// Future Deep v5 Design System Tokens
+// Future Deep v7 Design System Tokens
 // The ultimate unified design language for PulseLink Suite.
 
 // Colors
-val DeepBackground = Color(0xFF03050A) // V5 Deepest Black/Blue
-val DeepSurface = Color(0xFF0B101B) // V5 Surface
-val DeepSurfaceAlt = Color(0xFF131826) // V5 Surface Alt
-val DeepAccent = Color(0xFF22D3EE) // Cyan
-val DeepAccentStrong = Color(0xFF0EA5E9)
-val DeepTertiary = Color(0xFFBC13FE) // Neon Purple
-val DeepError = Color(0xFFFF4757) // V5 Error
-val DeepOnSurface = Color(0xFFF0F6FC) // V5 Ink
-val DeepMuted = Color(0xFF8B949E) // V5 Muted
+val DeepBackground = Color(0xFF030508) // V7 Deepest Black/Blue
+val DeepSurface = Color(0xFF0B101B) // V7 Surface
+val DeepSurfaceAlt = Color(0xFF161B2E) // V7 Surface Alt
+val DeepAccent = Color(0xFF00F0FF) // V7 Cyber Cyan
+val DeepAccentStrong = Color(0xFF00BCD4) // V7 Cyan Strong
+val DeepTertiary = Color(0xFFD946EF) // V7 Neon Fuchsia
+val DeepError = Color(0xFFFF0055) // V7 Error
+val DeepOnSurface = Color(0xFFF0F4F8) // V7 Ink
+val DeepMuted = Color(0xFF64748B) // V7 Muted
+val DeepSuccess = Color(0xFF00FF9D) // V7 Success
 
 object Spacing {
     val extraSmall = 6.dp
@@ -36,7 +37,7 @@ object Layout {
 }
 
 object Gradients {
-    // V5 "Alive" Background approximation
+    // V7 "Alive" Background approximation
     val PrimaryBackground = Brush.verticalGradient(
         colors = listOf(Color(0xFF0A0F1C), DeepBackground)
     )
@@ -46,7 +47,7 @@ object Gradients {
         colors = listOf(
             DeepAccent,
             DeepAccentStrong,
-            Color(0xFF38BDF8) // Sky 400
+            Color(0xFF38BDF8)
         )
     )
 
@@ -54,7 +55,7 @@ object Gradients {
     val Holographic = Brush.linearGradient(
         colors = listOf(
             DeepAccent.copy(alpha = 0.9f),
-            Color(0xFFD8B4FE).copy(alpha = 0.8f),
+            Color(0xFFE879F9).copy(alpha = 0.8f), // Lighter fuchsia
             DeepAccentStrong.copy(alpha = 0.9f)
         )
     )
@@ -68,7 +69,7 @@ object Gradients {
         )
     )
 
-    // New V5 Neon Border - softer, wider
+    // New V7 Neon Border - softer, wider
     val NeonBorder = Brush.linearGradient(
         colors = listOf(
             DeepAccent.copy(alpha = 0.5f),
@@ -81,7 +82,7 @@ object Gradients {
         colors = listOf(DeepError, Color(0xFF991B1B))
     )
 
-    // Refined V5 Glass Border
+    // Refined V7 Glass Border
     val GlassBorder = Brush.verticalGradient(
         colors = listOf(
             Color.White.copy(alpha = 0.15f),
