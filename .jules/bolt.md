@@ -17,3 +17,7 @@
 ## 2025-02-25 - Sidebar Search Isolation
 **Learning:** The `Sidebar` search state was lifted to `App.jsx`, causing the entire application (including heavy Map and Message lists) to re-render on every keystroke of the thread search input.
 **Action:** Moved the search state and filtering logic *inside* the `Sidebar` component. This isolates the high-frequency re-renders to the Sidebar itself, preventing the global app re-render, while still accepting the raw data from the parent.
+
+## 2025-02-26 - Key-based State Reset
+**Learning:** Using `useEffect` to sync local component state with props (e.g., updating a form when `selectedItem` changes) causes a "double render" effect (Parent render -> Child render -> Effect -> Child state update -> Child re-render).
+**Action:** Use the `key` prop on the child component (e.g., `key={selectedItem.id}`) to force React to unmount and remount the component when the selection changes. This allows initializing state directly from props in the constructor/useState, avoiding the `useEffect` entirely and saving one full render cycle.

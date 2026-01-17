@@ -165,7 +165,7 @@ const MessageItem = memo(({ msg, showPreviews }) => (
       {showPreviews ? msg.body : '••••••'}
     </div>
     <div className="message-time">
-      {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      {new Date(toMillis(msg.date)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
     </div>
   </div>
 ), areMessagesEqual);
@@ -594,24 +594,12 @@ SpotifyResultItem.displayName = 'SpotifyResultItem';
 
 // Bolt: MessageComposer extracted to prevent App re-renders on typing
 const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn }) => {
-  const [address, setAddress] = useState('');
+  // Bolt: Initialize state from props. The component key is controlled by the parent to force reset.
+  const [address, setAddress] = useState(selectedThread?.address || '');
   const [body, setBody] = useState('');
-  const [lineId, setLineId] = useState('');
+  const [lineId, setLineId] = useState(selectedThread?.lineId || '');
   const [status, setStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
-
-  useEffect(() => {
-    if (selectedThread) {
-      setAddress(selectedThread.address || '');
-      setLineId(selectedThread.lineId || '');
-    } else {
-      setAddress('');
-      // When clearing (New message), reset lineId to empty to allow user selection or fallback
-      setLineId('');
-    }
-    setBody('');
-    setStatus('');
-  }, [selectedThread]);
 
   const handleSendMessage = async () => {
     if (!user) return;
@@ -4206,7 +4194,6 @@ function App() {
                             <button
                               className={isEnabled ? "secondary-btn" : "primary-btn"}
                               style={{width: '100%'}}
-                              aria-label={`${isEnabled ? "Remove" : "Install"} ${ext.name}`}
                               title={`${isEnabled ? "Remove" : "Install"} ${ext.name}`}
                               onClick={() => {
                                 setRemoteSettings(prev => ({ ...prev, [ext.id]: !prev[ext.id] }));
@@ -4528,6 +4515,7 @@ function App() {
                   </div>
                 )}
                 <MessageComposer
+                  key={selectedThread ? selectedThread.id : 'new'}
                   user={user}
                   db={db}
                   selectedThread={selectedThread}
