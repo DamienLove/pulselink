@@ -53,11 +53,11 @@
 
 :root {
   /* Core Palette: "Future Deep v7" - Sheer Perfection */
-  --bg: #030508; /* v7 Deepest Black */
-  --bg-accent: #05080f;
-  --surface: #080b14;
-  --surface-alt: #0d121f;
-  --surface-hover: #151b2e;
+  --bg: #020305; /* Deepest Void */
+  --bg-accent: #04060a;
+  --surface: #06090f;
+  --surface-alt: #0b0f1a;
+  --surface-hover: #121624;
 
   /* Text & Ink */
   --ink: #e0f7fa;
@@ -67,15 +67,15 @@
 
   /* Accents - Future Cyan & Deep Magenta */
   --accent: #00f0ff;        /* v7 Cyan */
-  --accent-glow: rgba(0, 240, 255, 0.6);
+  --accent-glow: rgba(0, 240, 255, 0.65);
   --accent-strong: #00bcd4;
-  --accent-dim: rgba(0, 240, 255, 0.1);
+  --accent-dim: rgba(0, 240, 255, 0.12);
 
   --secondary: #d946ef;     /* v7 Magenta */
-  --secondary-glow: rgba(217, 70, 239, 0.5);
+  --secondary-glow: rgba(217, 70, 239, 0.55);
 
   --tertiary: #a855f7;      /* Neon Purple */
-  --tertiary-glow: rgba(168, 85, 247, 0.5);
+  --tertiary-glow: rgba(168, 85, 247, 0.55);
 
   --danger: #ff4757;
   --success: #2ed573;
@@ -83,21 +83,21 @@
 
   --border: rgba(255, 255, 255, 0.08);
   --border-light: rgba(255, 255, 255, 0.15);
-  --border-neon: rgba(34, 211, 238, 0.3);
-  --bg-radial-start: #0a0f1c;
+  --border-neon: rgba(34, 211, 238, 0.35);
+  --bg-radial-start: #080c14;
 
   /* Glassmorphism Refined V5 */
-  --glass-bg: rgba(3, 5, 10, 0.7);
+  --glass-bg: rgba(6, 9, 15, 0.7);
   --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-highlight: rgba(255, 255, 255, 0.1);
-  --glass-blur: 24px;
+  --glass-highlight: rgba(255, 255, 255, 0.12);
+  --glass-blur: 32px;
 
   /* Shadows */
   --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
-  --shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.8);
-  --shadow-lg: 0 32px 64px -12px rgba(0, 0, 0, 0.9);
+  --shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.85);
+  --shadow-lg: 0 40px 80px -20px rgba(0, 0, 0, 0.95);
   --shadow-glow: 0 0 30px var(--accent-glow);
-  --shadow-neon: 0 0 10px var(--accent-glow), 0 0 20px var(--accent-dim);
+  --shadow-neon: 0 0 15px var(--accent-glow), 0 0 30px var(--accent-dim);
 
   /* Typography */
   --font-display: "Space Grotesk", system-ui, -apple-system, sans-serif;
@@ -142,6 +142,7 @@ html, body {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
   letter-spacing: -0.02em;
+  text-wrap: balance;
 }
 
 /*
@@ -229,6 +230,7 @@ select {
   background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
+  width: 8px; /* Expand on hover */
   background-color: var(--accent);
   box-shadow: 0 0 15px var(--accent-glow);
   border: 0px solid transparent;
@@ -273,6 +275,9 @@ select {
 .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
 .animate-slide-up { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .animate-scale-in { animation: scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.stagger-enter > * {
+    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
 .mono { font-family: var(--font-mono); }
 
 .glass-panel {

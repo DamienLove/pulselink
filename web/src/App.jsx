@@ -3403,7 +3403,7 @@ function App() {
                   </div>
                 </div>
               )}
-              <div className="home-grid">
+              <div className="home-grid stagger-enter">
                 <button className="home-card" onClick={() => setActivePanel('pulselink')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink" />
@@ -3468,7 +3468,7 @@ function App() {
                 <h3>PulseLink</h3>
                 <p>Manage trusted contacts and your public profile.</p>
               </div>
-              <div className="pulselink-grid">
+              <div className="pulselink-grid stagger-enter">
                 <div className="settings-card">
                   <h4>Public profile</h4>
                   <div className="profile-header-row">
@@ -3718,7 +3718,7 @@ function App() {
                   )}
                 </div>
               </div>
-              <div className="contact-list contact-list--full">
+              <div className="contact-list contact-list--full stagger-enter">
                 {contactListElements}
                 {filteredDeviceContacts.length > contactListLimit && (
                   <button
@@ -3796,7 +3796,7 @@ function App() {
                   </div>
                 )}
               </div>
-              <div className="map-grid">
+              <div className="map-grid stagger-enter">
                 <div className="map-card">
                   <div className="map-canvas" ref={mapRef} />
                   {!mapsApiKey && (
@@ -3848,7 +3848,7 @@ function App() {
                 </div>
               </div>
 
-              <div className="pulselink-grid">
+              <div className="pulselink-grid stagger-enter">
                 <div className="settings-card">
                     <div className="card-header-row" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20}}>
                         <h4>Current Playlist</h4>
@@ -3860,7 +3860,7 @@ function App() {
                             <p className="muted">Your playlist is empty. Add songs to start streaming.</p>
                         </div>
                     ) : (
-                        <div className="song-grid">
+                        <div className="song-grid stagger-enter">
                             {ringerPlaylist.map(song => (
                                 <RingerSongItem
                                     key={song.id}
@@ -3896,7 +3896,7 @@ function App() {
                     </div>
 
                     {spotifyResults.length > 0 && (
-                        <div className="song-grid">
+                        <div className="song-grid stagger-enter">
                             {spotifyResults.map(track => (
                                 <SpotifyResultItem
                                     key={track.id}
@@ -3920,7 +3920,7 @@ function App() {
                 <h3>Theme Gallery</h3>
                 <p>Browse community themes or publish your own. Image-based themes require approval.</p>
               </div>
-              <div className="themes-grid">
+              <div className="themes-grid stagger-enter">
                 <div className="settings-card themes-card">
                   <div className="themes-toolbar">
                     <label className="login-field">
@@ -4181,7 +4181,7 @@ function App() {
               ].map((category) => (
                 <div key={category.title} className="extension-category" style={{marginBottom: 32}}>
                   <h4 style={{marginBottom: 16, color: 'var(--ink)'}}>{category.title}</h4>
-                  <div className="home-grid">
+                  <div className="home-grid stagger-enter">
                     {category.items.map(ext => {
                       const isEnabled = remoteSettings[ext.id];
                       const isLocked = ext.premium && !isPremiumUser;
@@ -4310,7 +4310,7 @@ function App() {
                 )}
               </div>
 
-              <div className="settings-grid">
+              <div className="settings-grid stagger-enter">
                 {(() => {
                   const term = settingsSearch.toLowerCase().trim();
                   const show = (keywords) => {
