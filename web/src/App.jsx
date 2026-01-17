@@ -1463,6 +1463,17 @@ const escapeHtml = (unsafe) => {
     .replace(/'/g, "&#039;");
 };
 
+// Sentinel: Validate URLs to prevent XSS/SSRF
+const isValidHttpUrl = (string) => {
+  if (!string) return false;
+  try {
+    const url = new URL(string);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch (_) {
+    return false;
+  }
+};
+
 const loadGoogleMaps = (() => {
   let loaderPromise;
   return (apiKey) => {
@@ -2942,9 +2953,13 @@ function App() {
       setThemePublishStatus("Theme name is required.");
       return;
     }
+    const backgroundImageUrl = themePublishForm.backgroundImageUrl.trim();
+    if (backgroundImageUrl && !isValidHttpUrl(backgroundImageUrl)) {
+      setThemePublishStatus("Background URL must be a valid HTTP/HTTPS link.");
+      return;
+    }
     setIsPublishingTheme(true);
     setThemePublishStatus("Publishing theme...");
-    const backgroundImageUrl = themePublishForm.backgroundImageUrl.trim();
     const normalized = normalizeTheme({
       ...themePrefs,
       backgroundImageUrl: backgroundImageUrl || themePrefs.backgroundImageUrl || null
@@ -3093,6 +3108,10 @@ function App() {
     e?.preventDefault();
     if (!extensionForm.name.trim()) {
       setExtensionStatus('Name is required.');
+      return;
+    }
+    if (extensionForm.endpoint.trim() && !isValidHttpUrl(extensionForm.endpoint.trim())) {
+      setExtensionStatus('Endpoint must be a valid HTTP/HTTPS URL.');
       return;
     }
     const id = `${Date.now()}`;
