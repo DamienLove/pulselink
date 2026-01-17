@@ -1,6 +1,7 @@
 package com.pulselink.data.sms
 
 import android.util.Log
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
@@ -19,11 +20,14 @@ class SmsRelayService @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
     private val smsSender: SmsSender,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val smsSyncTrigger: SmsSyncTrigger
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var listener: ListenerRegistration? = null
+    private var outboxListener: ListenerRegistration? = null
+    private var userListener: ListenerRegistration? = null
     private val isStarted = AtomicBoolean(false)
+    private var lastSyncRequestTime: Long = 0
 
     fun start() {
         if (!isStarted.compareAndSet(false, true)) return
@@ -39,10 +43,10 @@ class SmsRelayService @Inject constructor(
     }
 
     private fun startListening(uid: String) {
-        if (listener != null) return
+        if (outboxListener != null) return
 
         val outboxRef = firestore.collection("users").document(uid).collection("outbox")
-        listener = outboxRef.addSnapshotListener { snapshots, e ->
+        outboxListener = outboxRef.addSnapshotListener { snapshots, e ->
             if (e != null) {
                 Log.w(TAG, "Listen failed.", e)
                 return@addSnapshotListener
@@ -61,11 +65,38 @@ class SmsRelayService @Inject constructor(
                 }
             }
         }
+
+        val userRef = firestore.collection("users").document(uid)
+        userListener = userRef.addSnapshotListener { snapshot, e ->
+            if (e != null) {
+                Log.w(TAG, "User listen failed.", e)
+                return@addSnapshotListener
+            }
+
+            if (snapshot != null && snapshot.exists()) {
+                val syncRequestedAt = snapshot.getTimestamp("syncRequestedAt")
+                if (syncRequestedAt != null) {
+                    val time = syncRequestedAt.seconds * 1000
+                    val now = System.currentTimeMillis()
+                    val isRecent = (now - time) < 5 * 60 * 1000 // 5 minutes
+
+                    if (time > lastSyncRequestTime) {
+                        if (lastSyncRequestTime > 0 || isRecent) {
+                            Log.d(TAG, "Sync requested via Firestore")
+                            smsSyncTrigger.triggerSync()
+                        }
+                        lastSyncRequestTime = time
+                    }
+                }
+            }
+        }
     }
 
     private fun stopListening() {
-        listener?.remove()
-        listener = null
+        outboxListener?.remove()
+        outboxListener = null
+        userListener?.remove()
+        userListener = null
     }
 
     private fun processMessage(docId: String, address: String, body: String, uid: String, lineId: String?) {
