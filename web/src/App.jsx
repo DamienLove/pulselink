@@ -1511,6 +1511,34 @@ const Sidebar = memo(({
   showPreviews
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Only active if panel is beacon (where search exists)
+      if (activePanel !== 'beacon') return;
+
+      const isInput = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
+      const isCmdK = (e.metaKey || e.ctrlKey) && e.key === 'k';
+      const isSlash = e.key === '/';
+      const isEscape = e.key === 'Escape';
+
+      // Focus shortcut: / or Cmd+K
+      if ((isSlash && !isInput) || isCmdK) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+
+      // Clear/Blur shortcut: Escape (only when focused)
+      if (isEscape && document.activeElement === searchInputRef.current) {
+        setSearchQuery('');
+        searchInputRef.current?.blur();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activePanel]);
 
   // Bolt: Pre-compute search strings for threads locally to prevent App re-renders
   const searchIndex = useMemo(() => {
@@ -1653,8 +1681,9 @@ const Sidebar = memo(({
                 <SearchIcon />
               </div>
               <input
+                ref={searchInputRef}
                 className="sidebar-search-input-field"
-                placeholder="Search messages..."
+                placeholder="Search messages... (/)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 aria-label="Search messages"
@@ -4216,7 +4245,6 @@ function App() {
                                   settingsUpdatedAt: serverTimestamp()
                                 }, { merge: true });
                               }}
-                              aria-label={isEnabled ? `Remove ${ext.name}` : `Install ${ext.name}`}
                             >
                               {isEnabled ? "Remove" : "Install"}
                             </button>
