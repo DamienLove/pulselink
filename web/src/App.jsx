@@ -26,6 +26,20 @@ import {
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import './App.css';
+
+const toMillis = (value) => {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'string') return new Date(value).getTime();
+  if (typeof value.toMillis === 'function') return value.toMillis();
+  if (typeof value.seconds === 'number') return value.seconds * 1000;
+  return 0;
+};
+
+const timeFormatter = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
+const dateTimeFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' });
+
 import logo from './assets/pulselink-pro-logo.png';
 import beaconLogo from './assets/beacon-logo.png';
 import ringersongLogo from './assets/ringersong-logo.png';
@@ -165,7 +179,7 @@ const MessageItem = memo(({ msg, showPreviews }) => (
       {showPreviews ? msg.body : '••••••'}
     </div>
     <div className="message-time">
-      {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      {timeFormatter.format(toMillis(msg.date))}
     </div>
   </div>
 ), areMessagesEqual);
@@ -340,7 +354,7 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
           {alertBadgeCopy[alert.severity] ?? 'Alert'}
         </span>
       </div>
-      <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
+      <div className="map-item-meta">{dateTimeFormatter.format(toMillis(alert.date))}</div>
       <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
       <div className="map-item-actions">
         <button
@@ -380,16 +394,8 @@ const areThemeGalleryItemsEqual = (prev, next) => {
   if (p.id !== n.id) return false;
 
   // Bolt: Check updatedAt if available (handling Firestore Timestamps)
-  const getMillis = (t) => {
-    if (!t) return 0;
-    if (typeof t === 'number') return t;
-    if (typeof t.toMillis === 'function') return t.toMillis();
-    if (typeof t.seconds === 'number') return t.seconds * 1000;
-    return 0;
-  };
-
-  const pTime = getMillis(p.updatedAt);
-  const nTime = getMillis(n.updatedAt);
+  const pTime = toMillis(p.updatedAt);
+  const nTime = toMillis(n.updatedAt);
   if (pTime > 0 && nTime > 0) {
     return pTime === nTime;
   }
@@ -1442,14 +1448,6 @@ const buildContactDocId = (contact) => {
   if (phone) return phone;
   if (email) return `email_${email}`;
   return contact.displayName.trim().toLowerCase().replace(/\s+/g, '_') || `contact_${Date.now()}`;
-};
-
-const toMillis = (value) => {
-  if (!value) return 0;
-  if (typeof value === 'number') return value;
-  if (typeof value.toMillis === 'function') return value.toMillis();
-  if (typeof value.seconds === 'number') return value.seconds * 1000;
-  return 0;
 };
 
 // Sentinel: Prevent XSS in map info windows
@@ -2609,7 +2607,7 @@ function App() {
         // Sentinel: Escape user input to prevent XSS in InfoWindow
         const safeType = escapeHtml(alertBadgeCopy[alert.severity] ?? 'Alert');
         const safeAddress = escapeHtml(alert.address);
-        const safeDate = escapeHtml(new Date(alert.date).toLocaleString());
+        const safeDate = escapeHtml(dateTimeFormatter.format(toMillis(alert.date)));
 
         mapInfoRef.current.setContent(
           `<div style="font-family: sans-serif; max-width: 220px;">
@@ -2660,7 +2658,7 @@ function App() {
       // Sentinel: Escape user input to prevent XSS in InfoWindow
       const safeType = escapeHtml(alertBadgeCopy[alert.severity] ?? 'Alert');
       const safeAddress = escapeHtml(alert.address);
-      const safeDate = escapeHtml(new Date(alert.date).toLocaleString());
+      const safeDate = escapeHtml(dateTimeFormatter.format(toMillis(alert.date)));
 
       mapInfoRef.current.setContent(
         `<div style="font-family: sans-serif; max-width: 220px;">
@@ -4216,7 +4214,6 @@ function App() {
                                   settingsUpdatedAt: serverTimestamp()
                                 }, { merge: true });
                               }}
-                              aria-label={isEnabled ? `Remove ${ext.name}` : `Install ${ext.name}`}
                             >
                               {isEnabled ? "Remove" : "Install"}
                             </button>
@@ -4423,7 +4420,7 @@ function App() {
                             <span className="settings-label">Web sync</span>
                             <span className="settings-value">
                               {syncDiagnostics
-                                ? `${new Date(toMillis(syncDiagnostics.timestamp)).toLocaleString()} • ${syncDiagnostics.status}`
+                                ? `${dateTimeFormatter.format(toMillis(syncDiagnostics.timestamp))} • ${syncDiagnostics.status}`
                                 : 'No sync data yet'}
                             </span>
                           </div>
