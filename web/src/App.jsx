@@ -1511,6 +1511,24 @@ const Sidebar = memo(({
   showPreviews
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Focus search on "/" or "Ctrl+K" when not already typing in an input
+      if (
+        (e.key === '/' || ((e.ctrlKey || e.metaKey) && e.key === 'k')) &&
+        activePanel === 'beacon' &&
+        document.activeElement !== searchInputRef.current &&
+        !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)
+      ) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activePanel]);
 
   // Bolt: Pre-compute search strings for threads locally to prevent App re-renders
   const searchIndex = useMemo(() => {
@@ -1653,11 +1671,20 @@ const Sidebar = memo(({
                 <SearchIcon />
               </div>
               <input
+                ref={searchInputRef}
                 className="sidebar-search-input-field"
-                placeholder="Search messages..."
+                placeholder="Search messages... (Ctrl+K)"
+                title="Search messages (Ctrl+K)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 aria-label="Search messages"
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setSearchQuery('');
+                    searchInputRef.current?.blur();
+                  }
+                }}
               />
               {searchQuery && (
                 <button
