@@ -1044,24 +1044,32 @@ class MainActivity : AppCompatActivity() {
 
                         LoginScreen(
                             state = loginUiState,
-                            onEmailChange = loginViewModel::updateEmail,        
-                            onPasswordChange = loginViewModel::updatePassword,  
+                            onEmailChange = loginViewModel::updateEmail,
+                            onPasswordChange = loginViewModel::updatePassword,
                             onConfirmPasswordChange = loginViewModel::updateConfirmPassword,
                             onSubmit = loginViewModel::submit,
                             onToggleMode = loginViewModel::toggleMode,
                             onForgotPassword = loginViewModel::sendPasswordReset,
-                            onSmsOnlyClick = loginViewModel::signInSmsOnly,     
+                            onSmsOnlyClick = loginViewModel::signInSmsOnly,
                             onGoogleClick = { googleLauncher.launch(googleClient.signInIntent) },
                             onMessageConsumed = loginViewModel::clearTransientMessages,
                             useProBranding = false
                         )
+
+                        val initialAuthState = remember { authState }
+
                         LaunchedEffect(authState, state.onboardingComplete) {
                             val authenticated = authState as? AuthState.Authenticated
-                            if (authenticated != null && !authenticated.user.isAnonymous) {
-                                val destination = if (state.onboardingComplete) "home" else "onboarding_intro"
-                                navController.navigate(destination) {
-                                    popUpTo(0) { inclusive = true }
-                                    launchSingleTop = true
+                            if (authenticated != null) {
+                                val isAnon = authenticated.user.isAnonymous
+                                val wasNotAuthenticated = initialAuthState !is AuthState.Authenticated
+
+                                if (!isAnon || wasNotAuthenticated) {
+                                    val destination = if (state.onboardingComplete) "home" else "onboarding_intro"
+                                    navController.navigate(destination) {
+                                        popUpTo(0) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
                                 }
                             }
                         }

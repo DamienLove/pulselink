@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PulseLink</string>
-    <string name="default_web_client_id">156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com</string>
     <string name="cta_add_contact">Add trusted contact</string>
     <string name="cta_send_check_in">Send check-in</string>
     <string name="cta_trigger_test">Trigger test alert</string>
