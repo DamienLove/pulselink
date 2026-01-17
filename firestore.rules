@@ -7,9 +7,17 @@ service cloud.firestore {
     }
 
     function isSubscriptionFieldChange() {
-      return request.resource != null &&
-        request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(["premiumSubscriptionStatus","premiumSubscriptionExpiry","tierBeforePremium","subscriptionPurchaseToken"]);
+      // Sentinel: Prevent Mass Assignment of subscription fields.
+      // 1. If deleting (request.resource == null), it's not a field injection.
+      // 2. If creating (resource == null), check new data keys directly.
+      // 3. If updating, check the diff of affected keys.
+
+      let protectedFields = ["premiumSubscriptionStatus", "premiumSubscriptionExpiry", "tierBeforePremium", "subscriptionPurchaseToken", "subscriptionStatus", "premiumUnlocked", "proUnlocked", "hasPremiumHistory", "hasProHistory"];
+
+      return request.resource != null && (
+        (resource == null && request.resource.data.keys().hasAny(protectedFields)) ||
+        (resource != null && request.resource.data.diff(resource.data).affectedKeys().hasAny(protectedFields))
+      );
     }
 
     match /users/{userId} {

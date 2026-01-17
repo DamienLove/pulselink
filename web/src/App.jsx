@@ -2238,9 +2238,7 @@ function App() {
     if (!user || !isPremiumUser || !userData) return;
     if (userData.remoteWebAccessEnabled === undefined) {
       setDoc(doc(db, "users", user.uid), {
-        remoteWebAccessEnabled: true,
-        subscriptionStatus: userData.subscriptionStatus ?? "premium",
-        premiumUnlocked: true
+        remoteWebAccessEnabled: true
       }, { merge: true }).catch((err) => {
         console.error("Failed to auto-enable remote web access", err);
       });
