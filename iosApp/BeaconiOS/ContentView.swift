@@ -23,17 +23,17 @@ struct ContentView: View {
                     }
                     .badge(isPro ? "Pro" : nil)
 
-                BeaconTab(viewModel: viewModel, filter: .trusted)
-                    .tabItem {
-                        Label("Trusted", systemImage: "shield.fill")
-                    }
-
-                BeaconTab(viewModel: viewModel, filter: .favorites)
-                    .tabItem {
-                        Label("Favorites", systemImage: "star.fill")
-                    }
-
                 if isPro {
+                    BeaconTab(viewModel: viewModel, filter: .trusted)
+                        .tabItem {
+                            Label("Trusted", systemImage: "shield.fill")
+                        }
+
+                    BeaconTab(viewModel: viewModel, filter: .favorites)
+                        .tabItem {
+                            Label("Favorites", systemImage: "star.fill")
+                        }
+
                     BeaconTab(viewModel: viewModel, filter: .private)
                         .tabItem {
                             Label("Private", systemImage: "lock.fill")
@@ -414,16 +414,16 @@ enum BubbleStyle: String, CaseIterable {
 }
 
 enum RelayColors {
-    // 0.133, 0.827, 0.933 -> #22D3EE
-    static let primary = Color(red: 0.133, green: 0.827, blue: 0.933)
-    // 0.055, 0.647, 0.914 -> #0EA5E9
-    static let accent  = Color(red: 0.055, green: 0.647, blue: 0.914)
-    // #03050A -> 3/255=0.012, 5/255=0.020, 10/255=0.039
-    static let deep    = Color(red: 0.012, green: 0.020, blue: 0.039)
+    // #00F0FF -> 0/255=0.0, 240/255=0.941, 255/255=1.0
+    static let primary = Color(red: 0.0, green: 0.941, blue: 1.0)
+    // #00F0FF -> 0/255=0.0, 240/255=0.941, 255/255=1.0
+    static let accent  = Color(red: 0.0, green: 0.941, blue: 1.0)
+    // #030508 -> 3/255=0.012, 5/255=0.020, 8/255=0.031
+    static let deep    = Color(red: 0.012, green: 0.020, blue: 0.031)
     // #0B101B -> 11/255=0.043, 16/255=0.063, 27/255=0.106
     static let surface = Color(red: 0.043, green: 0.063, blue: 0.106)
-    // #BC13FE -> 188/255=0.737, 19/255=0.075, 254/255=0.996
-    static let tertiary = Color(red: 0.737, green: 0.075, blue: 0.996)
+    // #D946EF -> 217/255=0.851, 70/255=0.275, 239/255=0.937
+    static let tertiary = Color(red: 0.851, green: 0.275, blue: 0.937)
 
     static let cardBackground = surface.opacity(0.8)
 }
