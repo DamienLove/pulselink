@@ -11,6 +11,7 @@ protocol BeaconConversationProvider {
     func listenToConversations(onChange: @escaping ([BeaconContactCard]) -> Void) -> ListenerRegistration?
     func listenToMessages(for contact: BeaconContactCard, onChange: @escaping ([BeaconConversationMessage]) -> Void) -> ListenerRegistration?
     func send(message: BeaconConversationMessage, to contact: BeaconContactCard) async throws
+    func requestSync() async throws
 }
 
 #if canImport(FirebaseFirestore)
@@ -83,6 +84,8 @@ final class MockBeaconConversationProvider: BeaconConversationProvider {
         arr.append(message)
         store[contact] = arr
     }
+
+    func requestSync() async throws {}
 }
 
 final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
@@ -255,11 +258,20 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
         try await db.collection("users").document(userId)
             .collection("outbox").addDocument(data: docData)
     }
+
+    func requestSync() async throws {
+        let data: [String: Any] = [
+            "syncRequestedAt": Int64(Date().timeIntervalSince1970 * 1000),
+            "remoteWebAccessEnabled": true
+        ]
+        try await db.collection("users").document(userId).setData(data, merge: true)
+    }
     #else
     init(userId: String) {}
     func loadConversations() async throws -> [BeaconContactCard: [BeaconConversationMessage]] { [:] }
     func listenToConversations(onChange: @escaping ([BeaconContactCard]) -> Void) -> ListenerRegistration? { return nil }
     func listenToMessages(for contact: BeaconContactCard, onChange: @escaping ([BeaconConversationMessage]) -> Void) -> ListenerRegistration? { return nil }
     func send(message: BeaconConversationMessage, to contact: BeaconContactCard) async throws {}
+    func requestSync() async throws {}
     #endif
 }

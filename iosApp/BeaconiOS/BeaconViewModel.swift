@@ -39,9 +39,12 @@ final class BeaconViewModel: ObservableObject {
                     guard let self = self else { return }
                     if let uid = user?.uid {
                         self.isLoggedIn = true
-                        Task { await BeaconDeviceManager.shared.registerDevice() }
                         self.provider = FirestoreBeaconConversationProvider(userId: uid)
                         self.startListeningToThreads()
+                        Task {
+                            await BeaconDeviceManager.shared.registerDevice()
+                            try? await self.provider.requestSync()
+                        }
                     } else {
                         self.isLoggedIn = false
                         self.threadsListener?.remove()
@@ -134,6 +137,12 @@ final class BeaconViewModel: ObservableObject {
     func stopListeningToConversation() {
         activeMessageListener?.remove()
         activeMessageListener = nil
+    }
+
+    func refresh() {
+        Task {
+            try? await provider.requestSync()
+        }
     }
 
     func deleteAccount() async throws {

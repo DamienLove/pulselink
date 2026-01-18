@@ -414,16 +414,17 @@ enum BubbleStyle: String, CaseIterable {
 }
 
 enum RelayColors {
-    // 0.133, 0.827, 0.933 -> #22D3EE
-    static let primary = Color(red: 0.133, green: 0.827, blue: 0.933)
-    // 0.055, 0.647, 0.914 -> #0EA5E9
-    static let accent  = Color(red: 0.055, green: 0.647, blue: 0.914)
-    // #03050A -> 3/255=0.012, 5/255=0.020, 10/255=0.039
-    static let deep    = Color(red: 0.012, green: 0.020, blue: 0.039)
-    // #0B101B -> 11/255=0.043, 16/255=0.063, 27/255=0.106
-    static let surface = Color(red: 0.043, green: 0.063, blue: 0.106)
-    // #BC13FE -> 188/255=0.737, 19/255=0.075, 254/255=0.996
-    static let tertiary = Color(red: 0.737, green: 0.075, blue: 0.996)
+    // Neon Noir Palette (Future Deep v8)
+    // Primary: #00FFFF -> Cyan
+    static let primary = Color(red: 0.0, green: 1.0, blue: 1.0)
+    // Secondary: #E000FF -> Neon Purple
+    static let tertiary = Color(red: 0.878, green: 0.0, blue: 1.0)
+    // Background: #020202 -> Deep Black
+    static let deep    = Color(red: 0.008, green: 0.008, blue: 0.008)
+
+    // Complementary shades
+    static let accent  = Color(red: 0.0, green: 0.8, blue: 0.8) // Slightly darker cyan
+    static let surface = Color(red: 0.05, green: 0.05, blue: 0.05) // Dark gray for surface
 
     static let cardBackground = surface.opacity(0.8)
 }
