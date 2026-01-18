@@ -1057,6 +1057,26 @@ textarea:focus-visible,
   text-align: right;
 }
 
+.compose-status {
+  padding: 10px 14px;
+  background: rgba(34, 211, 238, 0.1);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 12px;
+  font-size: 0.9em;
+  margin-top: -8px;
+  animation: slideUp 0.3s ease;
+  text-align: center;
+}
+
+.compose-hint {
+  font-size: 0.8em;
+  color: var(--muted);
+  text-align: center;
+  margin-top: -8px;
+  opacity: 0.7;
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Theme Gallery & Editor                                                    */
 /* -------------------------------------------------------------------------- */
