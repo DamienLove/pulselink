@@ -15,6 +15,7 @@ import com.pulselink.BuildConfig
 import com.pulselink.data.contacts.DeviceContactsRepository
 import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.util.splitSmsDisplayAddress
+import com.pulselink.R
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
@@ -30,6 +31,31 @@ class SmsSyncWorker @AssistedInject constructor(
     private val settingsRepository: SettingsRepository,
     private val deviceContactsRepository: DeviceContactsRepository
 ) : CoroutineWorker(appContext, workerParams) {
+
+    override suspend fun getForegroundInfo(): androidx.work.ForegroundInfo {
+        createNotificationChannel()
+        val notification = androidx.core.app.NotificationCompat.Builder(applicationContext, CHANNEL_ID)
+            .setContentTitle("Syncing SMS")
+            .setTicker("Syncing SMS")
+            .setSmallIcon(R.drawable.ic_logo)
+            .setOngoing(true)
+            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_LOW)
+            .build()
+        return androidx.work.ForegroundInfo(NOTIFICATION_ID, notification)
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "Sync Status"
+            val descriptionText = "Shows sync progress"
+            val importance = android.app.NotificationManager.IMPORTANCE_LOW
+            val channel = android.app.NotificationChannel(CHANNEL_ID, name, importance).apply {
+                description = descriptionText
+            }
+            val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
 
     override suspend fun doWork(): Result {
         val settings = settingsRepository.settings.first()
@@ -284,6 +310,11 @@ class SmsSyncWorker @AssistedInject constructor(
         } else {
             true
         }
+    }
+
+    companion object {
+        private const val CHANNEL_ID = "beacon_sync"
+        private const val NOTIFICATION_ID = 8888
     }
 
     private suspend fun writeDiagnostics(

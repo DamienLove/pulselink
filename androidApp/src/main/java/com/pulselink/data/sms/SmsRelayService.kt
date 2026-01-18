@@ -19,11 +19,13 @@ class SmsRelayService @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
     private val smsSender: SmsSender,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val smsSyncTrigger: SmsSyncTrigger
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var listener: ListenerRegistration? = null
+    private val listeners = mutableListOf<ListenerRegistration>()
     private val isStarted = AtomicBoolean(false)
+    private var lastSyncRequestAt: Long = 0L
 
     fun start() {
         if (!isStarted.compareAndSet(false, true)) return
@@ -39,10 +41,10 @@ class SmsRelayService @Inject constructor(
     }
 
     private fun startListening(uid: String) {
-        if (listener != null) return
+        if (listeners.isNotEmpty()) return
 
         val outboxRef = firestore.collection("users").document(uid).collection("outbox")
-        listener = outboxRef.addSnapshotListener { snapshots, e ->
+        listeners.add(outboxRef.addSnapshotListener { snapshots, e ->
             if (e != null) {
                 Log.w(TAG, "Listen failed.", e)
                 return@addSnapshotListener
@@ -60,12 +62,39 @@ class SmsRelayService @Inject constructor(
                     }
                 }
             }
-        }
+        })
+
+        val userRef = firestore.collection("users").document(uid)
+        listeners.add(userRef.addSnapshotListener { snapshot, e ->
+            if (e != null) {
+                Log.w(TAG, "User listen failed.", e)
+                return@addSnapshotListener
+            }
+
+            if (snapshot != null && snapshot.exists()) {
+                val syncRequestedAt = snapshot.getTimestamp("syncRequestedAt")?.toDate()?.time ?: 0L
+                if (syncRequestedAt > lastSyncRequestAt) {
+                    lastSyncRequestAt = syncRequestedAt
+                    scope.launch {
+                        try {
+                            val settings = settingsRepository.settings.first()
+                            if (settings.remoteWebAccessEnabled) {
+                                Log.d(TAG, "Remote sync requested, triggering now")
+                                smsSyncTrigger.triggerSync()
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error checking settings for remote sync", e)
+                        }
+                    }
+                }
+            }
+        })
     }
 
     private fun stopListening() {
-        listener?.remove()
-        listener = null
+        listeners.forEach { it.remove() }
+        listeners.clear()
+        lastSyncRequestAt = 0L
     }
 
     private fun processMessage(docId: String, address: String, body: String, uid: String, lineId: String?) {
