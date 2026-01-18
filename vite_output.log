@@ -1,0 +1,12 @@
+
+> pulselink-web@0.0.0 dev
+> vite
+
+
+  VITE v5.4.21  ready in 362 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+7:44:07 PM [vite] hmr update /src/App.jsx
+7:44:14 PM [vite] hmr update /src/App.jsx
+7:48:49 PM [vite] hmr update /src/App.jsx

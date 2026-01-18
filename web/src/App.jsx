@@ -1844,6 +1844,130 @@ const getToastClass = (msg) => {
   return 'toast';
 };
 
+const useSpotlightEffect = () => {
+  useEffect(() => {
+    let requestId;
+
+    const handleMouseMove = (e) => {
+      if (requestId) return;
+
+      requestId = requestAnimationFrame(() => {
+        const card = e.target.closest('.spotlight-card');
+        if (card) {
+          const rect = card.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          card.style.setProperty('--mouse-x', `${x}px`);
+          card.style.setProperty('--mouse-y', `${y}px`);
+        }
+        requestId = null;
+      });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      if (requestId) cancelAnimationFrame(requestId);
+    };
+  }, []);
+};
+
+const CommandPalette = ({ isOpen, onClose, actions }) => {
+  const [query, setQuery] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const inputRef = useRef(null);
+
+  const filteredActions = useMemo(() => {
+    if (!query) return actions;
+    const lower = query.toLowerCase();
+    return actions.filter(a =>
+      a.name.toLowerCase().includes(lower) ||
+      (a.subtitle && a.subtitle.toLowerCase().includes(lower))
+    );
+  }, [query, actions]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setQuery('');
+      setSelectedIndex(0);
+      // Small delay to ensure render
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (!isOpen) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex(i => Math.min(i + 1, filteredActions.length - 1));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex(i => Math.max(i - 1, 0));
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (filteredActions[selectedIndex]) {
+          filteredActions[selectedIndex].perform();
+          onClose();
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isOpen, filteredActions, selectedIndex, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="cmd-overlay" onClick={onClose}>
+      <div className="cmd-modal" onClick={e => e.stopPropagation()}>
+        <div className="cmd-header">
+          <SearchIcon />
+          <input
+            ref={inputRef}
+            className="cmd-input"
+            placeholder="Type a command..."
+            value={query}
+            onChange={e => {
+              setQuery(e.target.value);
+              setSelectedIndex(0);
+            }}
+          />
+          <div className="cmd-badge">ESC</div>
+        </div>
+        <div className="cmd-list">
+          {filteredActions.length === 0 ? (
+            <div className="cmd-empty">No commands found.</div>
+          ) : (
+            filteredActions.map((action, i) => (
+              <button
+                key={action.id}
+                className={`cmd-item ${i === selectedIndex ? 'selected' : ''}`}
+                onClick={() => {
+                  action.perform();
+                  onClose();
+                }}
+                onMouseEnter={() => setSelectedIndex(i)}
+              >
+                <div className="cmd-item-icon">{action.icon}</div>
+                <div className="cmd-item-content">
+                  <div className="cmd-item-title">{action.name}</div>
+                  {action.subtitle && <div className="cmd-item-sub">{action.subtitle}</div>}
+                </div>
+                {action.shortcut && <div className="cmd-shortcut">{action.shortcut}</div>}
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   const webHintStorageKey = 'pulselink.hideWebHint';
   const [user, setUser] = useState(null);
@@ -1981,9 +2105,12 @@ function App() {
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
   const [addingTrackId, setAddingTrackId] = useState(null);
   const [showDevTools, setShowDevTools] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [settingsSearch, setSettingsSearch] = useState('');
   const [premiumClaimActive, setPremiumClaimActive] = useState(false);
   const [proClaimActive, setProClaimActive] = useState(false);
+
+  useSpotlightEffect();
 
   const subscriptionStatus = userData?.subscriptionStatus;
   const premiumSubscriptionStatus = userData?.premiumSubscriptionStatus;
@@ -2037,17 +2164,7 @@ function App() {
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        // Focus sidebar search if in beacon, else maybe focus settings search
-        // For now, let's just focus the main search if available
-        const sidebarSearch = document.querySelector('.sidebar-search-input-field');
-        if (sidebarSearch) sidebarSearch.focus();
-        else {
-           const settingsSearch = document.querySelector('.settings-search-input');
-           if (settingsSearch) {
-               setActivePanel('settings');
-               setTimeout(() => settingsSearch.focus(), 100);
-           }
-        }
+        setShowCommandPalette(true);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -3360,6 +3477,21 @@ function App() {
     setSelectedThread(null);
   }, []);
 
+  const commands = useMemo(() => [
+    { id: 'home', name: 'Home', icon: <HomeIcon />, perform: () => setActivePanel('home') },
+    { id: 'beacon', name: 'Beacon Inbox', icon: <img src={beaconLogo} alt="" width={20} />, perform: () => setActivePanel('beacon') },
+    { id: 'pulselink', name: 'PulseLink Profile', icon: <img src={logo} alt="" width={20} />, perform: () => setActivePanel('pulselink') },
+    { id: 'ringersong', name: 'RingerSong', icon: <img src={ringersongLogo} alt="" width={20} />, perform: () => setActivePanel('ringersong') },
+    { id: 'map', name: 'Emergency Map', icon: <MapIcon />, perform: () => setActivePanel('map') },
+    { id: 'contacts', name: 'Contacts', icon: <ContactIcon />, perform: () => setActivePanel('contacts') },
+    { id: 'themes', name: 'Theme Gallery', icon: <ThemeIcon />, perform: () => setActivePanel('themes') },
+    { id: 'extensions', name: 'Extensions Store', icon: <ExtensionIcon />, perform: () => setActivePanel('extensions') },
+    { id: 'settings', name: 'Settings', icon: <SettingsIcon />, perform: () => setActivePanel('settings') },
+    { id: 'new-msg', name: 'New Message', subtitle: 'Start a conversation', icon: <MessageSquareIcon />, perform: () => { setActivePanel('beacon'); handleNewThread(); } },
+    { id: 'logout', name: 'Log Out', icon: <LockIcon />, perform: handleLogout },
+    { id: 'devtools', name: 'Toggle DevTools', icon: <BoltIcon />, perform: () => setShowDevTools(p => !p) }
+  ], [handleLogout, handleNewThread]);
+
   // Bolt: Stable handler to prevent ghost content when switching threads
   const handleThreadSelect = useCallback((thread) => {
     setMessages([]); // Clear previous messages immediately
@@ -3564,42 +3696,42 @@ function App() {
                 </div>
               )}
               <div className="home-grid">
-                <button className="home-card holographic-card" onClick={() => setActivePanel('beacon')}>
+                <button className="home-card spotlight-card" onClick={() => setActivePanel('beacon')}>
                   <div className="home-icon beacon">
                     <img src={beaconLogo} alt="Beacon" />
                   </div>
                   <h3>Beacon Inbox</h3>
                   <p>View SMS synced from your phone.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('pulselink')}>
+                <button className="home-card spotlight-card" onClick={() => setActivePanel('pulselink')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink" />
                   </div>
                   <h3>PulseLink</h3>
                   <p>Update your profile and trusted contacts.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('contacts')}>
+                <button className="home-card spotlight-card" onClick={() => setActivePanel('contacts')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink contacts" />
                   </div>
                   <h3>Contacts</h3>
                   <p>Browse all device contacts synced from your phone.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('ringersong')}>
+                <button className="home-card spotlight-card" onClick={() => setActivePanel('ringersong')}>
                   <div className="home-icon ringersong">
                     <img src={ringersongLogo} alt="RingerSong" />
                   </div>
                   <h3>RingerSong</h3>
                   <p>Manage ringtone progressions and streaming.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('map')}>
+                <button className="home-card spotlight-card" onClick={() => setActivePanel('map')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink map" />
                   </div>
                   <h3>Emergency Map</h3>
                   <p>Track shared locations from PulseLink alerts.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('themes')}>
+                <button className="home-card spotlight-card" onClick={() => setActivePanel('themes')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink themes" />
                   </div>
@@ -3607,7 +3739,7 @@ function App() {
                   <p>Browse, import, and publish custom themes.</p>
                 </button>
                 <button
-                  className="home-card"
+                  className="home-card spotlight-card"
                   onClick={() => setActivePanel('extensions')}
                   disabled={!remoteSettings.thirdPartyExtensionsEnabled}
                   title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage extensions" : "Enable 3rd-party extensions in Settings"}
@@ -3629,7 +3761,7 @@ function App() {
                 <p>Manage trusted contacts and your public profile.</p>
               </div>
               <div className="pulselink-grid">
-                <div className="settings-card">
+                <div className="settings-card spotlight-card">
                   <h4>Public profile</h4>
                   <div className="profile-header-row">
                     <div className="profile-avatar-preview">
@@ -3718,7 +3850,7 @@ function App() {
                   </button>
                     {profileStatus && <div className={getToastClass(profileStatus)} role="status" aria-live="polite">{profileStatus}</div>}
                 </div>
-                <div className="settings-card">
+                <div className="settings-card spotlight-card">
                   <h4>Trusted contacts</h4>
                   <div className="contact-list">
                     {trustedContacts.map((contact) => (
@@ -3738,7 +3870,7 @@ function App() {
                   </div>
                   {contactStatus && <div className={getToastClass(contactStatus)} role="status" aria-live="polite">{contactStatus}</div>}
                 </div>
-                <div className="settings-card">
+                <div className="settings-card spotlight-card">
                   <h4>{editingContactId ? 'Edit trusted contact' : 'Add trusted contact'}</h4>
                   <label className="login-field">
                     Name
@@ -3907,7 +4039,7 @@ function App() {
                 <p>Locations parsed from PulseLink alert messages synced to this account.</p>
               </div>
               {!user && (
-                <div className="settings-card" style={{ marginBottom: 20 }}>
+                <div className="settings-card spotlight-card" style={{ marginBottom: 20 }}>
                   <h4>Sign in to view alerts</h4>
                   <p className="settings-note">Emergency locations are secured per account. Please sign in to load your map.</p>
                 </div>
@@ -4009,7 +4141,7 @@ function App() {
               </div>
 
               <div className="pulselink-grid">
-                <div className="settings-card">
+                <div className="settings-card spotlight-card">
                     <div className="card-header-row" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20}}>
                         <h4>Current Playlist</h4>
                         <span className="badge" style={{background: 'var(--accent)', color: '#fff', padding: '2px 8px', borderRadius: 12, fontSize: '0.8em'}}>{ringerPlaylist.length} songs</span>
@@ -4032,7 +4164,7 @@ function App() {
                     )}
                 </div>
               
-                <div className="settings-card">
+                <div className="settings-card spotlight-card">
                     <h4>Add Music</h4>
                     <div className="search-container">
                         <div className="search-input-wrapper">
@@ -4081,7 +4213,7 @@ function App() {
                 <p>Browse community themes or publish your own. Image-based themes require approval.</p>
               </div>
               <div className="themes-grid">
-                <div className="settings-card themes-card">
+                <div className="settings-card themes-card spotlight-card">
                   <div className="themes-toolbar">
                     <label className="login-field">
                       Search themes
@@ -4113,7 +4245,7 @@ function App() {
                   </div>
                   {themeGalleryStatus && <div className={getToastClass(themeGalleryStatus)} role="status" aria-live="polite">{themeGalleryStatus}</div>}
                 </div>
-                <div className="settings-card themes-card">
+                <div className="settings-card themes-card spotlight-card">
                   <h4>Publish your theme</h4>
                   <label className="login-field">
                     Theme name
@@ -4178,7 +4310,7 @@ function App() {
                   </button>
                   {themePublishStatus && <div className={getToastClass(themePublishStatus)} role="status" aria-live="polite">{themePublishStatus}</div>}
                 </div>
-                <div className="settings-card themes-card">
+                <div className="settings-card themes-card spotlight-card">
                   <h4>Quick presets</h4>
                   <div className="theme-grid">
                     {themePresets.map((preset) => (
@@ -4286,17 +4418,17 @@ function App() {
                 <p>Enhance your PulseLink experience with powerful add-ons.</p>
               </div>
 
-              <div className="settings-card" style={{marginBottom: 20}}>
+              <div className="settings-card spotlight-card" style={{marginBottom: 20}}>
                 <h4>Quick Setup</h4>
                 <div className="settings-row" style={{alignItems: 'stretch', gap: 16}}>
-                  <button className="home-card" style={{margin: 0, flex: 1, textAlign: 'left', alignItems: 'flex-start'}} onClick={() => handleQuickSetup('essentials')}>
+                  <button className="home-card spotlight-card" style={{margin: 0, flex: 1, textAlign: 'left', alignItems: 'flex-start'}} onClick={() => handleQuickSetup('essentials')}>
                     <div className="home-icon" style={{width: 40, height: 40, background: 'rgba(34, 211, 238, 0.1)', color: 'var(--accent)'}}>
                       <BoltIcon />
                     </div>
                     <h4 style={{marginTop: 8}}>Essentials</h4>
                     <p style={{fontSize: '0.9em', color: 'var(--muted)', margin: 0}}>Just the basics: Beacon, Relay, Email Backup, and OTP Cleanup.</p>
                   </button>
-                  <button className="home-card" style={{margin: 0, flex: 1, textAlign: 'left', alignItems: 'flex-start'}} onClick={() => handleQuickSetup('power')}>
+                  <button className="home-card spotlight-card" style={{margin: 0, flex: 1, textAlign: 'left', alignItems: 'flex-start'}} onClick={() => handleQuickSetup('power')}>
                     <div className="home-icon" style={{width: 40, height: 40, background: 'rgba(34, 211, 238, 0.1)', color: 'var(--accent)'}}>
                       <StarIcon />
                     </div>
@@ -4348,7 +4480,7 @@ function App() {
                       const isLocked = ext.premium && !isPremiumUser;
 
                       return (
-                        <div className="home-card" key={ext.id} style={{ opacity: isLocked ? 0.6 : 1, position: 'relative' }}>
+                        <div className="home-card spotlight-card" key={ext.id} style={{ opacity: isLocked ? 0.6 : 1, position: 'relative' }}>
                           <div className="home-icon" style={{
                              background: ext.isImg ? 'transparent' : 'rgba(255, 255, 255, 0.05)',
                              display: 'grid',
@@ -4388,7 +4520,7 @@ function App() {
                 </div>
               ))}
 
-              <div className="settings-card">
+              <div className="settings-card spotlight-card">
                 <h4>Developer sandbox</h4>
                 <p className="settings-note">Add webhook-style extensions that run against your own account. Stored locally so you can iterate safely.</p>
                 {!remoteSettings.thirdPartyExtensionsEnabled && (
@@ -4396,7 +4528,7 @@ function App() {
                 )}
                 <div className="extensions-list" style={{display: 'grid', gap: 12}}>
                   {devExtensions.map((ext) => (
-                    <div key={ext.id} className="home-card" style={{margin: 0}}>
+                    <div key={ext.id} className="home-card spotlight-card" style={{margin: 0}}>
                       <h4>{ext.name}</h4>
                       <p className="settings-note">{ext.description || ext.endpoint || 'No description provided.'}</p>
                       {ext.endpoint && <code className="mono" style={{fontSize: 12}}>{ext.endpoint}</code>}
@@ -4425,7 +4557,7 @@ function App() {
                 </form>
                 {extensionStatus && <div className={getToastClass(extensionStatus)} role="status">{extensionStatus}</div>}
               </div>
-              <div className="settings-card">
+              <div className="settings-card spotlight-card">
                 <h4>Submit to gallery</h4>
                 <p className="settings-note">Share your extension with other testers.</p>
                 <div className="settings-row" style={{gap: 8, flexWrap: 'wrap'}}>
@@ -4481,7 +4613,7 @@ function App() {
                   return (
                     <>
                       {show(['account', 'email', 'user id', 'password', 'reset', 'sign out', 'logout', 'profile']) && (
-                        <div className="settings-card">
+                        <div className="settings-card spotlight-card">
                           <h4>Account</h4>
                           <div className="settings-row">
                             <span className="settings-label">Signed in as</span>
@@ -4502,7 +4634,7 @@ function App() {
                       )}
 
                       {show(['web', 'previews', 'scroll', 'auto-scroll', 'message previews', 'browser']) && (
-                        <div className="settings-card">
+                        <div className="settings-card spotlight-card">
                           <h4>Web preferences</h4>
                           <label className="settings-toggle">
                             <input
@@ -4527,7 +4659,7 @@ function App() {
                       )}
 
                       {show(['pulselink', 'remote', 'web access', 'contact info', 'extensions', '3rd party', 'time format', 'sync']) && (
-                        <div className="settings-card">
+                        <div className="settings-card spotlight-card">
                           <h4>PulseLink settings</h4>
                           <label className="settings-toggle">
                             <input
@@ -4605,7 +4737,7 @@ function App() {
                       )}
 
                       {show(['data', 'delete', 'clear', 'cloud', 'account data', 'remove', 'privacy']) && (
-                        <div className="settings-card">
+                        <div className="settings-card spotlight-card">
                           <h4>Account data</h4>
                           <p className="settings-note">
                             Delete account removes your login and all cloud data. Clear data keeps your login but deletes synced content.
@@ -4720,6 +4852,11 @@ function App() {
           )}
         </div>
       </div>
+      <CommandPalette
+        isOpen={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        actions={commands}
+      />
     </div>
   );
 }
