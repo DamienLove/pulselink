@@ -12,6 +12,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.pulselink.beacon.data.SmsMessageItem
+import com.pulselink.beacon.data.MmsPart
 import com.pulselink.beacon.data.SmsRepository
 import com.pulselink.beacon.data.SmsThreadItem
 import com.pulselink.beacon.data.InboxPreferencesRepository
@@ -67,6 +68,9 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     var contacts by mutableStateOf<List<BeaconContact>>(emptyList())
         private set
     var filteredContacts by mutableStateOf<List<BeaconContact>>(emptyList())
+        private set
+
+    var sharedMedia by mutableStateOf<List<MmsPart>>(emptyList())
         private set
 
     // Changed to hold UiItems for display
@@ -224,6 +228,12 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             contacts = repo.getContacts()
             updateFilteredList()
+        }
+    }
+
+    fun loadSharedMedia(threadId: Long) {
+        viewModelScope.launch {
+            sharedMedia = repo.getSharedMedia(threadId)
         }
     }
 

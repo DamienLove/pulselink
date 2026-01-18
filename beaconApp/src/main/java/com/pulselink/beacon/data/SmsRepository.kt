@@ -758,6 +758,61 @@ class SmsRepository(private val context: Context) {
         observerFlow.tryEmit(Unit)
     }
 
+    suspend fun getSharedMedia(threadId: Long): List<MmsPart> = withContext(Dispatchers.IO) {
+        if (!hasReadPerms()) return@withContext emptyList()
+
+        // 1. Get all MMS Message IDs for this thread
+        val mmsIds = mutableListOf<Long>()
+        val projection = arrayOf(Telephony.Mms._ID)
+        val cursor = runCatching {
+            context.contentResolver.query(
+                Telephony.Mms.CONTENT_URI,
+                projection,
+                "${Telephony.Mms.THREAD_ID}=?",
+                arrayOf(threadId.toString()),
+                "${Telephony.Mms.DATE} DESC"
+            )
+        }.getOrNull() ?: return@withContext emptyList()
+
+        cursor.use { c ->
+            while (c.moveToNext()) {
+                mmsIds.add(c.getLong(0))
+            }
+        }
+
+        if (mmsIds.isEmpty()) return@withContext emptyList()
+
+        // 2. Fetch parts for these messages (Chunked to avoid SQL limits)
+        val parts = mutableListOf<MmsPart>()
+        val partUri = Uri.parse("content://mms/part")
+        val partProj = arrayOf(Telephony.Mms.Part._ID, Telephony.Mms.Part.CONTENT_TYPE, Telephony.Mms.Part._DATA)
+
+        mmsIds.chunked(50).forEach { chunk ->
+            val ids = chunk.joinToString(",")
+            val cParts = runCatching {
+                context.contentResolver.query(
+                    partUri,
+                    partProj,
+                    "${Telephony.Mms.Part.MSG_ID} IN ($ids) AND ${Telephony.Mms.Part.CONTENT_TYPE} LIKE 'image/%'",
+                    null,
+                    null
+                )
+            }.getOrNull()
+
+            cParts?.use { c ->
+                val idIdx = c.getColumnIndex(Telephony.Mms.Part._ID)
+                val typeIdx = c.getColumnIndex(Telephony.Mms.Part.CONTENT_TYPE)
+                while (c.moveToNext()) {
+                    val partId = c.getString(idIdx)
+                    val type = c.getString(typeIdx)
+                    val uri = Uri.parse("content://mms/part/$partId")
+                    parts.add(MmsPart(contentType = type, dataUri = uri))
+                }
+            }
+        }
+        return@withContext parts
+    }
+
     private fun resolveAddress(raw: String?): String {
         if (!hasReadPerms()) return raw.orEmpty()
         val number = raw?.trim().orEmpty()

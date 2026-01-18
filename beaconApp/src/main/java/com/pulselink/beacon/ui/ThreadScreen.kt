@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -134,7 +135,8 @@ fun ThreadScreen(
     onCall: () -> Unit = {},
     onReact: (Long, String) -> Unit = { _, _ -> },
     onToggleStar: (Long) -> Unit = {},
-    onBlock: () -> Unit = {}
+    onBlock: () -> Unit = {},
+    onOpenDetails: () -> Unit = {}
 ) {
     var draft by remember { mutableStateOf("") }
     var draftLoaded by remember { mutableStateOf(false) }
@@ -269,7 +271,7 @@ fun ThreadScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
+                    Column(Modifier.clickable(onClick = onOpenDetails)) {
                         Text(address, maxLines = 1, style = MaterialTheme.typography.titleMedium, color = theme.frameColor)
                     }
                 },
@@ -291,6 +293,9 @@ fun ThreadScreen(
                     }
                     IconButton(onClick = onCall) {
                         Icon(Icons.Default.Call, contentDescription = "Call", tint = iconTint)
+                    }
+                    IconButton(onClick = onOpenDetails) {
+                        Icon(Icons.Default.Info, contentDescription = "Details", tint = iconTint)
                     }
                     IconButton(onClick = { showMenu = true }) {
                         Icon(androidx.compose.material.icons.Icons.Default.MoreVert, contentDescription = "Options", tint = iconTint)

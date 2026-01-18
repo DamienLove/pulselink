@@ -27,6 +27,7 @@ import com.pulselink.beacon.ui.ScheduledMessagesScreen
 import com.pulselink.beacon.ui.SpamAndBlockedScreen
 import com.pulselink.beacon.ui.SmsViewModel
 import com.pulselink.beacon.ui.ThreadScreen
+import com.pulselink.beacon.ui.ConversationDetailsScreen
 import com.pulselink.beacon.ui.ThemeViewModel
 import com.pulselink.beacon.ui.customize.CustomizationScreen
 import androidx.compose.ui.platform.LocalContext
@@ -311,9 +312,45 @@ private fun BeaconNav(
                         },
                         onReact = { msgId, emoji -> vm.addReaction(msgId, emoji) },
                         onToggleStar = { msgId -> vm.toggleStar(msgId, threadId) },
-                        onBlock = { vm.blockNumber(address) }
+                        onBlock = { vm.blockNumber(address) },
+                        onOpenDetails = { navController.navigate("details/$threadId/${Uri.encode(address)}") }
                     )
                 }
+            }
+            composable(
+                route = "details/{threadId}/{address}",
+                arguments = listOf(
+                    navArgument("threadId") { type = NavType.LongType },
+                    navArgument("address") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val threadId = backStackEntry.arguments?.getLong("threadId") ?: 0L
+                val address = backStackEntry.arguments?.getString("address")?.let { Uri.decode(it) } ?: ""
+                val contactTheme = themeState.forAddress(address)
+
+                ConversationDetailsScreen(
+                    threadId = threadId,
+                    address = address,
+                    theme = contactTheme,
+                    sharedMedia = vm.sharedMedia,
+                    onLoadMedia = { vm.loadSharedMedia(threadId) },
+                    onBack = { navController.popBackStack() },
+                    onCall = {
+                         val intent = Intent(Intent.ACTION_DIAL).apply {
+                                data = Uri.parse("tel:$address")
+                            }
+                            context.startActivity(intent)
+                    },
+                    onBlock = {
+                        vm.blockNumber(address)
+                        navController.popBackStack("inbox", inclusive = false)
+                    },
+                    onNotificationSettings = { navController.navigate("notifications?address=${Uri.encode(address)}") },
+                    onDeleteThread = {
+                        vm.deleteThread(threadId)
+                        navController.popBackStack("inbox", inclusive = false)
+                    }
+                )
             }
             composable(
                 route = "notifications?address={address}",
