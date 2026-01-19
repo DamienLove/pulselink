@@ -55,7 +55,7 @@ object Gradients {
     val Holographic = Brush.linearGradient(
         colors = listOf(
             DeepAccent.copy(alpha = 0.9f),
-            Color(0xFFD8B4FE).copy(alpha = 0.8f),
+            DeepTertiary.copy(alpha = 0.8f),
             DeepAccentStrong.copy(alpha = 0.9f)
         )
     )

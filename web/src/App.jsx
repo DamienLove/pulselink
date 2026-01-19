@@ -751,10 +751,10 @@ const defaultTheme = {
   secondaryColor: "#D946EF",
   bubbleOutgoing: "#00F0FF",
   bubbleIncoming: "#161B2E",
-  backgroundColor: "#030508",
+  backgroundColor: "#000000",
   iconSizeFactor: 1.0,
   fontStyle: "Default",
-  bubbleCornerRadius: 22,
+  bubbleCornerRadius: 26,
   inboxIconVariant: "Beacon",
   onBubbleOutgoing: "#000000",
   onBubbleIncoming: "#EEF2FB",
@@ -779,6 +779,29 @@ const defaultTheme = {
 
 const themePresets = [
   {
+    name: "Neon Noir v9",
+    theme: {
+      fontStyle: "Default",
+      bubbleCornerRadius: 26,
+      appBackgroundGradientStart: "#000000",
+      appBackgroundGradientEnd: "#05080E",
+      onBackground: "#E0F7FA",
+      topBarColor: "#000000",
+      onTopBarColor: "#00F0FF",
+      bubbleOutgoing: "#00F0FF",
+      onBubbleOutgoing: "#000000",
+      bubbleIncoming: "#0A0F1C",
+      onBubbleIncoming: "#E0F7FA",
+      primaryColor: "#00F0FF",
+      secondaryColor: "#E000FF",
+      dividerColor: "#1E293B",
+      inboxIconVariant: "midnight_oled",
+      useGlassEffect: true,
+      useHolographicGlow: true,
+      uiDensity: "Comfortable"
+    }
+  },
+  {
     name: "Future Hologram",
     theme: {
       fontStyle: "Default",
@@ -795,7 +818,7 @@ const themePresets = [
       primaryColor: "#00F0FF",
       secondaryColor: "#D946EF",
       dividerColor: "#1E293B",
-      inboxIconVariant: "neon_noir",
+      inboxIconVariant: "midnight_oled",
       useGlassEffect: true,
       useHolographicGlow: true,
       uiDensity: "Comfortable"
@@ -3630,7 +3653,7 @@ function App() {
                 </div>
               )}
               <div className="home-grid">
-                <button className="home-card holographic-card" onClick={() => setActivePanel('beacon')}>
+                <button className="home-card" onClick={() => setActivePanel('beacon')}>
                   <div className="home-icon beacon">
                     <img src={beaconLogo} alt="Beacon" />
                   </div>
