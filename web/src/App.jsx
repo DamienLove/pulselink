@@ -3697,39 +3697,60 @@ function App() {
               <div className="pulselink-grid">
                 <div className="settings-card">
                   <h4>Public profile</h4>
-                  <div className="profile-header-row">
-                    <div className="profile-avatar-preview">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                    <div style={{
+                      width: 80, height: 80, borderRadius: '50%',
+                      border: '2px solid var(--border)', background: 'rgba(255, 255, 255, 0.05)',
+                      overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: '0 0 20px rgba(0,0,0,0.5)', flexShrink: 0
+                    }}>
                       {profile.avatarId ? (
                         <img
                           src={avatarPresets.find(p => p.id === profile.avatarId)?.src}
                           alt="Avatar"
-                          className="profile-avatar-img"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       ) : (
                         profile.avatarUrl ? (
-                          <img src={profile.avatarUrl} alt="Avatar" className="profile-avatar-img" />
+                          <img src={profile.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
-                          <div className="profile-avatar-placeholder">?</div>
+                          <div style={{ fontSize: '2em', color: 'var(--muted)', fontWeight: 700 }}>?</div>
                         )
                       )}
                     </div>
                     {unlockedAvatars.length > 0 && (
-                      <div className="avatar-selector">
+                      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                         {unlockedAvatars.map(av => (
                           <button
                             key={av.id}
                             onClick={() => setProfile(prev => ({ ...prev, avatarId: av.id }))}
-                            className={`avatar-option-btn ${profile.avatarId === av.id ? 'active' : ''}`}
+                            className="ghost-btn"
                             title={av.name}
+                            aria-label={`Select ${av.name}`}
+                            aria-pressed={profile.avatarId === av.id}
+                            style={{
+                              width: 48, height: 48, padding: 0, borderRadius: '50%', overflow: 'hidden',
+                              border: profile.avatarId === av.id ? '2px solid var(--accent)' : '1px solid var(--border)',
+                              boxShadow: profile.avatarId === av.id ? '0 0 15px var(--accent-glow)' : 'none',
+                              color: profile.avatarId === av.id ? 'var(--accent)' : 'var(--muted)'
+                            }}
                           >
-                            <img src={av.src} alt={av.name} className="avatar-option-img" />
+                            <img src={av.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           </button>
                         ))}
                         <button
                           onClick={() => setProfile(prev => ({ ...prev, avatarId: '' }))}
-                          className={`avatar-option-btn ${!profile.avatarId ? 'active' : ''}`}
+                          className="ghost-btn"
                           title="Use Custom URL"
                           aria-label="Use custom avatar URL"
+                          aria-pressed={!profile.avatarId}
+                          style={{
+                            width: 48, height: 48, padding: 0, borderRadius: '50%',
+                            border: !profile.avatarId ? '2px solid var(--accent)' : '1px solid var(--border)',
+                            boxShadow: !profile.avatarId ? '0 0 15px var(--accent-glow)' : 'none',
+                            color: !profile.avatarId ? 'var(--accent)' : 'var(--muted)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}
                         >
                           <LinkIcon />
                         </button>

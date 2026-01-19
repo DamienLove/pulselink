@@ -10,3 +10,7 @@
 ## 2024-05-25 - Accessible Icon Buttons & Input Helpers
 **Learning:** Icon-only buttons (like Sidebar toggle) are invisible to screen readers without `aria-label`. Visual cues like character counts are missed unless linked via `aria-describedby`.
 **Action:** Audit all icon buttons for `aria-label` and programmatically link input helper text using `aria-describedby`.
+
+## 2024-05-26 - Unstyled Interactive State Confusion
+**Learning:** Interactive elements like avatar selection buttons that lack visual feedback (active state, hover state) and accessibility attributes (`aria-pressed`) create a confusing experience where users cannot verify their selection.
+**Action:** Always ensure interactive selection groups have distinct visual active states and appropriate ARIA attributes (`aria-pressed` or `aria-checked`) to communicate state to all users.
