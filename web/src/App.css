@@ -1001,14 +1001,17 @@ textarea:focus-visible,
   animation: shimmer 1.5s infinite;
 }
 
+.chat-sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
 .chat-header {
   padding: 24px 40px;
   background: rgba(3, 5, 10, 0.85);
   backdrop-filter: blur(24px);
   border-bottom: 1px solid var(--glass-border);
-  position: sticky;
-  top: 0;
-  z-index: 10;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1081,11 +1084,17 @@ textarea:focus-visible,
 .composer {
   padding: 24px 40px;
   background: rgba(2, 2, 2, 0.9);
-  border-top: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
   gap: 16px;
   backdrop-filter: blur(24px);
+}
+
+@media (max-width: 768px) {
+  .composer {
+    padding: 16px 20px;
+  }
 }
 
 .composer-row {

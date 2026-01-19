@@ -2044,7 +2044,7 @@ function App() {
   const [deleteAction, setDeleteAction] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [showPreviews, setShowPreviews] = useState(true);
-  const [autoScroll, setAutoScroll] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [spotifyToken, setSpotifyToken] = useState(null);
   const [spotifySearch, setSpotifySearch] = useState('');
   const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
@@ -2593,13 +2593,30 @@ function App() {
     }
   }, [user, selectedThread]);
 
-
-  // Auto-scroll to bottom when messages change
+  // Bolt: Message listener with Newest First ordering
   useEffect(() => {
-    if (autoScroll) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (user && selectedThread) {
+      setIsLoadingMessages(true);
+      const basePath = selectedThread.lineId
+        ? ["users", user.uid, "lines", selectedThread.lineId, "threads", selectedThread.id, "messages"]
+        : ["users", user.uid, "synced_threads", selectedThread.id, "messages"];
+      const messagesRef = collection(db, ...basePath);
+      // Bolt: Sort desc (Newest First) per user request
+      const q = query(messagesRef, orderBy("date", "desc"));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const messagesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setMessages(messagesData);
+        setIsLoadingMessages(false);
+      });
+      return () => unsubscribe();
+    } else {
+      setMessages([]);
+      setIsLoadingMessages(false);
     }
-  }, [messages, autoScroll]);
+  }, [user, selectedThread]);
 
   useEffect(() => {
     if (!user) {
@@ -3419,6 +3436,7 @@ function App() {
   // Bolt: Stable handler to prevent ghost content when switching threads
   const handleThreadSelect = useCallback((thread) => {
     setMessages([]); // Clear previous messages immediately
+    setIsLoadingMessages(true);
     setSelectedThread(thread);
     if (thread?.lineId) {
       setActiveLineId((prev) => prev ?? thread.lineId);
@@ -3440,8 +3458,8 @@ function App() {
   const activeLineThreads = useMemo(() => {
     if (lineInboxMode === 'COMBINED') return combinedThreads;
     const chosenLine = activeLineId || lines[0]?.id || null;
-    const current = chosenLine ? lineThreads[chosenLine] || [] : [];
-    return [...current].sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
+    // Bolt: Firestore already sorts by date desc, so no need to re-sort here
+    return chosenLine ? lineThreads[chosenLine] || [] : [];
   }, [lineInboxMode, activeLineId, lines, lineThreads, combinedThreads]);
 
 
@@ -4586,7 +4604,7 @@ function App() {
                         </div>
                       )}
 
-                      {show(['web', 'previews', 'scroll', 'auto-scroll', 'message previews', 'browser']) && (
+                      {show(['web', 'previews', 'message previews', 'browser']) && (
                         <div className="settings-card">
                           <h4>Web preferences</h4>
                           <label className="settings-toggle">
@@ -4596,14 +4614,6 @@ function App() {
                               onChange={(e) => setShowPreviews(e.target.checked)}
                             />
                             Show message previews
-                          </label>
-                          <label className="settings-toggle">
-                            <input
-                              type="checkbox"
-                              checked={autoScroll}
-                              onChange={(e) => setAutoScroll(e.target.checked)}
-                            />
-                            Auto-scroll to latest message
                           </label>
                           <p className="settings-note">
                             Preferences apply to this browser only.
@@ -4753,17 +4763,33 @@ function App() {
       )}
                 {selectedThread ? (
                   <>
-                    <div className="chat-header">
-                      <div>
-                        <h3>{selectedThread.address}</h3>
-                        {lineInboxMode === 'PER_LINE' && selectedThread.lineId && (
-                          <div className="chat-subtitle">From line {lines.find(l => l.id === selectedThread.lineId)?.label || selectedThread.lineId.slice(0,6)}</div>
-                        )}
+                    <div className="chat-sticky-top">
+                      <div className="chat-header">
+                        <div>
+                          <h3>{selectedThread.address}</h3>
+                          {lineInboxMode === 'PER_LINE' && selectedThread.lineId && (
+                            <div className="chat-subtitle">From line {lines.find(l => l.id === selectedThread.lineId)?.label || selectedThread.lineId.slice(0,6)}</div>
+                          )}
+                        </div>
                       </div>
+                      <MessageComposer
+                        user={user}
+                        db={db}
+                        selectedThread={selectedThread}
+                        lineInboxMode={lineInboxMode}
+                        activeLineId={activeLineId}
+                        lines={lines}
+                        isLoggingIn={isLoggingIn}
+                      />
                     </div>
                     <div className="messages-list">
-                      {messageListElements}
-                      <div ref={messagesEndRef} />
+                      {isLoadingMessages ? (
+                        <div style={{ padding: '40px', textAlign: 'center' }}>
+                          <Spinner />
+                        </div>
+                      ) : (
+                        messageListElements
+                      )}
                     </div>
                   </>
                 ) : (
@@ -4772,15 +4798,6 @@ function App() {
                     <div>Select a thread or start a new message</div>
                   </div>
                 )}
-                <MessageComposer
-                  user={user}
-                  db={db}
-                  selectedThread={selectedThread}
-                  lineInboxMode={lineInboxMode}
-                  activeLineId={activeLineId}
-                  lines={lines}
-                  isLoggingIn={isLoggingIn}
-                />
               </>
             ) : (
               <div className="empty-state">
