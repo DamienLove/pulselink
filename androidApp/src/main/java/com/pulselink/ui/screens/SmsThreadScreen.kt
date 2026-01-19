@@ -159,7 +159,9 @@ fun SmsThreadScreen(
         derivedStateOf {
             val layout = listState.layoutInfo
             val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
-            lastVisible >= (layout.totalItemsCount - 2).coerceAtLeast(0)
+            // Consider "near bottom" if within 5 items of the end, so user isn't disrupted
+            // while reading recent messages but still gets auto-scroll for new messages
+            lastVisible >= (layout.totalItemsCount - 5).coerceAtLeast(0)
         }
     }
     val context = LocalContext.current
@@ -426,8 +428,10 @@ fun SmsThreadScreen(
         }
     }
 
-    LaunchedEffect(messages.size) {
+    LaunchedEffect(messages) {
         if (messages.isEmpty()) return@LaunchedEffect
+        // Auto-scroll to newest message if this is the initial load or if user is near the bottom
+        // This prevents disrupting users who have scrolled up to read old messages
         if (!initialScrollDone || isNearBottom) {
             listState.animateScrollToItem(0)
             initialScrollDone = true
@@ -1038,14 +1042,35 @@ private fun MessageBubble(
                 modifier = bubbleModifier
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = msg.body,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        fontFamily = font,
-                        color = textColor,
-                        fontSize = fontSize
-                    )
+                    if (msg.isMms && msg.mediaParts.isNotEmpty()) {
+                        msg.mediaParts.forEach { part ->
+                            if (part.contentType.startsWith("image/")) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(part.dataUri)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = "MMS Image",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .padding(bottom = 8.dp),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                        }
+                    }
+                    if (msg.body.isNotBlank() && msg.body != "[MMS]") {
+                        Text(
+                            text = msg.body,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            fontFamily = font,
+                            color = textColor,
+                            fontSize = fontSize
+                        )
+                    }
                     Text(
                         text = dateFormatter(msg.timestamp),
                         style = MaterialTheme.typography.labelSmall,

@@ -14,6 +14,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -262,7 +263,10 @@ class BeaconInboxActivity : ComponentActivity() {
 
         val fromPulseLink = intent.getBooleanExtra("from_pulselink", false)
 
-        Column(modifier = Modifier.fillMaxSize()) {
+        val theme = state.settings.themePreferences
+        val backgroundColor = parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor)
+
+        Column(modifier = Modifier.fillMaxSize().background(backgroundColor)) {
             val bannerHeight = 50.dp
             Box(modifier = Modifier.weight(1f)) {
                 Box(
@@ -1020,6 +1024,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onToggleAiSummaries = viewModel::setAiSummariesEnabled,
                                         onToggleMergedExperience = viewModel::setMergedExperienceEnabled,
                                         onToggleThirdPartyExtensions = viewModel::setThirdPartyExtensionsEnabled,
+                                        onToggleTruecaller = viewModel::setTruecallerEnabled,
                                         onTogglePrivateSafe = viewModel::setPrivateSafeEnabled,
                                         onToggleSmartReplies = viewModel::setSmartRepliesEnabled,
                                         onOpenThemes = { navController.navigate("visual_settings") },

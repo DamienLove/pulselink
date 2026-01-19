@@ -22,7 +22,15 @@ data class SmsMessageItem(
     val body: String,
     val timestamp: Long,
     val outgoing: Boolean,
-    val status: SmsMessageStatus? = null
+    val status: SmsMessageStatus? = null,
+    val isMms: Boolean = false,
+    val mediaParts: List<MmsPart> = emptyList()
+)
+
+data class MmsPart(
+    val contentType: String,
+    val text: String? = null,
+    val dataUri: android.net.Uri? = null
 )
 
 enum class SmsMessageStatus {

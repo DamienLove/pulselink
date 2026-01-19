@@ -43,51 +43,65 @@ class SpotifyPlayerManager @Inject constructor(
             .showAuthView(showAuthView)
             .build()
 
+        // Use a timeout logic if possible, but SpotifyAppRemote doesn't expose it directly.
+        // We rely on the callback.
         SpotifyAppRemote.connect(context, connectionParams, object : Connector.ConnectionListener {
             override fun onConnected(appRemote: SpotifyAppRemote) {
                 spotifyAppRemote = appRemote
                 Log.d(TAG, "Connected to Spotify")
-                continuation.resume(true)
+                if (continuation.isActive) {
+                    continuation.resume(true)
+                }
             }
 
             override fun onFailure(throwable: Throwable) {
                 Log.e(TAG, "Failed to connect to Spotify", throwable)
-                continuation.resume(false)
+                if (continuation.isActive) {
+                    continuation.resume(false)
+                }
             }
         })
     }
 
     suspend fun playUri(uri: String, startMs: Long = 0): Boolean {
-        if (spotifyAppRemote?.isConnected != true) {
-            // Attempt silent connection first
-            if (!connect(showAuthView = false)) return false
-        }
-
-        return suspendCancellableCoroutine { continuation ->
-            val playerApi = spotifyAppRemote?.playerApi
-            if (playerApi == null) {
-                continuation.resume(false)
-                return@suspendCancellableCoroutine
-            }
-
-            playerApi.play(uri).setResultCallback {
-                Log.d(TAG, "Sent play command for $uri")
-                if (startMs > 0) {
-                     playerApi.seekTo(startMs).setResultCallback {
-                         Log.d(TAG, "Sent seek command for $startMs")
-                         continuation.resume(true)
-                     }.setErrorCallback { e ->
-                         Log.e(TAG, "Error seeking to $startMs", e)
-                         // Resume true anyway as play succeeded, though seek failed
-                         continuation.resume(true)
-                     }
-                } else {
-                    continuation.resume(true)
+        try {
+            if (spotifyAppRemote?.isConnected != true) {
+                // Attempt silent connection first with a timeout check implicitly handled by connect
+                if (!connect(showAuthView = false)) {
+                     Log.w(TAG, "Could not connect to Spotify for playback.")
+                     return false
                 }
-            }.setErrorCallback { e ->
-                Log.e(TAG, "Error playing URI", e)
-                continuation.resume(false)
             }
+
+            return suspendCancellableCoroutine { continuation ->
+                val playerApi = spotifyAppRemote?.playerApi
+                if (playerApi == null) {
+                    if (continuation.isActive) continuation.resume(false)
+                    return@suspendCancellableCoroutine
+                }
+
+                playerApi.play(uri).setResultCallback {
+                    Log.d(TAG, "Sent play command for $uri")
+                    if (startMs > 0) {
+                         playerApi.seekTo(startMs).setResultCallback {
+                             Log.d(TAG, "Sent seek command for $startMs")
+                             if (continuation.isActive) continuation.resume(true)
+                         }.setErrorCallback { e ->
+                             Log.e(TAG, "Error seeking to $startMs", e)
+                             // Resume true anyway as play succeeded, though seek failed
+                             if (continuation.isActive) continuation.resume(true)
+                         }
+                    } else {
+                        if (continuation.isActive) continuation.resume(true)
+                    }
+                }.setErrorCallback { e ->
+                    Log.e(TAG, "Error playing URI", e)
+                    if (continuation.isActive) continuation.resume(false)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception during playUri", e)
+            return false
         }
     }
 

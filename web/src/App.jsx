@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
 import DevTools from './DevTools';
+import CommandPalette from './CommandPalette';
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -48,6 +49,17 @@ import premiumAvatar from './assets/avatars/premium_crown.svg';
 import proAvatar from './assets/avatars/pro_spark.svg';
 import betaAvatar from './assets/avatars/beta_flask.svg';
 import loyalAvatar from './assets/avatars/loyal_star.svg';
+
+// Bolt: Shared Intl formatters to avoid expensive instantiation in render loops
+const timeFormatter = new Intl.DateTimeFormat(undefined, {
+  hour: '2-digit',
+  minute: '2-digit'
+});
+
+const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+  dateStyle: 'short',
+  timeStyle: 'short'
+});
 
 // Icons
 const HomeIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
@@ -165,7 +177,7 @@ const MessageItem = memo(({ msg, showPreviews }) => (
       {showPreviews ? msg.body : '••••••'}
     </div>
     <div className="message-time">
-      {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      {timeFormatter.format(new Date(msg.date))}
     </div>
   </div>
 ), areMessagesEqual);
@@ -340,7 +352,7 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
           {alertBadgeCopy[alert.severity] ?? 'Alert'}
         </span>
       </div>
-      <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
+      <div className="map-item-meta">{dateTimeFormatter.format(new Date(alert.date))}</div>
       <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
       <div className="map-item-actions">
         <button
@@ -709,8 +721,15 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
           onClick={handleSendMessage}
           disabled={isSending || isLoggingIn}
           className="primary-btn"
+          title="Send (Ctrl+Enter)"
+          aria-busy={isSending}
         >
-          {isSending ? "Sending..." : "Send"}
+          {isSending ? (
+            <>
+              <Spinner />
+              Sending...
+            </>
+          ) : "Send"}
         </button>
       </div>
       {status && <div className="compose-status" role="status" aria-live="polite">{status}</div>}
@@ -724,20 +743,20 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
 MessageComposer.displayName = 'MessageComposer';
 
 const defaultTheme = {
-  primaryColor: "#22D3EE",
-  secondaryColor: "#0EA5E9",
-  bubbleOutgoing: "#22D3EE",
+  primaryColor: "#00F0FF",
+  secondaryColor: "#D946EF",
+  bubbleOutgoing: "#00F0FF",
   bubbleIncoming: "#161B2E",
-  backgroundColor: "#05070F",
+  backgroundColor: "#030508",
   iconSizeFactor: 1.0,
   fontStyle: "Default",
   bubbleCornerRadius: 22,
   inboxIconVariant: "Beacon",
-  onBubbleOutgoing: "#04060C",
+  onBubbleOutgoing: "#000000",
   onBubbleIncoming: "#EEF2FB",
-  onBackground: "#EEF2FB",
-  topBarColor: "#0C1326",
-  onTopBarColor: "#EEF2FB",
+  onBackground: "#E0F7FA",
+  topBarColor: "#030508",
+  onTopBarColor: "#E0F7FA",
   bubbleCornerRadiusTopStart: null,
   bubbleCornerRadiusTopEnd: null,
   bubbleCornerRadiusBottomStart: null,
@@ -760,17 +779,17 @@ const themePresets = [
     theme: {
       fontStyle: "Default",
       bubbleCornerRadius: 24,
-      appBackgroundGradientStart: "#0F172A",
-      appBackgroundGradientEnd: "#1E1B4B",
-      onBackground: "#E2E8F0",
-      topBarColor: "#0F172A",
-      onTopBarColor: "#E2E8F0",
-      bubbleOutgoing: "#22D3EE",
-      onBubbleOutgoing: "#FFFFFF",
-      bubbleIncoming: "#312E81",
-      onBubbleIncoming: "#E2E8F0",
-      primaryColor: "#22D3EE",
-      secondaryColor: "#D8B4FE",
+      appBackgroundGradientStart: "#030508",
+      appBackgroundGradientEnd: "#1a1033",
+      onBackground: "#E0F7FA",
+      topBarColor: "#030508",
+      onTopBarColor: "#00F0FF",
+      bubbleOutgoing: "#00F0FF",
+      onBubbleOutgoing: "#000000",
+      bubbleIncoming: "#1a1033",
+      onBubbleIncoming: "#E0F7FA",
+      primaryColor: "#00F0FF",
+      secondaryColor: "#D946EF",
       dividerColor: "#1E293B",
       inboxIconVariant: "neon_noir",
       useGlassEffect: true,
@@ -1044,16 +1063,16 @@ const themePresets = [
     theme: {
       fontStyle: "Default",
       bubbleCornerRadius: 16,
-      backgroundColor: "#0B0F14",
-      onBackground: "#E2E8F0",
-      topBarColor: "#111827",
-      onTopBarColor: "#E2E8F0",
-      bubbleOutgoing: "#22D3EE",
-      onBubbleOutgoing: "#0B0F14",
+      backgroundColor: "#030508",
+      onBackground: "#E0F7FA",
+      topBarColor: "#030508",
+      onTopBarColor: "#00F0FF",
+      bubbleOutgoing: "#00F0FF",
+      onBubbleOutgoing: "#000000",
       bubbleIncoming: "#1F2937",
-      onBubbleIncoming: "#E2E8F0",
-      primaryColor: "#22D3EE",
-      secondaryColor: "#F472B6",
+      onBubbleIncoming: "#E0F7FA",
+      primaryColor: "#00F0FF",
+      secondaryColor: "#D946EF",
       dividerColor: "#1F2937",
       inboxIconVariant: "midnight_oled",
       backgroundImageUrl: neonBg
@@ -1364,26 +1383,46 @@ const iconOverrideKeys = [
   { key: "icon.notifications", label: "Notifications" }
 ];
 
-const normalizeTheme = (input = {}) => ({
-  ...defaultTheme,
-  ...input,
-  iconSizeFactor: Number(input.iconSizeFactor ?? defaultTheme.iconSizeFactor),
-  bubbleCornerRadius: Number(input.bubbleCornerRadius ?? defaultTheme.bubbleCornerRadius),
-  fontScale: Number(input.fontScale ?? defaultTheme.fontScale),
-  bubbleCornerRadiusTopStart: input.bubbleCornerRadiusTopStart ?? defaultTheme.bubbleCornerRadiusTopStart,
-  bubbleCornerRadiusTopEnd: input.bubbleCornerRadiusTopEnd ?? defaultTheme.bubbleCornerRadiusTopEnd,
-  bubbleCornerRadiusBottomStart: input.bubbleCornerRadiusBottomStart ?? defaultTheme.bubbleCornerRadiusBottomStart,
-  bubbleCornerRadiusBottomEnd: input.bubbleCornerRadiusBottomEnd ?? defaultTheme.bubbleCornerRadiusBottomEnd,
-  timestampColor: input.timestampColor ?? defaultTheme.timestampColor,
-  dividerColor: input.dividerColor ?? defaultTheme.dividerColor,
-  appBackgroundGradientStart: input.appBackgroundGradientStart ?? defaultTheme.appBackgroundGradientStart,
-  appBackgroundGradientEnd: input.appBackgroundGradientEnd ?? defaultTheme.appBackgroundGradientEnd,
-  backgroundImageUrl: input.backgroundImageUrl ?? defaultTheme.backgroundImageUrl,
-  iconOverrides: input.iconOverrides ?? defaultTheme.iconOverrides,
-  useGlassEffect: input.useGlassEffect ?? defaultTheme.useGlassEffect,
-  useHolographicGlow: input.useHolographicGlow ?? defaultTheme.useHolographicGlow,
-  uiDensity: input.uiDensity ?? defaultTheme.uiDensity
-});
+// Sentinel: Validate URL scheme to prevent XSS (javascript: links)
+const isValidImageUrl = (url) => {
+  if (!url) return true; // Allow empty/null as valid (it just means no image)
+  const lower = url.toString().toLowerCase().trim();
+  return lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('data:image/') || lower.startsWith('/');
+};
+
+const normalizeTheme = (input = {}) => {
+  const bgUrl = input.backgroundImageUrl ?? defaultTheme.backgroundImageUrl;
+  const safeBgUrl = isValidImageUrl(bgUrl) ? bgUrl : null;
+
+  const rawIcons = input.iconOverrides ?? defaultTheme.iconOverrides;
+  const safeIcons = {};
+  if (rawIcons) {
+    Object.entries(rawIcons).forEach(([k, v]) => {
+      if (isValidImageUrl(v)) safeIcons[k] = v;
+    });
+  }
+
+  return {
+    ...defaultTheme,
+    ...input,
+    iconSizeFactor: Number(input.iconSizeFactor ?? defaultTheme.iconSizeFactor),
+    bubbleCornerRadius: Number(input.bubbleCornerRadius ?? defaultTheme.bubbleCornerRadius),
+    fontScale: Number(input.fontScale ?? defaultTheme.fontScale),
+    bubbleCornerRadiusTopStart: input.bubbleCornerRadiusTopStart ?? defaultTheme.bubbleCornerRadiusTopStart,
+    bubbleCornerRadiusTopEnd: input.bubbleCornerRadiusTopEnd ?? defaultTheme.bubbleCornerRadiusTopEnd,
+    bubbleCornerRadiusBottomStart: input.bubbleCornerRadiusBottomStart ?? defaultTheme.bubbleCornerRadiusBottomStart,
+    bubbleCornerRadiusBottomEnd: input.bubbleCornerRadiusBottomEnd ?? defaultTheme.bubbleCornerRadiusBottomEnd,
+    timestampColor: input.timestampColor ?? defaultTheme.timestampColor,
+    dividerColor: input.dividerColor ?? defaultTheme.dividerColor,
+    appBackgroundGradientStart: input.appBackgroundGradientStart ?? defaultTheme.appBackgroundGradientStart,
+    appBackgroundGradientEnd: input.appBackgroundGradientEnd ?? defaultTheme.appBackgroundGradientEnd,
+    backgroundImageUrl: safeBgUrl,
+    iconOverrides: safeIcons,
+    useGlassEffect: input.useGlassEffect ?? defaultTheme.useGlassEffect,
+    useHolographicGlow: input.useHolographicGlow ?? defaultTheme.useHolographicGlow,
+    uiDensity: input.uiDensity ?? defaultTheme.uiDensity
+  };
+};
 
 const buildThemeVars = (theme) => {
   const active = normalizeTheme(theme);
@@ -1413,8 +1452,8 @@ const buildThemeVars = (theme) => {
   return vars;
 };
 
-const buildThemePreviewStyle = (theme) => {
-  const active = normalizeTheme(theme);
+// Expects an already normalized theme to avoid redundant normalization
+const buildThemePreviewStyle = (active) => {
   const style = {
     backgroundColor: active.backgroundColor
   };
@@ -1501,225 +1540,317 @@ const Sidebar = memo(({
   setActiveLineId,
   lineInboxMode,
   isLoadingThreads,
-  threadCount,
-  threadListElements,
   isPremium,
+  remoteSettings,
   navLogo,
   brandTitle,
-  threadSearch,
-  setThreadSearch
-}) => (
-  <div className="sidebar">
-    <div className="sidebar-header">
-      <div className="sidebar-brand">
-        <img src={navLogo || logo} alt="PulseLink Suite" className="brand-logo small" />
-        <div>
-          <div className="brand-title">{brandTitle || "PulseLink Suite"}</div>
-          <div className="brand-subtitle">{tierLabel} Web Access</div>
-        </div>
-      </div>
-      <div className="sidebar-actions">
-        {activePanel === 'beacon' && (
-          <button
-            onClick={handleNewThread}
-            className="secondary-btn"
-            aria-label="Start new conversation"
-          >
-            New
-          </button>
-        )}
-        <button onClick={handleLogout} className="ghost-btn">Logout</button>
-      </div>
-    </div>
-    <div className="sidebar-nav">
-      <button
-        className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
-        onClick={() => setActivePanel('home')}
-        title="Home"
-        aria-label="Home"
-        aria-current={activePanel === 'home' ? 'page' : undefined}
-      >
-        <HomeIcon />
-        <span>Home</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
-        onClick={() => setActivePanel('pulselink')}
-        title="PulseLink"
-        aria-label="PulseLink"
-        aria-current={activePanel === 'pulselink' ? 'page' : undefined}
-      >
-        <img src={logo} alt="PulseLink" />
-        <span>PulseLink</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
-        onClick={() => setActivePanel('beacon')}
-        title="Beacon"
-        aria-label="Beacon"
-        aria-current={activePanel === 'beacon' ? 'page' : undefined}
-      >
-        <img src={beaconLogo} alt="Beacon" />
-        <span>Beacon</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
-        onClick={() => setActivePanel('ringersong')}
-        title="RingerSong"
-        aria-label="RingerSong"
-        aria-current={activePanel === 'ringersong' ? 'page' : undefined}
-      >
-        <img src={ringersongLogo} alt="RingerSong" />
-        <span>RingerSong</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
-        onClick={() => setActivePanel('map')}
-        title="Map"
-        aria-label="Map"
-        aria-current={activePanel === 'map' ? 'page' : undefined}
-      >
-        <MapIcon />
-        <span>Map</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
-        onClick={() => setActivePanel('contacts')}
-        title="Contacts"
-        aria-label="Contacts"
-        aria-current={activePanel === 'contacts' ? 'page' : undefined}
-      >
-        <ContactIcon />
-        <span>Contacts</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
-        onClick={() => setActivePanel('themes')}
-        title="Themes"
-        aria-label="Themes"
-        aria-current={activePanel === 'themes' ? 'page' : undefined}
-      >
-        <ThemeIcon />
-        <span>Themes</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
-        onClick={() => setActivePanel('extensions')}
-        title="Extensions"
-        aria-label="Extensions"
-        aria-current={activePanel === 'extensions' ? 'page' : undefined}
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-        <span>Extensions</span>
-        <span className="badge-new">NEW</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
-        onClick={() => setActivePanel('settings')}
-        title="Settings"
-        aria-label="Settings"
-        aria-current={activePanel === 'settings' ? 'page' : undefined}
-      >
-        <SettingsIcon />
-        <span>Settings</span>
-      </button>
-    </div>
-    {activePanel === 'beacon' ? (
-      <>
-        <div className="sidebar-search-container">
-          <div className="sidebar-search-wrapper">
-            <div className="search-icon-wrapper">
-              <SearchIcon />
-            </div>
-            <input
-              className="sidebar-search-input-field"
-              placeholder="Search messages..."
-              value={threadSearch}
-              onChange={(e) => setThreadSearch(e.target.value)}
-              aria-label="Search messages"
-            />
-            {threadSearch && (
-              <button
-                className="ghost-btn icon-only sidebar-search-clear-btn"
-                onClick={() => setThreadSearch('')}
-                aria-label="Clear search"
-                title="Clear search"
-              >
-                <CloseIcon />
-              </button>
-            )}
+  threads,
+  selectedThreadId,
+  onSelect,
+  showPreviews,
+  openCommandPalette
+}) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef(null);
+
+  useEffect(() => {
+    if (activePanel !== 'beacon') return;
+
+    const handleKeyDown = (e) => {
+      // Focus search on "/" or "Ctrl+K" / "Cmd+K"
+      if (
+        (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) && !document.activeElement.isContentEditable) ||
+        ((e.ctrlKey || e.metaKey) && e.key === 'k')
+      ) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activePanel]);
+
+  // Bolt: Pre-compute search strings for threads locally to prevent App re-renders
+  const searchIndex = useMemo(() => {
+    return threads.map(t => {
+      const display = (t.display_name || t.address || '').toLowerCase();
+      const snippet = (t.snippet || '').toLowerCase();
+      return { thread: t, searchString: `${display} ${snippet}` };
+    });
+  }, [threads]);
+
+  const filteredThreads = useMemo(() => {
+    const term = searchQuery.trim().toLowerCase();
+    if (!term) return threads;
+    return searchIndex
+      .filter(({ searchString }) => searchString.includes(term))
+      .map(({ thread }) => thread);
+  }, [searchIndex, searchQuery, threads]);
+
+  const [collapsed, setCollapsed] = useState(false);
+
+  return (
+    <div className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+      <div className="sidebar-header">
+        <div className="sidebar-brand">
+          <img src={navLogo || logo} alt="PulseLink Suite" className="brand-logo small" />
+          <div>
+            <div className="brand-title">{brandTitle || "PulseLink Suite"}</div>
+            <div className="brand-subtitle">{tierLabel} Web Access</div>
           </div>
         </div>
-        <div className="thread-list">
-          {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
-            <div className="line-tabs" aria-label="Device lines">
-              <button
-                className={`chip ${!activeLineId ? 'active' : ''}`}
-                onClick={() => setActiveLineId(null)}
-              >
-                All
-              </button>
-              {lines.map((line) => (
-                <button
-                  key={line.id}
-                  className={`chip ${activeLineId === line.id ? 'active' : ''}`}
-                  onClick={() => setActiveLineId(line.id)}
-                  title={line.phoneNumber || 'Line'}
-                >
-                  {line.label || line.phoneNumber || line.id.slice(0, 6)}
-                </button>
-              ))}
-            </div>
-          )}
-          {isLoadingThreads ? (
-             Array.from({ length: 5 }).map((_, i) => <ThreadSkeleton key={i} />)
-          ) : threadCount === 0 ? (
-            <div className="sidebar-placeholder">
-              <div className="sidebar-tip">
-                <strong>{threadSearch ? "No matches found" : "No conversations found"}</strong>
-              </div>
-              {!threadSearch && (
-                <div className="sidebar-tip muted">
-                  To see your messages here:
-                  <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
-                    <li>Open PulseLink on your phone</li>
-                    <li>Go to Extensions Store</li>
-                    <li>Enable &quot;Remote Web Access&quot;</li>
-                  </ol>
-                  {!isPremium && (
-                    <div className="badge badge-premium" style={{ display: 'inline-block', marginTop: '8px', padding: '2px 8px', borderRadius: '4px', background: 'var(--accent)', color: '#fff', fontSize: '0.8em' }}>
-                      Premium Required
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ) : (
-            threadListElements
+        <div className="sidebar-actions">
+          {!collapsed && activePanel === 'beacon' && (
+            <button
+              onClick={handleNewThread}
+              className="secondary-btn"
+              aria-label="Start new conversation"
+            >
+              New
+            </button>
           )}
         </div>
-      </>
-    ) : (
-      <div className="sidebar-placeholder">
-        <div className="sidebar-tip">Use the tiles on Home to jump into PulseLink or Beacon.</div>
-        <div className="sidebar-tip muted">Theme and settings sync to your device.</div>
       </div>
-    )}
-  </div>
-), (prev, next) => {
+      <div className="sidebar-nav">
+        <button
+          className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
+          onClick={() => setActivePanel('home')}
+          title="Home"
+          aria-label="Home"
+          aria-current={activePanel === 'home' ? 'page' : undefined}
+        >
+          <HomeIcon />
+          <span>Home</span>
+        </button>
+        <button
+          className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
+          onClick={() => setActivePanel('pulselink')}
+          title="PulseLink"
+          aria-label="PulseLink"
+          aria-current={activePanel === 'pulselink' ? 'page' : undefined}
+        >
+          <img src={logo} alt="PulseLink" />
+          <span>PulseLink</span>
+        </button>
+        <button
+          className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
+          onClick={() => setActivePanel('beacon')}
+          title="Beacon"
+          aria-label="Beacon"
+          aria-current={activePanel === 'beacon' ? 'page' : undefined}
+        >
+          <img src={beaconLogo} alt="Beacon" />
+          <span>Beacon</span>
+        </button>
+        {remoteSettings.ringerSongEnabled && (
+          <button
+            className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
+            onClick={() => setActivePanel('ringersong')}
+            title="RingerSong"
+            aria-label="RingerSong"
+            aria-current={activePanel === 'ringersong' ? 'page' : undefined}
+          >
+            <img src={ringersongLogo} alt="RingerSong" />
+            <span>RingerSong</span>
+          </button>
+        )}
+        {remoteSettings.mapEnabled && (
+          <button
+            className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
+            onClick={() => setActivePanel('map')}
+            title="Map"
+            aria-label="Map"
+            aria-current={activePanel === 'map' ? 'page' : undefined}
+          >
+            <MapIcon />
+            <span>Map</span>
+          </button>
+        )}
+        {remoteSettings.contactsEnabled && (
+          <button
+            className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
+            onClick={() => setActivePanel('contacts')}
+            title="Contacts"
+            aria-label="Contacts"
+            aria-current={activePanel === 'contacts' ? 'page' : undefined}
+          >
+            <ContactIcon />
+            <span>Contacts</span>
+          </button>
+        )}
+        {remoteSettings.themesEnabled && (
+          <button
+            className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
+            onClick={() => setActivePanel('themes')}
+            title="Themes"
+            aria-label="Themes"
+            aria-current={activePanel === 'themes' ? 'page' : undefined}
+          >
+            <ThemeIcon />
+            <span>Themes</span>
+          </button>
+        )}
+        <button
+          className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
+          onClick={() => setActivePanel('extensions')}
+          title="Extensions"
+          aria-label="Extensions"
+          aria-current={activePanel === 'extensions' ? 'page' : undefined}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+          <span>Extensions</span>
+          <span className="badge-new">NEW</span>
+        </button>
+        <button
+          className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
+          onClick={() => setActivePanel('settings')}
+          title="Settings"
+          aria-label="Settings"
+          aria-current={activePanel === 'settings' ? 'page' : undefined}
+        >
+          <SettingsIcon />
+          <span>Settings</span>
+        </button>
+      </div>
+      <div className="sidebar-footer">
+        {!collapsed && <button onClick={handleLogout} className="ghost-btn">Logout</button>}
+        <button onClick={() => setCollapsed(prev => !prev)} className="ghost-btn icon-only" title={collapsed ? "Expand" : "Collapse"}>
+          {collapsed ? (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg>
+          ) : (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
+          )}
+        </button>
+      </div>
+      {activePanel === 'beacon' && !collapsed ? (
+        <>
+          <div className="sidebar-search-container">
+            <div className="sidebar-search-wrapper">
+              <div className="search-icon-wrapper">
+                <SearchIcon />
+              </div>
+              <input
+                ref={searchInputRef}
+                className="sidebar-search-input-field"
+                placeholder="Search (Ctrl+K)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Search messages (Ctrl+K)"
+                title="Search messages (Ctrl+K or /)"
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    if (searchQuery) {
+                      setSearchQuery('');
+                    } else {
+                      e.currentTarget.blur();
+                    }
+                  }
+                }}
+              />
+              {!searchQuery && <span className="shortcut-hint">/</span>}
+              {searchQuery && (
+                <button
+                  className="ghost-btn icon-only sidebar-search-clear-btn"
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Clear search"
+                  title="Clear search"
+                >
+                  <CloseIcon />
+                </button>
+              )}
+            </div>
+            <button
+              className="ghost-btn icon-only"
+              title="Command Palette (Ctrl+K)"
+              style={{ marginLeft: 8 }}
+              onClick={openCommandPalette}
+            >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3-3 3 3 0 0 0-3-3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path></svg>
+            </button>
+          </div>
+          <div className="thread-list">
+            {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
+              <div className="line-tabs" aria-label="Device lines">
+                <button
+                  className={`chip ${!activeLineId ? 'active' : ''}`}
+                  onClick={() => setActiveLineId(null)}
+                >
+                  All
+                </button>
+                {lines.map((line) => (
+                  <button
+                    key={line.id}
+                    className={`chip ${activeLineId === line.id ? 'active' : ''}`}
+                    onClick={() => setActiveLineId(line.id)}
+                    title={line.phoneNumber || 'Line'}
+                  >
+                    {line.label || line.phoneNumber || line.id.slice(0, 6)}
+                  </button>
+                ))}
+              </div>
+            )}
+            {isLoadingThreads ? (
+               Array.from({ length: 5 }).map((_, i) => <ThreadSkeleton key={i} />)
+            ) : filteredThreads.length === 0 ? (
+              <div className="sidebar-placeholder">
+                <div className="sidebar-tip">
+                  <strong>{searchQuery ? "No matches found" : "No conversations found"}</strong>
+                </div>
+                {!searchQuery && (
+                  <div className="sidebar-tip muted">
+                    To see your messages here:
+                    <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
+                      <li>Open PulseLink on your phone</li>
+                      <li>Go to Extensions Store</li>
+                      <li>Enable &quot;Remote Web Access&quot;</li>
+                    </ol>
+                    {!isPremium && (
+                      <div className="badge badge-premium" style={{ display: 'inline-block', marginTop: '8px', padding: '2px 8px', borderRadius: '4px', background: 'var(--accent)', color: '#fff', fontSize: '0.8em' }}>
+                        Premium Required
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              filteredThreads.map(thread => (
+                <ThreadItem
+                  key={`${thread.lineId || 'legacy'}_${thread.id}`}
+                  thread={thread}
+                  isActive={selectedThreadId === thread.id}
+                  onSelect={onSelect}
+                  showPreviews={showPreviews}
+                />
+              ))
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="sidebar-placeholder">
+          <div className="sidebar-tip">Use the tiles on Home to jump into PulseLink or Beacon.</div>
+          <div className="sidebar-tip muted">Theme and settings sync to your device.</div>
+        </div>
+      )}
+    </div>
+  );
+}, (prev, next) => {
   // Bolt: Ensure strict equality checks for all props to prevent unnecessary re-renders
   return prev.activePanel === next.activePanel &&
          prev.tierLabel === next.tierLabel &&
          prev.isLoadingThreads === next.isLoadingThreads &&
-         prev.threadCount === next.threadCount &&
+         prev.threads === next.threads &&
          prev.lines === next.lines &&
          prev.activeLineId === next.activeLineId &&
          prev.lineInboxMode === next.lineInboxMode &&
          prev.isPremium === next.isPremium &&
-         prev.threadListElements === next.threadListElements &&
+         prev.remoteSettings === next.remoteSettings &&
+         prev.selectedThreadId === next.selectedThreadId &&
+         prev.onSelect === next.onSelect &&
+         prev.showPreviews === next.showPreviews &&
          prev.navLogo === next.navLogo &&
-         prev.brandTitle === next.brandTitle &&
-         prev.threadSearch === next.threadSearch;
+         prev.brandTitle === next.brandTitle;
 });
 
 Sidebar.displayName = 'Sidebar';
@@ -1733,6 +1864,7 @@ const getToastClass = (msg) => {
 };
 
 function App() {
+  const webHintStorageKey = 'pulselink.hideWebHint';
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -1786,6 +1918,10 @@ function App() {
   });
   const [themePublishStatus, setThemePublishStatus] = useState('');
   const [isPublishingTheme, setIsPublishingTheme] = useState(false);
+  const [showWebHint, setShowWebHint] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem(webHintStorageKey) !== 'true';
+  });
   const [remoteSettings, setRemoteSettings] = useState({
     remoteWebAccessEnabled: false,
     autoUpdateContactInfo: true,
@@ -1799,7 +1935,12 @@ function App() {
     firebaseMessagingEnabled: true,
     mergedExperienceEnabled: false,
     privateSafeEnabled: false,
-    smartRepliesEnabled: true
+    smartRepliesEnabled: true,
+    truecallerEnabled: false,
+    ringerSongEnabled: true,
+    mapEnabled: true,
+    contactsEnabled: true,
+    themesEnabled: true
   });
   const [devExtensions, setDevExtensions] = useState(() => {
     const saved = localStorage.getItem('pulselink.devExtensions');
@@ -1849,6 +1990,8 @@ function App() {
   const [settingsStatus, setSettingsStatus] = useState('');
   const [remoteSettingsStatus, setRemoteSettingsStatus] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [syncDiagnostics, setSyncDiagnostics] = useState(null);
+  const [syncRequestStatus, setSyncRequestStatus] = useState('');
   const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -1861,31 +2004,64 @@ function App() {
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
   const [addingTrackId, setAddingTrackId] = useState(null);
   const [showDevTools, setShowDevTools] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [settingsSearch, setSettingsSearch] = useState('');
-  const [threadSearch, setThreadSearch] = useState('');
+  const [premiumClaimActive, setPremiumClaimActive] = useState(false);
+  const [proClaimActive, setProClaimActive] = useState(false);
 
   const subscriptionStatus = userData?.subscriptionStatus;
+  const premiumSubscriptionStatus = userData?.premiumSubscriptionStatus;
+
   const isPremiumUser = useMemo(() => {
-    return subscriptionStatus === "premium" ||
+    return premiumClaimActive ||
+      proClaimActive ||
+      premiumSubscriptionStatus === "SUBSCRIPTION_STATE_ACTIVE" ||
+      premiumSubscriptionStatus === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD" ||
+      subscriptionStatus === "premium" ||
       subscriptionStatus === "pro" ||
       userData?.premiumUnlocked === true ||
       userData?.proUnlocked === true ||
       userData?.hasPremiumHistory === true ||
       userData?.hasProHistory === true;
-  }, [subscriptionStatus, userData?.premiumUnlocked, userData?.proUnlocked, userData?.hasPremiumHistory, userData?.hasProHistory]);
+  }, [premiumClaimActive, proClaimActive, premiumSubscriptionStatus, subscriptionStatus, userData?.premiumUnlocked, userData?.proUnlocked, userData?.hasPremiumHistory, userData?.hasProHistory]);
 
   const isProUser = useMemo(() => {
     return isPremiumUser ||
+      proClaimActive === true ||
       subscriptionStatus === "pro" ||
       userData?.proUnlocked === true ||
       userData?.hasProHistory === true;
-  }, [isPremiumUser, subscriptionStatus, userData?.proUnlocked, userData?.hasProHistory]);
+  }, [isPremiumUser, proClaimActive, subscriptionStatus, userData?.proUnlocked, userData?.hasProHistory]);
 
-  // Toggle DevTools with Ctrl+Shift+D
+  useEffect(() => {
+    if (!user) {
+      setPremiumClaimActive(false);
+      setProClaimActive(false);
+      return;
+    }
+    const callable = httpsCallable(functions, "getPremiumStatus");
+    Promise.all([
+      callable(),
+      user.getIdTokenResult()
+    ]).then(([result, tokenResult]) => {
+      const data = result?.data || {};
+      setPremiumClaimActive(data.hasClaim === true);
+      setProClaimActive(tokenResult?.claims?.pro === true || tokenResult?.claims?.premium === true);
+    }).catch(() => {
+      setPremiumClaimActive(false);
+      setProClaimActive(false);
+    });
+  }, [user]);
+
+  // Toggle DevTools with Ctrl+Shift+D or Command Palette with Ctrl+K
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         setShowDevTools(prev => !prev);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCommandPalette(prev => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -2108,8 +2284,13 @@ function App() {
     const unsubscribe = onSnapshot(userRef, (snapshot) => {
       const data = snapshot.data() || {};
       setUserData(data);
-      const isPremium = data.subscriptionStatus === 'premium' || data.premiumUnlocked === true || data.hasPremiumHistory;
-      const isPro = isPremium || data.subscriptionStatus === 'pro' || data.proUnlocked === true || data.hasProHistory;
+      const isPremium = data.subscriptionStatus === 'premium' ||
+        data.premiumUnlocked === true ||
+        data.hasPremiumHistory === true;
+      const isPro = isPremium ||
+        data.subscriptionStatus === 'pro' ||
+        data.proUnlocked === true ||
+        data.hasProHistory === true;
       const isBeta = data.isBetaTester === true;
       const tenureDays = data.createdAt ? (Date.now() - toMillis(data.createdAt)) / (1000 * 60 * 60 * 24) : 0;
       setProfile({
@@ -2125,7 +2306,7 @@ function App() {
         setThemePrefs(defaultTheme);
       }
       setRemoteSettings({
-        remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? isPremium,
+        remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? isPro,
         autoUpdateContactInfo: data.autoUpdateContactInfo ?? true,
         timeFormat: data.timeFormat ?? 'AUTO',
         thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? true,
@@ -2137,7 +2318,12 @@ function App() {
         firebaseMessagingEnabled: data.firebaseMessagingEnabled ?? true,
         mergedExperienceEnabled: data.mergedExperienceEnabled ?? false,
         privateSafeEnabled: data.privateSafeEnabled ?? false,
-        smartRepliesEnabled: data.smartRepliesEnabled ?? true
+        smartRepliesEnabled: data.smartRepliesEnabled ?? true,
+        truecallerEnabled: data.truecallerEnabled ?? false,
+        ringerSongEnabled: data.ringerSongEnabled ?? true,
+        mapEnabled: data.mapEnabled ?? true,
+        contactsEnabled: data.contactsEnabled ?? true,
+        themesEnabled: data.themesEnabled ?? true
       });
       if (data.lineInboxMode) setLineInboxMode(data.lineInboxMode);
       if (data.activeLineId) setActiveLineId(data.activeLineId);
@@ -2201,14 +2387,24 @@ function App() {
     if (!user || !isPremiumUser || !userData) return;
     if (userData.remoteWebAccessEnabled === undefined) {
       setDoc(doc(db, "users", user.uid), {
-        remoteWebAccessEnabled: true,
-        subscriptionStatus: userData.subscriptionStatus ?? "premium",
-        premiumUnlocked: true
+        remoteWebAccessEnabled: true
       }, { merge: true }).catch((err) => {
         console.error("Failed to auto-enable remote web access", err);
       });
     }
   }, [user, userData, isPremiumUser]);
+
+  useEffect(() => {
+    if (!user) {
+      setSyncDiagnostics(null);
+      return;
+    }
+    const diagRef = doc(db, "users", user.uid, "syncDiagnostics", "latest");
+    const unsubscribe = onSnapshot(diagRef, (snapshot) => {
+      setSyncDiagnostics(snapshot.exists() ? snapshot.data() : null);
+    });
+    return () => unsubscribe();
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -2229,9 +2425,7 @@ function App() {
   }, [user]);
 
   useEffect(() => {
-    const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
-
-    if (!user || !isPremiumUser || !hasRemoteAccess) {
+    if (!user) {
       setDeviceContacts([]);
       return;
     }
@@ -2245,89 +2439,94 @@ function App() {
       setDeviceContacts(items);
     });
     return () => unsubscribe();
-  }, [user, isPremiumUser, remoteSettings.remoteWebAccessEnabled]);
+  }, [user]);
 
   useEffect(() => {
-    const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
-
-    if (user && isPremiumUser && hasRemoteAccess) {
-      setIsLoadingThreads(true);
-      // Legacy single-line threads (synced_threads)
-      const legacyRef = collection(db, "users", user.uid, "synced_threads");
-      const legacyQuery = query(legacyRef, orderBy("date", "desc"));
-      const unsubscribeLegacy = onSnapshot(legacyQuery, (snapshot) => {
-        const threadsData = snapshot.docs.map(doc => ({ id: doc.id, lineId: null, ...doc.data() }));
-        setLegacyThreads(threadsData);
-        // Only set loading to false if we have at least legacy threads or lines have also loaded.
-        // But for simplicity, we can set it to false here as we have *some* data.
-        // A better approach would be to wait for both, but onSnapshot is async.
-        // Let's assume lines load quickly or we just wait for the first data update.
-        setIsLoadingThreads(false);
-      });
-
-      // Multi-device: lines/{lineId}/threads
-      const linesRef = collection(db, "users", user.uid, "lines");
-      const threadUnsubs = new Map();
-
-      const attachLine = (lineId) => {
-        if (threadUnsubs.has(lineId)) return;
-        const lineThreadsRef = collection(db, "users", user.uid, "lines", lineId, "threads");
-        const lineQuery = query(lineThreadsRef, orderBy("date", "desc"));
-        const unsub = onSnapshot(lineQuery, (snapshot) => {
-          const items = snapshot.docs.map(doc => ({ id: doc.id, lineId, ...doc.data() }));
-          setLineThreads((prev) => ({ ...prev, [lineId]: items }));
-        });
-        threadUnsubs.set(lineId, unsub);
-      };
-
-      const detachAll = () => {
-        threadUnsubs.forEach((u) => u());
-        threadUnsubs.clear();
-      };
-
-      const unsubscribeLines = onSnapshot(linesRef, (snapshot) => {
-        const lineItems = snapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(line => line.disabled !== true);
-        setLines(lineItems);
-
-        // Attach listeners for new/active lines
-        lineItems.forEach(line => attachLine(line.id));
-
-        // Detach listeners for removed or disabled lines
-        const activeIds = new Set(lineItems.map(l => l.id));
-        // Safe iteration: collect IDs to remove first
-        const idsToRemove = Array.from(threadUnsubs.keys()).filter(id => !activeIds.has(id));
-
-        if (idsToRemove.length > 0) {
-          idsToRemove.forEach(id => {
-            const unsub = threadUnsubs.get(id);
-            if (unsub) unsub();
-            threadUnsubs.delete(id);
-          });
-
-          setLineThreads(prev => {
-            const next = { ...prev };
-            idsToRemove.forEach(id => delete next[id]);
-            return next;
-          });
-        }
-
-        setIsLoadingThreads(false);
-      });
-
-      return () => {
-        unsubscribeLegacy();
-        unsubscribeLines();
-        detachAll();
-      };
-    } else {
+    if (!user) {
       setLegacyThreads([]);
       setLines([]);
       setLineThreads({});
       setIsLoadingThreads(false);
+      return;
     }
-  }, [user, isPremiumUser, remoteSettings.remoteWebAccessEnabled]);
+    if (userData?.remoteWebAccessEnabled !== true) {
+      setLegacyThreads([]);
+      setLines([]);
+      setLineThreads({});
+      setIsLoadingThreads(false);
+      return;
+    }
+    setIsLoadingThreads(true);
+    // Legacy single-line threads (synced_threads)
+    const legacyRef = collection(db, "users", user.uid, "synced_threads");
+    const legacyQuery = query(legacyRef, orderBy("date", "desc"));
+    const unsubscribeLegacy = onSnapshot(legacyQuery, (snapshot) => {
+      const threadsData = snapshot.docs.map(doc => ({ id: doc.id, lineId: null, ...doc.data() }));
+      setLegacyThreads(threadsData);
+      // Only set loading to false if we have at least legacy threads or lines have also loaded.
+      // But for simplicity, we can set it to false here as we have *some* data.
+      // A better approach would be to wait for both, but onSnapshot is async.
+      // Let's assume lines load quickly or we just wait for the first data update.
+      setIsLoadingThreads(false);
+    });
+
+    // Multi-device: lines/{lineId}/threads
+    const linesRef = collection(db, "users", user.uid, "lines");
+    const threadUnsubs = new Map();
+
+    const attachLine = (lineId) => {
+      if (threadUnsubs.has(lineId)) return;
+      const lineThreadsRef = collection(db, "users", user.uid, "lines", lineId, "threads");
+      const lineQuery = query(lineThreadsRef, orderBy("date", "desc"));
+      const unsub = onSnapshot(lineQuery, (snapshot) => {
+        const items = snapshot.docs.map(doc => ({ id: doc.id, lineId, ...doc.data() }));
+        setLineThreads((prev) => ({ ...prev, [lineId]: items }));
+      });
+      threadUnsubs.set(lineId, unsub);
+    };
+
+    const detachAll = () => {
+      threadUnsubs.forEach((u) => u());
+      threadUnsubs.clear();
+    };
+
+    const unsubscribeLines = onSnapshot(linesRef, (snapshot) => {
+      const lineItems = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(line => line.disabled !== true);
+      setLines(lineItems);
+
+      // Attach listeners for new/active lines
+      lineItems.forEach(line => attachLine(line.id));
+
+      // Detach listeners for removed or disabled lines
+      const activeIds = new Set(lineItems.map(l => l.id));
+      // Safe iteration: collect IDs to remove first
+      const idsToRemove = Array.from(threadUnsubs.keys()).filter(id => !activeIds.has(id));
+
+      if (idsToRemove.length > 0) {
+        idsToRemove.forEach(id => {
+          const unsub = threadUnsubs.get(id);
+          if (unsub) unsub();
+          threadUnsubs.delete(id);
+        });
+
+        setLineThreads(prev => {
+          const next = { ...prev };
+          idsToRemove.forEach(id => delete next[id]);
+          return next;
+        });
+      }
+
+      setIsLoadingThreads(false);
+    });
+
+    return () => {
+      unsubscribeLegacy();
+      unsubscribeLines();
+      detachAll();
+    };
+  }, [user, userData?.remoteWebAccessEnabled]);
 
   useEffect(() => {
     const themesRef = collection(db, "themes_public");
@@ -2350,10 +2549,8 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
-
-    if (user && selectedThread && isPremiumUser && hasRemoteAccess) {
-      // Listen to messages only if user has premium and remote web access enabled
+    if (user && selectedThread) {
+      // Listen to messages for the selected thread
       const basePath = selectedThread.lineId
         ? ["users", user.uid, "lines", selectedThread.lineId, "threads", selectedThread.id, "messages"]
         : ["users", user.uid, "synced_threads", selectedThread.id, "messages"];  
@@ -2370,7 +2567,7 @@ function App() {
     } else {
       setMessages([]);
     }
-  }, [user, selectedThread, isPremiumUser, remoteSettings.remoteWebAccessEnabled]);
+  }, [user, selectedThread]);
 
 
   // Auto-scroll to bottom when messages change
@@ -2568,7 +2765,7 @@ function App() {
         // Sentinel: Escape user input to prevent XSS in InfoWindow
         const safeType = escapeHtml(alertBadgeCopy[alert.severity] ?? 'Alert');
         const safeAddress = escapeHtml(alert.address);
-        const safeDate = escapeHtml(new Date(alert.date).toLocaleString());
+        const safeDate = escapeHtml(dateTimeFormatter.format(new Date(alert.date)));
 
         mapInfoRef.current.setContent(
           `<div style="font-family: sans-serif; max-width: 220px;">
@@ -2619,7 +2816,7 @@ function App() {
       // Sentinel: Escape user input to prevent XSS in InfoWindow
       const safeType = escapeHtml(alertBadgeCopy[alert.severity] ?? 'Alert');
       const safeAddress = escapeHtml(alert.address);
-      const safeDate = escapeHtml(new Date(alert.date).toLocaleString());
+      const safeDate = escapeHtml(dateTimeFormatter.format(new Date(alert.date)));
 
       mapInfoRef.current.setContent(
         `<div style="font-family: sans-serif; max-width: 220px;">
@@ -2890,6 +3087,10 @@ function App() {
 
   const handleImportPublicTheme = useCallback(async (themeDoc) => {
     if (!themeDoc?.theme) return;
+    // Optimistic UI update
+    const normalized = normalizeTheme(themeDoc.theme);
+    setThemePrefs(normalized);
+
     await handleApplyPreset(themeDoc.theme);
     setThemeGalleryStatus(`Imported "${themeDoc.name}".`);
   }, [handleApplyPreset]);
@@ -2904,6 +3105,14 @@ function App() {
     setIsPublishingTheme(true);
     setThemePublishStatus("Publishing theme...");
     const backgroundImageUrl = themePublishForm.backgroundImageUrl.trim();
+
+    // Sentinel: Validate URL
+    if (backgroundImageUrl && !isValidImageUrl(backgroundImageUrl)) {
+      setThemePublishStatus("Invalid background URL. Must be http/https or data URI.");
+      setIsPublishingTheme(false);
+      return;
+    }
+
     const normalized = normalizeTheme({
       ...themePrefs,
       backgroundImageUrl: backgroundImageUrl || themePrefs.backgroundImageUrl || null
@@ -2971,6 +3180,11 @@ function App() {
         mergedExperienceEnabled: remoteSettings.mergedExperienceEnabled,
         privateSafeEnabled: remoteSettings.privateSafeEnabled,
         smartRepliesEnabled: remoteSettings.smartRepliesEnabled,
+        truecallerEnabled: remoteSettings.truecallerEnabled,
+        ringerSongEnabled: remoteSettings.ringerSongEnabled,
+        mapEnabled: remoteSettings.mapEnabled,
+        contactsEnabled: remoteSettings.contactsEnabled,
+        themesEnabled: remoteSettings.themesEnabled,
         settingsUpdatedAt: serverTimestamp()
       }, { merge: true });
       setRemoteSettingsStatus("Settings updated.");
@@ -2979,6 +3193,27 @@ function App() {
       setRemoteSettingsStatus(error?.message ?? "Settings update failed.");
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  const requestPhoneSync = async () => {
+    if (!user) return;
+    setSyncRequestStatus("Requesting sync...");
+    try {
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          syncRequestedAt: serverTimestamp(),
+          syncRequestedBy: "web",
+          remoteWebAccessEnabled: true,
+          settingsUpdatedAt: serverTimestamp()
+        },
+        { merge: true }
+      );
+      setSyncRequestStatus("Sync requested. Open PulseLink on your phone and keep it online.");
+    } catch (error) {
+      console.error("Sync request failed", error);
+      setSyncRequestStatus(error?.message ?? "Unable to request sync.");
     }
   };
 
@@ -3001,6 +3236,10 @@ function App() {
       newSettings.mergedExperienceEnabled = false;
       newSettings.privateSafeEnabled = false;
       newSettings.smartRepliesEnabled = true;
+      newSettings.ringerSongEnabled = false;
+      newSettings.mapEnabled = true; // Safety core
+      newSettings.contactsEnabled = true;
+      newSettings.themesEnabled = false;
     } else if (isPower) {
       newSettings.beaconLauncherEnabled = true;
       newSettings.firebaseMessagingEnabled = true;
@@ -3013,6 +3252,11 @@ function App() {
       newSettings.thirdPartyExtensionsEnabled = true;
       newSettings.privateSafeEnabled = true;
       newSettings.smartRepliesEnabled = true;
+      newSettings.truecallerEnabled = true;
+      newSettings.ringerSongEnabled = true;
+      newSettings.mapEnabled = true;
+      newSettings.contactsEnabled = true;
+      newSettings.themesEnabled = true;
     }
 
     setRemoteSettings(newSettings);
@@ -3176,40 +3420,10 @@ function App() {
     return [...current].sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
   }, [lineInboxMode, activeLineId, lines, lineThreads, combinedThreads]);
 
-  // Bolt: Pre-compute search strings for threads to avoid expensive string operations on every keystroke
-  const threadSearchIndex = useMemo(() => {
-    return activeLineThreads.map(t => {
-      const display = (t.display_name || t.address || '').toLowerCase();
-      const snippet = (t.snippet || '').toLowerCase();
-      return { thread: t, searchString: `${display} ${snippet}` };
-    });
-  }, [activeLineThreads]);
-
-  const filteredThreads = useMemo(() => {
-    const term = threadSearch.trim().toLowerCase();
-    if (!term) return activeLineThreads;
-    return threadSearchIndex
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ thread }) => thread);
-  }, [threadSearchIndex, threadSearch, activeLineThreads]);
-
-  // Bolt: Memoize thread list elements to prevent re-rendering on every compose keystroke.
-  // Note: handleThreadSelect is stable (useCallback) but included for exhaustive-deps correctness.
-  // Note: selectedThread?.id is used to avoid re-rendering the whole list when non-visual props of selectedThread change.
-  const threadListElements = useMemo(() => (
-    filteredThreads.map(thread => (
-      <ThreadItem
-        key={`${thread.lineId || 'legacy'}_${thread.id}`}
-        thread={thread}
-        isActive={selectedThread?.id === thread.id}
-        onSelect={handleThreadSelect}
-        showPreviews={showPreviews}
-      />
-    ))
-  ), [filteredThreads, selectedThread?.id, handleThreadSelect, showPreviews]);
 
   const isPremium = isPremiumUser;
   const tierLabel = isPremiumUser ? 'Premium' : (isProUser ? 'Pro' : 'Free');
+  const hasBeaconData = isPremiumUser || lines.length > 0 || legacyThreads.length > 0;
 
   const navLogo = useMemo(() => {
      if (remoteSettings.mergedExperienceEnabled) {
@@ -3281,7 +3495,12 @@ function App() {
                   aria-busy={isLoggingIn}
                   className="primary-btn"
                 >
-                  {isLoggingIn ? 'Signing in...' : 'Sign in'}
+                  {isLoggingIn ? (
+                    <>
+                      <Spinner />
+                      Signing in...
+                    </>
+                  ) : 'Sign in'}
                 </button>
                 <button
                   onClick={() => handleEmailAuth('signup')}
@@ -3306,7 +3525,12 @@ function App() {
                 aria-busy={isLoggingIn}
                 className="primary-btn"
               >
-                {isLoggingIn ? 'Signing in...' : 'Sign in with Google'}
+                {isLoggingIn ? (
+                  <>
+                    <Spinner />
+                    Signing in...
+                  </>
+                ) : 'Sign in with Google'}
               </button>
             </div>
           </div>
@@ -3319,6 +3543,15 @@ function App() {
     <div className={`app-shell ${themePrefs.useGlassEffect ? 'glass-mode' : ''} ${themePrefs.useHolographicGlow ? 'holographic-mode' : ''}`} style={themeVars}>
       <div className="noise-overlay" />
       {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
+      <CommandPalette
+        isOpen={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        setActivePanel={setActivePanel}
+        actions={{
+          logout: handleLogout,
+          newThread: handleNewThread
+        }}
+      />
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <div className="app-container">
         <Sidebar
@@ -3332,14 +3565,15 @@ function App() {
           setActiveLineId={setActiveLineId}
           lineInboxMode={lineInboxMode}
           isLoadingThreads={isLoadingThreads}
-          threadCount={filteredThreads.length}
-          threadListElements={threadListElements}
           isPremium={isPremium}
           remoteSettings={remoteSettings}
           navLogo={navLogo}
           brandTitle={remoteSettings.mergedExperienceEnabled ? "PulseLink Unified" : "PulseLink Suite"}
-          threadSearch={threadSearch}
-          setThreadSearch={setThreadSearch}
+          threads={activeLineThreads}
+          selectedThreadId={selectedThread?.id}
+          onSelect={handleThreadSelect}
+          showPreviews={showPreviews}
+          openCommandPalette={() => setShowCommandPalette(true)}
         />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
@@ -3352,13 +3586,33 @@ function App() {
               {/* QA TEST: Visit web app home screen after login */}
               {/* EXPECTED: Blue info banner should be visible explaining web access */}
               {/* EXPECTED: Banner should display icon, bold heading, and feature description */}
-              <div className="web-app-hint">
-                <div className="hint-icon">ℹ️</div>
-                <div className="hint-content">
-                  <strong>Access PulseLink Web anytime:</strong> Visit pulselink.damiennichols.com (or app.damiennichols.com / pulselink-24899.web.app) from any browser to manage contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.
+              {showWebHint && (
+                <div className="web-app-hint">
+                  <button
+                    className="hint-dismiss"
+                    type="button"
+                    aria-label="Dismiss web access notice"
+                    onClick={() => {
+                      setShowWebHint(false);
+                      localStorage.setItem(webHintStorageKey, 'true');
+                    }}
+                  >
+                    x
+                  </button>
+                  <div className="hint-icon">??</div>
+                  <div className="hint-content">
+                    <strong>Access PulseLink Web anytime:</strong> Visit pulselink.damiennichols.com (or app.damiennichols.com / pulselink-24899.web.app) from any browser to manage contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="home-grid">
+                <button className="home-card holographic-card" onClick={() => setActivePanel('beacon')}>
+                  <div className="home-icon beacon">
+                    <img src={beaconLogo} alt="Beacon" />
+                  </div>
+                  <h3>Beacon Inbox</h3>
+                  <p>View SMS synced from your phone.</p>
+                </button>
                 <button className="home-card" onClick={() => setActivePanel('pulselink')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink" />
@@ -3372,13 +3626,6 @@ function App() {
                   </div>
                   <h3>Contacts</h3>
                   <p>Browse all device contacts synced from your phone.</p>
-                </button>
-                <button className="home-card" onClick={() => setActivePanel('beacon')}>
-                  <div className="home-icon beacon">
-                    <img src={beaconLogo} alt="Beacon" />
-                  </div>
-                  <h3>Beacon Inbox</h3>
-                  <p>View SMS synced from your phone.</p>
                 </button>
                 <button className="home-card" onClick={() => setActivePanel('ringersong')}>
                   <div className="home-icon ringersong">
@@ -3666,6 +3913,7 @@ function App() {
                       className="secondary-btn"
                       onClick={() => setContactSearch('')}
                       aria-label="Clear search"
+                      title="Clear search"
                     >
                       Clear
                     </button>
@@ -4109,6 +4357,15 @@ function App() {
                   ]
                 },
                 {
+                  title: "PulseLink Apps",
+                  items: [
+                    { id: 'ringerSongEnabled', name: 'RingerSong', desc: 'Progressive ringtone streaming & playlist manager.', icon: ringersongLogo, isImg: true },
+                    { id: 'mapEnabled', name: 'Emergency Map', desc: 'Track shared locations from PulseLink alerts.', icon: <MapIcon /> },
+                    { id: 'contactsEnabled', name: 'Contacts Manager', desc: 'Browse and manage synced device contacts.', icon: <ContactIcon /> },
+                    { id: 'themesEnabled', name: 'Theme Gallery', desc: 'Browse, import, and publish custom themes.', icon: <ThemeIcon /> }
+                  ]
+                },
+                {
                   title: "Safety & Security",
                   items: [
                     { id: 'emailFallbackEnabled', name: 'Email Backup', desc: 'Forward urgent alerts to email if SMS fails.', icon: <EmailIcon /> },
@@ -4129,7 +4386,8 @@ function App() {
                   items: [
                     { id: 'remoteWebAccessEnabled', name: 'Remote Web Access', desc: 'Sync messages and contacts to this web portal.', icon: logo, isImg: true, premium: true },
                     { id: 'mergedExperienceEnabled', name: 'Unified Home', desc: 'Merge PulseLink and Beacon navigation into a single simplified experience.', icon: <HomeIcon />, premium: true },
-                    { id: 'thirdPartyExtensionsEnabled', name: '3rd Party Extensions', desc: 'Allow community-built plugins (Beta).', icon: <ExtensionIcon />, premium: true }
+                    { id: 'thirdPartyExtensionsEnabled', name: '3rd Party Extensions', desc: 'Allow community-built plugins (Beta).', icon: <ExtensionIcon />, premium: true },
+                    { id: 'truecallerEnabled', name: 'Truecaller Caller ID', desc: 'Identify unknown callers and block spam using Truecaller directory.', icon: <SearchIcon /> }
                   ]
                 }
               ].map((category) => (
@@ -4160,6 +4418,8 @@ function App() {
                             <button
                               className={isEnabled ? "secondary-btn" : "primary-btn"}
                               style={{width: '100%'}}
+                              aria-label={`${isEnabled ? "Remove" : "Install"} ${ext.name}`}
+                              title={`${isEnabled ? "Remove" : "Install"} ${ext.name}`}
                               onClick={() => {
                                 setRemoteSettings(prev => ({ ...prev, [ext.id]: !prev[ext.id] }));
                                 const next = { ...remoteSettings, [ext.id]: !isEnabled };
@@ -4368,9 +4628,30 @@ function App() {
                                 <Spinner />
                                 Saving...
                               </>
-                            ) : 'Save PulseLink settings'}
+                          ) : 'Save PulseLink settings'}
+                          </button>
+                          <div className="settings-row">
+                            <span className="settings-label">Web sync</span>
+                            <span className="settings-value">
+                              {syncDiagnostics
+                                ? `${dateTimeFormatter.format(new Date(toMillis(syncDiagnostics.timestamp)))} • ${syncDiagnostics.status}`
+                                : 'No sync data yet'}
+                            </span>
+                          </div>
+                          {syncDiagnostics && (
+                            <p className="settings-note">
+                              Threads: {syncDiagnostics.threadCount ?? 0} · Messages: {syncDiagnostics.messageCount ?? 0} · READ_SMS: {syncDiagnostics.hasReadSms ? 'yes' : 'no'} · App: {syncDiagnostics.appVersion ?? 'unknown'}
+                            </p>
+                          )}
+                          <button
+                            className="secondary-btn"
+                            type="button"
+                            onClick={requestPhoneSync}
+                          >
+                            Request phone sync
                           </button>
                           {remoteSettingsStatus && <div className={getToastClass(remoteSettingsStatus)} role="status" aria-live="polite">{remoteSettingsStatus}</div>}
+                          {syncRequestStatus && <div className={getToastClass(syncRequestStatus)} role="status" aria-live="polite">{syncRequestStatus}</div>}
                         </div>
                       )}
 
@@ -4409,7 +4690,7 @@ function App() {
           )}
 
           {activePanel === 'beacon' && (
-            isPremium ? (
+            hasBeaconData ? (
               <>
       {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
         <div className="line-tabs line-tabs--main">
@@ -4495,3 +4776,4 @@ function App() {
 }
 
 export default App;
+

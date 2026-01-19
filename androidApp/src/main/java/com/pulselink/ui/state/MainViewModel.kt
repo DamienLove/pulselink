@@ -122,6 +122,8 @@ class MainViewModel @Inject constructor(
     private var remoteSettingsListener: ListenerRegistration? = null
     private var remoteSettingsUserId: String? = null
     private var pushedThemeFromDevice = false
+    private var lastSettingsPushTimestamp: Long = 0L
+    private var lastSyncRequestAt: Long = 0L
 
     private val _uiState = MutableStateFlow(PulseLinkUiState())
     val uiState: StateFlow<PulseLinkUiState> = _uiState
@@ -150,13 +152,14 @@ class MainViewModel @Inject constructor(
                 if (user != null && !user.isAnonymous) {
                     val subscriptionStatus = when {
                         settings.premiumUnlocked || BuildConfig.PREMIUM_FEATURES -> "premium"
-                        settings.proUnlocked -> "pro"
+                        settings.proUnlocked || BuildConfig.PRO_FEATURES -> "pro"
                         else -> "free"
                     }
                     val payload = mapOf(
                         "premiumUnlocked" to settings.premiumUnlocked,
                         "proUnlocked" to settings.proUnlocked,
-                        "subscriptionStatus" to subscriptionStatus
+                        "subscriptionStatus" to subscriptionStatus,
+                        "remoteWebAccessEnabled" to settings.remoteWebAccessEnabled
                     )
                     pushSettingsToCloud(user, payload)
                     if (settings.remoteWebAccessEnabled && (!lastRemoteWebEnabled || settings.premiumUnlocked != lastPremium)) {
@@ -647,8 +650,8 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun sendLinkRequest(contactId: Long) {
-        viewModelScope.launch { linkManager.sendLinkRequest(contactId) }
+    suspend fun sendLinkRequest(contactId: Long): Boolean {
+        return linkManager.sendLinkRequest(contactId)
     }
 
     fun approveLink(contactId: Long) {
@@ -821,10 +824,15 @@ class MainViewModel @Inject constructor(
                 if (error != null || snapshot == null || !snapshot.exists()) {
                     return@addSnapshotListener
                 }
+                // Ignore updates within 2 seconds of pushing to avoid ping-pong
+                if (System.currentTimeMillis() - lastSettingsPushTimestamp < 2000) {
+                    return@addSnapshotListener
+                }
                 val themeMap = snapshot.get("themePreferences") as? Map<*, *>
                 val remoteWebAccess = snapshot.getBoolean("remoteWebAccessEnabled")
                 val autoUpdate = snapshot.getBoolean("autoUpdateContactInfo")
                 val timeFormatRaw = snapshot.getString("timeFormat")
+                val syncRequestedAt = snapshot.getTimestamp("syncRequestedAt")?.toDate()?.time ?: 0L
 
                 // Extensions
                 val beaconLauncher = snapshot.getBoolean("beaconLauncherEnabled")
@@ -837,9 +845,11 @@ class MainViewModel @Inject constructor(
                 val mergedExperience = snapshot.getBoolean("mergedExperienceEnabled")
                 val privateSafe = snapshot.getBoolean("privateSafeEnabled")
                 val smartReplies = snapshot.getBoolean("smartRepliesEnabled")
+                val truecaller = snapshot.getBoolean("truecallerEnabled")
 
                 viewModelScope.launch {
                     val current = settingsRepository.settings.first()
+                    val desiredRemoteWebAccess = remoteWebAccess ?: current.remoteWebAccessEnabled
                     if (themeMap != null) {
                         val remoteTheme = themeFromMap(themeMap)
                         if (remoteTheme != current.themePreferences) {
@@ -886,6 +896,14 @@ class MainViewModel @Inject constructor(
                     mergedExperience?.let { if (it != current.mergedExperienceEnabled) settingsRepository.setMergedExperienceEnabled(it) }
                     privateSafe?.let { if (it != current.privateSafeEnabled) settingsRepository.update { s -> s.copy(privateSafeEnabled = it) } }
                     smartReplies?.let { if (it != current.smartRepliesEnabled) settingsRepository.update { s -> s.copy(smartRepliesEnabled = it) } }
+                    truecaller?.let { if (it != current.truecallerEnabled) settingsRepository.setTruecallerEnabled(it) }
+
+                    if (syncRequestedAt > lastSyncRequestAt) {
+                        lastSyncRequestAt = syncRequestedAt
+                        if (desiredRemoteWebAccess) {
+                            triggerWebSync("RemoteRequest")
+                        }
+                    }
                 }
             }
     }
@@ -966,6 +984,7 @@ class MainViewModel @Inject constructor(
 
     private suspend fun pushSettingsToCloud(user: FirebaseUser, payload: Map<String, Any>) {
         runCatching {
+            lastSettingsPushTimestamp = System.currentTimeMillis()
             firestore.collection(COLLECTION_USERS).document(user.uid)
                 .set(payload + mapOf("settingsUpdatedAt" to FieldValue.serverTimestamp()), SetOptions.merge())
                 .await()
@@ -1037,27 +1056,44 @@ class MainViewModel @Inject constructor(
 
     private suspend fun fetchLegacyTrustedContacts(user: FirebaseUser): List<Contact> {
         return runCatching {
-            // Pull any legacy/alternate trusted contact storage in case the main subcollection is empty
+            val results = mutableListOf<Contact>()
+
+            // 1. Check 'contacts' subcollection (possible old location)
+            runCatching {
+                val oldContacts = firestore.collection(COLLECTION_USERS).document(user.uid)
+                    .collection("contacts")
+                    .get()
+                    .await()
+                    .documents
+                    .mapNotNull { it.toContact() }
+                results.addAll(oldContacts)
+            }
+
+            // 2. Check collectionGroup for orphaned or misplaced docs
             val ownerScoped = firestore.collectionGroup(COLLECTION_TRUSTED_CONTACTS)
                 .whereEqualTo("ownerUid", user.uid)
                 .get()
                 .await()
                 .documents
                 .mapNotNull { it.toContact() }
+            results.addAll(ownerScoped)
 
-            if (ownerScoped.isNotEmpty()) return@runCatching ownerScoped
-
-            val groupSnapshot = firestore.collectionGroup(COLLECTION_TRUSTED_CONTACTS)
-                .get()
-                .await()
-            groupSnapshot.documents
-                .filter { snap ->
-                    val path = snap.reference.path
-                    path.contains("/${user.uid}/") ||
-                        snap.getString("ownerUid") == user.uid ||
-                        snap.getString("userId") == user.uid
-                }
-                .mapNotNull { it.toContact() }
+            if (results.isEmpty()) {
+                // Fallback scan if indexes are missing or paths are weird
+                val groupSnapshot = firestore.collectionGroup(COLLECTION_TRUSTED_CONTACTS)
+                    .get()
+                    .await()
+                val scanned = groupSnapshot.documents
+                    .filter { snap ->
+                        val path = snap.reference.path
+                        path.contains("/${user.uid}/") ||
+                            snap.getString("ownerUid") == user.uid ||
+                            snap.getString("userId") == user.uid
+                    }
+                    .mapNotNull { it.toContact() }
+                results.addAll(scanned)
+            }
+            results.distinctBy { contactSyncKey(it) }
         }.getOrElse {
             Log.w(TAG, "Legacy trusted contacts lookup failed", it)
             emptyList()
@@ -1270,7 +1306,7 @@ class MainViewModel @Inject constructor(
             fontScale = (map["fontScale"] as? Number)?.toFloat() ?: defaults.fontScale,
             useGlassEffect = map["useGlassEffect"] as? Boolean ?: defaults.useGlassEffect,
             useHolographicGlow = map["useHolographicGlow"] as? Boolean ?: defaults.useHolographicGlow,
-            uiDensity = (map["uiDensity"] as? Number)?.toFloat() ?: defaults.uiDensity
+            uiDensity = map["uiDensity"] as? String ?: defaults.uiDensity
         )
     }
 
@@ -1678,6 +1714,15 @@ class MainViewModel @Inject constructor(
             settingsRepository.setThirdPartyExtensionsEnabled(enabled)
             (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
                 pushSettingsToCloud(user, mapOf("thirdPartyExtensionsEnabled" to enabled))
+            }
+        }
+    }
+
+    fun setTruecallerEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setTruecallerEnabled(enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("truecallerEnabled" to enabled))
             }
         }
     }

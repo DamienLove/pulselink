@@ -1,20 +1,42 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function hasPremiumClaim() {
+      return request.auth != null && request.auth.token.premium == true;
+    }
 
+    function remoteWebAccessEnabled(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.remoteWebAccessEnabled == true;
+    }
+
+    function canUseSmsWebSync(userId) {
+      return request.auth != null && request.auth.uid == userId && hasPremiumClaim() && remoteWebAccessEnabled(userId);
+    }
     function isDeviceOwner(deviceId) {
       return get(/databases/$(database)/documents/devices/$(deviceId)).data.uid == request.auth.uid;
     }
 
     function isSubscriptionFieldChange() {
-      return request.resource != null &&
-        request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(["premiumSubscriptionStatus","premiumSubscriptionExpiry","tierBeforePremium","subscriptionPurchaseToken"]);
+      // Sentinel: Prevent Mass Assignment of subscription fields.
+      // 1. If deleting (request.resource == null), it's not a field injection.
+      // 2. If creating (resource == null), check new data keys directly.
+      // 3. If updating, check the diff of affected keys.
+
+      let protectedFields = ["premiumSubscriptionStatus", "premiumSubscriptionExpiry", "tierBeforePremium", "subscriptionPurchaseToken", "subscriptionStatus", "premiumUnlocked", "proUnlocked", "hasPremiumHistory", "hasProHistory"];
+
+      return request.resource != null && (
+        (resource == null && request.resource.data.keys().hasAny(protectedFields)) ||
+        (resource != null && request.resource.data.diff(resource.data).affectedKeys().hasAny(protectedFields))
+      );
     }
 
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow write: if request.auth != null && request.auth.uid == userId && !isSubscriptionFieldChange();
+
+      match /syncDiagnostics/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
 
       match /synced_threads/{threadId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;

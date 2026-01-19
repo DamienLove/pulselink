@@ -101,7 +101,6 @@ object DatabaseModule {
     fun provideDatabase(@ApplicationContext context: Context): PulseLinkDatabase =
         Room.databaseBuilder(context, PulseLinkDatabase::class.java, "pulselink.db")
             .addMigrations(*PulseLinkDatabase.ALL_MIGRATIONS)
-            .fallbackToDestructiveMigration()
             .build()
 
     @Provides
@@ -136,7 +135,10 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideSmsStore(@ApplicationContext context: Context): SmsStore = SmsStore(context)
+    fun provideSmsStore(
+        @ApplicationContext context: Context,
+        smsSyncTrigger: com.pulselink.data.sms.SmsSyncTrigger
+    ): SmsStore = SmsStore(context, smsSyncTrigger)
 
     @Provides
     @Singleton

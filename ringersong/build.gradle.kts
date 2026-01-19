@@ -24,6 +24,18 @@ val keystoreProps = Properties().apply {
     }
 }
 
+tasks.register("syncGoogleServices", Copy::class) {
+    val sourceFile = rootProject.file("PRO-CERTS/google-services-premium.json")
+    onlyIf { sourceFile.exists() }
+    from(sourceFile)
+    into(projectDir)
+    rename { "google-services.json" }
+}
+
+tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn("syncGoogleServices")
+}
+
 android {
     namespace = "com.RingerSong.free"
     compileSdk = 35
@@ -32,8 +44,8 @@ android {
         applicationId = "com.RingerSong.free"
         minSdk = 35
         targetSdk = 35
-        versionCode = 27
-        versionName = "27"
+        versionCode = 28
+        versionName = "28"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

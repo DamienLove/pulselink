@@ -221,8 +221,8 @@ android {
         applicationId = "com.pulselink"
         minSdk = 26
         targetSdk = 35
-        versionCode = 136
-        versionName = "136"
+        versionCode = 143
+        versionName = "143"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         resValue("string", "google_maps_key", mapsApiKey)
@@ -417,7 +417,7 @@ kotlin {
 // Automatically copy per-flavor google-services.json from secure folders if present.
 listOf(
     "free" to rootProject.file("Free-Certs/google-services.json"),
-    "pro" to rootProject.file("PRO-CERTS/google-services.json"),
+    "pro" to rootProject.file("PRO-CERTS/google-services-premium.json"),
     "premium" to rootProject.file("PRO-CERTS/google-services-premium.json")
 ).forEach { (flavor, sourceFile) ->
     tasks.register("sync${flavor.replaceFirstChar { it.titlecase(Locale.US) }}GoogleServices", Copy::class) {

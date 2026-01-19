@@ -477,6 +477,55 @@ class SmsRepository(private val context: Context) {
         return@withContext (smsItems + mmsItems).sortedByDescending { it.timestamp }.take(limit)
     }
 
+    suspend fun getContacts(): List<BeaconContact> = withContext(Dispatchers.IO) {
+        if (!hasReadPerms()) return@withContext emptyList()
+
+        val contacts = mutableListOf<BeaconContact>()
+        val projection = arrayOf(
+            ContactsContract.CommonDataKinds.Phone._ID,
+            ContactsContract.CommonDataKinds.Phone.LOOKUP_KEY,
+            ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY,
+            ContactsContract.CommonDataKinds.Phone.NUMBER,
+            ContactsContract.CommonDataKinds.Phone.PHOTO_URI
+        )
+
+        val cursor = runCatching {
+            context.contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                projection,
+                null,
+                null,
+                "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY} ASC"
+            )
+        }.getOrNull() ?: return@withContext emptyList()
+
+        cursor.use { c ->
+            val idIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone._ID)
+            val keyIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.LOOKUP_KEY)
+            val nameIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY)
+            val numIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+            val photoIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.PHOTO_URI)
+
+            val seenNumbers = HashSet<String>()
+
+            while (c.moveToNext()) {
+                val number = c.getString(numIdx) ?: continue
+                // Simple normalization to dedup
+                val normalized = number.filter { it.isDigit() }
+                if (normalized.isNotBlank() && !seenNumbers.add(normalized)) continue
+
+                contacts.add(BeaconContact(
+                    id = c.getLong(idIdx),
+                    lookupKey = c.getString(keyIdx) ?: "",
+                    displayName = c.getString(nameIdx) ?: "",
+                    phoneNumber = number,
+                    photoUri = c.getString(photoIdx)
+                ))
+            }
+        }
+        return@withContext contacts
+    }
+
     fun searchMessages(query: String, limit: Int = 40): List<SmsMessageItem> {
         if (!hasReadPerms() || query.isBlank()) return emptyList()
         val pattern = "%${query.trim()}%"
@@ -696,6 +745,16 @@ class SmsRepository(private val context: Context) {
                 args
             )
         }
+        observerFlow.tryEmit(Unit)
+    }
+
+    fun deleteMessage(messageId: Long) {
+        if (!hasWritePerms()) return
+        context.contentResolver.delete(
+            Telephony.Sms.CONTENT_URI,
+            "${Telephony.Sms._ID}=?",
+            arrayOf(messageId.toString())
+        )
         observerFlow.tryEmit(Unit)
     }
 

@@ -14,6 +14,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "156950194350-87c2up4im44ugl02oio92eb3664bt513.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.free.pulselink",
+            "certificate_hash": "be10f6d1d744a636707dc13a5749d7007b864adb"
+          }
+        },
+        {
+          "client_id": "156950194350-bmscnhh7qaap2ars76b7kttkclnt6nhu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.free.pulselink",
+            "certificate_hash": "67855222da43059e161d6fe91c05e97bd36602df"
+          }
+        },
+        {
           "client_id": "156950194350-u6lano9eotko62l37777gqe23pbmthpm.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -37,6 +53,13 @@
             {
               "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "156950194350-liaiiin83lgc6hq3ujkp6cjgh6f0e9v6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pulselink.ios"
+              }
             }
           ]
         }
@@ -75,6 +98,13 @@
             {
               "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "156950194350-liaiiin83lgc6hq3ujkp6cjgh6f0e9v6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pulselink.ios"
+              }
             }
           ]
         }
@@ -97,6 +127,14 @@
           }
         },
         {
+          "client_id": "156950194350-qhenfrhpir109h22gglbb1o56bmbsh77.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pulselink.pro",
+            "certificate_hash": "108320797e54f3448f14ac6cd07a9f2ec6345824"
+          }
+        },
+        {
           "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -112,6 +150,13 @@
             {
               "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "156950194350-liaiiin83lgc6hq3ujkp6cjgh6f0e9v6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pulselink.ios"
+              }
             }
           ]
         }
@@ -126,6 +171,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "156950194350-hoem080m9lr7g7tamtetjp5d2q0tc2hf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pulselink.pro.debug",
+            "certificate_hash": "d0beb205d18f46cb17354bc41b4673a59cbaa9c8"
+          }
+        },
+        {
           "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -141,6 +194,13 @@
             {
               "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "156950194350-liaiiin83lgc6hq3ujkp6cjgh6f0e9v6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pulselink.ios"
+              }
             }
           ]
         }
@@ -170,6 +230,49 @@
             {
               "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "156950194350-liaiiin83lgc6hq3ujkp6cjgh6f0e9v6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pulselink.ios"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156950194350:android:14b151b74d07d43364653f",
+        "android_client_info": {
+          "package_name": "com.ringersong.free"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "156950194350-liaiiin83lgc6hq3ujkp6cjgh6f0e9v6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pulselink.ios"
+              }
             }
           ]
         }

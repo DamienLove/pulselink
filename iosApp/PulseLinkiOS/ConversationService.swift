@@ -12,6 +12,7 @@ protocol ConversationProvider {
     func listenToConversations(onChange: @escaping ([ContactCard]) -> Void) -> ListenerRegistration?
     func listenToMessages(for contact: ContactCard, onChange: @escaping ([ConversationMessage]) -> Void) -> ListenerRegistration?
     func send(message: ConversationMessage, to contact: ContactCard) async throws
+    func requestSync() async throws
 }
 
 #if canImport(FirebaseFirestore)
@@ -81,6 +82,8 @@ final class InMemoryConversationProvider: ConversationProvider {
         arr.append(message)
         store[contact] = arr
     }
+
+    func requestSync() async throws {}
 }
 
 final class FirestoreConversationProvider: ConversationProvider {
@@ -271,12 +274,21 @@ final class FirestoreConversationProvider: ConversationProvider {
         try await db.collection("users").document(userId)
             .collection("outbox").addDocument(data: docData)
     }
+
+    func requestSync() async throws {
+        let data: [String: Any] = [
+            "syncRequestedAt": Int64(Date().timeIntervalSince1970 * 1000),
+            "remoteWebAccessEnabled": true
+        ]
+        try await db.collection("users").document(userId).setData(data, merge: true)
+    }
     #else
     init(userId: String) {}
     func loadConversations() async throws -> [ContactCard: [ConversationMessage]] { [:] }
     func listenToConversations(onChange: @escaping ([ContactCard]) -> Void) -> ListenerRegistration? { return nil }
     func listenToMessages(for contact: ContactCard, onChange: @escaping ([ConversationMessage]) -> Void) -> ListenerRegistration? { return nil }
     func send(message: ConversationMessage, to contact: ContactCard) async throws {}
+    func requestSync() async throws {}
     #endif
 }
 

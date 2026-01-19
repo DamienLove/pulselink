@@ -36,6 +36,7 @@ interface SettingsRepository {
     suspend fun setOtpCleanupDays(days: Int)
     suspend fun setMergedExperienceEnabled(enabled: Boolean)
     suspend fun setThirdPartyExtensionsEnabled(enabled: Boolean)
+    suspend fun setTruecallerEnabled(enabled: Boolean)
     suspend fun setPrivatePinHash(hash: String?)
     suspend fun setPrivateThreads(threadIds: List<Long>)
     suspend fun setBeaconLauncherEnabled(enabled: Boolean)

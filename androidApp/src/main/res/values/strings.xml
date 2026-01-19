@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PulseLink</string>
+    <string name="default_web_client_id">156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com</string>
     <string name="cta_add_contact">Add trusted contact</string>
     <string name="cta_send_check_in">Send check-in</string>
     <string name="cta_trigger_test">Trigger test alert</string>
@@ -269,6 +270,8 @@
     <string name="link_invite_email_chooser">Send invite with</string>
     <string name="link_invite_no_email_app">No email app found to send invite.</string>
     <string name="link_invite_missing_contact_info">Add a phone or email to send an invite.</string>
+    <string name="link_request_failed_sms">Failed to send SMS invite. Check permissions.</string>
+    <string name="link_request_failed_email">Failed to send email invite.</string>
     <string name="voice_command_trigger_reason">Assistant command: %1$s</string>
     <string name="voice_command_emergency_sent">Emergency alert dispatched.</string>
     <string name="voice_command_contact_missing">I couldn\'t find that contact.</string>
@@ -520,6 +523,9 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
 
     <string name="extension_smart_replies_title">Smart Replies</string>
     <string name="extension_smart_replies_desc">Show quick response chips (e.g., "Yes", "No", "Thanks") above the message input.</string>
+
+    <string name="extension_truecaller_title">Truecaller Caller ID</string>
+    <string name="extension_truecaller_desc">Identify unknown callers and detect spam using Truecaller\'s extensive directory.</string>
 
     <string-array name="smart_replies_defaults">
         <item>Yes</item>

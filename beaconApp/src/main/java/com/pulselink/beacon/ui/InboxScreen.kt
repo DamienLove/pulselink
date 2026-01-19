@@ -97,16 +97,19 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.SmsThreadItem
+import com.pulselink.beacon.data.BeaconContact
 import com.pulselink.beacon.data.ThemePalette
 import com.pulselink.beacon.ui.ads.NativeAdCard
 import com.pulselink.beacon.R
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun InboxScreen(
     threads: List<SmsThreadItem>,
+    groupedThreads: Map<String, List<SmsThreadItem>>,
+    contacts: List<BeaconContact> = emptyList(),
     theme: ThemePalette,
     searchState: SearchResultState,
     isDefaultSms: Boolean,
@@ -125,6 +128,8 @@ fun InboxScreen(
     onClearSearch: () -> Unit,
     onCustomize: () -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenScheduled: () -> Unit,
+    onOpenSpamAndBlocked: () -> Unit,
     notificationsEnabled: Boolean,
     notificationsSilent: Boolean,
     onOpenNotificationSettings: () -> Unit,
@@ -143,21 +148,67 @@ fun InboxScreen(
     onMarkSelectedUnread: () -> Unit = {},
     onPinSelected: () -> Unit = {},
     onMarkAsUnread: (Long) -> Unit = {},
+    onMarkAllRead: () -> Unit = {},
     userMessage: String? = null,
     onClearUserMessage: () -> Unit = {},
     delayedSendTimeout: Int = 5,
-    onSetDelayedSendTimeout: (Int) -> Unit = {}
+    onSetDelayedSendTimeout: (Int) -> Unit = {},
+    autoReplyEnabled: Boolean = false,
+    autoReplyMessage: String = "",
+    quickReplies: List<String> = emptyList(),
+    onSetAutoReplyEnabled: (Boolean) -> Unit = {},
+    onSetAutoReplyMessage: (String) -> Unit = {},
+    onUpdateQuickReplies: (List<String>) -> Unit = {},
+    autoDeleteOtps: Boolean = false,
+    onSetAutoDeleteOtps: (Boolean) -> Unit = {}
 ) {
     val host = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var navigatedFromSearch by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var showQuickRepliesDialog by remember { mutableStateOf(false) }
     val iconTint = theme.accentColor
 
     LaunchedEffect(userMessage) {
         userMessage?.let {
             host.showSnackbar(it)
             onClearUserMessage()
+        }
+    }
+
+    if (showQuickRepliesDialog) {
+        var editedReplies by remember { mutableStateOf(quickReplies.joinToString("\n")) }
+        Dialog(onDismissRequest = { showQuickRepliesDialog = false }) {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                tonalElevation = 6.dp,
+                modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)
+            ) {
+                Column(Modifier.padding(24.dp)) {
+                    Text("Edit Quick Replies", style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Enter one reply per line:", style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = editedReplies,
+                        onValueChange = { editedReplies = it },
+                        modifier = Modifier.fillMaxWidth().height(200.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = theme.accentColor,
+                            cursorColor = theme.accentColor
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = { showQuickRepliesDialog = false }) { Text("Cancel") }
+                        TextButton(onClick = {
+                            val newList = editedReplies.split("\n").map { it.trim() }.filter { it.isNotBlank() }
+                            onUpdateQuickReplies(newList)
+                            showQuickRepliesDialog = false
+                        }) { Text("Save") }
+                    }
+                }
+            }
         }
     }
 
@@ -195,6 +246,93 @@ fun InboxScreen(
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
+                    androidx.compose.material3.HorizontalDivider()
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Auto Reply", fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.weight(1f))
+                        androidx.compose.material3.Switch(
+                            checked = autoReplyEnabled,
+                            onCheckedChange = onSetAutoReplyEnabled,
+                            colors = androidx.compose.material3.SwitchDefaults.colors(
+                                checkedThumbColor = theme.accentColor,
+                                checkedTrackColor = theme.accentColor.copy(alpha = 0.3f)
+                            )
+                        )
+                    }
+
+                    if (autoReplyEnabled) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = autoReplyMessage,
+                            onValueChange = onSetAutoReplyMessage,
+                            label = { Text("Auto Reply Message") },
+                            modifier = Modifier.fillMaxWidth(),
+                            maxLines = 3,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = theme.accentColor,
+                                focusedLabelColor = theme.accentColor,
+                                cursorColor = theme.accentColor
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Auto-delete OTPs", fontWeight = FontWeight.Bold)
+                            Text("Delete one-time codes after 24 hours", style = MaterialTheme.typography.bodySmall, color = theme.frameColor.copy(alpha = 0.6f))
+                        }
+                        androidx.compose.material3.Switch(
+                            checked = autoDeleteOtps,
+                            onCheckedChange = onSetAutoDeleteOtps,
+                            colors = androidx.compose.material3.SwitchDefaults.colors(
+                                checkedThumbColor = theme.accentColor,
+                                checkedTrackColor = theme.accentColor.copy(alpha = 0.3f)
+                            )
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedButton(
+                        onClick = {
+                            showSettingsDialog = false
+                            showQuickRepliesDialog = true
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Customize Quick Replies", color = theme.frameColor)
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            showSettingsDialog = false
+                            onOpenScheduled()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Scheduled Messages", color = theme.frameColor)
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            showSettingsDialog = false
+                            onOpenSpamAndBlocked()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Spam & Blocked", color = theme.frameColor)
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
                     TextButton(onClick = { showSettingsDialog = false }) {
                         Text("Done")
                     }
@@ -225,12 +363,7 @@ fun InboxScreen(
         }
     }
 
-    // Grouping for Date Headers
-    val groupedThreads = remember(filtered) {
-        filtered.groupBy { item ->
-            getHeaderForTimestamp(item.timestamp)
-        }
-    }
+    // Grouping is now passed from ViewModel
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -332,6 +465,12 @@ fun InboxScreen(
                         IconButton(onClick = { showSettingsDialog = true }) {
                             Icon(Icons.Default.Settings, contentDescription = "Settings", tint = iconTint)
                         }
+                        // Mark all read action if there are unread messages
+                        if (unreadCount > 0) {
+                            IconButton(onClick = onMarkAllRead) {
+                                Icon(Icons.Default.MarkChatUnread, contentDescription = "Mark all read", tint = iconTint)
+                            }
+                        }
                     },
                     colors = TopAppBarDefaults.largeTopAppBarColors(
                         containerColor = theme.inboxBackgroundColor.copy(alpha = 0.8f), // Semi-transparent Glass
@@ -409,7 +548,9 @@ fun InboxScreen(
 
             // Search Results or List
             Box(modifier = Modifier.weight(1f)) {
-                if (searchText.isNotBlank()) {
+                if (filter == InboxFilter.CONTACTS && searchText.isBlank()) {
+                    ContactsList(contacts, theme, onOpenThread)
+                } else if (searchText.isNotBlank()) {
                      when (searchState) {
                         is SearchResultState.Messages -> SearchResults(
                             hits = searchState.hits,
@@ -535,27 +676,6 @@ fun InboxScreen(
             )
         }
     }
-}
-
-private fun getHeaderForTimestamp(timestamp: Long): String {
-    val now = System.currentTimeMillis()
-    val diff = now - timestamp
-    return when {
-        DateUtils.isToday(timestamp) -> "Today"
-        diff < 2 * DateUtils.DAY_IN_MILLIS && isYesterday(timestamp) -> "Yesterday"
-        diff < 7 * DateUtils.DAY_IN_MILLIS -> "This Week"
-        diff < 30 * DateUtils.DAY_IN_MILLIS -> "This Month"
-        else -> "Older"
-    }
-}
-
-private fun isYesterday(timestamp: Long): Boolean {
-    // Simple check
-    val c1 = Calendar.getInstance()
-    c1.add(Calendar.DAY_OF_YEAR, -1)
-    val c2 = Calendar.getInstance()
-    c2.timeInMillis = timestamp
-    return c1.get(Calendar.YEAR) == c2.get(Calendar.YEAR) && c1.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR)
 }
 
 @Composable
@@ -1122,7 +1242,66 @@ private fun TabsRow(
         TabChip("Promotions", filter == InboxFilter.PROMOTIONS, theme) { onFilterChange(InboxFilter.PROMOTIONS) }
         TabChip("Unread${if(unreadCount > 0) " ($unreadCount)" else ""}", filter == InboxFilter.UNREAD, theme) { onFilterChange(InboxFilter.UNREAD) }
         TabChip("Starred", filter == InboxFilter.STARRED, theme) { onFilterChange(InboxFilter.STARRED) }
+        TabChip("Contacts", filter == InboxFilter.CONTACTS, theme) { onFilterChange(InboxFilter.CONTACTS) }
         TabChip("Archived", filter == InboxFilter.ARCHIVED, theme) { onFilterChange(InboxFilter.ARCHIVED) }
+    }
+}
+
+@Composable
+private fun ContactsList(
+    contacts: List<BeaconContact>,
+    theme: ThemePalette,
+    onContactClick: (Long, String) -> Unit
+) {
+    if (contacts.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+             Text("No contacts found", color = theme.frameColor.copy(alpha=0.6f))
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 80.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(contacts, key = { it.id }) { contact ->
+                ContactRow(contact, theme, onContactClick)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ContactRow(
+    contact: BeaconContact,
+    theme: ThemePalette,
+    onClick: (Long, String) -> Unit
+) {
+     Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick(0L, contact.phoneNumber) },
+        color = Color.Transparent
+    ) {
+        Row(
+            modifier = Modifier.padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            LetterAvatar(name = contact.displayName, theme = theme, size = 48.dp)
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(
+                    text = contact.displayName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = theme.frameColor,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = contact.phoneNumber,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = theme.frameColor.copy(alpha = 0.7f)
+                )
+            }
+        }
     }
 }
 
@@ -1144,4 +1323,4 @@ private fun TabChip(label: String, selected: Boolean, theme: ThemePalette, onCli
     }
 }
 
-enum class InboxFilter { ALL, READ, UNREAD, STARRED, ARCHIVED, PERSONAL, TRANSACTIONS, PROMOTIONS }
+enum class InboxFilter { ALL, READ, UNREAD, STARRED, ARCHIVED, PERSONAL, TRANSACTIONS, PROMOTIONS, CONTACTS }

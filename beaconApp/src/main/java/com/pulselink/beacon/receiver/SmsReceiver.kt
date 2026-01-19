@@ -7,12 +7,15 @@ import android.content.Intent
 import android.os.Build
 import android.provider.Telephony
 import android.telephony.SmsMessage
+import com.pulselink.beacon.data.InboxPreferencesRepository
 import com.pulselink.beacon.data.MessageNotificationPreferences
 import com.pulselink.beacon.data.SmsSyncManager
+import com.pulselink.beacon.data.SmsRepository
 import com.pulselink.beacon.notifications.MessageNotificationManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -22,9 +25,7 @@ import kotlinx.coroutines.launch
  */
 class SmsReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != Telephony.Sms.Intents.SMS_DELIVER_ACTION &&
-            intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION
-        ) return
+        if (intent.action != Telephony.Sms.Intents.SMS_DELIVER_ACTION) return
 
         val msgs = Telephony.Sms.Intents.getMessagesFromIntent(intent) ?: return
         val pendingResult = goAsync()
@@ -41,6 +42,9 @@ class SmsReceiver : BroadcastReceiver() {
                     runCatching {
                         SmsSyncManager.getInstance(context).syncIncoming(origin, body, timestamp)
                     }
+
+                    // Auto Reply Logic
+                    handleAutoReply(context, origin, body)
 
                     val settings = MessageNotificationPreferences(context).getConfig()
                     val threadId = runCatching {
@@ -78,5 +82,28 @@ class SmsReceiver : BroadcastReceiver() {
             }
         }
         context.contentResolver.insert(Telephony.Sms.Inbox.CONTENT_URI, values)
+    }
+
+    private suspend fun handleAutoReply(context: Context, origin: String, body: String) {
+        val prefs = InboxPreferencesRepository(context)
+        val state = prefs.flow.first()
+        if (state.autoReplyEnabled && state.autoReplyMessage.isNotBlank()) {
+             // 1. Basic filtering: Don't reply to short codes (length < 6) or if it looks like OTP
+             // 2. Don't reply to self (unlikely here)
+             // 3. Prevent loop: Don't reply if the incoming message is exactly the auto-reply message (simple check)
+
+             val isShortCode = origin.filter { it.isDigit() }.length < 7
+             if (isShortCode) return
+
+             if (body == state.autoReplyMessage) return // Loop prevention
+
+             // Check for OTP keywords to avoid replying to automated systems
+             val otpKeywords = listOf("code", "otp", "verification", "password", "login")
+             if (otpKeywords.any { body.contains(it, ignoreCase = true) }) return
+
+             // Send Reply
+             val repo = SmsRepository(context)
+             repo.sendSms(origin, state.autoReplyMessage)
+        }
     }
 }

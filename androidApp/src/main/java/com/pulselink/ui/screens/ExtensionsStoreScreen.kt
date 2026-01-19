@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.WifiTethering
@@ -105,6 +106,7 @@ fun ExtensionsStoreScreen(
     onToggleRemoteWebAccess: (Boolean) -> Unit,
     onToggleAiSummaries: (Boolean) -> Unit,
     onToggleThirdPartyExtensions: (Boolean) -> Unit,
+    onToggleTruecaller: (Boolean) -> Unit,
     onToggleMergedExperience: (Boolean) -> Unit,
     onTogglePrivateSafe: (Boolean) -> Unit,
     onToggleSmartReplies: (Boolean) -> Unit,
@@ -203,6 +205,14 @@ fun ExtensionsStoreScreen(
                 requiresPremium = true
             ),
             FeatureToggle(
+                id = "truecaller",
+                titleRes = R.string.extension_truecaller_title,
+                descriptionRes = R.string.extension_truecaller_desc,
+                icon = Icons.Filled.Search,
+                isEnabled = settings.truecallerEnabled,
+                onToggle = onToggleTruecaller
+            ),
+            FeatureToggle(
                 id = "crash",
                 titleRes = R.string.extension_crash_title,
                 descriptionRes = R.string.extension_crash_desc,
@@ -236,7 +246,7 @@ fun ExtensionsStoreScreen(
             ExtensionCategory(
                 id = "integrations",
                 title = "Integrations",
-                items = allFeatures.filter { it.id in listOf("web", "unified", "third_party_extensions") }
+                items = allFeatures.filter { it.id in listOf("web", "unified", "third_party_extensions", "truecaller") }
             )
         )
     }

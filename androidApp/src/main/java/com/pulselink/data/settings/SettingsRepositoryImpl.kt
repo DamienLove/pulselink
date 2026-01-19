@@ -77,6 +77,7 @@ private val WEB_ACCESS_HINT_DISMISSED = booleanPreferencesKey("web_access_hint_d
 private val FIREBASE_MESSAGING_ENABLED = booleanPreferencesKey("firebase_messaging_enabled")
 private val EMAIL_FALLBACK_ENABLED = booleanPreferencesKey("email_fallback_enabled")
 private val THIRD_PARTY_EXTENSIONS_ENABLED = booleanPreferencesKey("third_party_extensions_enabled")
+private val TRUECALLER_ENABLED = booleanPreferencesKey("truecaller_enabled")
 private val MERGED_EXPERIENCE_ENABLED = booleanPreferencesKey("merged_experience_enabled")
 private val UNIFIED_DISPLAY_NAME = stringPreferencesKey("unified_display_name")
 private val MESSAGING_CHANNEL_PRIORITY = stringPreferencesKey("messaging_channel_priority")
@@ -285,6 +286,7 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[FIREBASE_MESSAGING_ENABLED] = updated.firebaseMessagingEnabled
             prefs[EMAIL_FALLBACK_ENABLED] = updated.emailFallbackEnabled
             prefs[THIRD_PARTY_EXTENSIONS_ENABLED] = updated.thirdPartyExtensionsEnabled
+            prefs[TRUECALLER_ENABLED] = updated.truecallerEnabled
             prefs[MESSAGING_CHANNEL_PRIORITY] = encodeJson {
                 json.encodeToString(updated.messagingChannelPriority)
             }
@@ -626,6 +628,12 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun setTruecallerEnabled(enabled: Boolean) {
+        editOnIo { prefs ->
+            prefs[TRUECALLER_ENABLED] = enabled
+        }
+    }
+
     override suspend fun setMergedExperienceEnabled(enabled: Boolean) {
         editOnIo { prefs ->
             prefs[MERGED_EXPERIENCE_ENABLED] = enabled
@@ -693,6 +701,8 @@ class SettingsRepositoryImpl @Inject constructor(
             emailFallbackEnabled = prefs[EMAIL_FALLBACK_ENABLED] ?: PulseLinkSettings().emailFallbackEnabled,
             mergedExperienceEnabled = prefs[MERGED_EXPERIENCE_ENABLED] ?: PulseLinkSettings().mergedExperienceEnabled,
             unifiedDisplayName = prefs[UNIFIED_DISPLAY_NAME],
+            thirdPartyExtensionsEnabled = prefs[THIRD_PARTY_EXTENSIONS_ENABLED] ?: PulseLinkSettings().thirdPartyExtensionsEnabled,
+            truecallerEnabled = prefs[TRUECALLER_ENABLED] ?: PulseLinkSettings().truecallerEnabled,
             messagingChannelPriority = decodeJsonOrNull(prefs[MESSAGING_CHANNEL_PRIORITY]) {
                 json.decodeFromString<List<MessageChannel>>(it)
             } ?: PulseLinkSettings().messagingChannelPriority,

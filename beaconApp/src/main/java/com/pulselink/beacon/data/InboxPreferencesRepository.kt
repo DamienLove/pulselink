@@ -14,17 +14,63 @@ class InboxPreferencesRepository(private val context: Context) {
     private val pinnedKey = stringPreferencesKey("pinned_threads")
     private val archivedKey = stringPreferencesKey("archived_threads")
     private val delayedSendKey = androidx.datastore.preferences.core.intPreferencesKey("delayed_send_timeout")
+    private val autoReplyEnabledKey = androidx.datastore.preferences.core.booleanPreferencesKey("auto_reply_enabled")
+    private val autoReplyMessageKey = stringPreferencesKey("auto_reply_message")
+    private val quickRepliesKey = stringPreferencesKey("quick_replies")
+    private val autoDeleteOtpsKey = androidx.datastore.preferences.core.booleanPreferencesKey("auto_delete_otps")
 
     val flow: Flow<InboxState> = context.inboxDataStore.data.map { prefs ->
         val pinned = decodeSet(prefs[pinnedKey])
         val archived = decodeSet(prefs[archivedKey])
         val delayedSend = prefs[delayedSendKey] ?: 5
-        InboxState(pinnedThreadIds = pinned, archivedThreadIds = archived, delayedSendTimeout = delayedSend)
+        val autoReplyEnabled = prefs[autoReplyEnabledKey] ?: false
+        val autoReplyMessage = prefs[autoReplyMessageKey] ?: "I'm currently driving/busy. Will reply later."
+        val autoDeleteOtps = prefs[autoDeleteOtpsKey] ?: false
+        val quickRepliesRaw = prefs[quickRepliesKey]
+        val quickReplies = if (!quickRepliesRaw.isNullOrBlank()) {
+             quickRepliesRaw.split("|")
+        } else {
+             listOf("Ok", "Yes", "No", "Thanks", "On my way!", "Can't talk now", "Call you later?")
+        }
+
+        InboxState(
+            pinnedThreadIds = pinned,
+            archivedThreadIds = archived,
+            delayedSendTimeout = delayedSend,
+            autoReplyEnabled = autoReplyEnabled,
+            autoReplyMessage = autoReplyMessage,
+            quickReplies = quickReplies,
+            autoDeleteOtps = autoDeleteOtps
+        )
+    }
+
+    suspend fun setAutoDeleteOtps(enabled: Boolean) {
+        context.inboxDataStore.edit { prefs ->
+            prefs[autoDeleteOtpsKey] = enabled
+        }
     }
 
     suspend fun setDelayedSendTimeout(seconds: Int) {
         context.inboxDataStore.edit { prefs ->
             prefs[delayedSendKey] = seconds.coerceIn(0, 30)
+        }
+    }
+
+    suspend fun setAutoReplyEnabled(enabled: Boolean) {
+        context.inboxDataStore.edit { prefs ->
+            prefs[autoReplyEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setAutoReplyMessage(message: String) {
+        context.inboxDataStore.edit { prefs ->
+            prefs[autoReplyMessageKey] = message
+        }
+    }
+
+    suspend fun setQuickReplies(replies: List<String>) {
+        context.inboxDataStore.edit { prefs ->
+            prefs[quickRepliesKey] = replies.joinToString("|")
         }
     }
 

@@ -120,6 +120,39 @@ fun SettingsScreen(
             }
 
             SettingsCard(
+                title = "Permissions",
+                description = "Required for background playback and silencing."
+            ) {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                Button(
+                    onClick = {
+                        val intent = android.content.Intent(
+                            android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            android.net.Uri.parse("package:${context.packageName}")
+                        )
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Grant Overlay Permission (Required)")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = {
+                        val intent = android.content.Intent(
+                            android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS
+                        )
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Grant DND Access (Recommended)")
+                }
+            }
+
+            SettingsCard(
                 title = "Sync Status",
                 description = "Your unique ID for web synchronization."
             ) {

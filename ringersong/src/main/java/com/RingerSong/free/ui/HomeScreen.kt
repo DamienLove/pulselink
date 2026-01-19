@@ -64,6 +64,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -628,15 +629,15 @@ private fun RingtoneOptimizationCard(context: Context) {
             )
             Button(
                 onClick = {
-                    scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                        val success = RingtoneUtils.setSilentRingtone(context)
-                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                            if (success) {
-                                android.widget.Toast.makeText(context, "Default ringtone set to Silent", android.widget.Toast.LENGTH_SHORT).show()
-                                isOptimized = true
-                            } else {
-                                android.widget.Toast.makeText(context, "Failed to set silent ringtone", android.widget.Toast.LENGTH_SHORT).show()
-                            }
+                    scope.launch {
+                        val success = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            RingtoneUtils.setSilentRingtone(context)
+                        }
+                        if (success) {
+                            android.widget.Toast.makeText(context, "Default ringtone set to Silent", android.widget.Toast.LENGTH_SHORT).show()
+                            isOptimized = true
+                        } else {
+                            android.widget.Toast.makeText(context, "Failed to set silent ringtone", android.widget.Toast.LENGTH_SHORT).show()
                         }
                     }
                 }

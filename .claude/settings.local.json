@@ -51,7 +51,13 @@
       "Bash(dir /s /b androidAppbuildoutputsbundle*Release*.aab)",
       "Bash(cmd.exe /c \"dir /s /b androidApp\\\\build\\\\outputs\\\\bundle\\\\*Release\\\\*.aab\")",
       "Bash(grep:*)",
-      "WebFetch(domain:damiennichols.com)"
+      "WebFetch(domain:damiennichols.com)",
+      "mcp__plugin_firebase_firebase__firebase_get_environment",
+      "mcp__plugin_firebase_firebase__firebase_list_apps",
+      "mcp__plugin_firebase_firebase__firebase_create_android_sha",
+      "Bash(firebase apps:list:*)",
+      "mcp__plugin_firebase_firebase__firebase_get_sdk_config",
+      "Bash(python upload_play.py:*)"
     ]
   },
   "mcpServers": {

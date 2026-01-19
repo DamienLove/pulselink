@@ -50,8 +50,7 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action
-        if (action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION &&
-            action != Telephony.Sms.Intents.SMS_DELIVER_ACTION) {
+        if (action != Telephony.Sms.Intents.SMS_DELIVER_ACTION) {
             return
         }
         val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)

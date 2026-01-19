@@ -5,12 +5,6 @@ import android.content.ContentUris
 import android.content.Context
 import android.provider.Telephony
 import android.util.Log
-import androidx.work.Constraints
-import androidx.work.ExistingWorkPolicy
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequest
-import androidx.work.WorkManager
-import com.pulselink.BuildConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,7 +15,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class SmsStore @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val smsSyncTrigger: SmsSyncTrigger
 ){
     fun insertIncoming(address: String, body: String, timestamp: Long = System.currentTimeMillis()) {
         if (SmsCodec.isPulseLinkPayload(body)) return
@@ -42,7 +37,7 @@ class SmsStore @Inject constructor(
         runCatching {
             context.contentResolver.insert(Telephony.Sms.Inbox.CONTENT_URI, values)
         }.onSuccess {
-            scheduleSync()
+            smsSyncTrigger.triggerSync()
         }.onFailure { error ->
             Log.w(TAG, "Failed to insert incoming SMS into Telephony provider", error)
         }
@@ -68,7 +63,7 @@ class SmsStore @Inject constructor(
         runCatching {
             context.contentResolver.insert(Telephony.Sms.Sent.CONTENT_URI, values)
         }.onSuccess {
-            scheduleSync()
+            smsSyncTrigger.triggerSync()
         }.onFailure { error ->
             Log.w(TAG, "Failed to insert outgoing SMS into Telephony provider", error)
         }
@@ -98,7 +93,7 @@ class SmsStore @Inject constructor(
         return runCatching {
             context.contentResolver.insert(Telephony.Sms.Outbox.CONTENT_URI, values)
         }.onSuccess {
-            scheduleSync()
+            smsSyncTrigger.triggerSync()
         }.onFailure { error ->
             Log.w(TAG, "Failed to insert pending SMS into Telephony provider", error)
         }.getOrNull()?.lastPathSegment?.toLongOrNull()
@@ -136,22 +131,6 @@ class SmsStore @Inject constructor(
         }.onFailure { error ->
             Log.w(TAG, "Failed to update SMS status for $messageId", error)
         }
-    }
-
-    private fun scheduleSync() {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-
-        val request = OneTimeWorkRequest.Builder(SmsSyncWorker::class.java)
-            .setConstraints(constraints)
-            .build()
-
-        WorkManager.getInstance(context).enqueueUniqueWork(
-            "SmsSyncImmediate",
-            ExistingWorkPolicy.APPEND_OR_REPLACE,
-            request
-        )
     }
 
     companion object {

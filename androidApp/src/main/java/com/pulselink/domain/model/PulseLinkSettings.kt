@@ -76,7 +76,8 @@ data class PulseLinkSettings(
     val devicePhoneNumber: String? = null,
     // Extensions
     val privateSafeEnabled: Boolean = false,
-    val smartRepliesEnabled: Boolean = false
+    val smartRepliesEnabled: Boolean = false,
+    val truecallerEnabled: Boolean = false
 ) {
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)
         .map { it.trim().lowercase() }
