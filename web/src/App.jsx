@@ -83,6 +83,8 @@ const LockIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="non
 const MessageSquareIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>;
 const SearchIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
 const CloseIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+const InfoIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>;
+
 const Spinner = ({ className = '', style = {} }) => (
   <svg className={`spinner ${className}`} style={style} viewBox="0 0 50 50" aria-hidden="true">
     <defs>
@@ -1915,7 +1917,7 @@ function App() {
   const webHintStorageKey = 'pulselink.hideWebHint';
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(true);
   const [isLoadingThreads, setIsLoadingThreads] = useState(true);
   const [legacyThreads, setLegacyThreads] = useState([]);
   const [lineThreads, setLineThreads] = useState({});
@@ -3612,8 +3614,15 @@ function App() {
               {/* EXPECTED: Banner should display icon, bold heading, and feature description */}
               {showWebHint && (
                 <div className="web-app-hint">
+                  <div className="hint-icon-wrapper">
+                    <InfoIcon />
+                  </div>
+                  <div className="hint-content">
+                    <strong>Access PulseLink Web anytime</strong>
+                    <p>Visit pulselink.damiennichols.com (or app.damiennichols.com / pulselink-24899.web.app) from any browser to manage contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.</p>
+                  </div>
                   <button
-                    className="hint-dismiss"
+                    className="ghost-btn icon-only hint-dismiss"
                     type="button"
                     aria-label="Dismiss web access notice"
                     onClick={() => {
@@ -3621,12 +3630,8 @@ function App() {
                       localStorage.setItem(webHintStorageKey, 'true');
                     }}
                   >
-                    x
+                    <CloseIcon />
                   </button>
-                  <div className="hint-icon">??</div>
-                  <div className="hint-content">
-                    <strong>Access PulseLink Web anytime:</strong> Visit pulselink.damiennichols.com (or app.damiennichols.com / pulselink-24899.web.app) from any browser to manage contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.
-                  </div>
                 </div>
               )}
               <div className="home-grid">
@@ -4769,7 +4774,8 @@ function App() {
                 ) : (
                   <div className="empty-state">
                     <img src={beaconLogo} alt="Beacon" className="empty-logo" />
-                    <div>Select a thread or start a new message</div>
+                    <h2>Select a conversation</h2>
+                    <p>Choose a thread from the sidebar or start a new message.</p>
                   </div>
                 )}
                 <MessageComposer
