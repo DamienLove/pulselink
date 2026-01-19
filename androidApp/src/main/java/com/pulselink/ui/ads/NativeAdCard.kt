@@ -91,6 +91,9 @@ fun NativeAdCard(
             },
             update = { adView: NativeAdView ->
                 bindNativeAd(adView, ad)
+            },
+            onRelease = { adView ->
+                adView.removeAllViews()
             }
         )
     }

@@ -6,6 +6,8 @@ import android.content.Intent
 import android.os.Build
 import android.telephony.TelephonyManager
 import android.util.Log
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.RingerSong.free.data.AppStateStore
 import com.RingerSong.free.service.RingerPlaybackService
 import com.RingerSong.free.service.RingtoneSegmentManager
@@ -38,6 +40,10 @@ class CallStateReceiver : BroadcastReceiver() {
                 val number = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
                 Log.d(TAG, "RINGING from: $number - Starting RingerPlaybackService")
 
+                // Attempt to silence ringer immediately to reduce latency, but capture volume first!
+                val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+                var originalVolume = -1
+
                 // Start the playback service immediately to silence default ringer and play stream
                 val serviceIntent = Intent(context, RingerPlaybackService::class.java).apply {
                     action = RingerPlaybackService.ACTION_PLAY_SEGMENT
@@ -45,14 +51,40 @@ class CallStateReceiver : BroadcastReceiver() {
                 }
 
                 try {
+                    // Capture and silence BEFORE starting service to reduce latency
+                    if (audioManager != null) {
+                        originalVolume = audioManager.getStreamVolume(android.media.AudioManager.STREAM_RING)
+                        audioManager.setStreamVolume(android.media.AudioManager.STREAM_RING, 0, 0)
+                    }
+
+                    if (originalVolume != -1) {
+                        serviceIntent.putExtra(RingerPlaybackService.EXTRA_ORIGINAL_VOLUME, originalVolume)
+                    }
+
+                    if (!canStartServiceFromBackground(context)) {
+                        Log.w(TAG, "Skipping playback service start; app not in foreground and missing overlay permission.")
+                        // Restore volume if we can't start!
+                        if (originalVolume != -1) {
+                             audioManager?.setStreamVolume(android.media.AudioManager.STREAM_RING, originalVolume, 0)
+                        }
+                        return
+                    }
+
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         context.startForegroundService(serviceIntent)
                     } else {
                         context.startService(serviceIntent)
                     }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to start service (likely Android 12+ background restriction)", e)
-                    // Fallback or retry logic could go here, but for now we log and proceed safely.
+                } catch (e: Throwable) {
+                    Log.e(TAG, "Failed to start service", e)
+                    // Failsafe: Restore volume if service start failed
+                    if (originalVolume != -1) {
+                        try {
+                            audioManager?.setStreamVolume(android.media.AudioManager.STREAM_RING, originalVolume, 0)
+                        } catch (restoreEx: Exception) {
+                            Log.e(TAG, "Failed to restore volume in failsafe", restoreEx)
+                        }
+                    }
                 }
             }
 
@@ -67,8 +99,8 @@ class CallStateReceiver : BroadcastReceiver() {
                     }
                     try {
                         context.startService(serviceIntent)
-                    } catch (e: Exception) {
-                         Log.e(TAG, "Failed to send STOP intent", e)
+                    } catch (e: Throwable) {
+                        Log.e(TAG, "Failed to send STOP intent", e)
                     }
 
                     // We still keep the "Next Ringtone" logic for fallback/LOCAL support if needed,
@@ -105,13 +137,38 @@ class CallStateReceiver : BroadcastReceiver() {
                     action = RingerPlaybackService.ACTION_STOP_PLAYBACK
                 }
                 try {
-                    context.startService(serviceIntent)
-                } catch (e: Exception) {
-                     Log.e(TAG, "Failed to send STOP intent", e)
+                    // For stopping, we try to startService.
+                    // Note: Stopping doesn't strictly require foreground start permissions if we are just sending an intent,
+                    // but on Android O+ background start limits apply.
+                    // However, if we were already running foreground, we should be fine?
+                    // Actually, if the service is running, startService is allowed.
+                    try {
+                        context.startService(serviceIntent)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Could not send stop intent: ${e.message}")
+                    }
+                } catch (e: Throwable) {
+                    Log.e(TAG, "Failed to send STOP intent", e)
                 }
             }
         }
 
         lastState = phoneState
+    }
+
+    private fun canStartServiceFromBackground(context: Context): Boolean {
+        // If we have overlay permission, we are exempt from background start restrictions on Android 10+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+            android.provider.Settings.canDrawOverlays(context)) {
+            return true
+        }
+
+        // If targeting Android 12+ (S) and no overlay permission, we must be in foreground
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return ProcessLifecycleOwner.get().lifecycle.currentState
+                .isAtLeast(Lifecycle.State.STARTED)
+        }
+
+        return true
     }
 }

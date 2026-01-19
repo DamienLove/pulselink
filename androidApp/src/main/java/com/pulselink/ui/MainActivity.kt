@@ -53,6 +53,7 @@ import androidx.core.content.PackageManagerCompat
 import androidx.core.content.UnusedAppRestrictionsConstants
 import androidx.compose.material3.FloatingActionButton
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -64,10 +65,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
 import com.pulselink.auth.AuthState
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.pulselink.data.ads.AppOpenAdController
 import com.pulselink.data.sms.MessageNotificationManager
 import com.pulselink.data.contacts.DeviceContact
@@ -1011,57 +1015,72 @@ class MainActivity : AppCompatActivity() {
                     composable("login") {
                         val loginViewModel: LoginViewModel = hiltViewModel()
                         val loginUiState by loginViewModel.uiState.collectAsStateWithLifecycle()
-                        val activity = LocalContext.current as? MainActivity
-                        val googleClient = remember {
-                                GoogleSignIn.getClient(
-                                    activity!!,
-                                    GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                                        .requestIdToken(getString(R.string.default_web_client_id))
-                                        .requestEmail()
+                        val context = LocalContext.current
+                        val credentialManager = remember { CredentialManager.create(context) }
+                        val clientId = stringResource(R.string.default_web_client_id)
+
+                        val onGoogleSignIn: () -> Unit = {
+                            scope.launch {
+                                try {
+                                    val googleIdOption = GetGoogleIdOption.Builder()
+                                        .setFilterByAuthorizedAccounts(false)
+                                        .setServerClientId(clientId)
+                                        .setAutoSelectEnabled(false)
                                         .build()
-                                )
-                        }
-                        val googleLauncher = rememberLauncherForActivityResult(
-                            contract = ActivityResultContracts.StartActivityForResult()
-                        ) { result ->
-                            if (result.resultCode != RESULT_OK) {
-                                loginViewModel.reportExternalError()
-                                return@rememberLauncherForActivityResult
-                            }
-                            try {
-                                val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-                                val account = task.getResult(ApiException::class.java)
-                                val idToken = account?.idToken
-                                if (idToken != null) {
-                                    loginViewModel.handleGoogleIdToken(idToken)
-                                } else {
+
+                                    val request = GetCredentialRequest.Builder()
+                                        .addCredentialOption(googleIdOption)
+                                        .build()
+
+                                    val result = credentialManager.getCredential(
+                                        request = request,
+                                        context = context,
+                                    )
+                                    val credential = result.credential
+                                    if (credential is androidx.credentials.CustomCredential &&
+                                        credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                                        loginViewModel.handleGoogleIdToken(googleIdTokenCredential.idToken)
+                                    } else {
+                                        Log.e("MainActivity", "Unexpected credential type: ${credential.type}")
+                                        loginViewModel.reportExternalError()
+                                    }
+                                } catch (e: GetCredentialCancellationException) {
+                                    Log.d("MainActivity", "CredentialManager cancelled", e)
+                                } catch (e: GetCredentialException) {
+                                    Log.e("MainActivity", "CredentialManager error", e)
+                                    // If cancellation, just ignore. If other error, report.
+                                    loginViewModel.reportExternalError()
+                                } catch (e: Exception) {
+                                    Log.e("MainActivity", "Google Sign-In error", e)
                                     loginViewModel.reportExternalError()
                                 }
-                            } catch (e: Exception) {
-                                loginViewModel.reportExternalError()
                             }
                         }
 
                         LoginScreen(
                             state = loginUiState,
-                            onEmailChange = loginViewModel::updateEmail,        
-                            onPasswordChange = loginViewModel::updatePassword,  
+                            onEmailChange = loginViewModel::updateEmail,
+                            onPasswordChange = loginViewModel::updatePassword,
                             onConfirmPasswordChange = loginViewModel::updateConfirmPassword,
                             onSubmit = loginViewModel::submit,
                             onToggleMode = loginViewModel::toggleMode,
                             onForgotPassword = loginViewModel::sendPasswordReset,
-                            onSmsOnlyClick = loginViewModel::signInSmsOnly,     
-                            onGoogleClick = { googleLauncher.launch(googleClient.signInIntent) },
+                            onSmsOnlyClick = loginViewModel::signInSmsOnly,
+                            onGoogleClick = onGoogleSignIn,
                             onMessageConsumed = loginViewModel::clearTransientMessages,
                             useProBranding = false
                         )
+                        val initialAnonymous = rememberSaveable { (authState as? AuthState.Authenticated)?.user?.isAnonymous == true }
                         LaunchedEffect(authState, state.onboardingComplete) {
                             val authenticated = authState as? AuthState.Authenticated
-                            if (authenticated != null && !authenticated.user.isAnonymous) {
-                                val destination = if (state.onboardingComplete) "home" else "onboarding_intro"
-                                navController.navigate(destination) {
-                                    popUpTo(0) { inclusive = true }
-                                    launchSingleTop = true
+                            if (authenticated != null) {
+                                if (!authenticated.user.isAnonymous || !initialAnonymous) {
+                                    val destination = if (state.onboardingComplete) "home" else "onboarding_intro"
+                                    navController.navigate(destination) {
+                                        popUpTo(0) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
                                 }
                             }
                         }
@@ -1645,6 +1664,11 @@ class MainActivity : AppCompatActivity() {
                             onToggleAutoUpdateContactInfo = viewModel::setAutoUpdateContactInfo,
                             onToggleFirebaseMessaging = viewModel::setFirebaseMessagingEnabled,
                             onToggleEmailFallback = viewModel::setEmailFallbackEnabled,
+                            onSetOtpCleanupDays = viewModel::setOtpCleanupDays,
+                            onChangePrivatePin = { navController.navigate("private_pin") },
+                            onToggleSmartReplies = viewModel::setSmartRepliesEnabled,
+                            onToggleAiCompose = viewModel::setAiComposeEnabled,
+                            onToggleAiUrgency = viewModel::setAiUrgencyEnabled,
                             onRequestDefaultSms = requestDefaultSms,
                             onToggleBeaconLauncher = { enabled -> viewModel.setBeaconLauncherEnabled(enabled) },
                             onSyncNow = viewModel::syncContactsNow,
@@ -1696,6 +1720,11 @@ class MainActivity : AppCompatActivity() {
                             onToggleAiSummaries = viewModel::setAiSummariesEnabled,
                             onToggleMergedExperience = viewModel::setMergedExperienceEnabled,
                             onToggleThirdPartyExtensions = viewModel::setThirdPartyExtensionsEnabled,
+                            onToggleTruecaller = viewModel::setTruecallerEnabled,
+                            onTogglePrivateSafe = viewModel::setPrivateSafeEnabled,
+                            onToggleSmartReplies = viewModel::setSmartRepliesEnabled,
+                            onOpenThemes = { navController.navigate("visual_settings") },
+                            onOpenRingerSong = { navController.navigate("notifications/message_sound") },
                             onBack = { navController.popBackStack() }
                         )
                     }
@@ -2113,6 +2142,27 @@ class MainActivity : AppCompatActivity() {
                         val threadLineId = lineId ?: deviceLineId
                         val threadKey = "${threadLineId ?: deviceLineId}:$threadId"
                         val fallbackLineId = defaultSendLineId ?: threadLineId ?: deviceLineId
+                        val callNumber = contact?.primaryPhone()
+                            ?.takeIf { it.isNotBlank() }
+                            ?: decodedAddress.takeIf { it.isNotBlank() }
+                        val onCallThread = callNumber?.let { number ->
+                            {
+                                val contactValue = contact
+                                if (contactValue == null || contactValue.primaryPhone().isNullOrBlank()) {
+                                    val dialed = dialNumber(activity, number)
+                                    if (!dialed) {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.call_failed),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                } else {
+                                    scope.launch { callContactHandler(contactValue) }
+                                }
+                                Unit
+                            }
+                        }
                         val selectedLine = when (lineSendPreference) {
                             LineSendPreference.DEVICE_DEFAULT -> deviceLineId
                             LineSendPreference.LINE_DEFAULT -> fallbackLineId
@@ -2136,6 +2186,8 @@ class MainActivity : AppCompatActivity() {
                             onEditNotificationVibration = {
                                 navController.navigate("notifications/message_vibration?address=${Uri.encode(decodedAddress)}")
                             },
+                            onCall = onCallThread,
+                            callEnabled = onCallThread != null,
                             onSendMessage = { body, sendLineId ->
                                 threadViewModel.sendMessage(decodedAddress, body, sendLineId)
                             },
@@ -2178,7 +2230,8 @@ class MainActivity : AppCompatActivity() {
                             aiSummaryEnabled = premiumActive && state.settings.aiSummariesEnabled,
                             aiComposeEnabled = premiumActive && state.settings.aiComposeEnabled && isAuthenticated,
                             aiSignInRequired = !isAuthenticated,
-                            onRequestAiSignIn = { navController.navigate("login") }
+                            onRequestAiSignIn = { navController.navigate("login") },
+                            smartRepliesEnabled = state.settings.smartRepliesEnabled
                         )
                     }
                     composable("settings_help") {
@@ -2324,17 +2377,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun sendLinkOrInvite(contact: Contact) {
-        if (contact.phoneNumber.isNotBlank()) {
-            viewModel.sendLinkRequest(contact.id)
-            Toast.makeText(this, getString(R.string.link_request_sent_sms), Toast.LENGTH_SHORT).show()
-            return
+        lifecycleScope.launch {
+            if (contact.phoneNumber.isNotBlank()) {
+                val success = viewModel.sendLinkRequest(contact.id)
+                val msg = if (success) getString(R.string.link_request_sent_sms) else getString(R.string.link_request_failed_sms)
+                Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            if (!contact.email.isNullOrBlank()) {
+                val success = viewModel.sendLinkRequest(contact.id)
+                val msg = if (success) getString(R.string.link_request_sent_cloud) else getString(R.string.link_request_failed_email)
+                Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            Toast.makeText(this@MainActivity, getString(R.string.link_invite_missing_contact_info), Toast.LENGTH_SHORT).show()
         }
-        if (!contact.email.isNullOrBlank()) {
-            viewModel.sendLinkRequest(contact.id)
-            Toast.makeText(this, getString(R.string.link_request_sent_cloud), Toast.LENGTH_SHORT).show()
-            return
-        }
-        Toast.makeText(this, getString(R.string.link_invite_missing_contact_info), Toast.LENGTH_SHORT).show()
     }
 
     override fun onResume() {
@@ -2516,6 +2573,16 @@ private fun placeCall(
         true
     } catch (error: SecurityException) {
         monitor.cancel()
+        false
+    }
+}
+
+private fun dialNumber(activity: MainActivity, phoneNumber: String): Boolean {
+    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phoneNumber"))
+    return try {
+        activity.startActivity(intent)
+        true
+    } catch (_: Exception) {
         false
     }
 }

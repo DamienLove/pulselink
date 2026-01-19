@@ -19,11 +19,15 @@ class SmsRelayService @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
     private val smsSender: SmsSender,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val smsSyncTrigger: SmsSyncTrigger
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var listener: ListenerRegistration? = null
+    private var outboxListener: ListenerRegistration? = null
+    private var userListener: ListenerRegistration? = null
     private val isStarted = AtomicBoolean(false)
+    private var lastSyncRequestedAt: com.google.firebase.Timestamp? = null
+    private var isFirstSnapshot = true
 
     fun start() {
         if (!isStarted.compareAndSet(false, true)) return
@@ -39,24 +43,49 @@ class SmsRelayService @Inject constructor(
     }
 
     private fun startListening(uid: String) {
-        if (listener != null) return
+        if (outboxListener == null) {
+            val outboxRef = firestore.collection("users").document(uid).collection("outbox")
+            outboxListener = outboxRef.addSnapshotListener { snapshots, e ->
+                if (e != null) {
+                    Log.w(TAG, "Outbox listen failed.", e)
+                    return@addSnapshotListener
+                }
 
-        val outboxRef = firestore.collection("users").document(uid).collection("outbox")
-        listener = outboxRef.addSnapshotListener { snapshots, e ->
-            if (e != null) {
-                Log.w(TAG, "Listen failed.", e)
-                return@addSnapshotListener
+                if (snapshots != null) {
+                    for (doc in snapshots.documents) {
+                        val data = doc.data ?: continue
+                        val address = data["address"] as? String
+                        val body = data["body"] as? String
+                        val lineId = data["lineId"] as? String
+
+                        if (address != null && body != null) {
+                            processMessage(doc.id, address, body, uid, lineId)
+                        }
+                    }
+                }
             }
+        }
 
-            if (snapshots != null) {
-                for (doc in snapshots.documents) {
-                    val data = doc.data ?: continue
-                    val address = data["address"] as? String
-                    val body = data["body"] as? String
-                    val lineId = data["lineId"] as? String
+        if (userListener == null) {
+            isFirstSnapshot = true
+            val userRef = firestore.collection("users").document(uid)
+            userListener = userRef.addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    Log.w(TAG, "User listen failed.", e)
+                    return@addSnapshotListener
+                }
 
-                    if (address != null && body != null) {
-                        processMessage(doc.id, address, body, uid, lineId)
+                if (snapshot != null && snapshot.exists()) {
+                    val syncRequestedAt = snapshot.getTimestamp("syncRequestedAt")
+
+                    if (isFirstSnapshot) {
+                        isFirstSnapshot = false
+                        lastSyncRequestedAt = syncRequestedAt
+                    } else if (syncRequestedAt != null && syncRequestedAt != lastSyncRequestedAt) {
+                        // Timestamp changed, trigger sync
+                        Log.d(TAG, "Sync requested from web at $syncRequestedAt")
+                        lastSyncRequestedAt = syncRequestedAt
+                        smsSyncTrigger.triggerSync()
                     }
                 }
             }
@@ -64,8 +93,12 @@ class SmsRelayService @Inject constructor(
     }
 
     private fun stopListening() {
-        listener?.remove()
-        listener = null
+        outboxListener?.remove()
+        outboxListener = null
+        userListener?.remove()
+        userListener = null
+        lastSyncRequestedAt = null
+        isFirstSnapshot = true
     }
 
     private fun processMessage(docId: String, address: String, body: String, uid: String, lineId: String?) {

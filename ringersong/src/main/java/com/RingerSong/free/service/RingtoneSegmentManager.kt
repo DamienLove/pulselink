@@ -93,6 +93,10 @@ class RingtoneSegmentManager @Inject constructor(
                     Log.w(TAG, "Spotify streaming not supported for ringtones")
                     null
                 }
+                else -> {
+                    Log.w(TAG, "Unsupported song source: ${song.source}")
+                    null
+                }
             }
 
             if (sourceFilePath == null) {

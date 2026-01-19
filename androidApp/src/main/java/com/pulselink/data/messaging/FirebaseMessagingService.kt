@@ -7,6 +7,7 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.pulselink.data.link.LinkChannelService
+import com.pulselink.data.sms.SmsRelayService
 import com.pulselink.domain.repository.SettingsRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -19,6 +20,7 @@ import javax.inject.Inject
 class PulseLinkFirebaseMessagingService : FirebaseMessagingService() {
 
     @Inject lateinit var linkChannelService: LinkChannelService
+    @Inject lateinit var smsRelayService: SmsRelayService
     @Inject lateinit var settingsRepository: SettingsRepository
     @Inject lateinit var firestore: FirebaseFirestore
     @Inject lateinit var auth: FirebaseAuth
@@ -34,6 +36,16 @@ class PulseLinkFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
         Log.d(TAG, "Message received from: ${message.from}")
+
+        val type = message.data["type"]
+        if (type == "SMS_RELAY") {
+            Log.d(TAG, "Received SMS_RELAY trigger")
+            // Ensure the relay service is listening. This is idempotent.
+            // If the app was dead, PulseLinkApp.onCreate() calls this too, but
+            // explicit call here guarantees it for all entry points.
+            smsRelayService.start()
+            return
+        }
 
         // Ensure LinkChannelService is running to process the message via Firestore listeners
         linkChannelService.start()

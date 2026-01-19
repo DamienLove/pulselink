@@ -14,6 +14,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,6 +48,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -77,6 +79,7 @@ import com.pulselink.ui.screens.PrivatePinScreen
 import com.pulselink.ui.screens.NewMessageScreen
 import com.pulselink.ui.screens.MessageNotificationSoundScreen
 import com.pulselink.ui.screens.VibrationPatternPickerScreen
+import com.pulselink.ui.screens.CustomVibrationCreatorScreen
 import com.pulselink.ui.screens.ProfileSettingsScreen
 import com.pulselink.ui.screens.MultiLineSetupDialog
 import com.pulselink.ui.screens.LineLimitDialog
@@ -133,7 +136,9 @@ class BeaconInboxActivity : ComponentActivity() {
         val subscriptionUiState by subscriptionManager.subscriptionState.collectAsStateWithLifecycle()
         val hasPremium = subscriptionUiState.isPremiumActive ||
             state.settings.premiumUnlocked ||
-            BuildConfig.PREMIUM_FEATURES
+            BuildConfig.PREMIUM_FEATURES ||
+            state.settings.proUnlocked ||
+            BuildConfig.PRO_FEATURES
         val hasPro = BuildConfig.PRO_FEATURES || state.settings.proUnlocked || state.settings.premiumUnlocked
         val isPro = hasPro || hasPremium
                 val deleteAccountState by viewModel.deleteAccountState.collectAsStateWithLifecycle()
@@ -258,7 +263,10 @@ class BeaconInboxActivity : ComponentActivity() {
 
         val fromPulseLink = intent.getBooleanExtra("from_pulselink", false)
 
-        Column(modifier = Modifier.fillMaxSize()) {
+        val theme = state.settings.themePreferences
+        val backgroundColor = parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor)
+
+        Column(modifier = Modifier.fillMaxSize().background(backgroundColor)) {
             val bannerHeight = 50.dp
             Box(modifier = Modifier.weight(1f)) {
                 Box(
@@ -293,17 +301,23 @@ class BeaconInboxActivity : ComponentActivity() {
                                     }
 
                                     var currentRoute by remember { mutableStateOf(BeaconNavRoute.Inbox) }
+                                    var contactSearchQuery by rememberSaveable { mutableStateOf("") }
 
                 val deviceContactsViewModel: DeviceContactsViewModel = hiltViewModel()
                 val deviceContacts by deviceContactsViewModel.contacts.collectAsStateWithLifecycle()
-                val hasContactsPermission = ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.READ_CONTACTS
-                ) == PackageManager.PERMISSION_GRANTED
+                var hasContactsPermission by remember {
+                    mutableStateOf(checkContactsPermission(context))
+                }
                 val contactsPermissionLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.RequestPermission()
                 ) { granted ->
+                    hasContactsPermission = granted
                     if (granted) {
+                        deviceContactsViewModel.refresh()
+                    }
+                }
+                LaunchedEffect(hasContactsPermission) {
+                    if (hasContactsPermission) {
                         deviceContactsViewModel.refresh()
                     }
                 }
@@ -332,6 +346,50 @@ class BeaconInboxActivity : ComponentActivity() {
                     // Return list sorted by name
                     normalized.values.sortedBy { it.displayName.lowercase() }
                 }
+                val filteredContacts = remember(mergedContacts, contactSearchQuery) {
+                    val query = contactSearchQuery.trim()
+                    if (query.isBlank()) {
+                        mergedContacts
+                    } else {
+                        mergedContacts.filter { contact ->
+                            contact.displayName.contains(query, ignoreCase = true) ||
+                                contact.phoneNumber.contains(query, ignoreCase = true) ||
+                                contact.additionalPhones.any { it.contains(query, ignoreCase = true) }
+                        }
+                    }
+                }
+                val contactRecipients = remember(state.contacts, deviceContacts) {
+                    val trustedRecipients = state.contacts.flatMap { contact ->
+                        val phones = (listOf(contact.phoneNumber) + contact.additionalPhones)
+                            .map { it.trim() }
+                            .filter { it.isNotBlank() }
+                        phones.mapIndexed { index, phone ->
+                            MessageRecipient(
+                                id = (contact.id * 10_000L) + index,
+                                displayName = contact.displayName,
+                                phoneNumber = phone,
+                                isTrusted = true
+                            )
+                        }
+                    }
+                    val trustedNumbers = trustedRecipients
+                        .map { normalizePhone(it.phoneNumber) }
+                        .toSet()
+                    val deviceRecipients = deviceContacts.map { device ->
+                        MessageRecipient(
+                            id = -device.id,
+                            displayName = device.displayName.ifBlank { device.phoneNumber },
+                            phoneNumber = device.phoneNumber,
+                            isTrusted = false
+                        )
+                    }.filter { candidate -> normalizePhone(candidate.phoneNumber) !in trustedNumbers }
+                    (trustedRecipients + deviceRecipients)
+                        .distinctBy { normalizePhone(it.phoneNumber) }
+                        .sortedWith(
+                            compareByDescending<MessageRecipient> { it.isTrusted }
+                                .thenBy { it.displayName.lowercase() }
+                        )
+                }
 
                                     val displayedThreads = when (currentRoute) {
                                         BeaconNavRoute.Inbox -> threads
@@ -358,7 +416,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                             // Show contacts list instead of messages
                                             Column(modifier = Modifier.fillMaxSize()) {
                                                 BeaconContactsScreen(
-                                                    contacts = mergedContacts,
+                                                    contacts = filteredContacts,
                                                     theme = state.settings.themePreferences,
                                                     hasContactsPermission = hasContactsPermission,
                                                     onRequestContactsPermission = {
@@ -368,11 +426,17 @@ class BeaconInboxActivity : ComponentActivity() {
                                                         if (contact.phoneNumber.isNotBlank()) {
                                                             navController.navigate("sms/thread/0/${Uri.encode(contact.phoneNumber)}")
                                                         }
-                                                    }
+                                                    },
+                                                    searchQuery = contactSearchQuery,
+                                                    onSearchChange = { contactSearchQuery = it },
+                                                    onClearSearch = { contactSearchQuery = "" }
                                                 )
                                                 BeaconNavBar(
                                                     currentRoute = currentRoute,
                                                     onNavigate = { route ->
+                                                        if (currentRoute == BeaconNavRoute.Contacts && route != BeaconNavRoute.Contacts) {
+                                                            contactSearchQuery = ""
+                                                        }
                                                         if (route == BeaconNavRoute.Private && currentRoute != BeaconNavRoute.Private) {
                                                             if (state.settings.privatePinHash.isNullOrBlank()) {
                                                                 navController.navigate("private_pin")
@@ -387,7 +451,8 @@ class BeaconInboxActivity : ComponentActivity() {
                                                             currentRoute = route
                                                         }
                                                     },
-                                                    theme = state.settings.themePreferences
+                                                    theme = state.settings.themePreferences,
+                                                    privateSafeEnabled = state.settings.privateSafeEnabled
                                                 )
                                             }
                                         } else {
@@ -481,6 +546,11 @@ class BeaconInboxActivity : ComponentActivity() {
                                             onClearSearch = { smsInboxViewModel.clearSearch() },
                                             archivedOnly = currentRoute == BeaconNavRoute.Archived,
                                             contactsByNumber = contactsByNumber,
+                                            contactRecipients = contactRecipients,
+                                            hasContactsPermission = hasContactsPermission,
+                                            onRequestContactsPermission = {
+                                                contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                                            },
                                             banner = {
                                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                                     if (!notificationsEnabled || notificationsSilent) {
@@ -644,7 +714,8 @@ class BeaconInboxActivity : ComponentActivity() {
                                                             currentRoute = route
                                                         }
                                                     },
-                                                    theme = state.settings.themePreferences
+                                                    theme = state.settings.themePreferences,
+                                                    privateSafeEnabled = state.settings.privateSafeEnabled
                                                 )
                                             }
                                         )
@@ -761,9 +832,23 @@ class BeaconInboxActivity : ComponentActivity() {
                                     val summaryState by threadViewModel.summaryState.collectAsStateWithLifecycle()
                                     val composeState by threadViewModel.composeState.collectAsStateWithLifecycle()
                                     val decodedAddress = Uri.decode(address)
+                                    val callNumber = contact?.phoneNumber
+                                        ?.takeIf { it.isNotBlank() }
+                                        ?: contact?.additionalPhones?.firstOrNull { it.isNotBlank() }
+                                        ?: decodedAddress.takeIf { it.isNotBlank() }
+                                    val onCallThread = callNumber?.let { number ->
+                                        {
+                                            val intent = Intent(Intent.ACTION_DIAL).apply {
+                                                data = Uri.parse("tel:$number")
+                                            }
+                                            context.startActivity(intent)
+                                        }
+                                    }
                                     val premiumActive = subscriptionUiState.isPremiumActive ||
                                         state.settings.premiumUnlocked ||
-                                        BuildConfig.PREMIUM_FEATURES
+                                        BuildConfig.PREMIUM_FEATURES ||
+                                        state.settings.proUnlocked ||
+                                        BuildConfig.PRO_FEATURES
                                     val threadLineId = lineId ?: deviceLineId
                                     val threadKey = "${threadLineId ?: deviceLineId}:$threadId"
                                     val fallbackLineId = defaultSendLineId ?: threadLineId ?: deviceLineId
@@ -806,9 +891,11 @@ class BeaconInboxActivity : ComponentActivity() {
                                             onEditNotificationSound = {
                                                 navController.navigate("notifications/message_sound?address=${Uri.encode(decodedAddress)}")
                                             },
-                                            onEditNotificationVibration = {
+                                            onEditNotificationVibration = {     
                                                 navController.navigate("notifications/message_vibration?address=${Uri.encode(decodedAddress)}")
                                             },
+                                            onCall = onCallThread,
+                                            callEnabled = onCallThread != null,
                                             onEditContact = {
                                                 // Navigate to PulseLink main activity to edit contact
                                                 val intent = Intent(context, MainActivity::class.java).apply {
@@ -858,13 +945,16 @@ class BeaconInboxActivity : ComponentActivity() {
                                         aiSummaryEnabled = premiumActive && state.settings.aiSummariesEnabled,
                                         aiComposeEnabled = premiumActive && state.settings.aiComposeEnabled,
                                         onLoadMore = { threadViewModel.loadMoreMessages() },
-                                        hasMoreToLoad = threadViewModel.hasMoreMessages.collectAsStateWithLifecycle().value
+                                        hasMoreToLoad = threadViewModel.hasMoreMessages.collectAsStateWithLifecycle().value,
+                                        smartRepliesEnabled = state.settings.smartRepliesEnabled
                                     )
                                 }
                                 composable("beacon_settings") {
                                     val premiumActive = subscriptionUiState.isPremiumActive ||
                                         state.settings.premiumUnlocked ||
-                                        BuildConfig.PREMIUM_FEATURES
+                                        BuildConfig.PREMIUM_FEATURES ||
+                                        state.settings.proUnlocked ||
+                                        BuildConfig.PRO_FEATURES
                                     val messageSoundLabel = if (state.settings.messageNotificationSoundUri.isNullOrBlank()) {
                                         "Phone default notification"
                                     } else {
@@ -934,6 +1024,11 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onToggleAiSummaries = viewModel::setAiSummariesEnabled,
                                         onToggleMergedExperience = viewModel::setMergedExperienceEnabled,
                                         onToggleThirdPartyExtensions = viewModel::setThirdPartyExtensionsEnabled,
+                                        onToggleTruecaller = viewModel::setTruecallerEnabled,
+                                        onTogglePrivateSafe = viewModel::setPrivateSafeEnabled,
+                                        onToggleSmartReplies = viewModel::setSmartRepliesEnabled,
+                                        onOpenThemes = { navController.navigate("visual_settings") },
+                                        onOpenRingerSong = { navController.navigate("notifications/message_sound") },
                                         onBack = { navController.popBackStack() }
                                     )
                                 }
@@ -989,6 +1084,15 @@ class BeaconInboxActivity : ComponentActivity() {
                                     val normalized = addressArg?.let { com.pulselink.util.normalizeSmsAddress(it) }
                                     val overrideKey = normalized?.let { state.settings.messageNotificationVibrationOverrides[it] }
                                     val isContact = addressArg != null
+                                    val customOption = VibrationPatterns.customOption(
+                                        state.settings.customVibrationPatternName,
+                                        state.settings.customVibrationPattern
+                                    )
+                                    val messageOptions = if (customOption != null) {
+                                        VibrationPatterns.messageOptions + customOption
+                                    } else {
+                                        VibrationPatterns.messageOptions
+                                    }
                                     VibrationPatternPickerScreen(
                                         title = if (isContact) "Notification vibration" else "Message vibration pattern",
                                         subtitle = if (isContact) {
@@ -996,7 +1100,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                         } else {
                                             "Choose the vibration style for incoming texts."
                                         },
-                                        options = VibrationPatterns.messageOptions,
+                                        options = messageOptions,
                                         selectedKey = if (isContact) overrideKey else state.settings.messageNotificationVibrationPattern,
                                         defaultLabel = if (isContact) "Use global message pattern" else null,
                                         onSelect = { key ->
@@ -1008,7 +1112,17 @@ class BeaconInboxActivity : ComponentActivity() {
                                                 )
                                             }
                                         },
-                                        onBack = { navController.popBackStack() }
+                                        onBack = { navController.popBackStack() },
+                                        onCreateCustom = { navController.navigate("notifications/custom_vibration") }
+                                    )
+                                }
+                                composable("notifications/custom_vibration") {
+                                    CustomVibrationCreatorScreen(
+                                        onBack = { navController.popBackStack() },
+                                        onSave = { name, pattern ->
+                                            viewModel.saveCustomVibrationPattern(name, pattern.toList())
+                                            navController.popBackStack()
+                                        }
                                     )
                                 }
                                 composable(

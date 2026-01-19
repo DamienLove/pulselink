@@ -73,7 +73,11 @@ data class PulseLinkSettings(
     val defaultSendLineId: String? = null,
     val lineSendPreference: LineSendPreference = LineSendPreference.LAST_USED,
     val threadLineOverrides: Map<String, String> = emptyMap(),
-    val devicePhoneNumber: String? = null
+    val devicePhoneNumber: String? = null,
+    // Extensions
+    val privateSafeEnabled: Boolean = false,
+    val smartRepliesEnabled: Boolean = false,
+    val truecallerEnabled: Boolean = false
 ) {
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)
         .map { it.trim().lowercase() }
@@ -110,5 +114,8 @@ data class ThemePreferences(
     val appBackgroundGradientEnd: String? = null,
     val fontScale: Float = 1.0f,
     val backgroundImageUrl: String? = null,
-    val iconOverrides: Map<String, String> = emptyMap()
+    val iconOverrides: Map<String, String> = emptyMap(),
+    val useGlassEffect: Boolean = false,
+    val useHolographicGlow: Boolean = false,
+    val uiDensity: String = "Comfortable"
 )

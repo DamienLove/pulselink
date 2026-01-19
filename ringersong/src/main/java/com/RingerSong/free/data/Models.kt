@@ -26,7 +26,8 @@ data class SettingsState(
 enum class SongSource {
     SPOTIFY,
     YOUTUBE_MUSIC,
-    LOCAL
+    LOCAL,
+    APPLE_MUSIC // Added for future support
 }
 
 @Serializable

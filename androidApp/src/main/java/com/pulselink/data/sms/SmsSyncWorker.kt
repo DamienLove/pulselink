@@ -3,15 +3,19 @@ package com.pulselink.data.sms
 import android.content.Context
 import android.os.Build
 import android.provider.Telephony
+import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
+import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.pulselink.BuildConfig
+import com.pulselink.R
+import com.pulselink.data.alert.NotificationRegistrar
 import com.pulselink.data.contacts.DeviceContactsRepository
 import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.util.splitSmsDisplayAddress
@@ -28,13 +32,30 @@ class SmsSyncWorker @AssistedInject constructor(
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore,
     private val settingsRepository: SettingsRepository,
-    private val deviceContactsRepository: DeviceContactsRepository
+    private val deviceContactsRepository: DeviceContactsRepository,
+    private val notificationRegistrar: NotificationRegistrar
 ) : CoroutineWorker(appContext, workerParams) {
+
+    override suspend fun getForegroundInfo(): ForegroundInfo {
+        notificationRegistrar.ensureChannels()
+        val notification = NotificationCompat.Builder(applicationContext, NotificationRegistrar.CHANNEL_BACKGROUND)
+            .setContentTitle(applicationContext.getString(R.string.app_name))
+            .setContentText("Syncing messages...")
+            .setSmallIcon(R.drawable.ic_logo)
+            .setOngoing(true)
+            .build()
+        return ForegroundInfo(1001, notification)
+    }
 
     override suspend fun doWork(): Result {
         val settings = settingsRepository.settings.first()
         val isPremium = BuildConfig.PREMIUM_FEATURES || settings.premiumUnlocked
-        val isPro = settings.proUnlocked
+        val isPro = BuildConfig.PRO_FEATURES || settings.proUnlocked
+        val subscriptionTier = when {
+            isPremium -> "premium"
+            isPro -> "pro"
+            else -> "free"
+        }
         val hasReadSms = hasSmsPermission()
 
         val user = auth.currentUser ?: run {
@@ -47,15 +68,9 @@ class SmsSyncWorker @AssistedInject constructor(
             val userRef = firestore.collection("users").document(user.uid)
             val deviceId = settingsRepository.ensureDeviceId()
 
-            // Sync subscription status to allow Web client to unlock features
-            val status = when {
-                isPremium -> "premium"
-                isPro -> "pro"
-                else -> "free"
-            }
             userRef.set(
                 mapOf(
-                    "subscriptionStatus" to status,
+                    "subscriptionStatus" to subscriptionTier,
                     "remoteWebAccessEnabled" to settings.remoteWebAccessEnabled
                 ),
                 SetOptions.merge()
@@ -63,11 +78,11 @@ class SmsSyncWorker @AssistedInject constructor(
 
             // If the user hasn't enabled remote web access, there's nothing to sync.
             if (!settings.remoteWebAccessEnabled) {
-                writeDiagnostics(user.uid, deviceId, status, 0, 0, hasReadSms, "remoteWebAccess off")
+                writeDiagnostics(user.uid, deviceId, subscriptionTier, 0, 0, hasReadSms, "remoteWebAccess off")
                 return Result.success()
             }
             if (!hasReadSms) {
-                writeDiagnostics(user.uid, deviceId, status, 0, 0, hasReadSms, "READ_SMS missing")
+                writeDiagnostics(user.uid, deviceId, subscriptionTier, 0, 0, hasReadSms, "READ_SMS missing")
                 return Result.success()
             }
 
@@ -94,7 +109,8 @@ class SmsSyncWorker @AssistedInject constructor(
 
             var syncedThreads = 0
             var syncedMessages = 0
-            val threads = smsRepository.listThreads(limit = 50)
+            val threadLimit = if (isPremium || isPro) 200 else 50
+            val threads = smsRepository.listThreads(limit = threadLimit)
             val lineThreadsRef = lineRef.collection("threads")
 
             // Identify existing threads in Firestore to delete those that are no longer present (or dropped out of top 50)
@@ -154,7 +170,8 @@ class SmsSyncWorker @AssistedInject constructor(
                 lineThreadDoc.set(threadData, SetOptions.merge()).await()
                 syncedThreads++
 
-                val messages = smsRepository.messagesForThread(thread.threadId, limit = 200)
+                val messageLimit = if (isPremium) 500 else 200
+                val messages = smsRepository.messagesForThread(thread.threadId, limit = messageLimit)
                 val lineMessagesRef = lineThreadDoc.collection("messages")
                 val lineBatch = firestore.batch()
                 var batchCount = 0
@@ -185,7 +202,7 @@ class SmsSyncWorker @AssistedInject constructor(
             writeDiagnostics(
                 user.uid,
                 deviceId,
-                status,
+                subscriptionTier,
                 syncedThreads,
                 syncedMessages,
                 hasReadSms,
@@ -272,13 +289,15 @@ class SmsSyncWorker @AssistedInject constructor(
 
     private fun hasSmsPermission(): Boolean {
         val ctx = applicationContext
-        val perms = listOf(
-            android.Manifest.permission.READ_SMS,
-            android.Manifest.permission.RECEIVE_SMS,
-            android.Manifest.permission.SEND_SMS
-        )
-        return perms.all { perm ->
-            ContextCompat.checkSelfPermission(ctx, perm) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        val readGranted = ContextCompat.checkSelfPermission(
+            ctx,
+            android.Manifest.permission.READ_SMS
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (readGranted) return true
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            Telephony.Sms.getDefaultSmsPackage(ctx) == ctx.packageName
+        } else {
+            true
         }
     }
 

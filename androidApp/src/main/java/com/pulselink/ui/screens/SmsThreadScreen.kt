@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,6 +31,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.AutoFixHigh
@@ -68,9 +70,14 @@ import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -111,6 +118,8 @@ fun SmsThreadScreen(
     onEditNotificationSound: () -> Unit = {},
     onEditNotificationVibration: () -> Unit = {},
     onEditContact: () -> Unit = {},
+    onCall: (() -> Unit)? = null,
+    callEnabled: Boolean = false,
     onSendMessage: (String, String?) -> Unit,
     lineOptions: List<com.pulselink.domain.model.SmsLine> = emptyList(),
     selectedLineId: String? = null,
@@ -131,7 +140,8 @@ fun SmsThreadScreen(
     aiSignInRequired: Boolean = false,
     onRequestAiSignIn: () -> Unit = {},
     onLoadMore: () -> Unit = {},
-    hasMoreToLoad: Boolean = true
+    hasMoreToLoad: Boolean = true,
+    smartRepliesEnabled: Boolean = false
 ) {
     val effectiveTheme = contact?.themeOverride ?: globalTheme
     var showThemeMenu by remember { mutableStateOf(false) }
@@ -149,7 +159,9 @@ fun SmsThreadScreen(
         derivedStateOf {
             val layout = listState.layoutInfo
             val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
-            lastVisible >= (layout.totalItemsCount - 2).coerceAtLeast(0)
+            // Consider "near bottom" if within 5 items of the end, so user isn't disrupted
+            // while reading recent messages but still gets auto-scroll for new messages
+            lastVisible >= (layout.totalItemsCount - 5).coerceAtLeast(0)
         }
     }
     val context = LocalContext.current
@@ -208,7 +220,8 @@ fun SmsThreadScreen(
                 aiState = aiComposeState,
                 onAiAction = { action ->
                     onRequestCompose(action, draft, lastInbound)
-                }
+                },
+                smartRepliesEnabled = smartRepliesEnabled
             )
         },
         topBar = {
@@ -241,6 +254,22 @@ fun SmsThreadScreen(
                     }
                 },
                 actions = {
+                    if (onCall != null) {
+                        val callTint = parseColorOr(
+                            MaterialTheme.colorScheme.onSurface,
+                            effectiveTheme.onTopBarColor
+                        )
+                        IconButton(onClick = onCall, enabled = callEnabled) {
+                            ThemeIcon(
+                                iconKey = ThemeIconKey.CALL,
+                                theme = effectiveTheme,
+                                imageVector = Icons.Filled.Call,
+                                contentDescription = "Call",
+                                tint = if (callEnabled) callTint else callTint.copy(alpha = 0.3f),
+                                modifier = Modifier.size(iconSize)
+                            )
+                        }
+                    }
                     IconButton(onClick = onToggleArchive) {
                         val icon = if (isArchived) Icons.Filled.Unarchive else Icons.Filled.Archive
                         val iconKey = if (isArchived) ThemeIconKey.UNARCHIVE else ThemeIconKey.ARCHIVE
@@ -399,8 +428,10 @@ fun SmsThreadScreen(
         }
     }
 
-    LaunchedEffect(messages.size) {
+    LaunchedEffect(messages) {
         if (messages.isEmpty()) return@LaunchedEffect
+        // Auto-scroll to newest message if this is the initial load or if user is near the bottom
+        // This prevents disrupting users who have scrolled up to read old messages
         if (!initialScrollDone || isNearBottom) {
             listState.animateScrollToItem(0)
             initialScrollDone = true
@@ -484,7 +515,8 @@ private fun MessageInput(
     aiSignInRequired: Boolean,
     onRequestAiSignIn: () -> Unit,
     aiState: AiComposeState,
-    onAiAction: (AiComposeAction) -> Unit
+    onAiAction: (AiComposeAction) -> Unit,
+    smartRepliesEnabled: Boolean
 ) {
     var showAiMenu by remember { mutableStateOf(false) }
     val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
@@ -505,6 +537,26 @@ private fun MessageInput(
                 .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
+            if (smartRepliesEnabled) {
+                val suggestions = stringArrayResource(com.pulselink.R.array.smart_replies_defaults).toList()
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
+                ) {
+                    items(suggestions) { label ->
+                        SuggestionChip(
+                            onClick = { onDraftChange(if (draft.isBlank()) label else "$draft $label") },
+                            label = { Text(label) },
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = primary.copy(alpha = 0.1f),
+                                labelColor = primary
+                            ),
+                            border = BorderStroke(1.dp, primary.copy(alpha = 0.3f))
+                        )
+                    }
+                }
+            }
             if (aiSignInRequired) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -831,7 +883,7 @@ private fun MessageBubble(
     onAvatarClick: (() -> Unit)? = null
 ) {
     val isOutgoing = msg.outgoing
-    val bubbleColor = if (isOutgoing) {
+    val rawBubbleColor = if (isOutgoing) {
         parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing)
     } else {
         parseColorOr(MaterialTheme.colorScheme.surfaceVariant, theme.bubbleIncoming)
@@ -868,6 +920,40 @@ private fun MessageBubble(
     }
 
     val fontSize = MaterialTheme.typography.bodyMedium.fontSize * theme.fontScale
+
+    // Advanced Effects Logic
+    val bubbleColor = if (theme.useGlassEffect) {
+        rawBubbleColor.copy(alpha = 0.65f)
+    } else {
+        rawBubbleColor
+    }
+
+    var bubbleModifier: Modifier = Modifier
+    if (theme.useGlassEffect) {
+         bubbleModifier = bubbleModifier.border(
+            BorderStroke(1.dp, Brush.verticalGradient(
+                listOf(Color.White.copy(alpha = 0.4f), Color.White.copy(alpha = 0.1f))
+            )),
+            shape
+         )
+    }
+
+    if (theme.useHolographicGlow) {
+         val glowColor = if (isOutgoing) rawBubbleColor else parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+         bubbleModifier = bubbleModifier.border(
+             BorderStroke(
+                 1.dp,
+                 Brush.linearGradient(
+                     listOf(
+                         glowColor.copy(alpha = 0.3f),
+                         glowColor.copy(alpha = 0.8f),
+                         glowColor.copy(alpha = 0.3f)
+                     )
+                 )
+             ),
+             shape
+         )
+    }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -952,17 +1038,39 @@ private fun MessageBubble(
             }
             Surface(
                 color = bubbleColor,
-                shape = shape
+                shape = shape,
+                modifier = bubbleModifier
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = msg.body,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        fontFamily = font,
-                        color = textColor,
-                        fontSize = fontSize
-                    )
+                    if (msg.isMms && msg.mediaParts.isNotEmpty()) {
+                        msg.mediaParts.forEach { part ->
+                            if (part.contentType.startsWith("image/")) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(part.dataUri)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = "MMS Image",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .padding(bottom = 8.dp),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                        }
+                    }
+                    if (msg.body.isNotBlank() && msg.body != "[MMS]") {
+                        Text(
+                            text = msg.body,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            fontFamily = font,
+                            color = textColor,
+                            fontSize = fontSize
+                        )
+                    }
                     Text(
                         text = dateFormatter(msg.timestamp),
                         style = MaterialTheme.typography.labelSmall,

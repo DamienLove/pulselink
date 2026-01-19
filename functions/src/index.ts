@@ -23,7 +23,7 @@ export {naturalLanguageQuery} from "./naturalLanguageInterface";
 export {menuSuggestion} from "./genkit-sample";
 export {summarizeSmsThread, composeSmsAssist, classifySmsUrgency} from "./ai";
 export {alertRelay, alertRelayHttp} from "./alertRelay";
-export {onMessageCreated} from "./messaging";
+export {onMessageCreated, onOutboxCreated} from "./messaging";
 export {sendEmailNotification} from "./email";
 export {findUser, deleteAccount} from "./users";
 export {approveTheme} from "./themes";

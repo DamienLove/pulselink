@@ -18,10 +18,16 @@ import com.pulselink.beacon.data.InboxPreferencesRepository
 import com.pulselink.beacon.data.InboxState
 import com.pulselink.beacon.data.scheduled.BeaconDatabase
 import com.pulselink.beacon.data.scheduled.ScheduledMessage
-import com.pulselink.beacon.data.scheduled.MessageStatus
+import com.pulselink.beacon.data.scheduled.MessageReaction
+import com.pulselink.beacon.data.scheduled.MessageStar
+import com.pulselink.beacon.data.scheduled.BlockedNumber
+import com.pulselink.beacon.data.scheduled.MessageStatus as ScheduledStatus
+import com.pulselink.beacon.data.MessageStatus
+import com.pulselink.beacon.data.scheduled.ThreadDraft
 import com.pulselink.beacon.worker.ScheduledMessageWorker
 import com.pulselink.beacon.util.ThreadDateUtils
 import com.pulselink.beacon.BuildConfig
+import com.pulselink.beacon.data.BeaconContact
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -29,6 +35,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
+import kotlin.math.abs
 
 sealed class SearchResultState {
     object Idle : SearchResultState()
@@ -43,20 +50,60 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = SmsRepository(app.applicationContext)
     private val inboxPrefs = InboxPreferencesRepository(app.applicationContext)
     private val scheduledDao = BeaconDatabase.getDatabase(app).scheduledMessageDao()
+    private val reactionDao = BeaconDatabase.getDatabase(app).reactionDao()
+    private val starDao = BeaconDatabase.getDatabase(app).messageStarDao()
+    private val blockedDao = BeaconDatabase.getDatabase(app).blockedNumberDao()
+    private val draftDao = BeaconDatabase.getDatabase(app).threadDraftDao()
     private val workManager = WorkManager.getInstance(app)
 
     private companion object {
-        const val THREAD_LIMIT = 500 // Increased from 100
+        const val THREAD_LIMIT = 100
         const val MESSAGE_LIMIT = 300
     }
 
     var threads by mutableStateOf<List<SmsThreadItem>>(emptyList())
         private set
+
+    var contacts by mutableStateOf<List<BeaconContact>>(emptyList())
+        private set
+    var filteredContacts by mutableStateOf<List<BeaconContact>>(emptyList())
+        private set
+
+    // Grouped threads for UI (Map<Header, List<Thread>>)
+    var filteredGroupedThreads by mutableStateOf<Map<String, List<SmsThreadItem>>>(emptyMap())
+        private set
+
     // Changed to hold UiItems for display
     var uiMessages by mutableStateOf<List<ThreadUiItem>>(emptyList())
         private set
+
+    var reactions by mutableStateOf<Map<Long, List<MessageReaction>>>(emptyMap())
+        private set
+
+    var starredMessageIds by mutableStateOf<Set<Long>>(emptySet())
+        private set
+
+    // Store threads that have starred messages for filtering
+    private var threadsWithStars: Set<Long> = emptySet()
+
+    private var blockedNumbers: Set<String> = emptySet()
+    var blockedNumbersList by mutableStateOf<List<BlockedNumber>>(emptyList())
+        private set
+
+    var scheduledMessages by mutableStateOf<List<ScheduledMessage>>(emptyList())
+        private set
+
+    var draftsMap by mutableStateOf<Map<Long, ThreadDraft>>(emptyMap())
+        private set
+
+    var isDraftsLoaded by mutableStateOf(false)
+        private set
+
     // Keep raw messages for internal logic
     private var rawMessages = emptyList<SmsMessageItem>()
+
+    // Pending messages (Optimistic UI)
+    private val pendingOutgoingMessages = mutableListOf<SmsMessageItem>()
 
     var currentThreadId by mutableStateOf<Long?>(null)
         private set
@@ -88,10 +135,25 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     )
 
     private var delayedSendJob: Job? = null
+    private var reactionJob: Job? = null
 
     // Internal holder for raw threads before merging preferences
     private var rawThreads: List<SmsThreadItem> = emptyList()
     private var inboxState: InboxState = InboxState()
+
+    val delayedSendTimeout: Int get() = inboxState.delayedSendTimeout
+    val autoReplyEnabled: Boolean get() = inboxState.autoReplyEnabled
+    val autoReplyMessage: String get() = inboxState.autoReplyMessage
+    val quickReplies: List<String> get() = inboxState.quickReplies
+    val autoDeleteOtps: Boolean get() = inboxState.autoDeleteOtps
+
+    // Filtered state
+    var filteredThreads by mutableStateOf<List<SmsThreadItem>>(emptyList())
+        private set
+    var currentFilter by mutableStateOf(InboxFilter.ALL)
+        private set
+    var currentSearchText by mutableStateOf("")
+        private set
 
     private var searchJob: Job? = null
 
@@ -100,8 +162,18 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
         viewModelScope.launch {
             repo.changes().collectLatest {
-                refreshThreads(initial = false)
-                currentThreadId?.let { refreshThread(it, refreshRead = false) }
+                // Use suspend functions to ensure cancellation if new updates arrive
+                // This prevents stacking parallel DB queries during rapid updates
+                isRefreshing = true
+                val newThreads = fetchThreadsSuspend()
+                rawThreads = newThreads
+                mergeThreads()
+                isRefreshing = false
+
+                val threadId = currentThreadId
+                if (threadId != null) {
+                    refreshThreadSuspend(threadId, refreshRead = false)
+                }
             }
         }
 
@@ -111,41 +183,212 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                 mergeThreads()
             }
         }
+
+        viewModelScope.launch {
+            starDao.getAllStarred().collectLatest { stars ->
+                starredMessageIds = stars.map { it.messageId }.toSet()
+                threadsWithStars = stars.map { it.threadId }.toSet()
+                // Refresh list if filter is STARRED
+                if (currentFilter == InboxFilter.STARRED) updateFilteredList()
+            }
+        }
+
+        viewModelScope.launch {
+            blockedDao.getAllBlocked().collectLatest { blocked ->
+                blockedNumbersList = blocked
+                blockedNumbers = blocked.map { it.normalizedNumber }.toSet()
+                mergeThreads() // Re-filter blocked threads
+            }
+        }
+
+        viewModelScope.launch {
+            scheduledDao.getAllPending().collectLatest { scheduled ->
+                scheduledMessages = scheduled
+            }
+        }
+
+        viewModelScope.launch {
+            draftDao.getAllDrafts().collectLatest { drafts ->
+                draftsMap = drafts.associateBy { it.threadId }
+                isDraftsLoaded = true
+                mergeThreads()
+            }
+        }
+    }
+
+    fun updateFilter(filter: InboxFilter) {
+        currentFilter = filter
+        if (filter == InboxFilter.CONTACTS && contacts.isEmpty()) {
+            loadContacts()
+        }
+        updateFilteredList()
+    }
+
+    fun loadContacts() {
+        viewModelScope.launch {
+            contacts = repo.getContacts()
+            updateFilteredList()
+        }
+    }
+
+    fun updateSearchText(text: String) {
+        currentSearchText = text
+        updateFilteredList()
+        search(text) // Trigger full search logic too
     }
 
     fun refreshThreads(initial: Boolean = false) {
         viewModelScope.launch {
             if (initial) isLoading = true else isRefreshing = true
-            // Run on IO
-            rawThreads = runCatching { repo.listThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
+            val newThreads = fetchThreadsSuspend()
+            rawThreads = newThreads
             mergeThreads()
             if (initial) isLoading = false else isRefreshing = false
         }
     }
 
+    private suspend fun fetchThreadsSuspend(): List<SmsThreadItem> {
+        return runCatching { repo.listThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
+    }
+
     private fun mergeThreads() {
-        // Optimized sorting
-        val merged = rawThreads.map { thread ->
-            val isPinned = inboxState.pinnedThreadIds.contains(thread.threadId)
-            // Only copy if needed
-            if (isPinned != thread.isPinned || inboxState.archivedThreadIds.contains(thread.threadId) != thread.isArchived) {
-                thread.copy(
-                    isPinned = isPinned,
-                    isArchived = inboxState.archivedThreadIds.contains(thread.threadId)
+        viewModelScope.launch(Dispatchers.Default) {
+            // Optimized sorting and filtering blocked
+            val merged = rawThreads.asSequence()
+                .filter { !blockedNumbers.contains(it.address) }
+                .map { thread ->
+                    val isPinned = inboxState.pinnedThreadIds.contains(thread.threadId)
+                    val isArchived = inboxState.archivedThreadIds.contains(thread.threadId)
+                    val draft = draftsMap[thread.threadId]
+
+                    // Calculate effective timestamp (max of thread or draft)
+                    // If we have a draft that is newer than the thread timestamp, use it.
+                    val effectiveTimestamp = if (draft != null && draft.timestamp > thread.timestamp) {
+                        draft.timestamp
+                    } else {
+                        thread.timestamp
+                    }
+
+                    // Always create copy if draft exists or other state changed
+                    if (isPinned != thread.isPinned ||
+                        isArchived != thread.isArchived ||
+                        draft?.body != thread.draftSnippet ||
+                        effectiveTimestamp != thread.timestamp
+                    ) {
+                        thread.copy(
+                            isPinned = isPinned,
+                            isArchived = isArchived,
+                            draftSnippet = draft?.body,
+                            timestamp = effectiveTimestamp
+                        )
+                    } else {
+                        thread
+                    }
+                }
+                .sortedWith(
+                    compareByDescending<SmsThreadItem> { it.isPinned }
+                        .thenByDescending { it.timestamp }
                 )
-            } else {
-                thread
+                .toList()
+
+            withContext(Dispatchers.Main) {
+                threads = merged
             }
-        }.sortedWith(
-            compareByDescending<SmsThreadItem> { it.isPinned }
-                .thenByDescending { it.timestamp }
-        )
-        threads = merged
+            updateFilteredList()
+        }
+    }
+
+    private fun updateFilteredList() {
+        viewModelScope.launch(Dispatchers.Default) {
+            val list = threads
+            val filter = currentFilter
+            val search = currentSearchText
+
+            val result = if (search.isNotBlank()) {
+                // If searching, show all non-archived matching items in the main list
+                list.filter {
+                    !it.isArchived && (it.address.contains(search, true) || it.snippet.contains(search, true))
+                }
+            } else {
+                 when (filter) {
+                    InboxFilter.ALL -> list.filter { !it.isArchived }
+                    InboxFilter.READ -> list.filter { !it.unread && !it.isArchived }
+                    InboxFilter.UNREAD -> list.filter { it.unread && !it.isArchived }
+                    InboxFilter.STARRED -> list.filter { threadsWithStars.contains(it.threadId) && !it.isArchived }
+                    InboxFilter.PERSONAL -> list.filter { it.category == ThreadCategory.PERSONAL && !it.isArchived }
+                    InboxFilter.TRANSACTIONS -> list.filter { it.category == ThreadCategory.TRANSACTIONS && !it.isArchived }
+                    InboxFilter.PROMOTIONS -> list.filter { it.category == ThreadCategory.PROMOTIONS && !it.isArchived }
+                    InboxFilter.ARCHIVED -> list.filter { it.isArchived }
+                    InboxFilter.CONTACTS -> emptyList()
+                }
+            }
+
+            // Calculate groups
+            val now = System.currentTimeMillis()
+            val calendar = java.util.Calendar.getInstance()
+            calendar.timeInMillis = now
+            calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+            calendar.set(java.util.Calendar.MINUTE, 0)
+            calendar.set(java.util.Calendar.SECOND, 0)
+            calendar.set(java.util.Calendar.MILLISECOND, 0)
+            val startOfToday = calendar.timeInMillis
+
+            calendar.add(java.util.Calendar.DAY_OF_YEAR, -1)
+            val startOfYesterday = calendar.timeInMillis
+
+            val groups = result.groupBy { item ->
+                val t = item.timestamp
+                when {
+                    t >= startOfToday -> "Today"
+                    t >= startOfYesterday -> "Yesterday"
+                    now - t < 7 * android.text.format.DateUtils.DAY_IN_MILLIS -> "This Week"
+                    now - t < 30 * android.text.format.DateUtils.DAY_IN_MILLIS -> "This Month"
+                    else -> "Older"
+                }
+            }
+
+            val currentContacts = contacts
+            val fContacts = if (search.isNotBlank()) {
+                currentContacts.filter {
+                    it.displayName.contains(search, true) || it.phoneNumber.contains(search)
+                }
+            } else {
+                currentContacts
+            }
+
+            withContext(Dispatchers.Main) {
+                filteredThreads = result
+                filteredGroupedThreads = groups
+                filteredContacts = fContacts
+            }
+        }
     }
 
     fun togglePin(threadId: Long) {
         viewModelScope.launch {
             inboxPrefs.togglePin(threadId)
+        }
+    }
+
+    fun toggleStar(messageId: Long, threadId: Long) {
+        viewModelScope.launch {
+            if (starredMessageIds.contains(messageId)) {
+                starDao.remove(messageId)
+            } else {
+                starDao.insert(MessageStar(messageId = messageId, threadId = threadId))
+            }
+        }
+    }
+
+    fun blockNumber(address: String) {
+        viewModelScope.launch {
+            blockedDao.block(BlockedNumber(normalizedNumber = address, originalNumber = address))
+        }
+    }
+
+    fun unblockNumber(address: String) {
+        viewModelScope.launch {
+            blockedDao.unblock(address)
         }
     }
 
@@ -188,6 +431,16 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
             userMessage = "${toArchive.size} threads archived"
             clearSelection()
+        }
+    }
+
+    fun markAllRead() {
+        viewModelScope.launch {
+            val unreadIds = threads.filter { it.unread }.map { it.threadId }
+            if (unreadIds.isNotEmpty()) {
+                repo.markThreadsRead(unreadIds)
+                userMessage = "Marked ${unreadIds.size} threads as read"
+            }
         }
     }
 
@@ -251,16 +504,139 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun refreshThread(threadId: Long, refreshRead: Boolean) {
         viewModelScope.launch {
-            rawMessages = runCatching { repo.messagesForThread(threadId, limit = MESSAGE_LIMIT) }
-                .getOrElse { emptyList() }
-            // Transform for UI (Group by Date)
-            uiMessages = ThreadDateUtils.mapMessagesToUi(rawMessages)
-
-            if (refreshRead) runCatching { repo.markThreadRead(threadId) }
+            refreshThreadSuspend(threadId, refreshRead)
         }
     }
 
-    fun sendDelayedMessage(body: String, delaySeconds: Int = 5) {
+    private suspend fun refreshThreadSuspend(threadId: Long, refreshRead: Boolean) {
+        val dbMessages = runCatching { repo.messagesForThread(threadId, limit = MESSAGE_LIMIT) }
+            .getOrElse { emptyList() }
+
+        // Deduplicate pending messages: remove if found in DB
+        pendingOutgoingMessages.removeAll { pending ->
+            // Check if any DB message matches (body + similar timestamp)
+            dbMessages.any { db ->
+                db.outgoing && db.body == pending.body && abs(db.timestamp - pending.timestamp) < 10000
+            }
+        }
+
+        // Merge pending messages for this thread
+        val pendingForThread = pendingOutgoingMessages.filter {
+            if (threadId == 0L) it.address == currentAddress else it.threadId == threadId
+        }
+
+        rawMessages = (pendingForThread + dbMessages).sortedByDescending { it.timestamp }
+
+        // Transform for UI (Group by Date)
+        uiMessages = ThreadDateUtils.mapMessagesToUi(rawMessages)
+
+        // Load reactions
+        reactionJob?.cancel()
+        val ids = rawMessages.map { it.id }
+        if (ids.isNotEmpty()) {
+            reactionJob = viewModelScope.launch {
+                reactionDao.getReactionsForMessages(ids).collectLatest { list ->
+                    reactions = list.groupBy { it.messageId }
+                }
+            }
+        } else {
+            reactions = emptyMap()
+        }
+
+        if (refreshRead) runCatching { repo.markThreadRead(threadId) }
+    }
+
+    fun addReaction(messageId: Long, emoji: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            // Toggle local reaction
+            val current = reactions[messageId]?.find { it.emoji == emoji }
+            if (current != null) {
+                reactionDao.removeReaction(messageId, emoji)
+            } else {
+                reactionDao.insert(MessageReaction(messageId = messageId, emoji = emoji))
+
+                // Send "Tapback" SMS text
+                // "Liked a message", "Loved...", etc.
+                // Standard: "Liked " + original text (truncated)
+                val originalMsg = rawMessages.find { it.id == messageId }
+                if (originalMsg != null && !originalMsg.outgoing) {
+                    // Only send Tapback if we are reacting to SOMEONE ELSE'S message
+                    // Reacting to our own message locally is fine, but sending "Liked my own message" is weird.
+                    val prefix = when(emoji) {
+                        "👍" -> "Liked"
+                        "❤️" -> "Loved"
+                        "😂" -> "Laughed at"
+                        "😮" -> "Questioned" // Or Surprised
+                        "😢" -> "Emphasized" // Or Sad
+                        "👎" -> "Disliked"
+                        else -> "Reacted $emoji to"
+                    }
+                    val snippet = if (originalMsg.body.length > 20) originalMsg.body.take(20) + "..." else originalMsg.body
+                    val tapbackBody = "$prefix \"$snippet\""
+
+                    // Send it
+                    // NOTE: In a real app we might want to delay this or confirm.
+                    val ok = runCatching { repo.sendSms(originalMsg.address, tapbackBody) }.getOrDefault(false)
+                    if (ok) {
+                         withContext(Dispatchers.Main) {
+                             currentThreadId?.let { refreshThread(it, refreshRead = true) }
+                         }
+                    }
+                }
+            }
+        }
+    }
+
+    fun setDelayedSendTimeout(seconds: Int) {
+        viewModelScope.launch {
+            inboxPrefs.setDelayedSendTimeout(seconds)
+        }
+    }
+
+    fun setAutoReplyEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            inboxPrefs.setAutoReplyEnabled(enabled)
+        }
+    }
+
+    fun setAutoReplyMessage(message: String) {
+        viewModelScope.launch {
+            inboxPrefs.setAutoReplyMessage(message)
+        }
+    }
+
+    fun updateQuickReplies(replies: List<String>) {
+        viewModelScope.launch {
+            inboxPrefs.setQuickReplies(replies)
+        }
+    }
+
+    fun setAutoDeleteOtps(enabled: Boolean) {
+        viewModelScope.launch {
+            inboxPrefs.setAutoDeleteOtps(enabled)
+            if (enabled) {
+                // Enqueue periodic worker
+                val request = androidx.work.PeriodicWorkRequestBuilder<com.pulselink.beacon.worker.OtpCleanupWorker>(
+                    24, java.util.concurrent.TimeUnit.HOURS
+                ).build()
+                workManager.enqueueUniquePeriodicWork(
+                    "OtpCleanup",
+                    androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+                    request
+                )
+            } else {
+                workManager.cancelUniqueWork("OtpCleanup")
+            }
+        }
+    }
+
+    fun sendDelayedMessage(body: String) {
+        val delaySeconds = delayedSendTimeout
+        if (delaySeconds <= 0) {
+            sendMessage(body)
+            return
+        }
+
         // If there is already a pending message, send it immediately before starting the new one
         if (pendingMessage != null) {
              sendNow()
@@ -298,14 +674,68 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         val addr = currentAddress.ifBlank { rawMessages.lastOrNull()?.address.orEmpty() }
         if (addr.isBlank()) return
 
+        // Optimistic UI
+        val tempId = System.currentTimeMillis()
+        val pending = SmsMessageItem(
+            id = tempId,
+            threadId = currentThreadId ?: 0L,
+            address = addr,
+            body = body,
+            timestamp = System.currentTimeMillis(),
+            outgoing = true,
+            status = MessageStatus.SENDING
+        )
+        pendingOutgoingMessages.add(0, pending)
+
+        // Immediate UI Update
+        currentThreadId?.let {
+            deleteDraft(it)
+            refreshThread(it, refreshRead = false) // Don't mark read triggered by self-send
+        }
+
         viewModelScope.launch(Dispatchers.IO) {
             val ok = runCatching { repo.sendSms(addr, body) }.getOrDefault(false)
             if (ok) {
+                // Success: The ContentObserver will trigger refreshThread, which will eventually find the real message
+                // and remove the pending one.
                 withContext(Dispatchers.Main) {
-                    currentThreadId?.let { refreshThread(it, refreshRead = true) }
+                    // We could mark it as SENT here if we wanted to keep it until DB update
+                    // But relying on DB update is safer for consistency.
+                    // Trigger refresh just in case observer is slow?
+                    // currentThreadId?.let { refreshThread(it, refreshRead = true) }
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    // Mark failed
+                    val index = pendingOutgoingMessages.indexOfFirst { it.id == tempId }
+                    if (index != -1) {
+                        pendingOutgoingMessages[index] = pending.copy(status = MessageStatus.FAILED)
+                        currentThreadId?.let { refreshThread(it, refreshRead = false) }
+                    }
                 }
             }
         }
+    }
+
+    fun saveDraft(threadId: Long, body: String) {
+        if (threadId <= 0) return
+        if (body.isBlank()) {
+            deleteDraft(threadId)
+            return
+        }
+        viewModelScope.launch {
+            draftDao.insertDraft(ThreadDraft(threadId, body, System.currentTimeMillis()))
+        }
+    }
+
+    fun deleteDraft(threadId: Long) {
+        viewModelScope.launch {
+            draftDao.deleteDraft(threadId)
+        }
+    }
+
+    fun getDraftForThread(threadId: Long): String? {
+        return draftsMap[threadId]
     }
 
     fun scheduleMessage(body: String, scheduledTime: Long) {
@@ -322,7 +752,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
             val delay = scheduledTime - System.currentTimeMillis()
 
             if (delay <= 0) {
-                scheduledDao.insert(message.copy(status = MessageStatus.FAILED))
+                scheduledDao.insert(message.copy(status = ScheduledStatus.FAILED))
             } else {
                 val id = scheduledDao.insert(message)
                 val request = OneTimeWorkRequestBuilder<ScheduledMessageWorker>()
@@ -331,6 +761,13 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                     .build()
                 workManager.enqueue(request)
             }
+        }
+    }
+
+    fun cancelScheduledMessage(message: ScheduledMessage) {
+        viewModelScope.launch(Dispatchers.IO) {
+            scheduledDao.delete(message)
+            // Cancel worker if needed (usually handled by worker check)
         }
     }
 

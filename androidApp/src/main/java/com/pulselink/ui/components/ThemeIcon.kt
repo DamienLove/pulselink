@@ -25,6 +25,7 @@ object ThemeIconKey {
     const val REFRESH = "icon.refresh"
     const val NOTIFICATIONS = "icon.notifications"
     const val PALETTE = "icon.palette"
+    const val CALL = "icon.call"
     const val SEND = "icon.send"
     const val AI = "icon.ai"
     const val ARROW_DOWN = "icon.arrow_down"

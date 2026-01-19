@@ -100,7 +100,10 @@ final class AlertRelayViewModel: ObservableObject {
                         self.isLoggedIn = true
                         self.conversationProvider = FirestoreConversationProvider(userId: uid)
                         self.startListeningToThreads()
-                        Task { await DeviceManager.shared.registerDevice() }
+                        Task {
+                            await DeviceManager.shared.registerDevice()
+                            try? await self.conversationProvider.requestSync()
+                        }
                     } else {
                         self.isLoggedIn = false
                         self.threadsListener?.remove()
@@ -266,6 +269,12 @@ final class AlertRelayViewModel: ObservableObject {
         // Mock success
         try? await Task.sleep(nanoseconds: 1_000_000_000)
         #endif
+    }
+
+    func refresh() {
+        Task {
+            try? await conversationProvider.requestSync()
+        }
     }
 
     private func startListeningToThreads() {

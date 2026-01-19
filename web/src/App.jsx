@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
 import DevTools from './DevTools';
+import CommandPalette from './CommandPalette';
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -49,6 +50,17 @@ import proAvatar from './assets/avatars/pro_spark.svg';
 import betaAvatar from './assets/avatars/beta_flask.svg';
 import loyalAvatar from './assets/avatars/loyal_star.svg';
 
+// Bolt: Shared Intl formatters to avoid expensive instantiation in render loops
+const timeFormatter = new Intl.DateTimeFormat(undefined, {
+  hour: '2-digit',
+  minute: '2-digit'
+});
+
+const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+  dateStyle: 'short',
+  timeStyle: 'short'
+});
+
 // Icons
 const HomeIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
 const MapIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>;
@@ -67,8 +79,22 @@ const CloudSyncIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill
 const ExtensionIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.5 11a2.5 2.5 0 0 1 0 5 2.5 2.5 0 0 1-5 0V11h5Z"/><path d="M8 11V6a2.5 2.5 0 0 1 5 0 2.5 2.5 0 0 1 0 5H8Z"/><path d="M11 8h5a2.5 2.5 0 0 1 0 5 2.5 2.5 0 0 1-5 0v-5Z"/><path d="M12 21a9 9 0 0 0 9-9 9 9 0 0 0-9-9 9 9 0 0 0-9 9 9 9 0 0 0 9 9Z"/></svg>;
 const BoltIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>;
 const StarIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
+const LockIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>;
+const MessageSquareIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>;
+const SearchIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
+const CloseIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
 const Spinner = ({ className = '', style = {} }) => (
-  <span className={`spinner ${className}`} style={style} aria-hidden="true" />
+  <svg className={`spinner ${className}`} style={style} viewBox="0 0 50 50" aria-hidden="true">
+    <defs>
+      <linearGradient id="spinner-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="currentColor" stopOpacity="0" />
+        <stop offset="100%" stopColor="currentColor" stopOpacity="1" />
+      </linearGradient>
+    </defs>
+    <circle cx="25" cy="25" r="20" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="4" />
+    <circle cx="25" cy="25" r="20" fill="none" stroke="url(#spinner-grad)" strokeWidth="4" strokeDasharray="100" strokeDashoffset="80" strokeLinecap="round" />
+    <circle cx="25" cy="25" r="14" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="40" strokeOpacity="0.3" className="spinner-inner" style={{animationDirection: 'reverse', animationDuration: '2s'}} />
+  </svg>
 );
 
 const CopyButton = ({ text, label = "Copy" }) => {
@@ -114,7 +140,7 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
     className={`thread-item ${isActive ? 'active' : ''}`}
     onClick={() => onSelect(thread)}
     aria-current={isActive ? 'true' : undefined}
-    aria-label={`Select conversation with ${thread.display_name || thread.address}`}
+    aria-label={`Select conversation with ${thread.display_name || thread.address}${showPreviews && thread.snippet ? `, ${thread.snippet}` : ''}`}
   >
     <div className="thread-name">{thread.display_name || thread.address}</div>
     <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
@@ -122,6 +148,13 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
 ), areThreadsEqual);
 
 ThreadItem.displayName = 'ThreadItem';
+
+const ThreadSkeleton = () => (
+  <div className="skeleton-thread">
+    <div className="skeleton-line" style={{ width: '40%' }}></div>
+    <div className="skeleton-line short"></div>
+  </div>
+);
 
 const areMessagesEqual = (prev, next) => {
   return prev.showPreviews === next.showPreviews &&
@@ -136,10 +169,15 @@ const areMessagesEqual = (prev, next) => {
 const MessageItem = memo(({ msg, showPreviews }) => (
   <div className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
     <div className="message-bubble">
+      {msg.imageUrl && (
+        <div className="message-image-container">
+          <img src={msg.imageUrl} alt="Attachment" className="message-image" loading="lazy" />
+        </div>
+      )}
       {showPreviews ? msg.body : '••••••'}
     </div>
     <div className="message-time">
-      {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      {timeFormatter.format(new Date(msg.date))}
     </div>
   </div>
 ), areMessagesEqual);
@@ -314,7 +352,7 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
           {alertBadgeCopy[alert.severity] ?? 'Alert'}
         </span>
       </div>
-      <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
+      <div className="map-item-meta">{dateTimeFormatter.format(new Date(alert.date))}</div>
       <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
       <div className="map-item-actions">
         <button
@@ -450,6 +488,7 @@ const ThemePresetItem = memo(({ preset, onApply }) => (
   <button
     className="theme-chip"
     onClick={() => onApply(preset.theme)}
+    aria-label={`Apply ${preset.name} theme`}
   >
     <div className="theme-chip-title">
       <span className="theme-dot" style={{ background: preset.theme.primaryColor }} />
@@ -514,7 +553,7 @@ const RingerSongItem = memo(({ song, onDelete }) => {
   return (
     <div className="song-card">
       {song.albumArtUrl ? (
-        <img src={song.albumArtUrl} alt="" className="song-art" />
+        <img src={song.albumArtUrl} alt="" className="song-art" loading="lazy" />
       ) : (
         <div className="song-art" style={{ display: 'grid', placeItems: 'center' }}>♫</div>
       )}
@@ -546,7 +585,7 @@ const areSpotifyResultsEqual = (prev, next) => {
 // Bolt: Optimized SpotifyResultItem to prevent re-rendering all results when one is adding
 const SpotifyResultItem = memo(({ track, onAdd, isAdding }) => (
   <div className="song-card">
-    <img src={track.album?.images[0]?.url} alt="" className="song-art" />
+    <img src={track.album?.images[0]?.url} alt="" className="song-art" loading="lazy" />
     <div className="song-info">
       <div className="song-title">{track.name}</div>
       <div className="song-artist">{track.artists.map(a => a.name).join(', ')}</div>
@@ -565,35 +604,220 @@ const SpotifyResultItem = memo(({ track, onAdd, isAdding }) => (
 ), areSpotifyResultsEqual);
 SpotifyResultItem.displayName = 'SpotifyResultItem';
 
+// Bolt: MessageComposer extracted to prevent App re-renders on typing
+const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn }) => {
+  const [address, setAddress] = useState('');
+  const [body, setBody] = useState('');
+  const [lineId, setLineId] = useState('');
+  const [status, setStatus] = useState('');
+  const [isSending, setIsSending] = useState(false);
+
+  useEffect(() => {
+    if (selectedThread) {
+      setAddress(selectedThread.address || '');
+      setLineId(selectedThread.lineId || '');
+    } else {
+      setAddress('');
+      // When clearing (New message), reset lineId to empty to allow user selection or fallback
+      setLineId('');
+    }
+    setBody('');
+    setStatus('');
+  }, [selectedThread]);
+
+  const handleSendMessage = async () => {
+    if (!user) return;
+    const cleanAddress = address.trim();
+    const cleanBody = body.trim();
+    const effectiveLineId = lineInboxMode === 'PER_LINE' ? (lineId || activeLineId || lines[0]?.id || null) : null;
+
+    if (!cleanAddress || !cleanBody) {
+      setStatus("Add a phone number and message.");
+      return;
+    }
+    setIsSending(true);
+    setStatus('');
+    try {
+      await addDoc(collection(db, "users", user.uid, "outbox"), {
+        address: cleanAddress,
+        body: cleanBody,
+        createdAt: serverTimestamp(),
+        source: "web",
+        lineId: effectiveLineId
+      });
+      setBody('');
+      setStatus("Queued for sending from your device.");
+    } catch (error) {
+      console.error("Send failed", error);
+      setStatus("Send failed. Try again.");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <div className="composer">
+      <div className="composer-row">
+        <label className="composer-label" htmlFor="compose-address">To</label>
+        <input
+          id="compose-address"
+          className="composer-input"
+          type="tel"
+          placeholder="Phone number"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+        />
+      </div>
+      {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
+        <div className="composer-row">
+          <label className="composer-label" htmlFor="compose-line">Send from</label>
+          <select
+            id="compose-line"
+            className="composer-input"
+            value={lineId}
+            onChange={(e) => setLineId(e.target.value)}
+          >
+            <option value="">Primary device</option>
+            {lines.map(line => (
+              <option key={line.id} value={line.id}>
+                {(line.label || line.phoneNumber || line.id.slice(0, 6))}
+                {line.primaryDeviceId ? ' • primary' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      <div className="composer-row composer-actions">
+        <div style={{ flex: 1, position: 'relative' }}>
+          <textarea
+            className="composer-textarea"
+            style={{ width: '100%', paddingBottom: '24px' }}
+            placeholder="Type a message... (Ctrl+Enter to send)"
+            aria-label="Message body"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+          />
+          {body.length > 0 && (
+            <div style={{
+              position: 'absolute',
+              bottom: '8px',
+              right: '12px',
+              fontSize: '0.75em',
+              color: 'var(--muted)',
+              pointerEvents: 'none',
+              fontWeight: 500
+            }}>
+              {body.length}
+            </div>
+          )}
+        </div>
+        <button
+          onClick={handleSendMessage}
+          disabled={isSending || isLoggingIn}
+          className="primary-btn"
+          title="Send (Ctrl+Enter)"
+          aria-busy={isSending}
+        >
+          {isSending ? (
+            <>
+              <Spinner />
+              Sending...
+            </>
+          ) : "Send"}
+        </button>
+      </div>
+      {status && <div className="compose-status" role="status" aria-live="polite">{status}</div>}
+      <div className="compose-hint">
+        Messages are sent from your phone when it&apos;s online and signed in.
+      </div>
+    </div>
+  );
+});
+
+MessageComposer.displayName = 'MessageComposer';
+
 const defaultTheme = {
-  primaryColor: "#6750A4",
-  secondaryColor: "#625B71",
-  bubbleOutgoing: "#D0BCFF",
-  bubbleIncoming: "#E8DEF8",
-  backgroundColor: "#FFFFFF",
+  primaryColor: "#00F0FF",
+  secondaryColor: "#D946EF",
+  bubbleOutgoing: "#00F0FF",
+  bubbleIncoming: "#161B2E",
+  backgroundColor: "#030508",
   iconSizeFactor: 1.0,
   fontStyle: "Default",
-  bubbleCornerRadius: 12,
-  inboxIconVariant: "Default",
+  bubbleCornerRadius: 22,
+  inboxIconVariant: "Beacon",
   onBubbleOutgoing: "#000000",
-  onBubbleIncoming: "#000000",
-  onBackground: "#000000",
-  topBarColor: "#FFFFFF",
-  onTopBarColor: "#000000",
+  onBubbleIncoming: "#EEF2FB",
+  onBackground: "#E0F7FA",
+  topBarColor: "#030508",
+  onTopBarColor: "#E0F7FA",
   bubbleCornerRadiusTopStart: null,
   bubbleCornerRadiusTopEnd: null,
   bubbleCornerRadiusBottomStart: null,
   bubbleCornerRadiusBottomEnd: null,
-  timestampColor: null,
-  dividerColor: null,
+  timestampColor: "#9FB3C8",
+  dividerColor: "#1E293B",
   appBackgroundGradientStart: null,
   appBackgroundGradientEnd: null,
   fontScale: 1.0,
   backgroundImageUrl: null,
-  iconOverrides: {}
+  iconOverrides: {},
+  useGlassEffect: true,
+  useHolographicGlow: true,
+  uiDensity: 'Comfortable'
 };
 
 const themePresets = [
+  {
+    name: "Future Hologram",
+    theme: {
+      fontStyle: "Default",
+      bubbleCornerRadius: 24,
+      appBackgroundGradientStart: "#030508",
+      appBackgroundGradientEnd: "#1a1033",
+      onBackground: "#E0F7FA",
+      topBarColor: "#030508",
+      onTopBarColor: "#00F0FF",
+      bubbleOutgoing: "#00F0FF",
+      onBubbleOutgoing: "#000000",
+      bubbleIncoming: "#1a1033",
+      onBubbleIncoming: "#E0F7FA",
+      primaryColor: "#00F0FF",
+      secondaryColor: "#D946EF",
+      dividerColor: "#1E293B",
+      inboxIconVariant: "neon_noir",
+      useGlassEffect: true,
+      useHolographicGlow: true,
+      uiDensity: "Comfortable"
+    }
+  },
+  {
+    name: "Neon Cyber",
+    theme: {
+      fontStyle: "Monospace",
+      bubbleCornerRadius: 4,
+      backgroundColor: "#000000",
+      onBackground: "#00FF41",
+      topBarColor: "#000000",
+      onTopBarColor: "#00FF41",
+      bubbleOutgoing: "#003B00",
+      onBubbleOutgoing: "#00FF41",
+      bubbleIncoming: "#0D0D0D",
+      onBubbleIncoming: "#00FF41",
+      primaryColor: "#00FF41",
+      secondaryColor: "#008F11",
+      dividerColor: "#003B00",
+      inboxIconVariant: "midnight_oled",
+      useHolographicGlow: true,
+      uiDensity: "Compact"
+    }
+  },
   {
     name: "Default Light",
     theme: {
@@ -839,16 +1063,16 @@ const themePresets = [
     theme: {
       fontStyle: "Default",
       bubbleCornerRadius: 16,
-      backgroundColor: "#0B0F14",
-      onBackground: "#E2E8F0",
-      topBarColor: "#111827",
-      onTopBarColor: "#E2E8F0",
-      bubbleOutgoing: "#22D3EE",
-      onBubbleOutgoing: "#0B0F14",
+      backgroundColor: "#030508",
+      onBackground: "#E0F7FA",
+      topBarColor: "#030508",
+      onTopBarColor: "#00F0FF",
+      bubbleOutgoing: "#00F0FF",
+      onBubbleOutgoing: "#000000",
       bubbleIncoming: "#1F2937",
-      onBubbleIncoming: "#E2E8F0",
-      primaryColor: "#22D3EE",
-      secondaryColor: "#F472B6",
+      onBubbleIncoming: "#E0F7FA",
+      primaryColor: "#00F0FF",
+      secondaryColor: "#D946EF",
       dividerColor: "#1F2937",
       inboxIconVariant: "midnight_oled",
       backgroundImageUrl: neonBg
@@ -1159,23 +1383,46 @@ const iconOverrideKeys = [
   { key: "icon.notifications", label: "Notifications" }
 ];
 
-const normalizeTheme = (input = {}) => ({
-  ...defaultTheme,
-  ...input,
-  iconSizeFactor: Number(input.iconSizeFactor ?? defaultTheme.iconSizeFactor),
-  bubbleCornerRadius: Number(input.bubbleCornerRadius ?? defaultTheme.bubbleCornerRadius),
-  fontScale: Number(input.fontScale ?? defaultTheme.fontScale),
-  bubbleCornerRadiusTopStart: input.bubbleCornerRadiusTopStart ?? defaultTheme.bubbleCornerRadiusTopStart,
-  bubbleCornerRadiusTopEnd: input.bubbleCornerRadiusTopEnd ?? defaultTheme.bubbleCornerRadiusTopEnd,
-  bubbleCornerRadiusBottomStart: input.bubbleCornerRadiusBottomStart ?? defaultTheme.bubbleCornerRadiusBottomStart,
-  bubbleCornerRadiusBottomEnd: input.bubbleCornerRadiusBottomEnd ?? defaultTheme.bubbleCornerRadiusBottomEnd,
-  timestampColor: input.timestampColor ?? defaultTheme.timestampColor,
-  dividerColor: input.dividerColor ?? defaultTheme.dividerColor,
-  appBackgroundGradientStart: input.appBackgroundGradientStart ?? defaultTheme.appBackgroundGradientStart,
-  appBackgroundGradientEnd: input.appBackgroundGradientEnd ?? defaultTheme.appBackgroundGradientEnd,
-  backgroundImageUrl: input.backgroundImageUrl ?? defaultTheme.backgroundImageUrl,
-  iconOverrides: input.iconOverrides ?? defaultTheme.iconOverrides
-});
+// Sentinel: Validate URL scheme to prevent XSS (javascript: links)
+const isValidImageUrl = (url) => {
+  if (!url) return true; // Allow empty/null as valid (it just means no image)
+  const lower = url.toString().toLowerCase().trim();
+  return lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('data:image/') || lower.startsWith('/');
+};
+
+const normalizeTheme = (input = {}) => {
+  const bgUrl = input.backgroundImageUrl ?? defaultTheme.backgroundImageUrl;
+  const safeBgUrl = isValidImageUrl(bgUrl) ? bgUrl : null;
+
+  const rawIcons = input.iconOverrides ?? defaultTheme.iconOverrides;
+  const safeIcons = {};
+  if (rawIcons) {
+    Object.entries(rawIcons).forEach(([k, v]) => {
+      if (isValidImageUrl(v)) safeIcons[k] = v;
+    });
+  }
+
+  return {
+    ...defaultTheme,
+    ...input,
+    iconSizeFactor: Number(input.iconSizeFactor ?? defaultTheme.iconSizeFactor),
+    bubbleCornerRadius: Number(input.bubbleCornerRadius ?? defaultTheme.bubbleCornerRadius),
+    fontScale: Number(input.fontScale ?? defaultTheme.fontScale),
+    bubbleCornerRadiusTopStart: input.bubbleCornerRadiusTopStart ?? defaultTheme.bubbleCornerRadiusTopStart,
+    bubbleCornerRadiusTopEnd: input.bubbleCornerRadiusTopEnd ?? defaultTheme.bubbleCornerRadiusTopEnd,
+    bubbleCornerRadiusBottomStart: input.bubbleCornerRadiusBottomStart ?? defaultTheme.bubbleCornerRadiusBottomStart,
+    bubbleCornerRadiusBottomEnd: input.bubbleCornerRadiusBottomEnd ?? defaultTheme.bubbleCornerRadiusBottomEnd,
+    timestampColor: input.timestampColor ?? defaultTheme.timestampColor,
+    dividerColor: input.dividerColor ?? defaultTheme.dividerColor,
+    appBackgroundGradientStart: input.appBackgroundGradientStart ?? defaultTheme.appBackgroundGradientStart,
+    appBackgroundGradientEnd: input.appBackgroundGradientEnd ?? defaultTheme.appBackgroundGradientEnd,
+    backgroundImageUrl: safeBgUrl,
+    iconOverrides: safeIcons,
+    useGlassEffect: input.useGlassEffect ?? defaultTheme.useGlassEffect,
+    useHolographicGlow: input.useHolographicGlow ?? defaultTheme.useHolographicGlow,
+    uiDensity: input.uiDensity ?? defaultTheme.uiDensity
+  };
+};
 
 const buildThemeVars = (theme) => {
   const active = normalizeTheme(theme);
@@ -1205,8 +1452,8 @@ const buildThemeVars = (theme) => {
   return vars;
 };
 
-const buildThemePreviewStyle = (theme) => {
-  const active = normalizeTheme(theme);
+// Expects an already normalized theme to avoid redundant normalization
+const buildThemePreviewStyle = (active) => {
   const style = {
     backgroundColor: active.backgroundColor
   };
@@ -1281,7 +1528,343 @@ const loadGoogleMaps = (() => {
   };
 })();
 
+// Bolt: Optimized Sidebar to prevent re-renders on high-frequency parent updates (typing)
+const Sidebar = memo(({
+  activePanel,
+  setActivePanel,
+  tierLabel,
+  handleLogout, // Bolt: Explicitly included for logout functionality
+  handleNewThread, // Bolt: Explicitly included for new conversation
+  lines, // Bolt: Explicitly included for multi-line support
+  activeLineId,
+  setActiveLineId,
+  lineInboxMode,
+  isLoadingThreads,
+  isPremium,
+  remoteSettings,
+  navLogo,
+  brandTitle,
+  threads,
+  selectedThreadId,
+  onSelect,
+  showPreviews,
+  openCommandPalette
+}) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef(null);
+
+  useEffect(() => {
+    if (activePanel !== 'beacon') return;
+
+    const handleKeyDown = (e) => {
+      // Focus search on "/" or "Ctrl+K" / "Cmd+K"
+      if (
+        (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) && !document.activeElement.isContentEditable) ||
+        ((e.ctrlKey || e.metaKey) && e.key === 'k')
+      ) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activePanel]);
+
+  // Bolt: Pre-compute search strings for threads locally to prevent App re-renders
+  const searchIndex = useMemo(() => {
+    return threads.map(t => {
+      const display = (t.display_name || t.address || '').toLowerCase();
+      const snippet = (t.snippet || '').toLowerCase();
+      return { thread: t, searchString: `${display} ${snippet}` };
+    });
+  }, [threads]);
+
+  const filteredThreads = useMemo(() => {
+    const term = searchQuery.trim().toLowerCase();
+    if (!term) return threads;
+    return searchIndex
+      .filter(({ searchString }) => searchString.includes(term))
+      .map(({ thread }) => thread);
+  }, [searchIndex, searchQuery, threads]);
+
+  const [collapsed, setCollapsed] = useState(false);
+
+  return (
+    <div className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+      <div className="sidebar-header">
+        <div className="sidebar-brand">
+          <img src={navLogo || logo} alt="PulseLink Suite" className="brand-logo small" />
+          <div>
+            <div className="brand-title">{brandTitle || "PulseLink Suite"}</div>
+            <div className="brand-subtitle">{tierLabel} Web Access</div>
+          </div>
+        </div>
+        <div className="sidebar-actions">
+          {!collapsed && activePanel === 'beacon' && (
+            <button
+              onClick={handleNewThread}
+              className="secondary-btn"
+              aria-label="Start new conversation"
+            >
+              New
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="sidebar-nav">
+        <button
+          className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
+          onClick={() => setActivePanel('home')}
+          title="Home"
+          aria-label="Home"
+          aria-current={activePanel === 'home' ? 'page' : undefined}
+        >
+          <HomeIcon />
+          <span>Home</span>
+        </button>
+        <button
+          className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
+          onClick={() => setActivePanel('pulselink')}
+          title="PulseLink"
+          aria-label="PulseLink"
+          aria-current={activePanel === 'pulselink' ? 'page' : undefined}
+        >
+          <img src={logo} alt="PulseLink" />
+          <span>PulseLink</span>
+        </button>
+        <button
+          className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
+          onClick={() => setActivePanel('beacon')}
+          title="Beacon"
+          aria-label="Beacon"
+          aria-current={activePanel === 'beacon' ? 'page' : undefined}
+        >
+          <img src={beaconLogo} alt="Beacon" />
+          <span>Beacon</span>
+        </button>
+        {remoteSettings.ringerSongEnabled && (
+          <button
+            className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
+            onClick={() => setActivePanel('ringersong')}
+            title="RingerSong"
+            aria-label="RingerSong"
+            aria-current={activePanel === 'ringersong' ? 'page' : undefined}
+          >
+            <img src={ringersongLogo} alt="RingerSong" />
+            <span>RingerSong</span>
+          </button>
+        )}
+        {remoteSettings.mapEnabled && (
+          <button
+            className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
+            onClick={() => setActivePanel('map')}
+            title="Map"
+            aria-label="Map"
+            aria-current={activePanel === 'map' ? 'page' : undefined}
+          >
+            <MapIcon />
+            <span>Map</span>
+          </button>
+        )}
+        {remoteSettings.contactsEnabled && (
+          <button
+            className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
+            onClick={() => setActivePanel('contacts')}
+            title="Contacts"
+            aria-label="Contacts"
+            aria-current={activePanel === 'contacts' ? 'page' : undefined}
+          >
+            <ContactIcon />
+            <span>Contacts</span>
+          </button>
+        )}
+        {remoteSettings.themesEnabled && (
+          <button
+            className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
+            onClick={() => setActivePanel('themes')}
+            title="Themes"
+            aria-label="Themes"
+            aria-current={activePanel === 'themes' ? 'page' : undefined}
+          >
+            <ThemeIcon />
+            <span>Themes</span>
+          </button>
+        )}
+        <button
+          className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
+          onClick={() => setActivePanel('extensions')}
+          title="Extensions"
+          aria-label="Extensions"
+          aria-current={activePanel === 'extensions' ? 'page' : undefined}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+          <span>Extensions</span>
+          <span className="badge-new">NEW</span>
+        </button>
+        <button
+          className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
+          onClick={() => setActivePanel('settings')}
+          title="Settings"
+          aria-label="Settings"
+          aria-current={activePanel === 'settings' ? 'page' : undefined}
+        >
+          <SettingsIcon />
+          <span>Settings</span>
+        </button>
+      </div>
+      <div className="sidebar-footer">
+        {!collapsed && <button onClick={handleLogout} className="ghost-btn">Logout</button>}
+        <button onClick={() => setCollapsed(prev => !prev)} className="ghost-btn icon-only" title={collapsed ? "Expand" : "Collapse"}>
+          {collapsed ? (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg>
+          ) : (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
+          )}
+        </button>
+      </div>
+      {activePanel === 'beacon' && !collapsed ? (
+        <>
+          <div className="sidebar-search-container">
+            <div className="sidebar-search-wrapper">
+              <div className="search-icon-wrapper">
+                <SearchIcon />
+              </div>
+              <input
+                ref={searchInputRef}
+                className="sidebar-search-input-field"
+                placeholder="Search (Ctrl+K)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Search messages (Ctrl+K)"
+                title="Search messages (Ctrl+K or /)"
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    if (searchQuery) {
+                      setSearchQuery('');
+                    } else {
+                      e.currentTarget.blur();
+                    }
+                  }
+                }}
+              />
+              {!searchQuery && <span className="shortcut-hint">/</span>}
+              {searchQuery && (
+                <button
+                  className="ghost-btn icon-only sidebar-search-clear-btn"
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Clear search"
+                  title="Clear search"
+                >
+                  <CloseIcon />
+                </button>
+              )}
+            </div>
+            <button
+              className="ghost-btn icon-only"
+              title="Command Palette (Ctrl+K)"
+              style={{ marginLeft: 8 }}
+              onClick={openCommandPalette}
+            >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3-3 3 3 0 0 0-3-3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path></svg>
+            </button>
+          </div>
+          <div className="thread-list">
+            {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
+              <div className="line-tabs" aria-label="Device lines">
+                <button
+                  className={`chip ${!activeLineId ? 'active' : ''}`}
+                  onClick={() => setActiveLineId(null)}
+                >
+                  All
+                </button>
+                {lines.map((line) => (
+                  <button
+                    key={line.id}
+                    className={`chip ${activeLineId === line.id ? 'active' : ''}`}
+                    onClick={() => setActiveLineId(line.id)}
+                    title={line.phoneNumber || 'Line'}
+                  >
+                    {line.label || line.phoneNumber || line.id.slice(0, 6)}
+                  </button>
+                ))}
+              </div>
+            )}
+            {isLoadingThreads ? (
+               Array.from({ length: 5 }).map((_, i) => <ThreadSkeleton key={i} />)
+            ) : filteredThreads.length === 0 ? (
+              <div className="sidebar-placeholder">
+                <div className="sidebar-tip">
+                  <strong>{searchQuery ? "No matches found" : "No conversations found"}</strong>
+                </div>
+                {!searchQuery && (
+                  <div className="sidebar-tip muted">
+                    To see your messages here:
+                    <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
+                      <li>Open PulseLink on your phone</li>
+                      <li>Go to Extensions Store</li>
+                      <li>Enable &quot;Remote Web Access&quot;</li>
+                    </ol>
+                    {!isPremium && (
+                      <div className="badge badge-premium" style={{ display: 'inline-block', marginTop: '8px', padding: '2px 8px', borderRadius: '4px', background: 'var(--accent)', color: '#fff', fontSize: '0.8em' }}>
+                        Premium Required
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              filteredThreads.map(thread => (
+                <ThreadItem
+                  key={`${thread.lineId || 'legacy'}_${thread.id}`}
+                  thread={thread}
+                  isActive={selectedThreadId === thread.id}
+                  onSelect={onSelect}
+                  showPreviews={showPreviews}
+                />
+              ))
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="sidebar-placeholder">
+          <div className="sidebar-tip">Use the tiles on Home to jump into PulseLink or Beacon.</div>
+          <div className="sidebar-tip muted">Theme and settings sync to your device.</div>
+        </div>
+      )}
+    </div>
+  );
+}, (prev, next) => {
+  // Bolt: Ensure strict equality checks for all props to prevent unnecessary re-renders
+  return prev.activePanel === next.activePanel &&
+         prev.tierLabel === next.tierLabel &&
+         prev.isLoadingThreads === next.isLoadingThreads &&
+         prev.threads === next.threads &&
+         prev.lines === next.lines &&
+         prev.activeLineId === next.activeLineId &&
+         prev.lineInboxMode === next.lineInboxMode &&
+         prev.isPremium === next.isPremium &&
+         prev.remoteSettings === next.remoteSettings &&
+         prev.selectedThreadId === next.selectedThreadId &&
+         prev.onSelect === next.onSelect &&
+         prev.showPreviews === next.showPreviews &&
+         prev.navLogo === next.navLogo &&
+         prev.brandTitle === next.brandTitle;
+});
+
+Sidebar.displayName = 'Sidebar';
+
+const getToastClass = (msg) => {
+  if (!msg) return 'toast';
+  const lower = msg.toLowerCase();
+  if (lower.includes('fail') || lower.includes('error') || lower.includes('missing')) return 'toast error';
+  if (lower.includes('success') || lower.includes('saved') || lower.includes('updated') || lower.includes('sent') || lower.includes('published') || lower.includes('imported') || lower.includes('cleared')) return 'toast success';
+  return 'toast';
+};
+
 function App() {
+  const webHintStorageKey = 'pulselink.hideWebHint';
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -1303,6 +1886,7 @@ function App() {
   const [trustedContacts, setTrustedContacts] = useState([]);
   const [deviceContacts, setDeviceContacts] = useState([]);
   const [contactSearch, setContactSearch] = useState('');
+  const [contactListLimit, setContactListLimit] = useState(50);
   const [unlockedAvatars, setUnlockedAvatars] = useState([]);
   const [contactForm, setContactForm] = useState({
     displayName: '',
@@ -1318,6 +1902,7 @@ function App() {
   });
   const [editingContactId, setEditingContactId] = useState(null);
   const [contactStatus, setContactStatus] = useState('');
+  const [isSavingContact, setIsSavingContact] = useState(false);
   const [profileStatus, setProfileStatus] = useState('');
   const [themePrefs, setThemePrefs] = useState(defaultTheme);
   const [themeStatus, setThemeStatus] = useState('');
@@ -1332,6 +1917,11 @@ function App() {
     backgroundImageUrl: ''
   });
   const [themePublishStatus, setThemePublishStatus] = useState('');
+  const [isPublishingTheme, setIsPublishingTheme] = useState(false);
+  const [showWebHint, setShowWebHint] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem(webHintStorageKey) !== 'true';
+  });
   const [remoteSettings, setRemoteSettings] = useState({
     remoteWebAccessEnabled: false,
     autoUpdateContactInfo: true,
@@ -1343,7 +1933,14 @@ function App() {
     crashDetectionEnabled: false,
     aiSummariesEnabled: false,
     firebaseMessagingEnabled: true,
-    mergedExperienceEnabled: false
+    mergedExperienceEnabled: false,
+    privateSafeEnabled: false,
+    smartRepliesEnabled: true,
+    truecallerEnabled: false,
+    ringerSongEnabled: true,
+    mapEnabled: true,
+    contactsEnabled: true,
+    themesEnabled: true
   });
   const [devExtensions, setDevExtensions] = useState(() => {
     const saved = localStorage.getItem('pulselink.devExtensions');
@@ -1370,17 +1967,18 @@ function App() {
   useEffect(() => {
     localStorage.setItem('pulselink.devExtensions', JSON.stringify(devExtensions));
   }, [devExtensions]);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
-  const [composeAddress, setComposeAddress] = useState('');
-  const [composeBody, setComposeBody] = useState('');
-  const [sendLineId, setSendLineId] = useState('');
-  const [sendStatus, setSendStatus] = useState('');
-  const [isSending, setIsSending] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [activePanel, setActivePanel] = useState('home');
+
+  // Bolt: Reset contact list limit when search or panel changes
+  useEffect(() => {
+    setContactListLimit(50);
+  }, [contactSearch, activePanel]);
   const [alertLocations, setAlertLocations] = useState([]);
   const [alertStatus, setAlertStatus] = useState('');
   const [severityFilter, setSeverityFilter] = useState('emergency');
@@ -1392,6 +1990,8 @@ function App() {
   const [settingsStatus, setSettingsStatus] = useState('');
   const [remoteSettingsStatus, setRemoteSettingsStatus] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [syncDiagnostics, setSyncDiagnostics] = useState(null);
+  const [syncRequestStatus, setSyncRequestStatus] = useState('');
   const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -1404,26 +2004,64 @@ function App() {
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
   const [addingTrackId, setAddingTrackId] = useState(null);
   const [showDevTools, setShowDevTools] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [settingsSearch, setSettingsSearch] = useState('');
+  const [premiumClaimActive, setPremiumClaimActive] = useState(false);
+  const [proClaimActive, setProClaimActive] = useState(false);
 
   const subscriptionStatus = userData?.subscriptionStatus;
+  const premiumSubscriptionStatus = userData?.premiumSubscriptionStatus;
+
   const isPremiumUser = useMemo(() => {
-    return subscriptionStatus === "premium" ||
+    return premiumClaimActive ||
+      proClaimActive ||
+      premiumSubscriptionStatus === "SUBSCRIPTION_STATE_ACTIVE" ||
+      premiumSubscriptionStatus === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD" ||
+      subscriptionStatus === "premium" ||
+      subscriptionStatus === "pro" ||
       userData?.premiumUnlocked === true ||
-      userData?.hasPremiumHistory === true;
-  }, [subscriptionStatus, userData?.premiumUnlocked, userData?.hasPremiumHistory]);
+      userData?.proUnlocked === true ||
+      userData?.hasPremiumHistory === true ||
+      userData?.hasProHistory === true;
+  }, [premiumClaimActive, proClaimActive, premiumSubscriptionStatus, subscriptionStatus, userData?.premiumUnlocked, userData?.proUnlocked, userData?.hasPremiumHistory, userData?.hasProHistory]);
 
   const isProUser = useMemo(() => {
     return isPremiumUser ||
+      proClaimActive === true ||
       subscriptionStatus === "pro" ||
       userData?.proUnlocked === true ||
       userData?.hasProHistory === true;
-  }, [isPremiumUser, subscriptionStatus, userData?.proUnlocked, userData?.hasProHistory]);
+  }, [isPremiumUser, proClaimActive, subscriptionStatus, userData?.proUnlocked, userData?.hasProHistory]);
 
-  // Toggle DevTools with Ctrl+Shift+D
+  useEffect(() => {
+    if (!user) {
+      setPremiumClaimActive(false);
+      setProClaimActive(false);
+      return;
+    }
+    const callable = httpsCallable(functions, "getPremiumStatus");
+    Promise.all([
+      callable(),
+      user.getIdTokenResult()
+    ]).then(([result, tokenResult]) => {
+      const data = result?.data || {};
+      setPremiumClaimActive(data.hasClaim === true);
+      setProClaimActive(tokenResult?.claims?.pro === true || tokenResult?.claims?.premium === true);
+    }).catch(() => {
+      setPremiumClaimActive(false);
+      setProClaimActive(false);
+    });
+  }, [user]);
+
+  // Toggle DevTools with Ctrl+Shift+D or Command Palette with Ctrl+K
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         setShowDevTools(prev => !prev);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCommandPalette(prev => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -1554,32 +2192,52 @@ function App() {
       return true;
     });
   }, [alertLocations, incomingOnly, severityFilter]);
-  const filteredThemes = useMemo(() => {
-    const term = themeSearch.trim().toLowerCase();
-    if (!term) return publicThemes;
-    return publicThemes.filter((theme) => {
+  // Bolt: Pre-compute search strings for themes to avoid redundant lowercasing during typing
+  const themeSearchIndex = useMemo(() => {
+    return publicThemes.map(theme => {
       const name = (theme.name ?? '').toString().toLowerCase();
       const author = (theme.authorName ?? '').toString().toLowerCase();
       const handle = (theme.authorHandle ?? '').toString().toLowerCase();
-      return name.includes(term) || author.includes(term) || handle.includes(term);
+      return { theme, searchString: `${name} ${author} ${handle}` };
     });
-  }, [publicThemes, themeSearch]);
-  const filteredDeviceContacts = useMemo(() => {
-    const term = contactSearch.trim().toLowerCase();
-    if (!term) return deviceContacts;
-    return deviceContacts.filter((contact) => {
-      const values = [
+  }, [publicThemes]);
+
+  const filteredThemes = useMemo(() => {
+    const term = themeSearch.trim().toLowerCase();
+    if (!term) return publicThemes;
+    return themeSearchIndex
+      .filter(({ searchString }) => searchString.includes(term))
+      .map(({ theme }) => theme);
+  }, [themeSearchIndex, themeSearch, publicThemes]);
+  // Bolt: Pre-compute search strings for contacts to avoid expensive string operations on every keystroke
+  const contactSearchIndex = useMemo(() => {
+    return deviceContacts.map(contact => {
+      const parts = [
         contact.displayName,
         contact.phoneNumber,
         contact.email,
-        ...(contact.additionalPhones || []),
-        ...(contact.additionalEmails || [])
+        ...(Array.isArray(contact.additionalPhones) ? contact.additionalPhones : []),
+        ...(Array.isArray(contact.additionalEmails) ? contact.additionalEmails : [])
       ];
-      return values.some((value) =>
-        (value ?? '').toString().toLowerCase().includes(term)
-      );
+
+      const searchString = parts
+        .filter(part => part !== null && part !== undefined)
+        .map(part => String(part).toLowerCase())
+        .join(' ');
+
+      return { contact, searchString };
     });
-  }, [deviceContacts, contactSearch]);
+  }, [deviceContacts]);
+
+  const filteredDeviceContacts = useMemo(() => {
+    const term = contactSearch.trim().toLowerCase();
+    if (!term) return deviceContacts;
+
+    // Bolt: Use the pre-computed index for O(N) simple string inclusion check
+    return contactSearchIndex
+      .filter(({ searchString }) => searchString.includes(term))
+      .map(({ contact }) => contact);
+  }, [contactSearchIndex, contactSearch, deviceContacts]);
 
   // Bolt: Memoize list elements to avoid re-creating them on every render
   const messageListElements = useMemo(() => (
@@ -1588,17 +2246,20 @@ function App() {
     ))
   ), [messages, showPreviews]);
 
+  // Bolt: Pagination for contact list to improve performance
   const contactListElements = useMemo(() => (
-    filteredDeviceContacts.map((contact) => (
+    filteredDeviceContacts.slice(0, contactListLimit).map((contact) => (
       <DeviceContactItem key={contact.id} contact={contact} />
     ))
-  ), [filteredDeviceContacts]);
+  ), [filteredDeviceContacts, contactListLimit]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setIsLoggingIn(false);
-      setActivePanel(currentUser ? 'home' : 'home');
+      if (currentUser) {
+        setActivePanel('home');
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -1623,8 +2284,13 @@ function App() {
     const unsubscribe = onSnapshot(userRef, (snapshot) => {
       const data = snapshot.data() || {};
       setUserData(data);
-      const isPremium = data.subscriptionStatus === 'premium' || data.premiumUnlocked === true || data.hasPremiumHistory;
-      const isPro = isPremium || data.subscriptionStatus === 'pro' || data.proUnlocked === true || data.hasProHistory;
+      const isPremium = data.subscriptionStatus === 'premium' ||
+        data.premiumUnlocked === true ||
+        data.hasPremiumHistory === true;
+      const isPro = isPremium ||
+        data.subscriptionStatus === 'pro' ||
+        data.proUnlocked === true ||
+        data.hasProHistory === true;
       const isBeta = data.isBetaTester === true;
       const tenureDays = data.createdAt ? (Date.now() - toMillis(data.createdAt)) / (1000 * 60 * 60 * 24) : 0;
       setProfile({
@@ -1640,7 +2306,7 @@ function App() {
         setThemePrefs(defaultTheme);
       }
       setRemoteSettings({
-        remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? isPremium,
+        remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? isPro,
         autoUpdateContactInfo: data.autoUpdateContactInfo ?? true,
         timeFormat: data.timeFormat ?? 'AUTO',
         thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? true,
@@ -1650,7 +2316,14 @@ function App() {
         crashDetectionEnabled: data.crashDetectionEnabled ?? false,
         aiSummariesEnabled: data.aiSummariesEnabled ?? false,
         firebaseMessagingEnabled: data.firebaseMessagingEnabled ?? true,
-        mergedExperienceEnabled: data.mergedExperienceEnabled ?? false
+        mergedExperienceEnabled: data.mergedExperienceEnabled ?? false,
+        privateSafeEnabled: data.privateSafeEnabled ?? false,
+        smartRepliesEnabled: data.smartRepliesEnabled ?? true,
+        truecallerEnabled: data.truecallerEnabled ?? false,
+        ringerSongEnabled: data.ringerSongEnabled ?? true,
+        mapEnabled: data.mapEnabled ?? true,
+        contactsEnabled: data.contactsEnabled ?? true,
+        themesEnabled: data.themesEnabled ?? true
       });
       if (data.lineInboxMode) setLineInboxMode(data.lineInboxMode);
       if (data.activeLineId) setActiveLineId(data.activeLineId);
@@ -1714,14 +2387,24 @@ function App() {
     if (!user || !isPremiumUser || !userData) return;
     if (userData.remoteWebAccessEnabled === undefined) {
       setDoc(doc(db, "users", user.uid), {
-        remoteWebAccessEnabled: true,
-        subscriptionStatus: userData.subscriptionStatus ?? "premium",
-        premiumUnlocked: true
+        remoteWebAccessEnabled: true
       }, { merge: true }).catch((err) => {
         console.error("Failed to auto-enable remote web access", err);
       });
     }
   }, [user, userData, isPremiumUser]);
+
+  useEffect(() => {
+    if (!user) {
+      setSyncDiagnostics(null);
+      return;
+    }
+    const diagRef = doc(db, "users", user.uid, "syncDiagnostics", "latest");
+    const unsubscribe = onSnapshot(diagRef, (snapshot) => {
+      setSyncDiagnostics(snapshot.exists() ? snapshot.data() : null);
+    });
+    return () => unsubscribe();
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -1742,9 +2425,7 @@ function App() {
   }, [user]);
 
   useEffect(() => {
-    const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
-
-    if (!user || !isPremiumUser || !hasRemoteAccess) {
+    if (!user) {
       setDeviceContacts([]);
       return;
     }
@@ -1758,89 +2439,94 @@ function App() {
       setDeviceContacts(items);
     });
     return () => unsubscribe();
-  }, [user, isPremiumUser, remoteSettings.remoteWebAccessEnabled]);
+  }, [user]);
 
   useEffect(() => {
-    const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
-
-    if (user && isPremiumUser && hasRemoteAccess) {
-      setIsLoadingThreads(true);
-      // Legacy single-line threads (synced_threads)
-      const legacyRef = collection(db, "users", user.uid, "synced_threads");
-      const legacyQuery = query(legacyRef, orderBy("date", "desc"));
-      const unsubscribeLegacy = onSnapshot(legacyQuery, (snapshot) => {
-        const threadsData = snapshot.docs.map(doc => ({ id: doc.id, lineId: null, ...doc.data() }));
-        setLegacyThreads(threadsData);
-        // Only set loading to false if we have at least legacy threads or lines have also loaded.
-        // But for simplicity, we can set it to false here as we have *some* data.
-        // A better approach would be to wait for both, but onSnapshot is async.
-        // Let's assume lines load quickly or we just wait for the first data update.
-        setIsLoadingThreads(false);
-      });
-
-      // Multi-device: lines/{lineId}/threads
-      const linesRef = collection(db, "users", user.uid, "lines");
-      const threadUnsubs = new Map();
-
-      const attachLine = (lineId) => {
-        if (threadUnsubs.has(lineId)) return;
-        const lineThreadsRef = collection(db, "users", user.uid, "lines", lineId, "threads");
-        const lineQuery = query(lineThreadsRef, orderBy("date", "desc"));
-        const unsub = onSnapshot(lineQuery, (snapshot) => {
-          const items = snapshot.docs.map(doc => ({ id: doc.id, lineId, ...doc.data() }));
-          setLineThreads((prev) => ({ ...prev, [lineId]: items }));
-        });
-        threadUnsubs.set(lineId, unsub);
-      };
-
-      const detachAll = () => {
-        threadUnsubs.forEach((u) => u());
-        threadUnsubs.clear();
-      };
-
-      const unsubscribeLines = onSnapshot(linesRef, (snapshot) => {
-        const lineItems = snapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(line => line.disabled !== true);
-        setLines(lineItems);
-
-        // Attach listeners for new/active lines
-        lineItems.forEach(line => attachLine(line.id));
-
-        // Detach listeners for removed or disabled lines
-        const activeIds = new Set(lineItems.map(l => l.id));
-        // Safe iteration: collect IDs to remove first
-        const idsToRemove = Array.from(threadUnsubs.keys()).filter(id => !activeIds.has(id));
-
-        if (idsToRemove.length > 0) {
-          idsToRemove.forEach(id => {
-            const unsub = threadUnsubs.get(id);
-            if (unsub) unsub();
-            threadUnsubs.delete(id);
-          });
-
-          setLineThreads(prev => {
-            const next = { ...prev };
-            idsToRemove.forEach(id => delete next[id]);
-            return next;
-          });
-        }
-
-        setIsLoadingThreads(false);
-      });
-
-      return () => {
-        unsubscribeLegacy();
-        unsubscribeLines();
-        detachAll();
-      };
-    } else {
+    if (!user) {
       setLegacyThreads([]);
       setLines([]);
       setLineThreads({});
       setIsLoadingThreads(false);
+      return;
     }
-  }, [user, isPremiumUser, remoteSettings.remoteWebAccessEnabled]);
+    if (userData?.remoteWebAccessEnabled !== true) {
+      setLegacyThreads([]);
+      setLines([]);
+      setLineThreads({});
+      setIsLoadingThreads(false);
+      return;
+    }
+    setIsLoadingThreads(true);
+    // Legacy single-line threads (synced_threads)
+    const legacyRef = collection(db, "users", user.uid, "synced_threads");
+    const legacyQuery = query(legacyRef, orderBy("date", "desc"));
+    const unsubscribeLegacy = onSnapshot(legacyQuery, (snapshot) => {
+      const threadsData = snapshot.docs.map(doc => ({ id: doc.id, lineId: null, ...doc.data() }));
+      setLegacyThreads(threadsData);
+      // Only set loading to false if we have at least legacy threads or lines have also loaded.
+      // But for simplicity, we can set it to false here as we have *some* data.
+      // A better approach would be to wait for both, but onSnapshot is async.
+      // Let's assume lines load quickly or we just wait for the first data update.
+      setIsLoadingThreads(false);
+    });
+
+    // Multi-device: lines/{lineId}/threads
+    const linesRef = collection(db, "users", user.uid, "lines");
+    const threadUnsubs = new Map();
+
+    const attachLine = (lineId) => {
+      if (threadUnsubs.has(lineId)) return;
+      const lineThreadsRef = collection(db, "users", user.uid, "lines", lineId, "threads");
+      const lineQuery = query(lineThreadsRef, orderBy("date", "desc"));
+      const unsub = onSnapshot(lineQuery, (snapshot) => {
+        const items = snapshot.docs.map(doc => ({ id: doc.id, lineId, ...doc.data() }));
+        setLineThreads((prev) => ({ ...prev, [lineId]: items }));
+      });
+      threadUnsubs.set(lineId, unsub);
+    };
+
+    const detachAll = () => {
+      threadUnsubs.forEach((u) => u());
+      threadUnsubs.clear();
+    };
+
+    const unsubscribeLines = onSnapshot(linesRef, (snapshot) => {
+      const lineItems = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(line => line.disabled !== true);
+      setLines(lineItems);
+
+      // Attach listeners for new/active lines
+      lineItems.forEach(line => attachLine(line.id));
+
+      // Detach listeners for removed or disabled lines
+      const activeIds = new Set(lineItems.map(l => l.id));
+      // Safe iteration: collect IDs to remove first
+      const idsToRemove = Array.from(threadUnsubs.keys()).filter(id => !activeIds.has(id));
+
+      if (idsToRemove.length > 0) {
+        idsToRemove.forEach(id => {
+          const unsub = threadUnsubs.get(id);
+          if (unsub) unsub();
+          threadUnsubs.delete(id);
+        });
+
+        setLineThreads(prev => {
+          const next = { ...prev };
+          idsToRemove.forEach(id => delete next[id]);
+          return next;
+        });
+      }
+
+      setIsLoadingThreads(false);
+    });
+
+    return () => {
+      unsubscribeLegacy();
+      unsubscribeLines();
+      detachAll();
+    };
+  }, [user, userData?.remoteWebAccessEnabled]);
 
   useEffect(() => {
     const themesRef = collection(db, "themes_public");
@@ -1863,10 +2549,8 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
-
-    if (user && selectedThread && isPremiumUser && hasRemoteAccess) {
-      // Listen to messages only if user has premium and remote web access enabled
+    if (user && selectedThread) {
+      // Listen to messages for the selected thread
       const basePath = selectedThread.lineId
         ? ["users", user.uid, "lines", selectedThread.lineId, "threads", selectedThread.id, "messages"]
         : ["users", user.uid, "synced_threads", selectedThread.id, "messages"];  
@@ -1883,15 +2567,8 @@ function App() {
     } else {
       setMessages([]);
     }
-  }, [user, selectedThread, isPremiumUser, remoteSettings.remoteWebAccessEnabled]);
+  }, [user, selectedThread]);
 
-  useEffect(() => {
-    if (selectedThread?.address) {
-      setComposeAddress(selectedThread.address);
-    }
-    setComposeBody('');
-    setSendStatus('');
-  }, [selectedThread?.address]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -1995,53 +2672,92 @@ function App() {
     );
   }, [activePanel, userLocation]);
 
+  // Bolt: Optimized map marker reconciliation to prevent full re-render/flicker on every update
   useEffect(() => {
     if (!mapInstanceRef.current || !window.google?.maps) return;
-    mapMarkersRef.current.forEach((marker) => marker.setMap(null));
-    mapMarkersRef.current.clear();
-    if (mapHomeMarkerRef.current) {
-      mapHomeMarkerRef.current.setMap(null);
-      mapHomeMarkerRef.current = null;
-    }
 
+    // 1. Handle Home Marker (User Location) when no alerts
     if (!filteredAlerts.length) {
+      // Clear all alert markers since we are in "Home Mode"
+      if (mapMarkersRef.current.size > 0) {
+        mapMarkersRef.current.forEach((marker) => marker.setMap(null));
+        mapMarkersRef.current.clear();
+      }
+
       const center = userLocation ?? defaultMapCenter;
       mapInstanceRef.current.setCenter(center);
       mapInstanceRef.current.setZoom(userLocation ? 12 : 3);
+
       if (userLocation) {
-        mapHomeMarkerRef.current = new window.google.maps.Marker({
-          position: center,
-          map: mapInstanceRef.current,
-          title: 'Your location',
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            fillColor: '#3b82f6',
-            fillOpacity: 0.9,
-            strokeColor: '#0b0e16',
-            strokeWeight: 2,
-            scale: 7
-          }
-        });
+        if (!mapHomeMarkerRef.current) {
+          mapHomeMarkerRef.current = new window.google.maps.Marker({
+            position: center,
+            map: mapInstanceRef.current,
+            title: 'Your location',
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              fillColor: '#3b82f6',
+              fillOpacity: 0.9,
+              strokeColor: '#0b0e16',
+              strokeWeight: 2,
+              scale: 7
+            }
+          });
+        } else {
+          mapHomeMarkerRef.current.setPosition(center);
+          mapHomeMarkerRef.current.setMap(mapInstanceRef.current);
+        }
+      } else {
+        if (mapHomeMarkerRef.current) mapHomeMarkerRef.current.setMap(null);
       }
       return;
     }
 
+    // We have alerts, so hide Home marker
+    if (mapHomeMarkerRef.current) {
+      mapHomeMarkerRef.current.setMap(null);
+    }
+
+    // 2. Reconcile Alert Markers (Diffing)
     const bounds = new window.google.maps.LatLngBounds();
+    const activeIds = new Set();
+    let markersChanged = false;
+
     filteredAlerts.forEach((alert) => {
-      const color = alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent;
-      const marker = new window.google.maps.Marker({
-        position: { lat: alert.lat, lng: alert.lng },
-        map: mapInstanceRef.current,
-        title: `${alertBadgeCopy[alert.severity] ?? 'Alert'} from ${alert.address}`,
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          fillColor: color,
-          fillOpacity: 0.9,
-          strokeColor: '#0b0e16',
-          strokeWeight: 2,
-          scale: 8
+      activeIds.add(alert.id);
+      bounds.extend({ lat: alert.lat, lng: alert.lng });
+
+      let marker = mapMarkersRef.current.get(alert.id);
+
+      if (!marker) {
+        // Create new marker
+        markersChanged = true;
+        const color = alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent;
+        marker = new window.google.maps.Marker({
+          position: { lat: alert.lat, lng: alert.lng },
+          map: mapInstanceRef.current,
+          title: `${alertBadgeCopy[alert.severity] ?? 'Alert'} from ${alert.address}`,
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            fillColor: color,
+            fillOpacity: 0.9,
+            strokeColor: '#0b0e16',
+            strokeWeight: 2,
+            scale: 8
+          }
+        });
+        mapMarkersRef.current.set(alert.id, marker);
+      } else {
+        // Ensure marker is on map (in case it was hidden previously, though unlikely here)
+        if (marker.getMap() !== mapInstanceRef.current) {
+          marker.setMap(mapInstanceRef.current);
         }
-      });
+        // Could update position here if alerts move, but assuming static for performance
+      }
+
+      // Always update listener to capture fresh closure variables (alert data)
+      // This is cheaper than recreating the marker
+      window.google.maps.event.clearListeners(marker, 'click');
       marker.addListener('click', () => {
         if (!mapInfoRef.current) {
           mapInfoRef.current = new window.google.maps.InfoWindow();
@@ -2049,7 +2765,7 @@ function App() {
         // Sentinel: Escape user input to prevent XSS in InfoWindow
         const safeType = escapeHtml(alertBadgeCopy[alert.severity] ?? 'Alert');
         const safeAddress = escapeHtml(alert.address);
-        const safeDate = escapeHtml(new Date(alert.date).toLocaleString());
+        const safeDate = escapeHtml(dateTimeFormatter.format(new Date(alert.date)));
 
         mapInfoRef.current.setContent(
           `<div style="font-family: sans-serif; max-width: 220px;">
@@ -2060,10 +2776,30 @@ function App() {
         );
         mapInfoRef.current.open(mapInstanceRef.current, marker);
       });
-      mapMarkersRef.current.set(alert.id, marker);
-      bounds.extend({ lat: alert.lat, lng: alert.lng });
     });
-    mapInstanceRef.current.fitBounds(bounds);
+
+    // Remove stale markers
+    const idsToRemove = [];
+    mapMarkersRef.current.forEach((_, id) => {
+      if (!activeIds.has(id)) {
+        idsToRemove.push(id);
+      }
+    });
+
+    if (idsToRemove.length > 0) {
+      markersChanged = true;
+      idsToRemove.forEach((id) => {
+        const marker = mapMarkersRef.current.get(id);
+        marker.setMap(null);
+        mapMarkersRef.current.delete(id);
+      });
+    }
+
+    // Only fit bounds if markers changed (added/removed) or first load to avoid disrupting user panning
+    // Use getBounds() check to detect first load
+    if (markersChanged || !mapInstanceRef.current.getBounds()) {
+      mapInstanceRef.current.fitBounds(bounds);
+    }
   }, [filteredAlerts, userLocation, defaultMapCenter]);
 
   // Bolt: Wrap handlers in useCallback to ensure stable references for React.memo
@@ -2080,7 +2816,7 @@ function App() {
       // Sentinel: Escape user input to prevent XSS in InfoWindow
       const safeType = escapeHtml(alertBadgeCopy[alert.severity] ?? 'Alert');
       const safeAddress = escapeHtml(alert.address);
-      const safeDate = escapeHtml(new Date(alert.date).toLocaleString());
+      const safeDate = escapeHtml(dateTimeFormatter.format(new Date(alert.date)));
 
       mapInfoRef.current.setContent(
         `<div style="font-family: sans-serif; max-width: 220px;">
@@ -2267,6 +3003,7 @@ function App() {
       setContactStatus("Display name is required.");
       return;
     }
+    setIsSavingContact(true);
     setContactStatus("Saving contact...");
     try {
       const payload = {
@@ -2296,6 +3033,8 @@ function App() {
     } catch (error) {
       console.error("Contact save failed", error);
       setContactStatus(error?.message ?? "Contact save failed.");
+    } finally {
+      setIsSavingContact(false);
     }
   };
 
@@ -2348,6 +3087,10 @@ function App() {
 
   const handleImportPublicTheme = useCallback(async (themeDoc) => {
     if (!themeDoc?.theme) return;
+    // Optimistic UI update
+    const normalized = normalizeTheme(themeDoc.theme);
+    setThemePrefs(normalized);
+
     await handleApplyPreset(themeDoc.theme);
     setThemeGalleryStatus(`Imported "${themeDoc.name}".`);
   }, [handleApplyPreset]);
@@ -2359,8 +3102,17 @@ function App() {
       setThemePublishStatus("Theme name is required.");
       return;
     }
+    setIsPublishingTheme(true);
     setThemePublishStatus("Publishing theme...");
     const backgroundImageUrl = themePublishForm.backgroundImageUrl.trim();
+
+    // Sentinel: Validate URL
+    if (backgroundImageUrl && !isValidImageUrl(backgroundImageUrl)) {
+      setThemePublishStatus("Invalid background URL. Must be http/https or data URI.");
+      setIsPublishingTheme(false);
+      return;
+    }
+
     const normalized = normalizeTheme({
       ...themePrefs,
       backgroundImageUrl: backgroundImageUrl || themePrefs.backgroundImageUrl || null
@@ -2404,6 +3156,8 @@ function App() {
     } catch (error) {
       console.error("Theme publish failed", error);
       setThemePublishStatus(error?.message ?? "Theme publish failed.");
+    } finally {
+      setIsPublishingTheme(false);
     }
   };
 
@@ -2424,6 +3178,13 @@ function App() {
         aiSummariesEnabled: remoteSettings.aiSummariesEnabled,
         firebaseMessagingEnabled: remoteSettings.firebaseMessagingEnabled,
         mergedExperienceEnabled: remoteSettings.mergedExperienceEnabled,
+        privateSafeEnabled: remoteSettings.privateSafeEnabled,
+        smartRepliesEnabled: remoteSettings.smartRepliesEnabled,
+        truecallerEnabled: remoteSettings.truecallerEnabled,
+        ringerSongEnabled: remoteSettings.ringerSongEnabled,
+        mapEnabled: remoteSettings.mapEnabled,
+        contactsEnabled: remoteSettings.contactsEnabled,
+        themesEnabled: remoteSettings.themesEnabled,
         settingsUpdatedAt: serverTimestamp()
       }, { merge: true });
       setRemoteSettingsStatus("Settings updated.");
@@ -2432,6 +3193,27 @@ function App() {
       setRemoteSettingsStatus(error?.message ?? "Settings update failed.");
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  const requestPhoneSync = async () => {
+    if (!user) return;
+    setSyncRequestStatus("Requesting sync...");
+    try {
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          syncRequestedAt: serverTimestamp(),
+          syncRequestedBy: "web",
+          remoteWebAccessEnabled: true,
+          settingsUpdatedAt: serverTimestamp()
+        },
+        { merge: true }
+      );
+      setSyncRequestStatus("Sync requested. Open PulseLink on your phone and keep it online.");
+    } catch (error) {
+      console.error("Sync request failed", error);
+      setSyncRequestStatus(error?.message ?? "Unable to request sync.");
     }
   };
 
@@ -2452,6 +3234,12 @@ function App() {
       newSettings.remoteWebAccessEnabled = false;
       newSettings.crashDetectionEnabled = false;
       newSettings.mergedExperienceEnabled = false;
+      newSettings.privateSafeEnabled = false;
+      newSettings.smartRepliesEnabled = true;
+      newSettings.ringerSongEnabled = false;
+      newSettings.mapEnabled = true; // Safety core
+      newSettings.contactsEnabled = true;
+      newSettings.themesEnabled = false;
     } else if (isPower) {
       newSettings.beaconLauncherEnabled = true;
       newSettings.firebaseMessagingEnabled = true;
@@ -2462,6 +3250,13 @@ function App() {
       newSettings.crashDetectionEnabled = isPremiumUser;
       newSettings.mergedExperienceEnabled = true;
       newSettings.thirdPartyExtensionsEnabled = true;
+      newSettings.privateSafeEnabled = true;
+      newSettings.smartRepliesEnabled = true;
+      newSettings.truecallerEnabled = true;
+      newSettings.ringerSongEnabled = true;
+      newSettings.mapEnabled = true;
+      newSettings.contactsEnabled = true;
+      newSettings.themesEnabled = true;
     }
 
     setRemoteSettings(newSettings);
@@ -2588,40 +3383,14 @@ function App() {
   const handleLogout = useCallback(async () => {
     await signOut(auth);
     setSelectedThread(null);
-    setComposeAddress('');
-    setComposeBody('');
-    setSendStatus('');
     setActivePanel('home');
   }, []);
 
-  const handleSendMessage = async () => {
-    if (!user) return;
-    const address = composeAddress.trim();
-    const body = composeBody.trim();
-    const effectiveLineId = lineInboxMode === 'PER_LINE' ? (sendLineId || activeLineId || lines[0]?.id || null) : null;
-    if (!address || !body) {
-      setSendStatus("Add a phone number and message.");
-      return;
-    }
-    setIsSending(true);
-    setSendStatus('');
-    try {
-      await addDoc(collection(db, "users", user.uid, "outbox"), {
-        address,
-        body,
-        createdAt: serverTimestamp(),
-        source: "web",
-        lineId: effectiveLineId
-      });
-      setComposeBody('');
-      setSendStatus("Queued for sending from your device.");
-    } catch (error) {
-      console.error("Send failed", error);
-      setSendStatus("Send failed. Try again.");
-    } finally {
-      setIsSending(false);
-    }
-  };
+  // Bolt: Stable handler for new thread button
+  const handleNewThread = useCallback(() => {
+    setActivePanel('beacon');
+    setSelectedThread(null);
+  }, []);
 
   // Bolt: Stable handler to prevent ghost content when switching threads
   const handleThreadSelect = useCallback((thread) => {
@@ -2629,7 +3398,6 @@ function App() {
     setSelectedThread(thread);
     if (thread?.lineId) {
       setActiveLineId((prev) => prev ?? thread.lineId);
-      setSendLineId(thread.lineId);
     }
   }, []);
 
@@ -2649,35 +3417,29 @@ function App() {
     if (lineInboxMode === 'COMBINED') return combinedThreads;
     const chosenLine = activeLineId || lines[0]?.id || null;
     const current = chosenLine ? lineThreads[chosenLine] || [] : [];
-    return current.sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
+    return [...current].sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
   }, [lineInboxMode, activeLineId, lines, lineThreads, combinedThreads]);
 
-  // Bolt: Memoize thread list elements to prevent re-rendering on every compose keystroke.
-  // Note: handleThreadSelect is stable (useCallback) but included for exhaustive-deps correctness.
-  // Note: selectedThread?.id is used to avoid re-rendering the whole list when non-visual props of selectedThread change.
-  const threadListElements = useMemo(() => (
-    activeLineThreads.map(thread => (
-      <ThreadItem
-        key={`${thread.lineId || 'legacy'}_${thread.id}`}
-        thread={thread}
-        isActive={selectedThread?.id === thread.id}
-        onSelect={handleThreadSelect}
-        showPreviews={showPreviews}
-      />
-    ))
-  ), [activeLineThreads, selectedThread?.id, handleThreadSelect, showPreviews]);
 
   const isPremium = isPremiumUser;
   const tierLabel = isPremiumUser ? 'Premium' : (isProUser ? 'Pro' : 'Free');
+  const hasBeaconData = isPremiumUser || lines.length > 0 || legacyThreads.length > 0;
+
+  const navLogo = useMemo(() => {
+     if (remoteSettings.mergedExperienceEnabled) {
+         return beaconLogo;
+     }
+     return logo;
+  }, [remoteSettings.mergedExperienceEnabled]);
 
   if (!user) {
     return (
-      <div className="app-shell" style={themeVars}>
+      <div className={`app-shell ${themePrefs.useGlassEffect ? 'glass-mode' : ''} ${themePrefs.useHolographicGlow ? 'holographic-mode' : ''}`} style={themeVars}>
         <div className="noise-overlay" />
         {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
         <a href="#main-content" className="skip-link">Skip to main content</a>
         <div className="container login-container" id="main-content">
-          <div className="login-card">
+          <div className="login-card neon-border">
             <img src={logo} alt="PulseLink Pro" className="brand-logo" />
             <h1>PulseLink Web</h1>
             <p>Login to access your messages</p>
@@ -2733,7 +3495,12 @@ function App() {
                   aria-busy={isLoggingIn}
                   className="primary-btn"
                 >
-                  {isLoggingIn ? 'Signing in...' : 'Sign in'}
+                  {isLoggingIn ? (
+                    <>
+                      <Spinner />
+                      Signing in...
+                    </>
+                  ) : 'Sign in'}
                 </button>
                 <button
                   onClick={() => handleEmailAuth('signup')}
@@ -2758,7 +3525,12 @@ function App() {
                 aria-busy={isLoggingIn}
                 className="primary-btn"
               >
-                {isLoggingIn ? 'Signing in...' : 'Sign in with Google'}
+                {isLoggingIn ? (
+                  <>
+                    <Spinner />
+                    Signing in...
+                  </>
+                ) : 'Sign in with Google'}
               </button>
             </div>
           </div>
@@ -2768,189 +3540,41 @@ function App() {
   }
 
   return (
-    <div className="app-shell" style={themeVars}>
+    <div className={`app-shell ${themePrefs.useGlassEffect ? 'glass-mode' : ''} ${themePrefs.useHolographicGlow ? 'holographic-mode' : ''}`} style={themeVars}>
       <div className="noise-overlay" />
       {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
+      <CommandPalette
+        isOpen={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        setActivePanel={setActivePanel}
+        actions={{
+          logout: handleLogout,
+          newThread: handleNewThread
+        }}
+      />
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <div className="app-container">
-        <div className="sidebar">
-          <div className="sidebar-header">
-            <div className="sidebar-brand">
-              <img src={logo} alt="PulseLink Suite" className="brand-logo small" />
-              <div>
-                <div className="brand-title">PulseLink Suite</div>
-                <div className="brand-subtitle">{tierLabel} Web Access</div>        
-              </div>
-            </div>
-            <div className="sidebar-actions">
-              {activePanel === 'beacon' && (
-                <button
-                  onClick={() => {
-                    setActivePanel('beacon');
-                    setSelectedThread(null);
-                    setComposeAddress('');
-                    setComposeBody('');
-                    setSendStatus('');
-                  }}
-                  className="secondary-btn"
-                  aria-label="Start new conversation"
-                >
-                  New
-                </button>
-              )}
-              <button onClick={handleLogout} className="ghost-btn">Logout</button>
-            </div>
-          </div>
-          <div className="sidebar-nav">
-            <button
-              className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
-              onClick={() => setActivePanel('home')}
-              title="Home"
-              aria-label="Home"
-              aria-current={activePanel === 'home' ? 'page' : undefined}
-            >
-              <HomeIcon />
-              <span>Home</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
-              onClick={() => setActivePanel('pulselink')}
-              title="PulseLink"
-              aria-label="PulseLink"
-              aria-current={activePanel === 'pulselink' ? 'page' : undefined}
-            >
-              <img src={logo} alt="PulseLink" />
-              <span>PulseLink</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
-              onClick={() => setActivePanel('beacon')}
-              title="Beacon"
-              aria-label="Beacon"
-              aria-current={activePanel === 'beacon' ? 'page' : undefined}
-            >
-              <img src={beaconLogo} alt="Beacon" />
-              <span>Beacon</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
-              onClick={() => setActivePanel('ringersong')}
-              title="RingerSong"
-              aria-label="RingerSong"
-              aria-current={activePanel === 'ringersong' ? 'page' : undefined}
-            >
-              <img src={ringersongLogo} alt="RingerSong" />
-              <span>RingerSong</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
-              onClick={() => setActivePanel('map')}
-              title="Map"
-              aria-label="Map"
-              aria-current={activePanel === 'map' ? 'page' : undefined}
-            >
-              <MapIcon />
-              <span>Map</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
-              onClick={() => setActivePanel('contacts')}
-              title="Contacts"
-              aria-label="Contacts"
-              aria-current={activePanel === 'contacts' ? 'page' : undefined}
-            >
-              <ContactIcon />
-              <span>Contacts</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
-              onClick={() => setActivePanel('themes')}
-              title="Themes"
-              aria-label="Themes"
-              aria-current={activePanel === 'themes' ? 'page' : undefined}
-            >
-              <ThemeIcon />
-              <span>Themes</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
-              onClick={() => setActivePanel('extensions')}
-              title="Extensions"
-              aria-label="Extensions"
-              aria-current={activePanel === 'extensions' ? 'page' : undefined}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-              <span>Extensions</span>
-              <span className="badge-new">NEW</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
-              onClick={() => setActivePanel('settings')}
-              title="Settings"
-              aria-label="Settings"
-              aria-current={activePanel === 'settings' ? 'page' : undefined}
-            >
-              <SettingsIcon />
-              <span>Settings</span>
-            </button>
-          </div>
-          {activePanel === 'beacon' ? (
-            <div className="thread-list">
-              {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
-                <div className="line-tabs" aria-label="Device lines">
-                  <button
-                    className={`chip ${!activeLineId ? 'active' : ''}`}
-                    onClick={() => setActiveLineId(null)}
-                  >
-                    All
-                  </button>
-                  {lines.map((line) => (
-                    <button
-                      key={line.id}
-                      className={`chip ${activeLineId === line.id ? 'active' : ''}`}
-                      onClick={() => setActiveLineId(line.id)}
-                      title={line.phoneNumber || 'Line'}
-                    >
-                      {line.label || line.phoneNumber || line.id.slice(0, 6)}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {isLoadingThreads ? (
-                <div className="sidebar-placeholder">
-                  <Spinner />
-                  <div className="sidebar-tip muted">Loading conversations...</div>
-                </div>
-              ) : activeLineThreads.length === 0 ? (
-                <div className="sidebar-placeholder">
-                  <div className="sidebar-tip">
-                    <strong>No conversations found</strong>
-                  </div>
-                  <div className="sidebar-tip muted">
-                    To see your messages here:
-                    <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
-                      <li>Open PulseLink on your phone</li>
-                      <li>Go to Extensions Store</li>
-                      <li>Enable &quot;Remote Web Access&quot;</li>
-                    </ol>
-                    {!isPremium && (
-                      <div className="badge badge-premium" style={{ display: 'inline-block', marginTop: '8px', padding: '2px 8px', borderRadius: '4px', background: 'var(--accent)', color: '#fff', fontSize: '0.8em' }}>
-                        Premium Required
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                threadListElements
-              )}
-            </div>
-          ) : (
-            <div className="sidebar-placeholder">
-              <div className="sidebar-tip">Use the tiles on Home to jump into PulseLink or Beacon.</div>
-              <div className="sidebar-tip muted">Theme and settings sync to your device.</div>
-            </div>
-          )}
-        </div>
+        <Sidebar
+          activePanel={activePanel}
+          setActivePanel={setActivePanel}
+          tierLabel={tierLabel}
+          handleLogout={handleLogout}
+          handleNewThread={handleNewThread}
+          lines={lines}
+          activeLineId={activeLineId}
+          setActiveLineId={setActiveLineId}
+          lineInboxMode={lineInboxMode}
+          isLoadingThreads={isLoadingThreads}
+          isPremium={isPremium}
+          remoteSettings={remoteSettings}
+          navLogo={navLogo}
+          brandTitle={remoteSettings.mergedExperienceEnabled ? "PulseLink Unified" : "PulseLink Suite"}
+          threads={activeLineThreads}
+          selectedThreadId={selectedThread?.id}
+          onSelect={handleThreadSelect}
+          showPreviews={showPreviews}
+          openCommandPalette={() => setShowCommandPalette(true)}
+        />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
             <div className="home-panel">
@@ -2962,13 +3586,33 @@ function App() {
               {/* QA TEST: Visit web app home screen after login */}
               {/* EXPECTED: Blue info banner should be visible explaining web access */}
               {/* EXPECTED: Banner should display icon, bold heading, and feature description */}
-              <div className="web-app-hint">
-                <div className="hint-icon">ℹ️</div>
-                <div className="hint-content">
-                  <strong>Access PulseLink Web anytime:</strong> Visit pulselink.damiennichols.com (or app.damiennichols.com / pulselink-24899.web.app) from any browser to manage contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.
+              {showWebHint && (
+                <div className="web-app-hint">
+                  <button
+                    className="hint-dismiss"
+                    type="button"
+                    aria-label="Dismiss web access notice"
+                    onClick={() => {
+                      setShowWebHint(false);
+                      localStorage.setItem(webHintStorageKey, 'true');
+                    }}
+                  >
+                    x
+                  </button>
+                  <div className="hint-icon">??</div>
+                  <div className="hint-content">
+                    <strong>Access PulseLink Web anytime:</strong> Visit pulselink.damiennichols.com (or app.damiennichols.com / pulselink-24899.web.app) from any browser to manage contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="home-grid">
+                <button className="home-card holographic-card" onClick={() => setActivePanel('beacon')}>
+                  <div className="home-icon beacon">
+                    <img src={beaconLogo} alt="Beacon" />
+                  </div>
+                  <h3>Beacon Inbox</h3>
+                  <p>View SMS synced from your phone.</p>
+                </button>
                 <button className="home-card" onClick={() => setActivePanel('pulselink')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink" />
@@ -2982,13 +3626,6 @@ function App() {
                   </div>
                   <h3>Contacts</h3>
                   <p>Browse all device contacts synced from your phone.</p>
-                </button>
-                <button className="home-card" onClick={() => setActivePanel('beacon')}>
-                  <div className="home-icon beacon">
-                    <img src={beaconLogo} alt="Beacon" />
-                  </div>
-                  <h3>Beacon Inbox</h3>
-                  <p>View SMS synced from your phone.</p>
                 </button>
                 <button className="home-card" onClick={() => setActivePanel('ringersong')}>
                   <div className="home-icon ringersong">
@@ -3121,7 +3758,7 @@ function App() {
                       </>
                     ) : 'Save profile'}
                   </button>
-                  {profileStatus && <div className="settings-status" role="status" aria-live="polite">{profileStatus}</div>}
+                    {profileStatus && <div className={getToastClass(profileStatus)} role="status" aria-live="polite">{profileStatus}</div>}
                 </div>
                 <div className="settings-card">
                   <h4>Trusted contacts</h4>
@@ -3141,7 +3778,7 @@ function App() {
                       <div className="settings-note">No trusted contacts yet.</div>
                     )}
                   </div>
-                  {contactStatus && <div className="settings-status" role="status" aria-live="polite">{contactStatus}</div>}
+                  {contactStatus && <div className={getToastClass(contactStatus)} role="status" aria-live="polite">{contactStatus}</div>}
                 </div>
                 <div className="settings-card">
                   <h4>{editingContactId ? 'Edit trusted contact' : 'Add trusted contact'}</h4>
@@ -3229,14 +3866,24 @@ function App() {
                     Allow remote sound changes
                   </label>
                   <div className="contact-actions">
-                    <button className="primary-btn" onClick={handleSaveContact}>
-                      {editingContactId ? 'Update contact' : 'Add contact'}
+                    <button
+                      className="primary-btn"
+                      onClick={handleSaveContact}
+                      disabled={isSavingContact}
+                      aria-busy={isSavingContact}
+                    >
+                      {isSavingContact ? (
+                        <>
+                          <Spinner />
+                          {editingContactId ? 'Updating...' : 'Saving...'}
+                        </>
+                      ) : (editingContactId ? 'Update contact' : 'Add contact')}
                     </button>
-                    <button className="ghost-btn" onClick={resetContactForm}>
+                    <button className="ghost-btn" onClick={resetContactForm} disabled={isSavingContact}>
                       Clear
                     </button>
                   </div>
-                  {contactStatus && <div className="settings-status" role="status" aria-live="polite">{contactStatus}</div>}
+                  {contactStatus && <div className={getToastClass(contactStatus)} role="status" aria-live="polite">{contactStatus}</div>}
                 </div>
               </div>
             </div>
@@ -3252,16 +3899,38 @@ function App() {
                 <div className="contact-count">
                   {filteredDeviceContacts.length} contact{filteredDeviceContacts.length === 1 ? '' : 's'}
                 </div>
-                <input
-                  className="login-input contact-search"
-                  placeholder="Search by name, phone, or email"
-                  aria-label="Search contacts"
-                  value={contactSearch}
-                  onChange={(e) => setContactSearch(e.target.value)}
-                />
+                <div className="sidebar-actions" style={{ flex: 1 }}>
+                  <input
+                    className="login-input contact-search"
+                    placeholder="Search by name, phone, or email"
+                    aria-label="Search contacts"
+                    value={contactSearch}
+                    onChange={(e) => setContactSearch(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  {contactSearch && (
+                    <button
+                      className="secondary-btn"
+                      onClick={() => setContactSearch('')}
+                      aria-label="Clear search"
+                      title="Clear search"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="contact-list contact-list--full">
                 {contactListElements}
+                {filteredDeviceContacts.length > contactListLimit && (
+                  <button
+                    className="secondary-btn"
+                    style={{ marginTop: '16px', width: '100%' }}
+                    onClick={() => setContactListLimit(prev => prev + 50)}
+                  >
+                    Show more contacts
+                  </button>
+                )}
                 {filteredDeviceContacts.length === 0 && (
                   <div className="settings-note">
                     {contactSearch.trim()
@@ -3338,7 +4007,7 @@ function App() {
                       <p>Set VITE_GOOGLE_MAPS_API_KEY in web/.env.local to load the map view.</p>
                     </div>
                   )}
-                  {mapStatus && <div className="map-status" role="status" aria-live="polite">{mapStatus}</div>}
+                  {mapStatus && <div className={getToastClass(mapStatus)} role="status" aria-live="polite">{mapStatus}</div>}
                 </div>
                 <div className="map-list">
                   {filteredAlerts.map((alert) => (
@@ -3441,7 +4110,7 @@ function App() {
                         </div>
                     )}
                     
-                    {settingsStatus && <div className="settings-status" style={{marginTop: 12}} role="status" aria-live="polite">{settingsStatus}</div>}
+                    {settingsStatus && <div className={getToastClass(settingsStatus)} style={{marginTop: 12}} role="status" aria-live="polite">{settingsStatus}</div>}
                 </div>
               </div>
             </div>
@@ -3479,10 +4148,12 @@ function App() {
                       />
                     ))}
                     {filteredThemes.length === 0 && (
-                      <div className="theme-empty">No themes yet. Be the first to publish!</div>
+                      <div className="theme-empty">
+                        No themes found.
+                      </div>
                     )}
                   </div>
-                  {themeGalleryStatus && <div className="settings-status" role="status" aria-live="polite">{themeGalleryStatus}</div>}
+                  {themeGalleryStatus && <div className={getToastClass(themeGalleryStatus)} role="status" aria-live="polite">{themeGalleryStatus}</div>}
                 </div>
                 <div className="settings-card themes-card">
                   <h4>Publish your theme</h4>
@@ -3533,10 +4204,21 @@ function App() {
                   <p className="settings-note">
                     Suggested max: 1920x1080 and under 1.5MB. Image themes require approval.
                   </p>
-                  <button className="primary-btn" type="button" onClick={handlePublishTheme}>
-                    Publish theme
+                  <button
+                    className="primary-btn"
+                    type="button"
+                    onClick={handlePublishTheme}
+                    disabled={isPublishingTheme}
+                    aria-busy={isPublishingTheme}
+                  >
+                    {isPublishingTheme ? (
+                      <>
+                        <Spinner />
+                        Publishing...
+                      </>
+                    ) : 'Publish theme'}
                   </button>
-                  {themePublishStatus && <div className="settings-status" role="status" aria-live="polite">{themePublishStatus}</div>}
+                  {themePublishStatus && <div className={getToastClass(themePublishStatus)} role="status" aria-live="polite">{themePublishStatus}</div>}
                 </div>
                 <div className="settings-card themes-card">
                   <h4>Quick presets</h4>
@@ -3633,7 +4315,7 @@ function App() {
                   <button className="primary-btn" type="button" onClick={() => handleApplyPreset(themePrefs)}>
                     Save theme
                   </button>
-                  {themeStatus && <div className="settings-status" role="status" aria-live="polite">{themeStatus}</div>}
+                  {themeStatus && <div className={getToastClass(themeStatus)} role="status" aria-live="polite">{themeStatus}</div>}
                 </div>
               </div>
             </div>
@@ -3666,62 +4348,96 @@ function App() {
                 </div>
               </div>
 
-              <div className="home-grid">
-                {[
-                  { id: 'beaconLauncherEnabled', name: 'Beacon Inbox', desc: 'Separate launcher icon for quick access to your SMS inbox.', icon: beaconLogo, isImg: true },
-                  { id: 'firebaseMessagingEnabled', name: 'Firebase Relay', desc: 'Faster messaging between PulseLink users.', icon: <CloudSyncIcon /> },
-                  { id: 'emailFallbackEnabled', name: 'Email Backup', desc: 'Forward urgent alerts to email if SMS fails.', icon: <EmailIcon /> },
-                  { id: 'otpCleanupEnabled', name: 'Smart OTP Cleanup', desc: 'Automatically deletes one-time passwords after 24 hours.', icon: <DeleteSweepIcon /> },
-                  { id: 'aiSummariesEnabled', name: 'PulseLink AI', desc: 'Smart summaries and urgency detection for your chats.', icon: <SmartToyIcon />, premium: true },
-                  { id: 'remoteWebAccessEnabled', name: 'Remote Web Access', desc: 'Sync messages and contacts to this web portal.', icon: logo, isImg: true, premium: true },
-                  { id: 'crashDetectionEnabled', name: 'Crash Detection', desc: 'Detects car crashes and notifies emergency contacts.', icon: <CarCrashIcon />, premium: true },
-                  { id: 'thirdPartyExtensionsEnabled', name: '3rd Party Extensions', desc: 'Allow community-built plugins (Beta).', icon: <ExtensionIcon />, premium: true }
-                ].map(ext => {
-                  const isEnabled = remoteSettings[ext.id];
-                  const isLocked = ext.premium && !isPremiumUser;
+              {[
+                {
+                  title: "Core",
+                  items: [
+                    { id: 'beaconLauncherEnabled', name: 'Beacon Inbox', desc: 'Separate launcher icon for quick access to your SMS inbox.', icon: beaconLogo, isImg: true },
+                    { id: 'firebaseMessagingEnabled', name: 'Firebase Relay', desc: 'Faster messaging between PulseLink users.', icon: <CloudSyncIcon /> }
+                  ]
+                },
+                {
+                  title: "PulseLink Apps",
+                  items: [
+                    { id: 'ringerSongEnabled', name: 'RingerSong', desc: 'Progressive ringtone streaming & playlist manager.', icon: ringersongLogo, isImg: true },
+                    { id: 'mapEnabled', name: 'Emergency Map', desc: 'Track shared locations from PulseLink alerts.', icon: <MapIcon /> },
+                    { id: 'contactsEnabled', name: 'Contacts Manager', desc: 'Browse and manage synced device contacts.', icon: <ContactIcon /> },
+                    { id: 'themesEnabled', name: 'Theme Gallery', desc: 'Browse, import, and publish custom themes.', icon: <ThemeIcon /> }
+                  ]
+                },
+                {
+                  title: "Safety & Security",
+                  items: [
+                    { id: 'emailFallbackEnabled', name: 'Email Backup', desc: 'Forward urgent alerts to email if SMS fails.', icon: <EmailIcon /> },
+                    { id: 'crashDetectionEnabled', name: 'Crash Detection', desc: 'Detects car crashes and notifies emergency contacts.', icon: <CarCrashIcon />, premium: true },
+                    { id: 'privateSafeEnabled', name: 'Private Safe', desc: 'Lock and hide sensitive conversations.', icon: <LockIcon /> }
+                  ]
+                },
+                {
+                  title: "Smart Features",
+                  items: [
+                    { id: 'smartRepliesEnabled', name: 'Smart Replies', desc: 'One-tap suggestion chips for incoming messages.', icon: <MessageSquareIcon /> },
+                    { id: 'otpCleanupEnabled', name: 'Smart OTP Cleanup', desc: 'Automatically deletes one-time passwords after 24 hours.', icon: <DeleteSweepIcon /> },
+                    { id: 'aiSummariesEnabled', name: 'PulseLink AI', desc: 'Smart summaries and urgency detection for your chats.', icon: <SmartToyIcon />, premium: true }
+                  ]
+                },
+                {
+                  title: "Integrations",
+                  items: [
+                    { id: 'remoteWebAccessEnabled', name: 'Remote Web Access', desc: 'Sync messages and contacts to this web portal.', icon: logo, isImg: true, premium: true },
+                    { id: 'mergedExperienceEnabled', name: 'Unified Home', desc: 'Merge PulseLink and Beacon navigation into a single simplified experience.', icon: <HomeIcon />, premium: true },
+                    { id: 'thirdPartyExtensionsEnabled', name: '3rd Party Extensions', desc: 'Allow community-built plugins (Beta).', icon: <ExtensionIcon />, premium: true },
+                    { id: 'truecallerEnabled', name: 'Truecaller Caller ID', desc: 'Identify unknown callers and block spam using Truecaller directory.', icon: <SearchIcon /> }
+                  ]
+                }
+              ].map((category) => (
+                <div key={category.title} className="extension-category" style={{marginBottom: 32}}>
+                  <h4 style={{marginBottom: 16, color: 'var(--ink)'}}>{category.title}</h4>
+                  <div className="home-grid">
+                    {category.items.map(ext => {
+                      const isEnabled = remoteSettings[ext.id];
+                      const isLocked = ext.premium && !isPremiumUser;
 
-                  return (
-                    <div className="home-card" key={ext.id} style={{ opacity: isLocked ? 0.6 : 1, position: 'relative' }}>
-                      <div className="home-icon" style={{
-                         background: ext.isImg ? 'transparent' : 'rgba(255, 255, 255, 0.05)',
-                         display: 'grid',
-                         placeItems: 'center'
-                      }}>
-                        {ext.isImg ? <img src={ext.icon} alt={ext.name} /> : ext.icon}
-                      </div>
-                      <h3 style={{marginTop: 12, marginBottom: 4}}>{ext.name}</h3>
-                      <p style={{marginBottom: 16, minHeight: 40}}>{ext.desc}</p>
+                      return (
+                        <div className="home-card" key={ext.id} style={{ opacity: isLocked ? 0.6 : 1, position: 'relative' }}>
+                          <div className="home-icon" style={{
+                             background: ext.isImg ? 'transparent' : 'rgba(255, 255, 255, 0.05)',
+                             display: 'grid',
+                             placeItems: 'center'
+                          }}>
+                            {ext.isImg ? <img src={ext.icon} alt={ext.name} /> : ext.icon}
+                          </div>
+                          <h3 style={{marginTop: 12, marginBottom: 4}}>{ext.name}</h3>
+                          <p style={{marginBottom: 16, minHeight: 40}}>{ext.desc}</p>
 
-                      {isLocked ? (
-                        <div className="badge badge-premium" style={{background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)'}}>
-                          Premium Required
+                          {isLocked ? (
+                            <div className="badge badge-premium" style={{background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)'}}>
+                              Premium Required
+                            </div>
+                          ) : (
+                            <button
+                              className={isEnabled ? "secondary-btn" : "primary-btn"}
+                              style={{width: '100%'}}
+                              aria-label={`${isEnabled ? "Remove" : "Install"} ${ext.name}`}
+                              title={`${isEnabled ? "Remove" : "Install"} ${ext.name}`}
+                              onClick={() => {
+                                setRemoteSettings(prev => ({ ...prev, [ext.id]: !prev[ext.id] }));
+                                const next = { ...remoteSettings, [ext.id]: !isEnabled };
+                                setDoc(doc(db, "users", user.uid), {
+                                  ...next,
+                                  settingsUpdatedAt: serverTimestamp()
+                                }, { merge: true });
+                              }}
+                            >
+                              {isEnabled ? "Remove" : "Install"}
+                            </button>
+                          )}
                         </div>
-                      ) : (
-                        <button
-                          className={isEnabled ? "secondary-btn" : "primary-btn"}
-                          style={{width: '100%'}}
-                          onClick={() => {
-                            setRemoteSettings(prev => ({ ...prev, [ext.id]: !prev[ext.id] }));
-                            // We trigger a save after a short delay or user leaves, but here we can just auto-save for UX
-                            // But handleRemoteSettingsSave uses current state, so we need to wait for state update or pass new state
-                            // Better to just update state and let user click specific save or use effect.
-                            // Actually, let's use a specialized save or the existing save button in Settings.
-                            // But users expect "Install/Remove" to be immediate.
-                            // We can duplicate the save logic here.
-                             const next = { ...remoteSettings, [ext.id]: !isEnabled };
-                             setDoc(doc(db, "users", user.uid), {
-                               ...next,
-                               settingsUpdatedAt: serverTimestamp()
-                             }, { merge: true });
-                          }}
-                        >
-                          {isEnabled ? "Remove" : "Install"}
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
 
               <div className="settings-card">
                 <h4>Developer sandbox</h4>
@@ -3758,7 +4474,7 @@ function App() {
                   </label>
                   <button type="submit" className="primary-btn">Save extension</button>
                 </form>
-                {extensionStatus && <div className="settings-status" role="status">{extensionStatus}</div>}
+                {extensionStatus && <div className={getToastClass(extensionStatus)} role="status">{extensionStatus}</div>}
               </div>
               <div className="settings-card">
                 <h4>Submit to gallery</h4>
@@ -3777,132 +4493,204 @@ function App() {
                 <h3>Settings</h3>
                 <p>Manage account details and shared preferences.</p>
               </div>
-              <div className="settings-grid">
-                <div className="settings-card">
-                  <h4>Account</h4>
-                  <div className="settings-row">
-                    <span className="settings-label">Signed in as</span>
-                    <span className="settings-value">{user.email || 'Unknown'}</span>
-                  </div>
-                  <div className="settings-row">
-                    <span className="settings-label">User ID</span>
-                    <span className="settings-value mono">
-                      {user.uid}
-                      <CopyButton text={user.uid} label="Copy User ID" />
-                    </span>
-                  </div>
-                  <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
-                    Send password reset email
-                  </button>
-                  {settingsStatus && <div className="settings-status" role="status" aria-live="polite">{settingsStatus}</div>}
-                </div>
-                <div className="settings-card">
-                  <h4>Web preferences</h4>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={showPreviews}
-                      onChange={(e) => setShowPreviews(e.target.checked)}
-                    />
-                    Show message previews
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={autoScroll}
-                      onChange={(e) => setAutoScroll(e.target.checked)}
-                    />
-                    Auto-scroll to latest message
-                  </label>
-                  <p className="settings-note">
-                    Preferences apply to this browser only.
-                  </p>
-                </div>
-                <div className="settings-card">
-                  <h4>PulseLink settings</h4>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.remoteWebAccessEnabled}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, remoteWebAccessEnabled: e.target.checked }))}
-                    />
-                    Enable remote web access
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.autoUpdateContactInfo}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, autoUpdateContactInfo: e.target.checked }))}
-                    />
-                    Auto-update contact info
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.thirdPartyExtensionsEnabled}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, thirdPartyExtensionsEnabled: e.target.checked }))}
-                    />
-                    Enable 3rd-party extensions (beta)
-                  </label>
-                  <label className="login-field">
-                    Time format
-                    <select
-                      className="login-input"
-                      value={remoteSettings.timeFormat}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, timeFormat: e.target.value }))}
-                    >
-                      <option value="AUTO">Auto</option>
-                      <option value="TWELVE_HOUR">12-hour</option>
-                      <option value="TWENTY_FOUR_HOUR">24-hour</option>
-                    </select>
-                  </label>
+
+              <div className="settings-search-container">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{opacity: 0.5}}>
+                  <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input
+                  className="settings-search-input"
+                  placeholder="Search settings..."
+                  aria-label="Search settings"
+                  value={settingsSearch}
+                  onChange={(e) => setSettingsSearch(e.target.value)}
+                />
+                {settingsSearch && (
                   <button
-                    className="secondary-btn"
-                    type="button"
-                    onClick={handleRemoteSettingsSave}
-                    disabled={isSavingSettings}
-                    aria-busy={isSavingSettings}
+                    className="ghost-btn icon-only"
+                    onClick={() => setSettingsSearch('')}
+                    aria-label="Clear search"
+                    title="Clear search"
+                    style={{ width: '28px', height: '28px' }}
                   >
-                    {isSavingSettings ? (
-                      <>
-                        <Spinner />
-                        Saving...
-                      </>
-                    ) : 'Save PulseLink settings'}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
                   </button>
-                  {remoteSettingsStatus && <div className="settings-status" role="status" aria-live="polite">{remoteSettingsStatus}</div>}
-                </div>
-                <div className="settings-card">
-                  <h4>Account data</h4>
-                  <p className="settings-note">
-                    Delete account removes your login and all cloud data. Clear data keeps your login but deletes synced content.
-                  </p>
-                  <div className="contact-actions">
-                    <button
-                      className="secondary-btn"
-                      type="button"
-                      onClick={handleDeleteAccountData}
-                      disabled={!!deleteAction}
-                    >
-                      {deleteAction === 'data' ? "Clearing..." : "Clear cloud data"}
-                    </button>
-                    <button
-                      className="primary-btn"
-                      type="button"
-                      onClick={handleDeleteAccount}
-                      disabled={!!deleteAction}
-                    >
-                      {deleteAction === 'account' ? "Deleting..." : "Delete account"}
-                    </button>
-                  </div>
-                  {deleteStatus && <div className="settings-status" role="status" aria-live="polite">{deleteStatus}</div>}
-                </div>
+                )}
+              </div>
+
+              <div className="settings-grid">
+                {(() => {
+                  const term = settingsSearch.toLowerCase().trim();
+                  const show = (keywords) => {
+                    if (!term) return true;
+                    return keywords.some(k => k.includes(term));
+                  };
+
+                  return (
+                    <>
+                      {show(['account', 'email', 'user id', 'password', 'reset', 'sign out', 'logout', 'profile']) && (
+                        <div className="settings-card">
+                          <h4>Account</h4>
+                          <div className="settings-row">
+                            <span className="settings-label">Signed in as</span>
+                            <span className="settings-value">{user.email || 'Unknown'}</span>
+                          </div>
+                          <div className="settings-row">
+                            <span className="settings-label">User ID</span>
+                            <span className="settings-value mono">
+                              {user.uid}
+                              <CopyButton text={user.uid} label="Copy User ID" />
+                            </span>
+                          </div>
+                          <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
+                            Send password reset email
+                          </button>
+                          {settingsStatus && <div className={getToastClass(settingsStatus)} role="status" aria-live="polite">{settingsStatus}</div>}
+                        </div>
+                      )}
+
+                      {show(['web', 'previews', 'scroll', 'auto-scroll', 'message previews', 'browser']) && (
+                        <div className="settings-card">
+                          <h4>Web preferences</h4>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={showPreviews}
+                              onChange={(e) => setShowPreviews(e.target.checked)}
+                            />
+                            Show message previews
+                          </label>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={autoScroll}
+                              onChange={(e) => setAutoScroll(e.target.checked)}
+                            />
+                            Auto-scroll to latest message
+                          </label>
+                          <p className="settings-note">
+                            Preferences apply to this browser only.
+                          </p>
+                        </div>
+                      )}
+
+                      {show(['pulselink', 'remote', 'web access', 'contact info', 'extensions', '3rd party', 'time format', 'sync']) && (
+                        <div className="settings-card">
+                          <h4>PulseLink settings</h4>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={remoteSettings.remoteWebAccessEnabled}
+                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, remoteWebAccessEnabled: e.target.checked }))}
+                            />
+                            Enable remote web access
+                          </label>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={remoteSettings.autoUpdateContactInfo}
+                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, autoUpdateContactInfo: e.target.checked }))}
+                            />
+                            Auto-update contact info
+                          </label>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={remoteSettings.thirdPartyExtensionsEnabled}
+                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, thirdPartyExtensionsEnabled: e.target.checked }))}
+                            />
+                            Enable 3rd-party extensions (beta)
+                          </label>
+                          <label className="login-field">
+                            Time format
+                            <select
+                              className="login-input"
+                              value={remoteSettings.timeFormat}
+                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, timeFormat: e.target.value }))}
+                            >
+                              <option value="AUTO">Auto</option>
+                              <option value="TWELVE_HOUR">12-hour</option>
+                              <option value="TWENTY_FOUR_HOUR">24-hour</option>
+                            </select>
+                          </label>
+                          <button
+                            className="secondary-btn"
+                            type="button"
+                            onClick={handleRemoteSettingsSave}
+                            disabled={isSavingSettings}
+                            aria-busy={isSavingSettings}
+                          >
+                            {isSavingSettings ? (
+                              <>
+                                <Spinner />
+                                Saving...
+                              </>
+                          ) : 'Save PulseLink settings'}
+                          </button>
+                          <div className="settings-row">
+                            <span className="settings-label">Web sync</span>
+                            <span className="settings-value">
+                              {syncDiagnostics
+                                ? `${dateTimeFormatter.format(new Date(toMillis(syncDiagnostics.timestamp)))} • ${syncDiagnostics.status}`
+                                : 'No sync data yet'}
+                            </span>
+                          </div>
+                          {syncDiagnostics && (
+                            <p className="settings-note">
+                              Threads: {syncDiagnostics.threadCount ?? 0} · Messages: {syncDiagnostics.messageCount ?? 0} · READ_SMS: {syncDiagnostics.hasReadSms ? 'yes' : 'no'} · App: {syncDiagnostics.appVersion ?? 'unknown'}
+                            </p>
+                          )}
+                          <button
+                            className="secondary-btn"
+                            type="button"
+                            onClick={requestPhoneSync}
+                          >
+                            Request phone sync
+                          </button>
+                          {remoteSettingsStatus && <div className={getToastClass(remoteSettingsStatus)} role="status" aria-live="polite">{remoteSettingsStatus}</div>}
+                          {syncRequestStatus && <div className={getToastClass(syncRequestStatus)} role="status" aria-live="polite">{syncRequestStatus}</div>}
+                        </div>
+                      )}
+
+                      {show(['data', 'delete', 'clear', 'cloud', 'account data', 'remove', 'privacy']) && (
+                        <div className="settings-card">
+                          <h4>Account data</h4>
+                          <p className="settings-note">
+                            Delete account removes your login and all cloud data. Clear data keeps your login but deletes synced content.
+                          </p>
+                          <div className="contact-actions">
+                            <button
+                              className="secondary-btn"
+                              type="button"
+                              onClick={handleDeleteAccountData}
+                              disabled={!!deleteAction}
+                            >
+                              {deleteAction === 'data' ? "Clearing..." : "Clear cloud data"}
+                            </button>
+                            <button
+                              className="primary-btn"
+                              type="button"
+                              onClick={handleDeleteAccount}
+                              disabled={!!deleteAction}
+                            >
+                              {deleteAction === 'account' ? "Deleting..." : "Delete account"}
+                            </button>
+                          </div>
+                          {deleteStatus && <div className={getToastClass(deleteStatus)} role="status" aria-live="polite">{deleteStatus}</div>}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           )}
 
           {activePanel === 'beacon' && (
-            isPremium ? (
+            hasBeaconData ? (
               <>
       {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
         <div className="line-tabs line-tabs--main">
@@ -3950,64 +4738,15 @@ function App() {
                     <div>Select a thread or start a new message</div>
                   </div>
                 )}
-                <div className="composer">
-                  <div className="composer-row">
-                    <label className="composer-label" htmlFor="compose-address">To</label>
-                    <input
-                      id="compose-address"
-                      className="composer-input"
-                      type="tel"
-                      placeholder="Phone number"
-                      value={composeAddress}
-                      onChange={(e) => setComposeAddress(e.target.value)}
-                    />
-                  </div>
-                  {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
-                    <div className="composer-row">
-                      <label className="composer-label" htmlFor="compose-line">Send from</label>
-                      <select
-                        id="compose-line"
-                        className="composer-input"
-                        value={sendLineId || ''}
-                        onChange={(e) => setSendLineId(e.target.value)}
-                      >
-                        <option value="">Primary device</option>
-                        {lines.map(line => (
-                          <option key={line.id} value={line.id}>
-                            {(line.label || line.phoneNumber || line.id.slice(0, 6))}
-                            {line.primaryDeviceId ? ' • primary' : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  <div className="composer-row composer-actions">
-                    <textarea
-                      className="composer-textarea"
-                      placeholder="Type a message... (Ctrl+Enter to send)"
-                      aria-label="Message body"
-                      value={composeBody}
-                      onChange={(e) => setComposeBody(e.target.value)}
-                      onKeyDown={(e) => {
-                        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                          e.preventDefault();
-                          handleSendMessage();
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={handleSendMessage}
-                      disabled={isSending || isLoggingIn}
-                      className="primary-btn"
-                    >
-                      {isSending ? "Sending..." : "Send"}
-                    </button>
-                  </div>
-                  {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
-                  <div className="compose-hint">
-                    Messages are sent from your phone when it&apos;s online and signed in.
-                  </div>
-                </div>
+                <MessageComposer
+                  user={user}
+                  db={db}
+                  selectedThread={selectedThread}
+                  lineInboxMode={lineInboxMode}
+                  activeLineId={activeLineId}
+                  lines={lines}
+                  isLoggingIn={isLoggingIn}
+                />
               </>
             ) : (
               <div className="empty-state">
@@ -4037,3 +4776,4 @@ function App() {
 }
 
 export default App;
+

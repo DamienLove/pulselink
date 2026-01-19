@@ -12,12 +12,28 @@ plugins {
     id("com.github.triplet.play") version "3.10.1"
 }
 
+configurations.configureEach {
+    exclude(group = "com.google.firebase", module = "firebase-sessions")
+}
+
 val keystorePropsFile = rootProject.file("ringersong-keystore/keystore.properties")
 
 val keystoreProps = Properties().apply {
     if (keystorePropsFile.exists()) {
         keystorePropsFile.inputStream().use(this::load)
     }
+}
+
+tasks.register("syncGoogleServices", Copy::class) {
+    val sourceFile = rootProject.file("PRO-CERTS/google-services-premium.json")
+    onlyIf { sourceFile.exists() }
+    from(sourceFile)
+    into(projectDir)
+    rename { "google-services.json" }
+}
+
+tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn("syncGoogleServices")
 }
 
 android {
@@ -28,8 +44,8 @@ android {
         applicationId = "com.RingerSong.free"
         minSdk = 35
         targetSdk = 35
-        versionCode = 26
-        versionName = "26"
+        versionCode = 28
+        versionName = "28"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -61,6 +77,11 @@ android {
             "String",
             "SPOTIFY_CLIENT_ID",
             "\"${localProps.getProperty("spotify.client.id", "YOUR_CLIENT_ID_PLACEHOLDER")}\""
+        )
+        buildConfigField(
+            "String",
+            "SPOTIFY_CLIENT_SECRET",
+            "\"${localProps.getProperty("spotify.client.secret", "YOUR_CLIENT_SECRET_PLACEHOLDER")}\""
         )
         buildConfigField("String", "REDIRECT_SCHEME", "\"com.RingerSong.free\"")
         buildConfigField("String", "REDIRECT_HOST", "\"callback\"")

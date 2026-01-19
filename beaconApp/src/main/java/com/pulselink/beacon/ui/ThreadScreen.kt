@@ -3,9 +3,15 @@ package com.pulselink.beacon.ui
 import android.text.format.DateUtils
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -33,6 +40,12 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DatePicker
@@ -53,6 +66,8 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -64,10 +79,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.ContentScale
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -77,7 +96,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.pulselink.beacon.data.SmsMessageItem
+import com.pulselink.beacon.data.MessageStatus
 import com.pulselink.beacon.data.ThemePalette
+import com.pulselink.beacon.data.scheduled.MessageReaction
 import com.pulselink.beacon.ui.ads.NativeAdCard
 import com.pulselink.beacon.util.LinkPreviewData
 import com.pulselink.beacon.util.LinkPreviewHelper
@@ -86,47 +107,111 @@ import java.time.LocalTime
 import java.time.ZoneId
 import android.content.Intent
 import android.net.Uri
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThreadScreen(
     address: String,
     uiItems: List<ThreadUiItem>,
+    reactions: Map<Long, List<MessageReaction>> = emptyMap(),
+    starredMessageIds: Set<Long> = emptySet(),
     theme: ThemePalette,
     pendingMessage: SmsViewModel.PendingMessage? = null,
+    initialDraft: String? = null,
+    isDraftsLoaded: Boolean = false,
+    quickReplies: List<String> = emptyList(),
+    onSaveDraft: (String) -> Unit = {},
     onBack: () -> Unit,
     onSend: (String) -> Unit,
+    onSendAttachment: (Uri) -> Unit = {},
     onCancelPending: () -> Unit = {},
     onSendNow: () -> Unit = {},
     onScheduleMessage: (String, Long) -> Unit = { _, _ -> },
     onDeleteThread: () -> Unit,
     onEditNotificationSound: () -> Unit,
     onCustomize: () -> Unit,
-    onCall: () -> Unit = {}
+    onCall: () -> Unit = {},
+    onReact: (Long, String) -> Unit = { _, _ -> },
+    onToggleStar: (Long) -> Unit = {},
+    onBlock: () -> Unit = {}
 ) {
     var draft by remember { mutableStateOf("") }
+    var draftLoaded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isDraftsLoaded, initialDraft) {
+        if (!draftLoaded && isDraftsLoaded) {
+            draft = initialDraft.orEmpty()
+            draftLoaded = true
+        }
+    }
+
+    LaunchedEffect(draft) {
+        if (draftLoaded) {
+            delay(500)
+            onSaveDraft(draft)
+        }
+    }
+
+    var showSearch by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var selectedDateMillis by remember { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
+
+    val attachmentLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) onSendAttachment(uri)
+    }
+
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+    // Constants
+    val SCROLL_THRESHOLD_ITEMS = 2
+    val AUTO_SCROLL_THRESHOLD = 3
+
+    // UX: Show "Scroll to Bottom" if user is scrolled up
+    val showScrollToBottom by androidx.compose.runtime.remember {
+        androidx.compose.runtime.derivedStateOf {
+            listState.firstVisibleItemIndex > SCROLL_THRESHOLD_ITEMS
+        }
+    }
+
+    // Filter Items
+    val filteredItems = remember(uiItems, searchQuery) {
+        if (searchQuery.isBlank()) uiItems else uiItems.filter {
+            when(it) {
+                is ThreadUiItem.Message -> it.message.body.contains(searchQuery, true)
+                is ThreadUiItem.DateHeader -> true
+            }
+        }
+    }
 
     // Auto-scroll logic for new messages
-    // Since reverseLayout=true, item 0 is at bottom.
-    // If the list grows (new message), it should stay at bottom if already there.
-    // However, if we just opened, we want to be at bottom.
-    LaunchedEffect(uiItems.firstOrNull()) {
-        if (uiItems.isNotEmpty()) {
-             if (listState.firstVisibleItemIndex < 3) {
+    // Trigger only when the size changes or the latest item ID changes
+    var showMenu by remember { mutableStateOf(false) }
+
+    val latestItemId = filteredItems.firstOrNull()?.let {
+        when(it) {
+            is ThreadUiItem.Message -> it.message.id
+            is ThreadUiItem.DateHeader -> it.date.hashCode().toLong()
+        }
+    }
+    LaunchedEffect(filteredItems.size, latestItemId) {
+        if (filteredItems.isNotEmpty()) {
+             // If near bottom, auto-scroll to show new message
+             if (listState.firstVisibleItemIndex < AUTO_SCROLL_THRESHOLD) {
                 listState.animateScrollToItem(0)
              }
         }
     }
 
     val iconTint = theme.accentColor
-    val quickReplies = remember {
-        listOf("Ok", "Yes", "No", "Thanks", "On my way!", "Can't talk now", "Call you later?")
-    }
+    // Using passed quickReplies list
 
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState()
@@ -194,17 +279,46 @@ fun ThreadScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        if (showSearch) {
+                            showSearch = false
+                            searchQuery = ""
+                        } else {
+                            showSearch = true
+                        }
+                    }) {
+                        Icon(if (showSearch) Icons.Default.Close else Icons.Default.Search, contentDescription = "Search", tint = iconTint)
+                    }
                     IconButton(onClick = onCall) {
                         Icon(Icons.Default.Call, contentDescription = "Call", tint = iconTint)
                     }
-                    IconButton(onClick = onCustomize) {
-                        Icon(Icons.Default.Palette, contentDescription = "Customize theme", tint = iconTint)
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(androidx.compose.material.icons.Icons.Default.MoreVert, contentDescription = "Options", tint = iconTint)
                     }
-                    IconButton(onClick = onEditNotificationSound) {
-                        Icon(Icons.Default.NotificationsActive, contentDescription = "Notification sound", tint = iconTint)
-                    }
-                    IconButton(onClick = onDeleteThread) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete thread", tint = iconTint)
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Customize theme") },
+                            onClick = { onCustomize(); showMenu = false },
+                            leadingIcon = { Icon(Icons.Default.Palette, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Notification sound") },
+                            onClick = { onEditNotificationSound(); showMenu = false },
+                            leadingIcon = { Icon(Icons.Default.NotificationsActive, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Block number") },
+                            onClick = { onBlock(); showMenu = false },
+                            leadingIcon = { Icon(Icons.Default.Block, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Delete thread") },
+                            onClick = { onDeleteThread(); showMenu = false },
+                            leadingIcon = { Icon(Icons.Default.Delete, null) }
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -222,8 +336,31 @@ fun ThreadScreen(
                 .padding(padding)
                 .background(theme.threadBackgroundColor)
         ) {
+            AnimatedVisibility(visible = showSearch) {
+                Surface(
+                    color = theme.threadBackgroundColor,
+                    modifier = Modifier.fillMaxWidth().padding(8.dp)
+                ) {
+                    TextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Search in conversation") },
+                        leadingIcon = { Icon(Icons.Default.Search, null) },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = theme.frameColor.copy(alpha = 0.05f),
+                            unfocusedContainerColor = theme.frameColor.copy(alpha = 0.05f),
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            }
+
             LazyColumn(
                 state = listState,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 16.dp),
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
@@ -234,7 +371,7 @@ fun ThreadScreen(
                 item { Spacer(modifier = Modifier.height(8.dp)) }
 
                 items(
-                    items = uiItems,
+                    items = filteredItems,
                     key = { item ->
                         when(item) {
                             is ThreadUiItem.Message -> item.message.id
@@ -249,7 +386,17 @@ fun ThreadScreen(
                     }
                 ) { item ->
                     when (item) {
-                        is ThreadUiItem.Message -> MessageBubble(message = item.message, theme = theme)
+                        is ThreadUiItem.Message -> {
+                            val msgReactions = reactions[item.message.id] ?: emptyList()
+                            MessageBubble(
+                                message = item.message,
+                                reactions = msgReactions,
+                                isStarred = starredMessageIds.contains(item.message.id),
+                                theme = theme,
+                                onReact = onReact,
+                                onToggleStar = { onToggleStar(item.message.id) }
+                            )
+                        }
                         is ThreadUiItem.DateHeader -> DateHeader(date = item.date, theme = theme)
                     }
                 }
@@ -265,6 +412,35 @@ fun ThreadScreen(
                 }
 
                 item { Spacer(modifier = Modifier.height(20.dp)) }
+            }
+
+            // Scroll to Bottom FAB
+            AnimatedVisibility(
+                visible = showScrollToBottom,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut(),
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(bottom = 8.dp)
+            ) {
+                Surface(
+                    onClick = {
+                        scope.launch {
+                            listState.animateScrollToItem(0)
+                        }
+                    },
+                    shape = CircleShape,
+                    color = theme.accentColor.copy(alpha = 0.9f),
+                    shadowElevation = 4.dp,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Scroll to newest",
+                        tint = Color.White,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
             }
 
             // Input Area
@@ -332,6 +508,9 @@ fun ThreadScreen(
                             .fillMaxWidth()
                             .padding(start = 8.dp, end = 8.dp, bottom = 8.dp, top = 4.dp)
                     ) {
+                        IconButton(onClick = { attachmentLauncher.launch("image/*") }) {
+                            Icon(Icons.Default.AttachFile, contentDescription = "Attach", tint = iconTint)
+                        }
                         IconButton(onClick = {
                             if (draft.isNotBlank()) showDatePicker = true
                         }) {
@@ -433,12 +612,22 @@ fun TimePickerDialog(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MessageBubble(message: SmsMessageItem, reactions: List<Reaction> = emptyList(), theme: ThemePalette) {
+private fun LazyItemScope.MessageBubble(
+    message: SmsMessageItem,
+    reactions: List<MessageReaction> = emptyList(),
+    isStarred: Boolean,
+    theme: ThemePalette,
+    onReact: (Long, String) -> Unit,
+    onToggleStar: () -> Unit
+) {
     val isOutgoing = message.outgoing
     val background = if (isOutgoing) theme.outgoingColor else theme.incomingColor
     val alignment = if (isOutgoing) Alignment.CenterEnd else Alignment.CenterStart
     val frameColor = theme.frameColor
+    val status = message.status
+    val bubbleAlpha = if (status == MessageStatus.SENDING) 0.6f else 1f
 
     // Bubble Styling
     val cornerRadius = theme.bubbleRadius.dp
@@ -462,11 +651,14 @@ private fun MessageBubble(message: SmsMessageItem, reactions: List<Reaction> = e
     val otp = remember(message.body) { extractOtp(message.body) }
     val extractedUrl = remember(message.body) { LinkPreviewHelper.extractUrl(message.body) }
     val context = LocalContext.current
+    var showMenu by remember { mutableStateOf(false) }
 
+    @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = if (reactions.isNotEmpty()) 8.dp else 1.dp),
+            .padding(vertical = if (reactions.isNotEmpty()) 8.dp else 1.dp)
+            .animateItemPlacement(),
         contentAlignment = alignment
     ) {
         Surface(
@@ -476,9 +668,55 @@ private fun MessageBubble(message: SmsMessageItem, reactions: List<Reaction> = e
             modifier = Modifier
                 .width(if (message.body.length > 40) 300.dp else Box.Unspecified) // Limit width for long text
                 .padding(horizontal = 0.dp)
+                .alpha(bubbleAlpha)
                 .clip(bubbleShape)
-                .clickable { /* Toggle timestamp expansion? */ }
+                .combinedClickable(
+                    onClick = { /* Toggle timestamp expansion? */ },
+                    onLongClick = { showMenu = true }
+                )
         ) {
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false }
+            ) {
+                // Quick Reactions Row
+                DropdownMenuItem(
+                    text = {
+                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                             listOf("👍", "❤️", "😂", "😮", "😢", "👎").forEach { emoji ->
+                                 Text(
+                                     text = emoji,
+                                     fontSize = 24.sp,
+                                     modifier = Modifier.clickable {
+                                         onReact(message.id, emoji)
+                                         showMenu = false
+                                     }
+                                 )
+                             }
+                         }
+                    },
+                    onClick = { }
+                )
+                androidx.compose.material3.HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text(if (isStarred) "Unstar" else "Star") },
+                    onClick = {
+                        onToggleStar()
+                        showMenu = false
+                    },
+                    leadingIcon = { Icon(Icons.Default.Star, contentDescription = null, tint = if (isStarred) theme.accentColor else Color.Unspecified) }
+                )
+                DropdownMenuItem(
+                    text = { Text("Copy Text") },
+                    onClick = {
+                        clipboardManager.setText(AnnotatedString(message.body))
+                        Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
+                        showMenu = false
+                    },
+                    leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) }
+                )
+            }
+
             Column(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
@@ -545,13 +783,29 @@ private fun MessageBubble(message: SmsMessageItem, reactions: List<Reaction> = e
                     )
                 }
 
-                // Timestamp
+                // Timestamp and Star
                 Row(
                     modifier = Modifier.padding(top = 4.dp).align(Alignment.End),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (status == MessageStatus.FAILED) {
+                        Icon(
+                            Icons.Default.Error,
+                            contentDescription = "Failed",
+                            modifier = Modifier.size(12.dp).padding(end = 4.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    if (isStarred) {
+                        Icon(
+                            Icons.Default.Star,
+                            contentDescription = "Starred",
+                            modifier = Modifier.size(10.dp).padding(end = 2.dp),
+                            tint = (if (isOutgoing) theme.onBubbleOutgoing else theme.onBubbleIncoming).copy(alpha = 0.8f)
+                        )
+                    }
                     Text(
-                        text = formatMessageTime(message.timestamp),
+                        text = if (status == MessageStatus.SENDING) "Sending..." else formatMessageTime(message.timestamp),
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                         fontWeight = FontWeight.Medium,
                         color = (if (isOutgoing) theme.onBubbleOutgoing else theme.onBubbleIncoming).copy(alpha = 0.7f)
@@ -560,31 +814,33 @@ private fun MessageBubble(message: SmsMessageItem, reactions: List<Reaction> = e
             }
         }
 
-        // Reactions Overlay
-        if (reactions.isNotEmpty()) {
-            Row(
-                modifier = Modifier
-                    .align(if (isOutgoing) Alignment.BottomEnd else Alignment.BottomStart)
-                    .offset(y = 10.dp, x = if (isOutgoing) (-4).dp else 4.dp)
-                    .zIndex(1f),
-                horizontalArrangement = Arrangement.spacedBy((-4).dp)
-            ) {
-                reactions.forEach { reaction ->
-                    Surface(
-                        shape = CircleShape,
-                        color = theme.threadBackgroundColor,
-                        border = BorderStroke(1.dp, theme.frameColor.copy(alpha = 0.1f)),
-                        modifier = Modifier.size(24.dp),
-                        shadowElevation = 2.dp
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(text = reaction.emoji, fontSize = 12.sp)
-                        }
+    }
+
+    // Reactions Overlay
+    if (reactions.isNotEmpty()) {
+        Row(
+            modifier = Modifier
+                .align(if (isOutgoing) Alignment.BottomEnd else Alignment.BottomStart)
+                .offset(y = 10.dp, x = if (isOutgoing) (-4).dp else 4.dp)
+                .zIndex(1f),
+            horizontalArrangement = Arrangement.spacedBy((-4).dp)
+        ) {
+            reactions.forEach { reaction ->
+                Surface(
+                    shape = CircleShape,
+                    color = theme.threadBackgroundColor,
+                    border = BorderStroke(1.dp, theme.frameColor.copy(alpha = 0.1f)),
+                    modifier = Modifier.size(24.dp),
+                    shadowElevation = 2.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(text = reaction.emoji, fontSize = 12.sp)
                     }
                 }
             }
         }
     }
+  }
 }
 
 private fun formatMessageTime(timestamp: Long): String {

@@ -184,8 +184,8 @@ class ContactLinkManager @Inject constructor(
 
 
     @android.annotation.SuppressLint("MissingPermission")
-    suspend fun sendLinkRequest(contactId: Long) {
-        val contact = contactRepository.getContact(contactId) ?: return
+    suspend fun sendLinkRequest(contactId: Long): Boolean {
+        val contact = contactRepository.getContact(contactId) ?: return false
         val deviceId = settingsRepository.ensureDeviceId()
         val code = contact.linkCode ?: UUID.randomUUID().toString()
         val updated = contact.copy(
@@ -228,10 +228,13 @@ class ContactLinkManager @Inject constructor(
              val targetEmail = normalizeEmail(contact.primaryEmail())
              if (targetEmail.isNotBlank()) {
                  sendEmailLinkRequest(code, targetEmail, senderName, updated)
+                 return true
              } else {
                  Log.w(TAG, "sendLinkRequest: no channel available for contactId=$contactId")
+                 return false
              }
         }
+        return finalSent
     }
 
     private suspend fun sendEmailLinkRequest(

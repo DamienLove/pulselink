@@ -375,6 +375,38 @@ fun CustomizeTab(
 
         HorizontalDivider()
 
+        Text("Advanced Effects", style = MaterialTheme.typography.titleMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable { onUpdate(theme.copy(useGlassEffect = !theme.useGlassEffect)) },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Glass Effect (Transparency)")
+            Switch(checked = theme.useGlassEffect, onCheckedChange = { onUpdate(theme.copy(useGlassEffect = it)) })
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable { onUpdate(theme.copy(useHolographicGlow = !theme.useHolographicGlow)) },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Holographic Glow")
+            Switch(checked = theme.useHolographicGlow, onCheckedChange = { onUpdate(theme.copy(useHolographicGlow = it)) })
+        }
+
+        Text("Density", style = MaterialTheme.typography.labelLarge)
+        val densities = listOf("Compact", "Comfortable", "Spacious")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            densities.forEach { density ->
+                FilterChip(
+                    selected = theme.uiDensity == density,
+                    onClick = { onUpdate(theme.copy(uiDensity = density)) },
+                    label = { Text(density) }
+                )
+            }
+        }
+
+        HorizontalDivider()
+
         Text("Icon Sizing", style = MaterialTheme.typography.titleMedium)
         Text("Scale: ${(theme.iconSizeFactor * 100).toInt()}%")
         Slider(
@@ -539,6 +571,50 @@ private data class ThemePreset(
 @Composable
 fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
     val themes = listOf(
+        ThemePreset(
+            name = "Future Hologram",
+            theme = ThemePreferences(
+                fontStyle = "Default",
+                bubbleCornerRadius = 24,
+                appBackgroundGradientStart = "#0F172A",
+                appBackgroundGradientEnd = "#1E1B4B",
+                onBackground = "#E2E8F0",
+                topBarColor = "#0F172A",
+                onTopBarColor = "#E2E8F0",
+                bubbleOutgoing = "#22D3EE",
+                onBubbleOutgoing = "#FFFFFF",
+                bubbleIncoming = "#312E81",
+                onBubbleIncoming = "#E2E8F0",
+                primaryColor = "#22D3EE",
+                secondaryColor = "#D8B4FE",
+                dividerColor = "#1E293B",
+                inboxIconVariant = "neon_noir",
+                useGlassEffect = true,
+                useHolographicGlow = true,
+                uiDensity = "Comfortable"
+            )
+        ),
+        ThemePreset(
+            name = "Neon Cyber",
+            theme = ThemePreferences(
+                fontStyle = "Monospace",
+                bubbleCornerRadius = 4,
+                backgroundColor = "#000000",
+                onBackground = "#00FF41",
+                topBarColor = "#000000",
+                onTopBarColor = "#00FF41",
+                bubbleOutgoing = "#003B00",
+                onBubbleOutgoing = "#00FF41",
+                bubbleIncoming = "#0D0D0D",
+                onBubbleIncoming = "#00FF41",
+                primaryColor = "#00FF41",
+                secondaryColor = "#008F11",
+                dividerColor = "#003B00",
+                inboxIconVariant = "midnight_oled",
+                useHolographicGlow = true,
+                uiDensity = "Compact"
+            )
+        ),
         ThemePreset(
             name = "Default Light",
             theme = ThemePreferences(

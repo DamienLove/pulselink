@@ -2,6 +2,7 @@ package com.RingerSong.free.data
 
 import android.content.Context
 import android.util.Base64
+import com.RingerSong.free.BuildConfig
 import com.google.gson.Gson
 import com.spotify.android.appremote.api.ConnectionParams
 import com.spotify.android.appremote.api.Connector
@@ -17,8 +18,8 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 // Spotify API credentials for search functionality
-private const val CLIENT_ID = "b846ea3c7e3440439c6a870be4de24ce"
-private const val CLIENT_SECRET = "c228e27787164bdebec398c25fe40145"
+private val CLIENT_ID = BuildConfig.SPOTIFY_CLIENT_ID
+private val CLIENT_SECRET = BuildConfig.SPOTIFY_CLIENT_SECRET
 private const val REDIRECT_URI = "com.RingerSong.free://callback"
 
 data class SpotifyTrack(

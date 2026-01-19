@@ -42,7 +42,14 @@ export const onMessageCreated = functions.firestore
       };
 
       // Add optional fields if present
-      if (message.body) dataPayload.body = message.body;
+      if (message.body) {
+        // Sentinel: Truncate body to prevent FCM payload size limit errors
+        // (4KB limit). If the body is too large, notifications will fail.
+        const maxBodyLength = 1000;
+        dataPayload.body = message.body.length > maxBodyLength ?
+            message.body.substring(0, maxBodyLength) + "..." :
+            message.body;
+      }
       if (message.linkCode) dataPayload.linkCode = message.linkCode;
 
       const payload = {
@@ -55,5 +62,60 @@ export const onMessageCreated = functions.firestore
         console.log(`FCM notification sent to ${receiverId}`);
       } catch (error) {
         console.error("Error sending FCM notification", error);
+      }
+    });
+
+export const onOutboxCreated = functions.firestore
+    .document("users/{userId}/outbox/{messageId}")
+    .onCreate(async (snapshot, context) => {
+      const userId = context.params.userId;
+      const messageId = context.params.messageId;
+
+      console.log(`New outbox message ${messageId} for user ${userId}`);
+
+      const db = admin.firestore();
+      // Find user's devices with FCM tokens
+      const devicesQuery = await db.collection("devices")
+          .where("uid", "==", userId)
+          .get();
+
+      if (devicesQuery.empty) {
+        console.log(`No devices found for user ${userId}`);
+        return;
+      }
+
+      const tokens: string[] = [];
+      devicesQuery.forEach((doc) => {
+        const data = doc.data();
+        if (data.fcmToken) {
+          tokens.push(data.fcmToken);
+        }
+      });
+
+      if (tokens.length === 0) {
+        console.log(`No FCM tokens found for user ${userId}`);
+        return;
+      }
+
+      const payload = {
+        data: {
+          type: "SMS_RELAY",
+          messageId: messageId,
+          userId: userId,
+          timestamp: String(Date.now()),
+        },
+        tokens: tokens,
+        android: {
+          priority: "high" as const, // Wake up the device
+        },
+      };
+
+      try {
+        const response = await admin.messaging().sendMulticast(payload);
+        console.log(
+          `Sent outbox notification to ${response.successCount} devices`
+        );
+      } catch (error) {
+        console.error("Error sending outbox notification", error);
       }
     });

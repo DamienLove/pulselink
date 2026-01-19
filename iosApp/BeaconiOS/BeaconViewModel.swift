@@ -12,6 +12,7 @@ final class BeaconViewModel: ObservableObject {
     @Published var contacts: [BeaconContactCard] = []
     @Published private(set) var conversations: [UUID: [BeaconConversationMessage]] = [:]
     @Published var statusText: String? = nil
+    @Published var lastUpdated: Date? = nil
 
     @Published var isLoggedIn: Bool = false
     private var provider: BeaconConversationProvider
@@ -38,9 +39,12 @@ final class BeaconViewModel: ObservableObject {
                     guard let self = self else { return }
                     if let uid = user?.uid {
                         self.isLoggedIn = true
-                        Task { await BeaconDeviceManager.shared.registerDevice() }
                         self.provider = FirestoreBeaconConversationProvider(userId: uid)
                         self.startListeningToThreads()
+                        Task {
+                            await BeaconDeviceManager.shared.registerDevice()
+                            try? await self.provider.requestSync()
+                        }
                     } else {
                         self.isLoggedIn = false
                         self.threadsListener?.remove()
@@ -63,6 +67,7 @@ final class BeaconViewModel: ObservableObject {
         threadsListener = provider.listenToConversations { [weak self] newContacts in
             DispatchQueue.main.async {
                 self?.contacts = newContacts.sorted(by: { $0.unread > $1.unread })
+                self?.lastUpdated = Date()
             }
         }
     }
@@ -132,6 +137,12 @@ final class BeaconViewModel: ObservableObject {
     func stopListeningToConversation() {
         activeMessageListener?.remove()
         activeMessageListener = nil
+    }
+
+    func refresh() {
+        Task {
+            try? await provider.requestSync()
+        }
     }
 
     func deleteAccount() async throws {

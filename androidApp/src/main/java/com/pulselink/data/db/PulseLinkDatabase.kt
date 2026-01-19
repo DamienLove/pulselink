@@ -148,7 +148,7 @@ interface ArchivedThreadDao {
 
 @Database(
     entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class, ArchivedThread::class],
-    version = 16,
+    version = 17,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -160,6 +160,18 @@ abstract class PulseLinkDatabase : RoomDatabase() {
     abstract fun archivedThreadDao(): ArchivedThreadDao
 
     companion object {
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                ensureBaseSchema(database)
+            }
+        }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                ensureBaseSchema(database)
+            }
+        }
+
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE alert_events ADD COLUMN contactId INTEGER")
@@ -246,12 +258,8 @@ abstract class PulseLinkDatabase : RoomDatabase() {
 
         val MIGRATION_14_15 = object : Migration(14, 15) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
-                    "ALTER TABLE contact_messages ADD COLUMN messageId TEXT NOT NULL DEFAULT ''"
-                )
-                database.execSQL(
-                    "ALTER TABLE contact_messages ADD COLUMN status TEXT NOT NULL DEFAULT 'SENT'"
-                )
+                addColumnIfMissing(database, "contact_messages", "messageId", "TEXT NOT NULL DEFAULT ''")
+                addColumnIfMissing(database, "contact_messages", "status", "TEXT NOT NULL DEFAULT 'SENT'")
                 database.execSQL(
                     "UPDATE contact_messages SET messageId = CASE WHEN messageId = '' THEN CAST(id AS TEXT) ELSE messageId END"
                 )
@@ -267,7 +275,84 @@ abstract class PulseLinkDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                if (!tableExists(database, "contact_messages")) {
+                    database.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS contact_messages (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            messageId TEXT NOT NULL DEFAULT '',
+                            contactId INTEGER NOT NULL,
+                            body TEXT NOT NULL,
+                            direction TEXT NOT NULL,
+                            timestamp INTEGER NOT NULL,
+                            overrideSucceeded INTEGER NOT NULL,
+                            status TEXT NOT NULL DEFAULT 'SENT'
+                        )
+                        """.trimIndent()
+                    )
+                    database.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_contact_messages_messageId ON contact_messages(messageId)"
+                    )
+                    return
+                }
+
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS contact_messages_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        messageId TEXT NOT NULL DEFAULT '',
+                        contactId INTEGER NOT NULL,
+                        body TEXT NOT NULL,
+                        direction TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL,
+                        overrideSucceeded INTEGER NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'SENT'
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    """
+                    INSERT INTO contact_messages_new (
+                        id,
+                        messageId,
+                        contactId,
+                        body,
+                        direction,
+                        timestamp,
+                        overrideSucceeded,
+                        status
+                    )
+                    SELECT
+                        id,
+                        CASE
+                            WHEN messageId IS NULL OR messageId = '' THEN CAST(id AS TEXT)
+                            ELSE messageId
+                        END,
+                        contactId,
+                        body,
+                        direction,
+                        timestamp,
+                        overrideSucceeded,
+                        CASE
+                            WHEN status IS NULL OR status = '' THEN 'SENT'
+                            ELSE status
+                        END
+                    FROM contact_messages
+                    """.trimIndent()
+                )
+                database.execSQL("DROP TABLE contact_messages")
+                database.execSQL("ALTER TABLE contact_messages_new RENAME TO contact_messages")
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_contact_messages_messageId ON contact_messages(messageId)"
+                )
+            }
+        }
+
         val ALL_MIGRATIONS = arrayOf(
+            MIGRATION_1_2,
+            MIGRATION_2_3,
             MIGRATION_3_4,
             MIGRATION_4_5,
             MIGRATION_5_6,
@@ -280,8 +365,134 @@ abstract class PulseLinkDatabase : RoomDatabase() {
             MIGRATION_12_13,
             MIGRATION_13_14,
             MIGRATION_14_15,
-            MIGRATION_15_16
+            MIGRATION_15_16,
+            MIGRATION_16_17
         )
+
+        private fun ensureBaseSchema(database: SupportSQLiteDatabase) {
+            ensureContactsTable(database)
+            ensureAlertEventsTable(database)
+            ensureBlockedContactsTable(database)
+            ensureContactMessagesTable(database)
+        }
+
+        private fun ensureContactsTable(database: SupportSQLiteDatabase) {
+            if (!tableExists(database, "contacts")) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS contacts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        displayName TEXT NOT NULL,
+                        phoneNumber TEXT NOT NULL,
+                        escalationTier TEXT NOT NULL,
+                        includeLocation INTEGER NOT NULL,
+                        autoCall INTEGER NOT NULL,
+                        emergencySoundKey TEXT,
+                        checkInSoundKey TEXT,
+                        cameraEnabled INTEGER NOT NULL,
+                        contactOrder INTEGER NOT NULL,
+                        linkStatus TEXT NOT NULL,
+                        linkCode TEXT,
+                        remoteDeviceId TEXT,
+                        allowRemoteOverride INTEGER NOT NULL,
+                        allowRemoteSoundChange INTEGER NOT NULL,
+                        pendingApproval INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                return
+            }
+
+            addColumnIfMissing(database, "contacts", "displayName", "TEXT NOT NULL DEFAULT ''")
+            addColumnIfMissing(database, "contacts", "phoneNumber", "TEXT NOT NULL DEFAULT ''")
+            addColumnIfMissing(database, "contacts", "escalationTier", "TEXT NOT NULL DEFAULT 'EMERGENCY'")
+            addColumnIfMissing(database, "contacts", "includeLocation", "INTEGER NOT NULL DEFAULT 1")
+            addColumnIfMissing(database, "contacts", "autoCall", "INTEGER NOT NULL DEFAULT 0")
+            addColumnIfMissing(database, "contacts", "emergencySoundKey", "TEXT")
+            addColumnIfMissing(database, "contacts", "checkInSoundKey", "TEXT")
+            addColumnIfMissing(database, "contacts", "cameraEnabled", "INTEGER NOT NULL DEFAULT 0")
+            addColumnIfMissing(database, "contacts", "contactOrder", "INTEGER NOT NULL DEFAULT 0")
+            addColumnIfMissing(database, "contacts", "linkStatus", "TEXT NOT NULL DEFAULT 'NONE'")
+            addColumnIfMissing(database, "contacts", "linkCode", "TEXT")
+            addColumnIfMissing(database, "contacts", "remoteDeviceId", "TEXT")
+            addColumnIfMissing(database, "contacts", "allowRemoteOverride", "INTEGER NOT NULL DEFAULT 1")
+            addColumnIfMissing(database, "contacts", "allowRemoteSoundChange", "INTEGER NOT NULL DEFAULT 0")
+            addColumnIfMissing(database, "contacts", "pendingApproval", "INTEGER NOT NULL DEFAULT 0")
+        }
+
+        private fun ensureAlertEventsTable(database: SupportSQLiteDatabase) {
+            if (!tableExists(database, "alert_events")) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS alert_events (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        timestamp INTEGER NOT NULL,
+                        triggeredBy TEXT NOT NULL,
+                        tier TEXT NOT NULL,
+                        contactCount INTEGER NOT NULL,
+                        sentSms INTEGER NOT NULL,
+                        sharedLocation INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                return
+            }
+
+            addColumnIfMissing(database, "alert_events", "timestamp", "INTEGER NOT NULL DEFAULT 0")
+            addColumnIfMissing(database, "alert_events", "triggeredBy", "TEXT NOT NULL DEFAULT ''")
+            addColumnIfMissing(database, "alert_events", "tier", "TEXT NOT NULL DEFAULT 'EMERGENCY'")
+            addColumnIfMissing(database, "alert_events", "contactCount", "INTEGER NOT NULL DEFAULT 0")
+            addColumnIfMissing(database, "alert_events", "sentSms", "INTEGER NOT NULL DEFAULT 0")
+            addColumnIfMissing(database, "alert_events", "sharedLocation", "INTEGER NOT NULL DEFAULT 0")
+        }
+
+        private fun ensureBlockedContactsTable(database: SupportSQLiteDatabase) {
+            if (!tableExists(database, "blocked_contacts")) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS blocked_contacts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        phoneNumber TEXT,
+                        linkCode TEXT,
+                        remoteDeviceId TEXT,
+                        displayName TEXT NOT NULL,
+                        blockedAt INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                return
+            }
+
+            addColumnIfMissing(database, "blocked_contacts", "phoneNumber", "TEXT")
+            addColumnIfMissing(database, "blocked_contacts", "linkCode", "TEXT")
+            addColumnIfMissing(database, "blocked_contacts", "remoteDeviceId", "TEXT")
+            addColumnIfMissing(database, "blocked_contacts", "displayName", "TEXT NOT NULL DEFAULT ''")
+            addColumnIfMissing(database, "blocked_contacts", "blockedAt", "INTEGER NOT NULL DEFAULT 0")
+        }
+
+        private fun ensureContactMessagesTable(database: SupportSQLiteDatabase) {
+            if (!tableExists(database, "contact_messages")) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS contact_messages (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        contactId INTEGER NOT NULL,
+                        body TEXT NOT NULL,
+                        direction TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL,
+                        overrideSucceeded INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                return
+            }
+
+            addColumnIfMissing(database, "contact_messages", "contactId", "INTEGER NOT NULL DEFAULT 0")
+            addColumnIfMissing(database, "contact_messages", "body", "TEXT NOT NULL DEFAULT ''")
+            addColumnIfMissing(database, "contact_messages", "direction", "TEXT NOT NULL DEFAULT 'OUTBOUND'")
+            addColumnIfMissing(database, "contact_messages", "timestamp", "INTEGER NOT NULL DEFAULT 0")
+            addColumnIfMissing(database, "contact_messages", "overrideSucceeded", "INTEGER NOT NULL DEFAULT 0")
+        }
 
         private fun addColumnIfMissing(
             database: SupportSQLiteDatabase,
@@ -308,6 +519,18 @@ abstract class PulseLinkDatabase : RoomDatabase() {
                 }
             }
             return false
+        }
+
+        private fun tableExists(
+            database: SupportSQLiteDatabase,
+            table: String
+        ): Boolean {
+            database.query(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+                arrayOf(table)
+            ).use { cursor ->
+                return cursor.moveToFirst()
+            }
         }
 
     }

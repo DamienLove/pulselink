@@ -46,12 +46,13 @@ export const grantProAccess = functions.https.onCall(async (data, context) => {
 
   try {
     // 4. Grant Pro Access: Get the target user and set their custom claim.
-    console.log(`Admin user '${context.auth.token.email}' is attempting to grant pro access to '${targetEmail}'.`);
+    // Sentinel: Redacted PII (emails) from logs to prevent leakage in production logs
+    console.log(`Admin user (UID: ${context.auth.uid}) is attempting to grant pro access.`);
 
     const userToUpgrade = await admin.auth().getUserByEmail(targetEmail);
     await admin.auth().setCustomUserClaims(userToUpgrade.uid, {pro: true});
 
-    console.log(`Successfully granted pro access to ${targetEmail} (UID: ${userToUpgrade.uid})`);
+    console.log(`Successfully granted pro access to user (UID: ${userToUpgrade.uid})`);
 
     return {
       status: "success",

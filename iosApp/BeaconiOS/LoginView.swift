@@ -61,6 +61,17 @@ struct LoginView: View {
             .disabled(isBusy || email.isEmpty || password.isEmpty)
             .padding(.horizontal)
 
+            Button(action: loginAnonymously) {
+                if isBusy {
+                    ProgressView()
+                } else {
+                    Text("Guest Mode (Anonymous)")
+                        .font(.footnote)
+                }
+            }
+            .disabled(isBusy)
+            .padding(.top, 8)
+
             Spacer()
         }
         .padding()
@@ -73,6 +84,23 @@ struct LoginView: View {
         isBusy = true
         error = nil
         Auth.auth().signIn(withEmail: email, password: password) { result, err in
+            isBusy = false
+            if let err = err {
+                self.error = err.localizedDescription
+                return
+            }
+            onLoginSuccess()
+        }
+        #else
+        onLoginSuccess()
+        #endif
+    }
+
+    private func loginAnonymously() {
+        #if canImport(FirebaseAuth)
+        isBusy = true
+        error = nil
+        Auth.auth().signInAnonymously { result, err in
             isBusy = false
             if let err = err {
                 self.error = err.localizedDescription

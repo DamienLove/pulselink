@@ -70,6 +70,7 @@ import com.pulselink.R
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.RemotePresence
+import com.pulselink.util.EmailUtils
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -275,10 +276,10 @@ private fun LinkStatusSection(
                                 onClick = {
                                     val rawSubject = "Override Instructions"
                                     val rawBody = "You have been set as a trusted contact. Even without the PulseLink app, you can trigger an emergency alert on my phone by texting exactly:\n\n'pulselink ${contact.remotePin} emergency'\n\nto my number."
+                                    // Use ACTION_SENDTO with encoded mailto URI to ensure subject/body are populated in all clients
+                                    // Also put extras directly for clients that ignore URI params (e.g. Gmail)
                                     val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
-                                        val subject = Uri.encode(rawSubject)
-                                        val body = Uri.encode(rawBody)
-                                        data = Uri.parse("mailto:${contact.email ?: ""}?subject=$subject&body=$body")
+                                        data = Uri.parse("mailto:${contact.email ?: ""}")
                                         putExtra(Intent.EXTRA_SUBJECT, rawSubject)
                                         putExtra(Intent.EXTRA_TEXT, rawBody)
                                     }

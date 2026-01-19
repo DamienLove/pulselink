@@ -1,5 +1,6 @@
 .gradle/
 .idea/
+.gemini/
 local.properties
 .DS_Store
 /**/build/
@@ -79,6 +80,7 @@ web/.env.*.local
 .firebase/
 .kotlin/
 firebase-debug.log
+mcp-server.log
 temp_gradle_*.log
 node_modules/
 

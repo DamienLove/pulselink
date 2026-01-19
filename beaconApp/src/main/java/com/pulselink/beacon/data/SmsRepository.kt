@@ -27,12 +27,20 @@ class SmsRepository(private val context: Context) {
     private val observerFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val otpRegex = Regex("\\b\\d{4,8}\\b")
 
-    private val addressCache = LruCache<Long, String>(ADDRESS_CACHE_SIZE)
-    private val contactCache = LruCache<String, String>(CONTACT_CACHE_SIZE)
-
     companion object {
-        private const val ADDRESS_CACHE_SIZE = 1000 // Increased cache
-        private const val CONTACT_CACHE_SIZE = 2000 // Increased cache
+        private const val ADDRESS_CACHE_SIZE = 2000 // Increased cache
+        private const val CONTACT_CACHE_SIZE = 5000 // Increased cache
+
+        // Static caches to survive ViewModel recreation
+        // These hold only Strings, which are safe from Context leaks.
+        private val addressCache = LruCache<Long, String>(ADDRESS_CACHE_SIZE)
+        private val contactCache = LruCache<String, String>(CONTACT_CACHE_SIZE)
+
+        // Clear caches on memory warning or low memory if needed
+        fun clearCaches() {
+            addressCache.evictAll()
+            contactCache.evictAll()
+        }
 
         // Classification Regex
         private val NUMERIC_REGEX = Regex("[^0-9]")
@@ -118,9 +126,15 @@ class SmsRepository(private val context: Context) {
             val recipIdx = c.getColumnIndexOrThrow(Telephony.Threads.RECIPIENT_IDS)
             var count = 0
             while (c.moveToNext() && count < limit) {
+                val threadId = c.getLong(idIdx)
+                var snippet = c.getString(snippetIdx) ?: ""
+
+                // Optimization: Fallback logic removed to prevent N+1 queries.
+                // Blank snippets are handled in UI (e.g. "Media" or hidden) to prioritize load speed.
+
                 rawThreads.add(RawThreadData(
-                    id = c.getLong(idIdx),
-                    snippet = c.getString(snippetIdx) ?: "",
+                    id = threadId,
+                    snippet = snippet,
                     timestamp = c.getLong(dateIdx),
                     unread = c.getInt(readIdx) == 0,
                     recipientIds = c.getString(recipIdx) ?: ""
@@ -171,7 +185,7 @@ class SmsRepository(private val context: Context) {
         if (TRANSACTION_PATTERN.matcher(body).find()) return ThreadCategory.TRANSACTIONS
         if (PROMOTION_PATTERN.matcher(body).find()) return ThreadCategory.PROMOTIONS
 
-        return ThreadCategory.TRANSACTIONS
+        return ThreadCategory.PERSONAL
     }
 
     private fun resolveAddressesForThreads(threads: List<RawThreadData>): Map<Long, String> {
@@ -205,7 +219,7 @@ class SmsRepository(private val context: Context) {
         val recipientIdToNumber = mutableMapOf<Long, String>()
         if (neededRecipients.isNotEmpty()) {
             // Increased chunk size for better speed
-            neededRecipients.chunked(100).forEach { chunk ->
+            neededRecipients.chunked(150).forEach { chunk ->
                 val q = chunk.joinToString(",")
                 val c = runCatching {
                     context.contentResolver.query(
@@ -337,6 +351,21 @@ class SmsRepository(private val context: Context) {
         }
     }
 
+    private fun getLastMessageSnippet(threadId: Long): String {
+        // Fast query for just the body of the latest message
+        return runCatching {
+            context.contentResolver.query(
+                Telephony.Sms.CONTENT_URI,
+                arrayOf(Telephony.Sms.BODY),
+                "${Telephony.Sms.THREAD_ID}=?",
+                arrayOf(threadId.toString()),
+                "${Telephony.Sms.DATE} DESC LIMIT 1"
+            )?.use { c ->
+                if (c.moveToFirst()) c.getString(0) else ""
+            }
+        }.getOrNull() ?: ""
+    }
+
     private suspend fun resolveMmsAddress(mmsId: Long): String = withContext(Dispatchers.IO) {
         if (!hasReadPerms()) return@withContext ""
         val uri = Uri.parse("content://mms/$mmsId/addr")
@@ -448,6 +477,55 @@ class SmsRepository(private val context: Context) {
         return@withContext (smsItems + mmsItems).sortedByDescending { it.timestamp }.take(limit)
     }
 
+    suspend fun getContacts(): List<BeaconContact> = withContext(Dispatchers.IO) {
+        if (!hasReadPerms()) return@withContext emptyList()
+
+        val contacts = mutableListOf<BeaconContact>()
+        val projection = arrayOf(
+            ContactsContract.CommonDataKinds.Phone._ID,
+            ContactsContract.CommonDataKinds.Phone.LOOKUP_KEY,
+            ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY,
+            ContactsContract.CommonDataKinds.Phone.NUMBER,
+            ContactsContract.CommonDataKinds.Phone.PHOTO_URI
+        )
+
+        val cursor = runCatching {
+            context.contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                projection,
+                null,
+                null,
+                "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY} ASC"
+            )
+        }.getOrNull() ?: return@withContext emptyList()
+
+        cursor.use { c ->
+            val idIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone._ID)
+            val keyIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.LOOKUP_KEY)
+            val nameIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY)
+            val numIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+            val photoIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.PHOTO_URI)
+
+            val seenNumbers = HashSet<String>()
+
+            while (c.moveToNext()) {
+                val number = c.getString(numIdx) ?: continue
+                // Simple normalization to dedup
+                val normalized = number.filter { it.isDigit() }
+                if (normalized.isNotBlank() && !seenNumbers.add(normalized)) continue
+
+                contacts.add(BeaconContact(
+                    id = c.getLong(idIdx),
+                    lookupKey = c.getString(keyIdx) ?: "",
+                    displayName = c.getString(nameIdx) ?: "",
+                    phoneNumber = number,
+                    photoUri = c.getString(photoIdx)
+                ))
+            }
+        }
+        return@withContext contacts
+    }
+
     fun searchMessages(query: String, limit: Int = 40): List<SmsMessageItem> {
         if (!hasReadPerms() || query.isBlank()) return emptyList()
         val pattern = "%${query.trim()}%"
@@ -499,6 +577,11 @@ class SmsRepository(private val context: Context) {
         return runCatching {
             val smsManager = android.telephony.SmsManager.getDefault()
             smsManager.sendTextMessage(address, null, body, null, null)
+
+            runCatching {
+                SmsSyncManager.getInstance(context).syncOutgoing(address, body)
+            }
+
             true
         }.getOrDefault(false)
     }
@@ -665,6 +748,16 @@ class SmsRepository(private val context: Context) {
         observerFlow.tryEmit(Unit)
     }
 
+    fun deleteMessage(messageId: Long) {
+        if (!hasWritePerms()) return
+        context.contentResolver.delete(
+            Telephony.Sms.CONTENT_URI,
+            "${Telephony.Sms._ID}=?",
+            arrayOf(messageId.toString())
+        )
+        observerFlow.tryEmit(Unit)
+    }
+
     private fun resolveAddress(raw: String?): String {
         if (!hasReadPerms()) return raw.orEmpty()
         val number = raw?.trim().orEmpty()
@@ -746,8 +839,9 @@ class SmsRepository(private val context: Context) {
             )
         }.getOrNull() ?: return emptyList()
 
-        val items = mutableListOf<SmsThreadItem>()
+        val rawItems = mutableListOf<RawSmsThreadData>()
         val seenThreads = HashSet<Long>()
+
         cursor.use { c ->
             val threadIdx = c.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID)
             val addrIdx = c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
@@ -758,23 +852,112 @@ class SmsRepository(private val context: Context) {
             while (c.moveToNext() && count < limit) {
                 val threadId = c.getLong(threadIdx)
                 if (!seenThreads.add(threadId)) continue
-                val body = c.getString(bodyIdx) ?: ""
-                val ts = c.getLong(dateIdx)
-                val unread = c.getInt(readIdx) == 0
-                val rawAddr = c.getString(addrIdx)
-                val address = resolveAddress(rawAddr)
 
-                items += SmsThreadItem(
+                rawItems.add(RawSmsThreadData(
                     threadId = threadId,
-                    address = address,
-                    snippet = body,
-                    timestamp = ts,
-                    unread = unread,
-                    category = classifyThread(address, body)
-                )
+                    rawAddress = c.getString(addrIdx) ?: "",
+                    body = c.getString(bodyIdx) ?: "",
+                    timestamp = c.getLong(dateIdx),
+                    unread = c.getInt(readIdx) == 0
+                ))
                 count++
             }
         }
-        return items
+
+        if (rawItems.isEmpty()) return emptyList()
+
+        // Batch resolve addresses
+        val resolvedMap = resolveAddressesForStrings(rawItems.map { it.rawAddress })
+
+        return rawItems.map { raw ->
+            val finalAddress = resolvedMap[raw.rawAddress] ?: raw.rawAddress
+            SmsThreadItem(
+                threadId = raw.threadId,
+                address = finalAddress,
+                snippet = raw.body,
+                timestamp = raw.timestamp,
+                unread = raw.unread,
+                category = classifyThread(finalAddress, raw.body)
+            )
+        }
+    }
+
+    private data class RawSmsThreadData(
+        val threadId: Long,
+        val rawAddress: String,
+        val body: String,
+        val timestamp: Long,
+        val unread: Boolean
+    )
+
+    private fun resolveAddressesForStrings(rawAddresses: List<String>): Map<String, String> {
+        val result = mutableMapOf<String, String>()
+        val toLookup = mutableSetOf<String>()
+
+        // 1. Check Cache
+        rawAddresses.forEach { raw ->
+            if (raw.isBlank()) return@forEach
+            val cached = contactCache[raw]
+            if (cached != null) {
+                result[raw] = cached
+            } else {
+                toLookup.add(raw)
+            }
+        }
+
+        if (toLookup.isEmpty()) return result
+
+        // 2. Batch Lookup
+        toLookup.chunked(100).forEach { batch ->
+            // Sanitize batch for SQL (single quotes escaping not strictly needed with placeholders but good to be careful)
+            // ContactsContract.CommonDataKinds.Phone.NUMBER lookup
+            val cursor = runCatching {
+                context.contentResolver.query(
+                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                    arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME),
+                    "${ContactsContract.CommonDataKinds.Phone.NUMBER} IN (${batch.joinToString(",") { "?" }})",
+                    batch.toTypedArray(),
+                    null
+                )
+            }.getOrNull()
+
+            cursor?.use { c ->
+                val numIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                val nameIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                while (c.moveToNext()) {
+                    val num = c.getString(numIdx) ?: continue
+                    val name = c.getString(nameIdx) ?: continue
+                    if (name.isNotBlank()) {
+                        val formatted = if (name != num) "$name \u2022 $num" else num
+
+                        // Try to match back to our lookup set (normalization might be needed)
+                        // Simple exact match first
+                        if (toLookup.contains(num)) {
+                            result[num] = formatted
+                            contactCache.put(num, formatted)
+                        }
+
+                        // Try stripped match
+                        val stripped = num.replace(" ", "").replace("-", "")
+                        batch.forEach { pending ->
+                             if (pending.replace(" ", "").replace("-", "") == stripped) {
+                                 result[pending] = formatted
+                                 contactCache.put(pending, formatted)
+                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fill remaining with raw
+        toLookup.forEach { raw ->
+            if (!result.containsKey(raw)) {
+                contactCache.put(raw, raw)
+                result[raw] = raw
+            }
+        }
+
+        return result
     }
 }

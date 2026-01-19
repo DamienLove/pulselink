@@ -1,12 +1,9 @@
 package com.pulselink.ui.ads
 
+import android.view.View
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -19,6 +16,7 @@ import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.LoadAdError
 import com.pulselink.data.ads.AdConfig
+import java.util.concurrent.atomic.AtomicBoolean
 
 @Composable
 fun BannerAdSlot(
@@ -39,38 +37,50 @@ fun BannerAdSlot(
         }
     }
 
-    var hasRequestedAd by remember(adView) { mutableStateOf(false) }
+    val requestGate = remember(adView) { AtomicBoolean(false) }
 
-    LaunchedEffect(adView, hasRequestedAd) {
-        if (!hasRequestedAd) {
+    fun requestAdIfNeeded() {
+        if (!adView.isAttachedToWindow) return
+        if (requestGate.compareAndSet(false, true)) {
             adView.loadAd(AdRequest.Builder().build())
-            hasRequestedAd = true
         }
     }
 
     DisposableEffect(lifecycleOwner, adView) {
+        val attachListener = object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) {
+                requestAdIfNeeded()
+            }
+
+            override fun onViewDetachedFromWindow(v: View) = Unit
+        }
         val observer = object : DefaultLifecycleObserver {
             override fun onResume(owner: LifecycleOwner) {
-                adView.resume()
+                if (adView.isAttachedToWindow) {
+                    adView.resume()
+                }
+                requestAdIfNeeded()
             }
 
             override fun onPause(owner: LifecycleOwner) {
                 adView.pause()
             }
-
-            override fun onDestroy(owner: LifecycleOwner) {
-                adView.destroy()
-            }
         }
         val listener = object : AdListener() {
             override fun onAdFailedToLoad(error: LoadAdError) {
-                hasRequestedAd = false
+                requestGate.set(false)
             }
         }
         adView.adListener = listener
+        adView.addOnAttachStateChangeListener(attachListener)
         lifecycleOwner.lifecycle.addObserver(observer)
+        requestAdIfNeeded()
         onDispose {
+            adView.removeOnAttachStateChangeListener(attachListener)
             lifecycleOwner.lifecycle.removeObserver(observer)
+            adView.adListener = object : AdListener() {}
+            adView.pause()
+            adView.removeAllViews()
             adView.destroy()
         }
     }

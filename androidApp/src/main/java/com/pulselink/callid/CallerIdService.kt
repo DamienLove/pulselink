@@ -2,9 +2,11 @@ package com.pulselink.callid
 
 import android.util.Log
 import com.pulselink.BuildConfig
+import com.pulselink.domain.repository.SettingsRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -12,7 +14,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 class CallerIdService @Inject constructor(
     providers: Set<@JvmSuppressWildcards CallerIdProvider>,
     private val cacheRepository: CallerIdCacheRepository,
-    private val usageLimiter: CallerIdUsageLimiter
+    private val usageLimiter: CallerIdUsageLimiter,
+    private val settingsRepository: SettingsRepository
 ) {
     private val orderedProviders: List<CallerIdProvider> = providers.sortedBy { it.priority }
     private val providerCaps: Map<String, Int> = mapOf(
@@ -30,7 +33,17 @@ class CallerIdService @Inject constructor(
         cacheRepository.lookupUserMapping(normalized)?.let { return@withContext it }
         cacheRepository.getCached(normalized)?.let { return@withContext it }
 
-        val providerChain = orderedProviders.shuffled()
+        val settings = settingsRepository.settings.first()
+        val truecallerEnabled = settings.truecallerEnabled
+
+        val providerChain = orderedProviders.shuffled().filter { provider ->
+            if (provider.providerName == "Truecaller" && !truecallerEnabled) {
+                false
+            } else {
+                true
+            }
+        }
+
         for (provider in providerChain) {
             val redacted = normalized.takeLast(4).padStart(normalized.length, '*')
             val cap = providerCaps[provider.providerName] ?: Int.MAX_VALUE

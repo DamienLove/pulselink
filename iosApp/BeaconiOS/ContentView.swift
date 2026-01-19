@@ -123,12 +123,20 @@ private struct BeaconTab: View {
         NavigationStack {
             VStack {
                 if filter != .private {
-                    Picker("Filter", selection: $subFilter) {
-                        ForEach(InboxSubFilter.allCases, id: \.self) { f in
-                            Text(f.rawValue).tag(f)
+                    VStack(spacing: 8) {
+                        Picker("Filter", selection: $subFilter) {
+                            ForEach(InboxSubFilter.allCases, id: \.self) { f in
+                                Text(f.rawValue).tag(f)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
+                        if let date = viewModel.lastUpdated {
+                            Text("Synced \(date, style: .time)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
                         }
                     }
-                    .pickerStyle(.segmented)
                     .padding(.horizontal)
                     .padding(.top, 10)
                 }
@@ -406,10 +414,17 @@ enum BubbleStyle: String, CaseIterable {
 }
 
 enum RelayColors {
-    // 0.133, 0.827, 0.933 -> #22D3EE
-    static let primary = Color(red: 0.133, green: 0.827, blue: 0.933)
-    // 0.055, 0.647, 0.914 -> #0EA5E9
-    static let accent  = Color(red: 0.055, green: 0.647, blue: 0.914)
-    // 0.043, 0.055, 0.086 -> #0B0E16
-    static let deep    = Color(red: 0.043, green: 0.055, blue: 0.086)
+    // Neon Noir Palette (Future Deep v8)
+    // Primary: #00FFFF -> Cyan
+    static let primary = Color(red: 0.0, green: 1.0, blue: 1.0)
+    // Secondary: #E000FF -> Neon Purple
+    static let tertiary = Color(red: 0.878, green: 0.0, blue: 1.0)
+    // Background: #020202 -> Deep Black
+    static let deep    = Color(red: 0.008, green: 0.008, blue: 0.008)
+
+    // Complementary shades
+    static let accent  = Color(red: 0.0, green: 0.8, blue: 0.8) // Slightly darker cyan
+    static let surface = Color(red: 0.05, green: 0.05, blue: 0.05) // Dark gray for surface
+
+    static let cardBackground = surface.opacity(0.8)
 }

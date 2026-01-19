@@ -23,10 +23,11 @@ import com.google.android.gms.ads.MobileAds
 import com.pulselink.beacon.ui.ads.BannerAd
 import com.pulselink.beacon.ui.InboxScreen
 import com.pulselink.beacon.ui.NewMessageScreen
+import com.pulselink.beacon.ui.ScheduledMessagesScreen
+import com.pulselink.beacon.ui.SpamAndBlockedScreen
 import com.pulselink.beacon.ui.SmsViewModel
 import com.pulselink.beacon.ui.ThreadScreen
 import com.pulselink.beacon.ui.ThemeViewModel
-import com.pulselink.beacon.data.ThemeState
 import com.pulselink.beacon.ui.customize.CustomizationScreen
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
@@ -61,7 +62,7 @@ class MainActivity : ComponentActivity() {
             val vm: SmsViewModel = viewModel(factory = SmsViewModel.factory(application))
             val themeVm: ThemeViewModel = viewModel(factory = ThemeViewModel.factory(application))
             BeaconTheme(theme = themeVm.themeState.global) {
-                BeaconNav(vm, themeVm, themeVm.themeState, notificationTarget)
+                BeaconNav(vm, themeVm, notificationTarget)
             }
         }
     }
@@ -90,9 +91,9 @@ private data class NotificationTarget(val threadId: Long, val address: String)
 private fun BeaconNav(
     vm: SmsViewModel,
     themeVm: ThemeViewModel,
-    themeState: ThemeState,
     notificationTarget: androidx.compose.runtime.MutableState<NotificationTarget?>
 ) {
+    val themeState = themeVm.themeState
     val navController = rememberNavController()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -190,7 +191,12 @@ private fun BeaconNav(
         ) {
             composable("inbox") {
                     InboxScreen(
-                        threads = vm.threads,
+                        threads = vm.filteredThreads,
+                        groupedThreads = vm.filteredGroupedThreads,
+                        contacts = vm.filteredContacts,
+                        filter = vm.currentFilter,
+                        onFilterChange = { vm.updateFilter(it) },
+                        searchText = vm.currentSearchText,
                         theme = themeState.global,
                         searchState = vm.searchState,
                         isDefaultSms = isDefaultSms,
@@ -220,11 +226,13 @@ private fun BeaconNav(
                     onTogglePin = { vm.togglePin(it) },
                     onToggleArchive = { vm.toggleArchive(it) },
                     onRefresh = { vm.refreshThreads() },
-                    onSearch = { vm.search(it) },
-                    onClearSearch = { vm.clearSearch() },
+                    onSearch = { vm.updateSearchText(it) },
+                    onClearSearch = { vm.updateSearchText("") },
                     onCustomize = { navController.navigate("customize?address=") },
                     onCompose = { navController.navigate("newMessage") },
                     onOpenNotifications = { navController.navigate("notifications") },
+                    onOpenScheduled = { navController.navigate("scheduled") },
+                    onOpenSpamAndBlocked = { navController.navigate("spam") },
                     selectionMode = vm.selectionMode,
                     selectedThreadIds = vm.selectedThreadIds,
                     onToggleSelection = { vm.toggleSelection(it) },
@@ -235,8 +243,19 @@ private fun BeaconNav(
                     onMarkSelectedUnread = { vm.markSelectedUnread() },
                     onPinSelected = { vm.pinSelected() },
                     onMarkAsUnread = { vm.markAsUnread(it) },
+                    onMarkAllRead = { vm.markAllRead() },
                     userMessage = vm.userMessage,
-                    onClearUserMessage = { vm.clearUserMessage() }
+                    onClearUserMessage = { vm.clearUserMessage() },
+                    delayedSendTimeout = vm.delayedSendTimeout,
+                    onSetDelayedSendTimeout = { vm.setDelayedSendTimeout(it) },
+                    autoReplyEnabled = vm.autoReplyEnabled,
+                    autoReplyMessage = vm.autoReplyMessage,
+                    quickReplies = vm.quickReplies,
+                    onSetAutoReplyEnabled = { vm.setAutoReplyEnabled(it) },
+                    onSetAutoReplyMessage = { vm.setAutoReplyMessage(it) },
+                    onUpdateQuickReplies = { vm.updateQuickReplies(it) },
+                    autoDeleteOtps = vm.autoDeleteOtps,
+                    onSetAutoDeleteOtps = { vm.setAutoDeleteOtps(it) }
                 )
             }
             composable(
@@ -255,10 +274,26 @@ private fun BeaconNav(
                     ThreadScreen(
                         address = address.ifBlank { "Unknown" },
                         uiItems = vm.uiMessages,
+                        reactions = vm.reactions,
+                        starredMessageIds = vm.starredMessageIds,
                         theme = contactTheme,
                         pendingMessage = vm.pendingMessage,
+                        initialDraft = vm.getDraftForThread(threadId),
+                        isDraftsLoaded = vm.isDraftsLoaded,
+                        quickReplies = vm.quickReplies,
+                        onSaveDraft = { vm.saveDraft(threadId, it) },
                         onBack = { navController.popBackStack() },
                         onSend = { vm.sendDelayedMessage(it) },
+                        onSendAttachment = { uri ->
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "image/*"
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                putExtra("address", address)
+                                putExtra(Intent.EXTRA_PHONE_NUMBER, address)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(intent, "Send MMS"))
+                        },
                         onCancelPending = { vm.cancelDelayedMessage() },
                         onSendNow = { vm.sendNow() },
                         onScheduleMessage = { body, time ->
@@ -275,7 +310,10 @@ private fun BeaconNav(
                                 data = Uri.parse("tel:$address")
                             }
                             context.startActivity(intent)
-                        }
+                        },
+                        onReact = { msgId, emoji -> vm.addReaction(msgId, emoji) },
+                        onToggleStar = { msgId -> vm.toggleStar(msgId, threadId) },
+                        onBlock = { vm.blockNumber(address) }
                     )
                 }
             }
@@ -340,6 +378,22 @@ private fun BeaconNav(
                             popUpTo("inbox")
                         }
                     }
+                )
+            }
+            composable("scheduled") {
+                ScheduledMessagesScreen(
+                    messages = vm.scheduledMessages,
+                    theme = themeState.global,
+                    onBack = { navController.popBackStack() },
+                    onDelete = { vm.cancelScheduledMessage(it) }
+                )
+            }
+            composable("spam") {
+                SpamAndBlockedScreen(
+                    blockedNumbers = vm.blockedNumbersList,
+                    theme = themeState.global,
+                    onBack = { navController.popBackStack() },
+                    onUnblock = { vm.unblockNumber(it) }
                 )
             }
             composable(
@@ -429,7 +483,8 @@ private fun requiredPermissions(context: android.content.Context): List<String> 
         android.Manifest.permission.RECEIVE_SMS,
         android.Manifest.permission.SEND_SMS,
         android.Manifest.permission.RECEIVE_MMS,
-        android.Manifest.permission.RECEIVE_WAP_PUSH
+        android.Manifest.permission.RECEIVE_WAP_PUSH,
+        android.Manifest.permission.READ_CONTACTS
     )
     val notif =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) listOf(android.Manifest.permission.POST_NOTIFICATIONS) else emptyList()
@@ -440,7 +495,10 @@ private fun requiredPermissions(context: android.content.Context): List<String> 
 }
 
 private fun requiredReadPermissions(context: android.content.Context): List<String> {
-    val readPerms = listOf(android.Manifest.permission.READ_SMS)
+    val readPerms = listOf(
+        android.Manifest.permission.READ_SMS,
+        android.Manifest.permission.READ_CONTACTS
+    )
     return readPerms.filter {
         ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
     }

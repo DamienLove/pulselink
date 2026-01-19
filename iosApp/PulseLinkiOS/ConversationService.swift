@@ -12,6 +12,7 @@ protocol ConversationProvider {
     func listenToConversations(onChange: @escaping ([ContactCard]) -> Void) -> ListenerRegistration?
     func listenToMessages(for contact: ContactCard, onChange: @escaping ([ConversationMessage]) -> Void) -> ListenerRegistration?
     func send(message: ConversationMessage, to contact: ContactCard) async throws
+    func requestSync() async throws
 }
 
 #if canImport(FirebaseFirestore)
@@ -81,6 +82,8 @@ final class InMemoryConversationProvider: ConversationProvider {
         arr.append(message)
         store[contact] = arr
     }
+
+    func requestSync() async throws {}
 }
 
 final class FirestoreConversationProvider: ConversationProvider {
@@ -90,9 +93,8 @@ final class FirestoreConversationProvider: ConversationProvider {
 
     // Internal state to hold merged contacts from legacy and lines
     private var legacyContacts: [ContactCard] = []
-    private var lineContacts: [ContactCard] = []
-    // To simplify, we only listen to the FIRST active line found to match "Bare min" functionality.
-    // Full multi-line support would require a more complex listener management.
+    // Map lineId to list of contacts
+    private var lineContacts: [String: [ContactCard]] = [:]
 
     init(userId: String) {
         self.userId = userId
@@ -108,9 +110,6 @@ final class FirestoreConversationProvider: ConversationProvider {
     }
 
     func loadConversations() async throws -> [ContactCard: [ConversationMessage]] {
-        // This is a "snapshot" load, distinct from realtime listeners.
-        // For simplicity, we just implement legacy load here or basic line load.
-        // But since the UI relies on listenToConversations, we can return empty or implement a basic fetch.
         return [:] // Not primarily used in realtime UI flow
     }
 
@@ -125,76 +124,49 @@ final class FirestoreConversationProvider: ConversationProvider {
         }
         composite.add(legacyListener)
 
-        // 2. Listen to Lines to find active devices
-        // This is a nested listener structure.
-        // We listen to "lines" collection. If lines exist, we pick the first one and listen to its threads.
-        // Ideally we would manage a map of listeners for all lines.
+        // 2. Listen to Lines collection to discover active devices/lines
+        // We maintain a map of listeners for each discovered line.
+        var lineListeners: [String: ListenerRegistration] = [:]
 
-        // Use a class-level variable to hold the threads listener so we can replace it if lines change.
-        // But since we are inside `listenToConversations`, we need to return a single registration.
-        // We will attach the threads listener to the composite, but we need to be careful not to leak.
-        // Actually, since Swift closures capture context, let's just listen to lines and inside that closure manage the threads listener.
-
-        // We need a way to store the *current* threads listener so we can cancel it if line ID changes.
-        // This is tricky with `CompositeListener` if we don't expose removal logic.
-        // Let's keep it simple: We listen to `lines`.
-        // Note: This implementation assumes a relatively stable single line (active phone).
-
-        var currentLineThreadsListener: ListenerRegistration?
-
+        // This listener watches for changes in the 'lines' collection (added/removed lines)
         let linesListener = linesCollection.addSnapshotListener { [weak self] snapshot, _ in
-            guard let self = self else { return }
-            let lines = snapshot?.documents ?? []
+            guard let self = self, let lines = snapshot?.documents else { return }
 
-            // If no lines, clear line contacts
-            if lines.isEmpty {
-                self.lineContacts = []
-                self.mergeAndNotify(onChange: onChange)
-                currentLineThreadsListener?.remove()
-                currentLineThreadsListener = nil
-                return
+            let currentLineIds = Set(lines.map { $0.documentID })
+
+            // Remove listeners for deleted lines
+            for (lineId, listener) in lineListeners {
+                if !currentLineIds.contains(lineId) {
+                    listener.remove()
+                    lineListeners.removeValue(forKey: lineId)
+                    self.lineContacts.removeValue(forKey: lineId)
+                }
             }
 
-            // Pick the first line (or prioritize 'primaryDeviceId' if we parsed it, but first is fine for now)
-            let firstLineId = lines[0].documentID
-
-            // If we are already listening to this line, do nothing
-            // (We would need to track currentLineId state, which is hard in this closure scope unless captured)
-            // For robustness, we will recreate the listener if we haven't tracked state,
-            // but let's just assume we replace it to be safe and simple.
-
-            currentLineThreadsListener?.remove()
-
-            let threadsRef = self.linesCollection.document(firstLineId).collection("threads")
-            currentLineThreadsListener = threadsRef.addSnapshotListener { [weak self] threadSnap, _ in
-                guard let self = self, let threadDocs = threadSnap?.documents else { return }
-                self.lineContacts = self.parseContacts(threadDocs, lineId: firstLineId)
-                self.mergeAndNotify(onChange: onChange)
+            // Add listeners for new lines
+            for lineDoc in lines {
+                let lineId = lineDoc.documentID
+                if lineListeners[lineId] == nil {
+                    let threadsRef = self.linesCollection.document(lineId).collection("threads")
+                    let listener = threadsRef.addSnapshotListener { [weak self] threadSnap, _ in
+                        guard let self = self, let threadDocs = threadSnap?.documents else { return }
+                        self.lineContacts[lineId] = self.parseContacts(threadDocs, lineId: lineId)
+                        self.mergeAndNotify(onChange: onChange)
+                    }
+                    lineListeners[lineId] = listener
+                }
             }
+
+            // If we have lines but no contacts yet (e.g. empty lines), trigger update
+            // (or if all lines were removed)
+            self.mergeAndNotify(onChange: onChange)
         }
         composite.add(linesListener)
 
-        // We need to make sure currentLineThreadsListener is cleaned up when composite is removed.
-        // Since `currentLineThreadsListener` is local to the closure scope of `linesListener` (mostly),
-        // we can't easily add it to `composite` externally.
-        // However, `linesListener`'s removal stops the callback. But `currentLineThreadsListener` stays alive?
-        // Yes, if not removed.
-        // We should wrap this logic in a dedicated class or simpler helper, but to stick to this file:
-        // We will make `CompositeListener` hold a cleanup closure.
-
-        // Actually, let's just piggyback on `composite.remove` by overriding it?
-        // No, `CompositeListener` is a simple array wrapper.
-        // Memory leak risk is small if `linesListener` is removed, but the inner listener might persist if not explicitly removed.
-        // Correct fix: When `linesListener` fires, it sets up `currentLineThreadsListener`.
-        // We need to ensure that if `composite.remove()` is called, `currentLineThreadsListener` is also removed.
-        // We can capture a wrapper object.
-
-        // Workaround: Add a specialized cleanup to composite?
-        // Since I can't easily change CompositeListener to hold a closure without defining it fully.
-        // Let's just define a custom listener object here.
-
+        // When the composite listener is removed (e.g. user logs out), we must also remove all the dynamic line listeners.
         let wrapper = WrapperListener(composite: composite) {
-            currentLineThreadsListener?.remove()
+            lineListeners.values.forEach { $0.remove() }
+            lineListeners.removeAll()
         }
         return wrapper
     }
@@ -223,16 +195,14 @@ final class FirestoreConversationProvider: ConversationProvider {
 
     private func mergeAndNotify(onChange: @escaping ([ContactCard]) -> Void) {
         // Merge legacy and line contacts.
-        // If duplicates exist (same threadId/address), prioritize line contacts.
-        // Keying by 'address' might be safer than 'threadId' across sources, but 'threadId' is what we use for Firestore paths.
-        // Actually, legacy threads have threadId from old DB, line threads from new DB. They might collide or differ.
-        // We will just show all unique items.
-
         var seen = Set<String>()
         var result: [ContactCard] = []
 
+        // Flatten all line contacts
+        let allLineContacts = lineContacts.values.flatMap { $0 }
+
         // Prioritize Line contacts
-        for c in lineContacts {
+        for c in allLineContacts {
             let key = c.address // Use address to dedup logical conversations
             if !seen.contains(key) {
                 seen.insert(key)
@@ -304,12 +274,21 @@ final class FirestoreConversationProvider: ConversationProvider {
         try await db.collection("users").document(userId)
             .collection("outbox").addDocument(data: docData)
     }
+
+    func requestSync() async throws {
+        let data: [String: Any] = [
+            "syncRequestedAt": Int64(Date().timeIntervalSince1970 * 1000),
+            "remoteWebAccessEnabled": true
+        ]
+        try await db.collection("users").document(userId).setData(data, merge: true)
+    }
     #else
     init(userId: String) {}
     func loadConversations() async throws -> [ContactCard: [ConversationMessage]] { [:] }
     func listenToConversations(onChange: @escaping ([ContactCard]) -> Void) -> ListenerRegistration? { return nil }
     func listenToMessages(for contact: ContactCard, onChange: @escaping ([ConversationMessage]) -> Void) -> ListenerRegistration? { return nil }
     func send(message: ConversationMessage, to contact: ContactCard) async throws {}
+    func requestSync() async throws {}
     #endif
 }
 

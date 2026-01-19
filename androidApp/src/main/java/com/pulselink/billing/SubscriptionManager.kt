@@ -2,6 +2,8 @@ package com.pulselink.billing
 
 import android.app.Activity
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.android.billingclient.api.AcknowledgePurchaseParams
@@ -79,6 +81,14 @@ class SubscriptionManager @Inject constructor(
     }
 
     private fun startConnection() {
+        if (!isPlayStoreAvailable()) {
+            _state.value = _state.value.copy(
+                available = false,
+                loading = false,
+                statusMessage = "Google Play Store unavailable; billing disabled"
+            )
+            return
+        }
         if (!isPlayServicesReady()) {
             _state.value = _state.value.copy(
                 available = false,
@@ -130,6 +140,22 @@ class SubscriptionManager @Inject constructor(
         return false
     }
 
+    private fun isPlayStoreAvailable(): Boolean {
+        val packageManager = context.packageManager
+        return runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                packageManager.getPackageInfo(
+                    "com.android.vending",
+                    PackageManager.PackageInfoFlags.of(0)
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.getPackageInfo("com.android.vending", 0)
+            }
+            true
+        }.getOrDefault(false)
+    }
+
     private fun queryProductsAndPurchases() {
         val productParams = QueryProductDetailsParams.newBuilder()
             .setProductList(
@@ -165,6 +191,22 @@ class SubscriptionManager @Inject constructor(
     }
 
     fun launchSubscribe(activity: Activity) {
+        if (!isPlayStoreAvailable()) {
+            _state.value = _state.value.copy(
+                statusMessage = "Google Play Store unavailable; billing disabled"
+            )
+            return
+        }
+        if (!isPlayServicesReady()) {
+            _state.value = _state.value.copy(
+                statusMessage = "Google Play Services unavailable; billing disabled"
+            )
+            return
+        }
+        if (activity.isFinishing || activity.isDestroyed) {
+            _state.value = _state.value.copy(statusMessage = "Cannot start billing right now")
+            return
+        }
         if (!billingClient.isReady) {
             _state.value = _state.value.copy(statusMessage = "Billing not ready; retrying connection")
             startConnection()
@@ -174,7 +216,11 @@ class SubscriptionManager @Inject constructor(
             _state.value = _state.value.copy(statusMessage = "Subscription not available")
             return
         }
-        val offerToken = product.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: run {
+        val offerToken = product.subscriptionOfferDetails
+            ?.firstOrNull()
+            ?.offerToken
+            ?.takeIf { it.isNotBlank() }
+            ?: run {
             _state.value = _state.value.copy(statusMessage = "No active base plan/offer configured")
             return
         }
@@ -188,7 +234,12 @@ class SubscriptionManager @Inject constructor(
                 )
             )
             .build()
-        val result = billingClient.launchBillingFlow(activity, flowParams)
+        val result = runCatching {
+            billingClient.launchBillingFlow(activity, flowParams)
+        }.getOrElse {
+            _state.value = _state.value.copy(statusMessage = "Purchase failed to start")
+            return
+        }
         if (result.responseCode != BillingClient.BillingResponseCode.OK) {
             _state.value = _state.value.copy(
                 statusMessage = "Purchase failed to start: ${result.responseCode}"

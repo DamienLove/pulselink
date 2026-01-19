@@ -70,6 +70,17 @@ private struct HomeTab: View {
             ScrollView {
                 VStack(spacing: 20) {
                     emergencyCard
+
+                    if viewModel.statusText != "Idle" {
+                        Text(viewModel.statusText)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 4)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Capsule())
+                    }
+
                     if isPro {
                         relayCard
                         overrideCard
@@ -178,9 +189,7 @@ private struct HomeTab: View {
                 Image(systemName: "waveform.path.ecg.rectangle")
                     .foregroundStyle(RelayColors.accent)
             }
-            Text(viewModel.statusText)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            // Status text moved to main view for visibility
 
             Button {
                 Task { await viewModel.sendTestAlert() }
@@ -459,6 +468,10 @@ private struct Card<Content: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RelayColors.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(RelayColors.primary.opacity(0.3), lineWidth: 1)
+        )
     }
 }
 
@@ -540,15 +553,20 @@ private struct CancelEmergencySheet: View {
 // MARK: - Theme
 
 enum RelayColors {
-    // 0.133, 0.827, 0.933 -> #22D3EE
-    static let primary = Color(red: 0.133, green: 0.827, blue: 0.933)
-    // 0.055, 0.647, 0.914 -> #0EA5E9
-    static let accent  = Color(red: 0.055, green: 0.647, blue: 0.914)
-    // 0.043, 0.055, 0.086 -> #0B0E16
-    static let deep    = Color(red: 0.043, green: 0.055, blue: 0.086)
+    // Neon Noir Palette (Future Deep v8)
+    // Primary: #00FFFF -> Cyan
+    static let primary = Color(red: 0.0, green: 1.0, blue: 1.0)
+    // Secondary: #E000FF -> Neon Purple
+    static let tertiary = Color(red: 0.878, green: 0.0, blue: 1.0)
+    // Background: #020202 -> Deep Black
+    static let deep    = Color(red: 0.008, green: 0.008, blue: 0.008)
 
-    // Slightly lighter than deep, with opacity to allow background to bleed through if needed, simulating glass
-    static let cardBackground = Color(red: 0.09, green: 0.11, blue: 0.15).opacity(0.8)
+    // Complementary shades
+    static let accent  = Color(red: 0.0, green: 0.8, blue: 0.8) // Slightly darker cyan
+    static let surface = Color(red: 0.05, green: 0.05, blue: 0.05) // Dark gray for surface
+
+    // Using surface with slight opacity for glass effect
+    static let cardBackground = surface.opacity(0.8)
 }
 
 #Preview {

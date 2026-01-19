@@ -11,6 +11,7 @@ protocol BeaconConversationProvider {
     func listenToConversations(onChange: @escaping ([BeaconContactCard]) -> Void) -> ListenerRegistration?
     func listenToMessages(for contact: BeaconContactCard, onChange: @escaping ([BeaconConversationMessage]) -> Void) -> ListenerRegistration?
     func send(message: BeaconConversationMessage, to contact: BeaconContactCard) async throws
+    func requestSync() async throws
 }
 
 #if canImport(FirebaseFirestore)
@@ -83,6 +84,8 @@ final class MockBeaconConversationProvider: BeaconConversationProvider {
         arr.append(message)
         store[contact] = arr
     }
+
+    func requestSync() async throws {}
 }
 
 final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
@@ -91,7 +94,8 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
     private let userId: String
 
     private var legacyContacts: [BeaconContactCard] = []
-    private var lineContacts: [BeaconContactCard] = []
+    // Map lineId to list of contacts
+    private var lineContacts: [String: [BeaconContactCard]] = [:]
 
     init(userId: String) {
         self.userId = userId
@@ -120,34 +124,45 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
         }
         composite.add(legacyListener)
 
-        // 2. Lines
-        var currentLineThreadsListener: ListenerRegistration?
+        // 2. Lines collection to discover active devices/lines
+        var lineListeners: [String: ListenerRegistration] = [:]
+
+        // Listen to active lines
         let linesListener = linesCollection.addSnapshotListener { [weak self] snapshot, _ in
-            guard let self = self else { return }
-            let lines = snapshot?.documents ?? []
+            guard let self = self, let lines = snapshot?.documents else { return }
 
-            if lines.isEmpty {
-                self.lineContacts = []
-                self.mergeAndNotify(onChange: onChange)
-                currentLineThreadsListener?.remove()
-                currentLineThreadsListener = nil
-                return
+            let currentLineIds = Set(lines.map { $0.documentID })
+
+            // Cleanup removed lines
+            for (lineId, listener) in lineListeners {
+                if !currentLineIds.contains(lineId) {
+                    listener.remove()
+                    lineListeners.removeValue(forKey: lineId)
+                    self.lineContacts.removeValue(forKey: lineId)
+                }
             }
 
-            let firstLineId = lines[0].documentID
-            currentLineThreadsListener?.remove()
-
-            let threadsRef = self.linesCollection.document(firstLineId).collection("threads")
-            currentLineThreadsListener = threadsRef.addSnapshotListener { [weak self] threadSnap, _ in
-                guard let self = self, let threadDocs = threadSnap?.documents else { return }
-                self.lineContacts = self.parseContacts(threadDocs, lineId: firstLineId)
-                self.mergeAndNotify(onChange: onChange)
+            // Add new line listeners
+            for lineDoc in lines {
+                let lineId = lineDoc.documentID
+                if lineListeners[lineId] == nil {
+                    let threadsRef = self.linesCollection.document(lineId).collection("threads")
+                    let listener = threadsRef.addSnapshotListener { [weak self] threadSnap, _ in
+                        guard let self = self, let threadDocs = threadSnap?.documents else { return }
+                        self.lineContacts[lineId] = self.parseContacts(threadDocs, lineId: lineId)
+                        self.mergeAndNotify(onChange: onChange)
+                    }
+                    lineListeners[lineId] = listener
+                }
             }
+
+            self.mergeAndNotify(onChange: onChange)
         }
         composite.add(linesListener)
 
         return WrapperListener(composite: composite) {
-            currentLineThreadsListener?.remove()
+            lineListeners.values.forEach { $0.remove() }
+            lineListeners.removeAll()
         }
     }
 
@@ -176,7 +191,10 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
         var seen = Set<String>()
         var result: [BeaconContactCard] = []
 
-        for c in lineContacts {
+        // Flatten all line contacts
+        let allLineContacts = lineContacts.values.flatMap { $0 }
+
+        for c in allLineContacts {
             let key = c.address
             if !seen.contains(key) {
                 seen.insert(key)
@@ -240,11 +258,20 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
         try await db.collection("users").document(userId)
             .collection("outbox").addDocument(data: docData)
     }
+
+    func requestSync() async throws {
+        let data: [String: Any] = [
+            "syncRequestedAt": Int64(Date().timeIntervalSince1970 * 1000),
+            "remoteWebAccessEnabled": true
+        ]
+        try await db.collection("users").document(userId).setData(data, merge: true)
+    }
     #else
     init(userId: String) {}
     func loadConversations() async throws -> [BeaconContactCard: [BeaconConversationMessage]] { [:] }
     func listenToConversations(onChange: @escaping ([BeaconContactCard]) -> Void) -> ListenerRegistration? { return nil }
     func listenToMessages(for contact: BeaconContactCard, onChange: @escaping ([BeaconConversationMessage]) -> Void) -> ListenerRegistration? { return nil }
     func send(message: BeaconConversationMessage, to contact: BeaconContactCard) async throws {}
+    func requestSync() async throws {}
     #endif
 }

@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.distinctUntilChanged
 import javax.inject.Inject
 import javax.inject.Singleton
 import java.util.concurrent.atomic.AtomicBoolean
@@ -27,6 +28,7 @@ class SmsSyncManager @Inject constructor(
     fun start() {
         if (!isStarted.compareAndSet(false, true)) return
 
+        // 1. Observe SMS DB changes
         smsRepository.changes()
             .debounce(500L) // Debounce for 0.5 seconds to batch rapid changes
             .onEach {
@@ -39,6 +41,19 @@ class SmsSyncManager @Inject constructor(
                 } catch (e: Exception) {
                     Log.e(TAG, "Error checking settings for sync", e)
                 }
+            }
+            .launchIn(scope)
+
+        // 2. Observe Settings changes to immediately sync when Premium/Web Access changes
+        settingsRepository.settings
+            .distinctUntilChanged { old, new ->
+                old.remoteWebAccessEnabled == new.remoteWebAccessEnabled &&
+                    old.premiumUnlocked == new.premiumUnlocked &&
+                    old.proUnlocked == new.proUnlocked
+            }
+            .onEach {
+                Log.d(TAG, "Settings changed (premium/web), triggering sync worker")
+                smsSyncTrigger.triggerSync()
             }
             .launchIn(scope)
     }

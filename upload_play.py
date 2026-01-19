@@ -1,11 +1,26 @@
+import os
 import pathlib
+import time
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from googleapiclient.errors import HttpError
 
-svc_path = pathlib.Path('C:/Projects/pulselink/secrets/service-account-key.json')
-if not svc_path.exists():
-    raise SystemExit('service account key missing')
+REPO_ROOT = pathlib.Path(__file__).resolve().parent
+
+def resolve_service_account_key() -> pathlib.Path:
+    env_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    candidates = [
+        pathlib.Path(env_path) if env_path else None,
+        REPO_ROOT / "secrets" / "service-account-key.json",
+        pathlib.Path("C:/Projects/pulselink/secrets/service-account-key.json"),
+    ]
+    for candidate in candidates:
+        if candidate is not None and candidate.exists():
+            return candidate
+    raise SystemExit("service account key missing")
+
+svc_path = resolve_service_account_key()
 creds = service_account.Credentials.from_service_account_file(
     svc_path,
     scopes=['https://www.googleapis.com/auth/androidpublisher']
@@ -38,6 +53,12 @@ def upload_and_release(package, aab_path, version_code, name):
         except TimeoutError:
             print("  timeout during upload chunk, retrying...")
             continue
+        except HttpError as exc:
+            message = str(exc)
+            if "already been used" in message:
+                print("  version already uploaded; skipping")
+                return
+            raise
     uploaded_vc = int(bundle['versionCode'])
     if uploaded_vc != version_code:
         print(f"warning: uploaded versionCode {uploaded_vc} != expected {version_code}")
@@ -54,10 +75,21 @@ def upload_and_release(package, aab_path, version_code, name):
             body={'releases': [release]}
         ).execute(num_retries=DEFAULT_RETRIES)
         print(f"  set track {track}")
-    service.edits().commit(packageName=package, editId=edit_id).execute(num_retries=DEFAULT_RETRIES)
-    print(f"  committed edit {edit_id}")
+    for attempt in range(DEFAULT_RETRIES):
+        try:
+            service.edits().commit(packageName=package, editId=edit_id).execute(num_retries=DEFAULT_RETRIES)
+            print(f"  committed edit {edit_id}")
+            return
+        except HttpError as exc:
+            message = str(exc)
+            if "not completed yet" in message and attempt < DEFAULT_RETRIES - 1:
+                wait = (attempt + 1) * 5
+                print(f"  upload still processing, retrying commit in {wait}s...")
+                time.sleep(wait)
+                continue
+            raise
 
-base = pathlib.Path('C:/Projects/pulselink/disposable_aabs')
-upload_and_release('com.free.pulselink', str(base/'androidApp-free-release-v129.aab'), 129, 'v129')
-upload_and_release('com.pulselink.pro', str(base/'androidApp-pro-release-v129.aab'), 129, 'v129')
+base = REPO_ROOT / 'disposable_aabs'
+upload_and_release('com.free.pulselink', str(base/'androidApp-free-release-v142.aab'), 142, 'v142')
+upload_and_release('com.pulselink.pro', str(base/'androidApp-pro-release-v142.aab'), 142, 'v142')
 

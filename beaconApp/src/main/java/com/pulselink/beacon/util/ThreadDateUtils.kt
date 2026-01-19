@@ -33,33 +33,9 @@ object ThreadDateUtils {
         val uiItems = mutableListOf<ThreadUiItem>()
         var currentDay: LocalDate? = null
 
-        // Pending reactions mapped by target text -> list of reactions
-        val pendingReactions = mutableMapOf<String, MutableList<Reaction>>()
-
         // Iterate Newest -> Oldest
         for (i in messages.indices) {
             val msg = messages[i]
-            val body = msg.body
-            val match = reactionRegex.find(body)
-
-            if (match != null) {
-                // This is a reaction message.
-                val type = match.groupValues[1]
-                val targetText = match.groupValues[2]
-                val emoji = emojiMap[type] ?: "👍"
-
-                // Add to pending
-                val reaction = Reaction(emoji, msg.address, msg.outgoing)
-
-                if (!pendingReactions.containsKey(targetText)) {
-                    pendingReactions[targetText] = mutableListOf()
-                }
-                pendingReactions[targetText]!!.add(reaction)
-
-                // Do NOT add this message to UI items (hide it)
-                continue
-            }
-
             val msgDate = Instant.ofEpochMilli(msg.timestamp)
                 .atZone(ZoneId.systemDefault())
                 .toLocalDate()
@@ -75,15 +51,7 @@ object ThreadDateUtils {
                  currentDay = msgDate
             }
 
-            // Attach reactions if any
-            val myReactions = pendingReactions[body]?.toList() ?: emptyList()
-            if (pendingReactions.containsKey(body)) {
-                // We consume the reactions for this message instance.
-                // Since we iterate Newest->Oldest, this attaches to the most recent message with that text.
-                pendingReactions.remove(body)
-            }
-
-            uiItems.add(ThreadUiItem.Message(msg, myReactions))
+            uiItems.add(ThreadUiItem.Message(msg, emptyList()))
         }
 
         // Add final header for the oldest group

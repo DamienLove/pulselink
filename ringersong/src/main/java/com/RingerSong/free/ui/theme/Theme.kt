@@ -8,42 +8,38 @@ import androidx.compose.ui.graphics.Color
 import com.RingerSong.free.data.ThemeConfig
 import com.pulselink.shared.ui.theme.hexToColor
 
+// Legacy Light - Not recommended but kept
 private val LightColorScheme = lightColorScheme(
     primary = Ocean,
-    secondary = Azure,
+    secondary = Sky,
     tertiary = NeonPurple,
-    background = Mist,
-    surface = Ice,
-    surfaceVariant = Sky.copy(alpha = 0.35f),
-    onPrimary = Mist,
-    onSecondary = Mist,
-    onTertiary = Ink,
-    onBackground = Ink,
-    onSurface = Ink,
-    onSurfaceVariant = Ink.copy(alpha = 0.65f),
-    primaryContainer = Sky.copy(alpha = 0.6f),
-    onPrimaryContainer = Ink,
-    tertiaryContainer = Sky.copy(alpha = 0.3f),
-    onTertiaryContainer = Ink
+    background = Color(0xFFF0F6FC),
+    surface = Color(0xFFFFFFFF),
+    onPrimary = Color.White,
+    onSecondary = Color.White,
+    onTertiary = Color.White,
+    onBackground = Color(0xFF03050A),
+    onSurface = Color(0xFF03050A)
 )
 
 private val DarkColorScheme = darkColorScheme(
     primary = Sky,
-    secondary = Azure,
+    secondary = Ocean,
     tertiary = NeonPurple,
-    background = Ink, // #05070F
-    surface = DeepBlue, // #0E121E (Updated to match PulseLink)
-    surfaceVariant = Ocean,
-    onPrimary = Ink,
-    onSecondary = Mist,
+    background = DeepBackground,
+    surface = DeepSurface,
+    surfaceVariant = DeepSurfaceAlt,
+    onPrimary = DeepBackground,
+    onSecondary = DeepBackground,
     onTertiary = Ink,
-    onBackground = Mist,
-    onSurface = Mist,
-    onSurfaceVariant = Mist.copy(alpha = 0.7f),
-    primaryContainer = Ocean,
-    onPrimaryContainer = Mist,
-    tertiaryContainer = Azure.copy(alpha = 0.2f),
-    onTertiaryContainer = Mist
+    onBackground = Ink,
+    onSurface = Ink,
+    onSurfaceVariant = Mist,
+    error = Error,
+    primaryContainer = Ocean.copy(alpha = 0.2f),
+    onPrimaryContainer = Sky,
+    tertiaryContainer = NeonPurple.copy(alpha = 0.2f),
+    onTertiaryContainer = Ink
 )
 
 @Composable
@@ -77,9 +73,9 @@ private fun buildColorScheme(base: androidx.compose.material3.ColorScheme, theme
         onBackground = onBackground,
         onSurface = onBackground,
         onSurfaceVariant = onBackground.copy(alpha = 0.8f),
-        primaryContainer = palette.accentColor.copy(alpha = 0.82f),
-        onPrimaryContainer = onBackground,
-        tertiaryContainer = palette.incomingColor.copy(alpha = 0.35f),
+        primaryContainer = palette.accentColor.copy(alpha = 0.2f),
+        onPrimaryContainer = palette.accentColor,
+        tertiaryContainer = palette.incomingColor.copy(alpha = 0.2f),
         onTertiaryContainer = onBackground
     )
 }

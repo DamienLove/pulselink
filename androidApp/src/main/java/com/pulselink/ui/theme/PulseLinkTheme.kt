@@ -7,12 +7,6 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// Future Deep v2 Palette - Dark Mode Optimized
-// Shared core tokens live in DesignSystem.kt to avoid duplication.
-private val DeepSurfaceAlt = Color(0xFF0F1A30)
-private val DeepOnBackground = Color(0xFFEEF2FB)
-private val DeepOnSurfaceVariant = Color(0xFF9FB3C8) // Muted
-
 private val DarkColors = darkColorScheme(
     primary = DeepAccent,
     onPrimary = Color(0xFF04101C), // Deep dark for contrast on bright accent
@@ -23,11 +17,11 @@ private val DarkColors = darkColorScheme(
     tertiary = DeepTertiary,
     onTertiary = Color(0xFFFFFFFF),
     background = DeepBackground,
-    onBackground = DeepOnBackground,
+    onBackground = DeepOnSurface, // Using v5 Ink
     surface = DeepSurface,
     onSurface = DeepOnSurface,
     surfaceVariant = DeepSurfaceAlt,
-    onSurfaceVariant = DeepOnSurfaceVariant,
+    onSurfaceVariant = DeepMuted,
     error = DeepError,
     onError = Color(0xFF2B0B0B)
 )
@@ -57,7 +51,7 @@ fun PulseLinkTheme(
 
     MaterialTheme(
         colorScheme = colors,
-        typography = MaterialTheme.typography, // Should be updated in Type.kt ideally, but out of scope for now
+        typography = MaterialTheme.typography,
         content = content
     )
 }
