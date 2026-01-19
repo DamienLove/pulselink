@@ -90,8 +90,15 @@ class LoginViewModel @Inject constructor(
             val sanitizedEmail = state.email.trim()
             val sanitizedPassword = state.password.trim()
             val result = withTimeoutOrNull(LOGIN_TIMEOUT_MS) {
-                if (state.mode == LoginMode.CREATE_ACCOUNT && authManager.currentUser()?.isAnonymous == true) {
-                    authManager.linkEmailAccount(sanitizedEmail, sanitizedPassword)
+                if (state.isAnonymousUser && state.mode == LoginMode.CREATE_ACCOUNT) {
+                    // Ensure we are still anonymous before linking
+                    if (authManager.currentUser()?.isAnonymous == true) {
+                        authManager.linkEmailAccount(sanitizedEmail, sanitizedPassword)
+                    } else {
+                        // Unexpected state: UI thinks we are anon, but Auth says otherwise.
+                        // Fail to avoid creating a new account and losing data.
+                        Result.failure(IllegalStateException("Cannot link account: User is no longer anonymous."))
+                    }
                 } else if (state.mode == LoginMode.SIGN_IN) {
                     authManager.signIn(sanitizedEmail, sanitizedPassword)
                 } else {
