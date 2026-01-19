@@ -547,7 +547,7 @@
 
         <!-- Home screen widget (available in all flavors, incl. Pro) -->
         <receiver
-            android:name=".widget.PulseLinkWidgetProvider"
+            android:name="com.pulselink.widget.PulseLinkWidgetProvider"
             android:exported="true"
             android:icon="@drawable/widget_logo"
             android:label="@string/app_name">
