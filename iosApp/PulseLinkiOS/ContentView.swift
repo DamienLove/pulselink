@@ -81,11 +81,11 @@ private struct HomeTab: View {
                             .clipShape(Capsule())
                     }
 
-                    if isPro {
-                        relayCard
-                        overrideCard
-                        activityCard
-                    } else {
+                    relayCard
+                    overrideCard
+                    activityCard
+
+                    if !isPro {
                         proUpsellCard
                     }
                 }
@@ -248,7 +248,7 @@ private struct HomeTab: View {
                 Image(systemName: "star.fill")
                     .foregroundStyle(RelayColors.accent)
             }
-            Text("Unlock SMS Relay, Contacts, and DND Overrides.")
+            Text("Unlock Trusted Contacts and support development.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
