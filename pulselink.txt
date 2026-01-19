@@ -1,6 +1,7 @@
 dewBranch: Suite-Beta (based on Beta)
 
 Recent work
+- 2026-01-18: v143 — fixed Google OAuth login failure by adding correct SHA-1 fingerprint (BE10F6D1D744A636707DC13A5749D7007B864ADB) to Firebase Console for com.free.pulselink release keystore; updated androidApp/google-services.json with new OAuth client configuration; bumped versionCode/Name to 143; built free/pro release AABs (disposable_aabs/androidApp-*-release-v143.aab) and uploaded to Play internal/beta/production via upload_play.py; web rebuild and Firebase Hosting deploy (pulselink-24899.web.app); committed and pushed to Suite-Beta.
 - 2026-01-18: v142 — resolved merge conflicts across Android/web/firestore rules; wired Truecaller toggle in Beacon inbox and Credential Manager cancellation handling; updated web premium/pro gating and remote-web access defaults; ran .\gradlew testFreeDebugUnitTest; built free/pro release AABs (disposable_aabs/androidApp-*-release-v142.aab) and uploaded to Play internal/beta/production via upload_play.py (commit retry/skip guard); web build and Firebase Hosting deploy (pulselink-24899.web.app).
 - 2026-01-16: Web - compacted overall UI spacing and typography (panel padding, headers, cards, buttons, search, map height, theme editor) to reduce vertical bloat; deployed Firebase Hosting (pulselink-24899.web.app).
 - 2026-01-16: Web - made the web access banner dismissible with a close button and persisted the dismissal in localStorage; deployed Firebase Hosting (pulselink-24899.web.app).
