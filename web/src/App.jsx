@@ -177,7 +177,7 @@ const MessageItem = memo(({ msg, showPreviews }) => (
       {showPreviews ? msg.body : '••••••'}
     </div>
     <div className="message-time">
-      {timeFormatter.format(new Date(msg.date))}
+      {timeFormatter.format(msg.date)}
     </div>
   </div>
 ), areMessagesEqual);
@@ -352,7 +352,7 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
           {alertBadgeCopy[alert.severity] ?? 'Alert'}
         </span>
       </div>
-      <div className="map-item-meta">{dateTimeFormatter.format(new Date(alert.date))}</div>
+      <div className="map-item-meta">{dateTimeFormatter.format(alert.date)}</div>
       <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
       <div className="map-item-actions">
         <button
@@ -2485,7 +2485,15 @@ function App() {
     const legacyRef = collection(db, "users", user.uid, "synced_threads");
     const legacyQuery = query(legacyRef, orderBy("date", "desc"));
     const unsubscribeLegacy = onSnapshot(legacyQuery, (snapshot) => {
-      const threadsData = snapshot.docs.map(doc => ({ id: doc.id, lineId: null, ...doc.data() }));
+      const threadsData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          lineId: null,
+          ...data,
+          date: toMillis(data.date)
+        };
+      });
       setLegacyThreads(threadsData);
       // Only set loading to false if we have at least legacy threads or lines have also loaded.
       // But for simplicity, we can set it to false here as we have *some* data.
@@ -2503,7 +2511,15 @@ function App() {
       const lineThreadsRef = collection(db, "users", user.uid, "lines", lineId, "threads");
       const lineQuery = query(lineThreadsRef, orderBy("date", "desc"));
       const unsub = onSnapshot(lineQuery, (snapshot) => {
-        const items = snapshot.docs.map(doc => ({ id: doc.id, lineId, ...doc.data() }));
+        const items = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            lineId,
+            ...data,
+            date: toMillis(data.date)
+          };
+        });
         setLineThreads((prev) => ({ ...prev, [lineId]: items }));
       });
       threadUnsubs.set(lineId, unsub);
@@ -2581,10 +2597,14 @@ function App() {
       const messagesRef = collection(db, ...basePath);
       const q = query(messagesRef, orderBy("date", "asc"));
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        const messagesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        const messagesData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            date: toMillis(data.date)
+          };
+        });
         setMessages(messagesData);
       });
       return () => unsubscribe();
@@ -2840,7 +2860,7 @@ function App() {
       // Sentinel: Escape user input to prevent XSS in InfoWindow
       const safeType = escapeHtml(alertBadgeCopy[alert.severity] ?? 'Alert');
       const safeAddress = escapeHtml(alert.address);
-      const safeDate = escapeHtml(dateTimeFormatter.format(new Date(alert.date)));
+      const safeDate = escapeHtml(dateTimeFormatter.format(alert.date));
 
       mapInfoRef.current.setContent(
         `<div style="font-family: sans-serif; max-width: 220px;">
