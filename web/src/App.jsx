@@ -83,6 +83,12 @@ const LockIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="non
 const MessageSquareIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>;
 const SearchIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
 const CloseIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+const PinIcon = ({ className }) => <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>;
+const ArchiveIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>;
+const UnarchiveIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 14 15 8 21 14"></polyline><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path></svg>;
+const MailIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>;
+const MailOpenIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 12h-6.68a2 2 0 0 0-1.89 1.34L12 16l-.93-2.66A2 2 0 0 0 9.18 12H2.5"></path><path d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6Z"></path></svg>;
+
 const Spinner = ({ className = '', style = {} }) => (
   <svg className={`spinner ${className}`} style={style} viewBox="0 0 50 50" aria-hidden="true">
     <defs>
@@ -128,6 +134,9 @@ const areThreadsEqual = (prev, next) => {
   return prev.isActive === next.isActive &&
          prev.showPreviews === next.showPreviews &&
          prev.onSelect === next.onSelect &&
+         prev.isPinned === next.isPinned &&
+         prev.isRead === next.isRead &&
+         prev.isArchived === next.isArchived &&
          prev.thread.id === next.thread.id &&
          prev.thread.address === next.thread.address &&
          prev.thread.snippet === next.thread.snippet;
@@ -135,17 +144,54 @@ const areThreadsEqual = (prev, next) => {
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
 // when only the selection state changes or when unrelated threads update.
-const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
-  <button
-    className={`thread-item ${isActive ? 'active' : ''}`}
-    onClick={() => onSelect(thread)}
-    aria-current={isActive ? 'true' : undefined}
-    aria-label={`Select conversation with ${thread.display_name || thread.address}${showPreviews && thread.snippet ? `, ${thread.snippet}` : ''}`}
-  >
-    <div className="thread-name">{thread.display_name || thread.address}</div>
-    <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
-  </button>
-), areThreadsEqual);
+const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, isPinned, isRead, isArchived, onTogglePin, onToggleRead, onToggleArchive, onDelete }) => {
+  const handleAction = useCallback((e, action) => {
+    e.stopPropagation();
+    action(thread.id);
+  }, [thread.id]);
+
+  const handleDelete = useCallback((e) => {
+    e.stopPropagation();
+    onDelete(thread);
+  }, [onDelete, thread]);
+
+  return (
+    <div
+      className={`thread-item ${isActive ? 'active' : ''} ${!isRead ? 'unread' : ''}`}
+      onClick={() => onSelect(thread)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect(thread);
+        }
+      }}
+      aria-current={isActive ? 'true' : undefined}
+      aria-label={`Select conversation with ${thread.display_name || thread.address}${showPreviews && thread.snippet ? `, ${thread.snippet}` : ''}`}
+    >
+      {isPinned && <PinIcon className="thread-pin-icon" />}
+      <div className="thread-name">{thread.display_name || thread.address}</div>
+      <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
+      {!isRead && <div className="thread-unread-dot" />}
+
+      <div className="thread-actions">
+        <button className="thread-action-btn" onClick={(e) => handleAction(e, onTogglePin)} title={isPinned ? "Unpin conversation" : "Pin conversation"}>
+          <PinIcon />
+        </button>
+        <button className="thread-action-btn" onClick={(e) => handleAction(e, onToggleRead)} title={!isRead ? "Mark as read" : "Mark as unread"}>
+          {!isRead ? <MailOpenIcon /> : <MailIcon />}
+        </button>
+        <button className="thread-action-btn" onClick={(e) => handleAction(e, onToggleArchive)} title={isArchived ? "Unarchive" : "Archive"}>
+          {isArchived ? <UnarchiveIcon /> : <ArchiveIcon />}
+        </button>
+        <button className="thread-action-btn" onClick={handleDelete} title="Delete conversation">
+          <TrashIcon />
+        </button>
+      </div>
+    </div>
+  );
+}, areThreadsEqual);
 
 ThreadItem.displayName = 'ThreadItem';
 
@@ -1600,9 +1646,17 @@ const Sidebar = memo(({
   selectedThreadId,
   onSelect,
   showPreviews,
-  openCommandPalette
+  openCommandPalette,
+  pinnedThreadIds,
+  archivedThreadIds,
+  unreadThreadIds,
+  onTogglePin,
+  onToggleRead,
+  onToggleArchive,
+  onDeleteThread
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState('inbox'); // 'inbox' | 'archived'
   const searchInputRef = useRef(null);
 
   useEffect(() => {
@@ -1628,12 +1682,43 @@ const Sidebar = memo(({
   const getSearchIndex = useLazySearchIndex(threads, threadMapper);
 
   const filteredThreads = useMemo(() => {
+    // 1. Filter by Search
     const term = searchQuery.trim().toLowerCase();
-    if (!term) return threads;
-    return getSearchIndex()
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ thread }) => thread);
-  }, [getSearchIndex, searchQuery, threads]);
+    let current = threads;
+
+    if (term) {
+      current = getSearchIndex()
+        .filter(({ searchString }) => searchString.includes(term))
+        .map(({ thread }) => thread);
+    }
+
+    // 2. Filter by Inbox/Archive View
+    // Standard SMS app behavior: "Inbox" shows only non-archived. "Archived" shows only archived.
+    // Pinned threads only show in Inbox usually.
+    // If searching, we might want to show all? top apps usually search globally or contextually.
+    // Let's stick to strict view filtering unless searching.
+    // Actually, searching typically reveals archived messages too.
+    // We'll keep strict separation for clarity unless user explicit search might want broad.
+    // Let's do strict separation first.
+    current = current.filter(t => {
+      const isArchived = archivedThreadIds.includes(t.id) || t.archived === true;
+      return viewMode === 'archived' ? isArchived : !isArchived;
+    });
+
+    // 3. Sort: Pinned first (only in Inbox), then Date
+    return current.sort((a, b) => {
+      // Pin check (only relevance in Inbox view usually, but if you pin an archived one, it stays archived)
+      // We sort pinned to top.
+      const isAPinned = pinnedThreadIds.includes(a.id);
+      const isBPinned = pinnedThreadIds.includes(b.id);
+
+      if (isAPinned && !isBPinned) return -1;
+      if (!isAPinned && isBPinned) return 1;
+
+      // Fallback to date
+      return (b.date ?? 0) - (a.date ?? 0);
+    });
+  }, [getSearchIndex, searchQuery, threads, viewMode, archivedThreadIds, pinnedThreadIds]);
 
   const [collapsed, setCollapsed] = useState(false);
 
@@ -1818,6 +1903,22 @@ const Sidebar = memo(({
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3-3 3 3 0 0 0-3-3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path></svg>
             </button>
           </div>
+          {/* View Filter Tabs (Inbox / Archive) */}
+          <div className="sidebar-filters">
+            <button
+              className={`filter-tab ${viewMode === 'inbox' ? 'active' : ''}`}
+              onClick={() => setViewMode('inbox')}
+            >
+              Inbox
+            </button>
+            <button
+              className={`filter-tab ${viewMode === 'archived' ? 'active' : ''}`}
+              onClick={() => setViewMode('archived')}
+            >
+              Archived
+            </button>
+          </div>
+
           <div className="thread-list">
             {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
               <div className="line-tabs" aria-label="Device lines">
@@ -1844,9 +1945,13 @@ const Sidebar = memo(({
             ) : filteredThreads.length === 0 ? (
               <div className="sidebar-placeholder">
                 <div className="sidebar-tip">
-                  <strong>{searchQuery ? "No matches found" : "No conversations found"}</strong>
+                  <strong>
+                    {searchQuery
+                      ? "No matches found"
+                      : (viewMode === 'archived' ? "No archived messages" : "No conversations found")}
+                  </strong>
                 </div>
-                {!searchQuery && (
+                {!searchQuery && viewMode === 'inbox' && (
                   <div className="sidebar-tip muted">
                     To see your messages here:
                     <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
@@ -1870,6 +1975,13 @@ const Sidebar = memo(({
                   isActive={selectedThreadId === thread.id}
                   onSelect={onSelect}
                   showPreviews={showPreviews}
+                  isPinned={pinnedThreadIds.includes(thread.id)}
+                  isRead={!unreadThreadIds.includes(thread.id) && thread.read !== false}
+                  isArchived={archivedThreadIds.includes(thread.id) || thread.archived === true}
+                  onTogglePin={onTogglePin}
+                  onToggleRead={onToggleRead}
+                  onToggleArchive={onToggleArchive}
+                  onDelete={onDeleteThread}
                 />
               ))
             )}
@@ -1898,7 +2010,10 @@ const Sidebar = memo(({
          prev.onSelect === next.onSelect &&
          prev.showPreviews === next.showPreviews &&
          prev.navLogo === next.navLogo &&
-         prev.brandTitle === next.brandTitle;
+         prev.brandTitle === next.brandTitle &&
+         prev.pinnedThreadIds === next.pinnedThreadIds &&
+         prev.archivedThreadIds === next.archivedThreadIds &&
+         prev.unreadThreadIds === next.unreadThreadIds;
 });
 
 Sidebar.displayName = 'Sidebar';
@@ -1931,6 +2046,9 @@ function App() {
     email: '',
     phoneNumber: ''
   });
+  const [pinnedThreadIds, setPinnedThreadIds] = useState([]);
+  const [archivedThreadIds, setArchivedThreadIds] = useState([]);
+  const [unreadThreadIds, setUnreadThreadIds] = useState([]);
   const [trustedContacts, setTrustedContacts] = useState([]);
   const [deviceContacts, setDeviceContacts] = useState([]);
   const [contactSearch, setContactSearch] = useState('');
@@ -2056,6 +2174,16 @@ function App() {
   const [settingsSearch, setSettingsSearch] = useState('');
   const [premiumClaimActive, setPremiumClaimActive] = useState(false);
   const [proClaimActive, setProClaimActive] = useState(false);
+
+  if (import.meta.env.DEV) {
+    window.debugSetUser = setUser;
+    window.debugSetRemoteSettings = setRemoteSettings;
+    window.debugSetLegacyThreads = setLegacyThreads;
+    window.debugSetIsLoadingThreads = setIsLoadingThreads;
+    window.debugSetPinnedThreadIds = setPinnedThreadIds;
+    window.debugSetArchivedThreadIds = setArchivedThreadIds;
+    window.debugSetUnreadThreadIds = setUnreadThreadIds;
+  }
 
   const subscriptionStatus = userData?.subscriptionStatus;
   const premiumSubscriptionStatus = userData?.premiumSubscriptionStatus;
@@ -2324,6 +2452,10 @@ function App() {
         email: data.email ?? user.email ?? '',
         phoneNumber: data.phoneNumber ?? ''
       });
+      setPinnedThreadIds(data.pinnedThreadIds || []);
+      setArchivedThreadIds(data.archivedThreadIds || []);
+      setUnreadThreadIds(data.unreadThreadIds || []);
+
       if (data.themePreferences) {
         setThemePrefs(normalizeTheme(data.themePreferences));
       } else {
@@ -3416,6 +3548,74 @@ function App() {
     setSelectedThread(null);
   }, []);
 
+  const handleTogglePin = useCallback(async (threadId) => {
+    if (!user) return;
+    try {
+      const isPinned = pinnedThreadIds.includes(threadId);
+      const newPinned = isPinned
+        ? pinnedThreadIds.filter(id => id !== threadId)
+        : [...pinnedThreadIds, threadId];
+
+      // Update local state immediately for responsiveness
+      setPinnedThreadIds(newPinned);
+
+      await setDoc(doc(db, "users", user.uid), {
+        pinnedThreadIds: newPinned
+      }, { merge: true });
+    } catch (e) {
+      console.error("Failed to toggle pin", e);
+    }
+  }, [user, pinnedThreadIds]);
+
+  const handleToggleArchive = useCallback(async (threadId) => {
+    if (!user) return;
+    try {
+      const isArchived = archivedThreadIds.includes(threadId);
+      const newArchived = isArchived
+        ? archivedThreadIds.filter(id => id !== threadId)
+        : [...archivedThreadIds, threadId];
+
+      setArchivedThreadIds(newArchived);
+
+      await setDoc(doc(db, "users", user.uid), {
+        archivedThreadIds: newArchived
+      }, { merge: true });
+    } catch (e) {
+      console.error("Failed to toggle archive", e);
+    }
+  }, [user, archivedThreadIds]);
+
+  const handleToggleRead = useCallback(async (threadId) => {
+    if (!user) return;
+    try {
+      const isUnread = unreadThreadIds.includes(threadId);
+      const newUnread = isUnread
+        ? unreadThreadIds.filter(id => id !== threadId)
+        : [...unreadThreadIds, threadId];
+
+      setUnreadThreadIds(newUnread);
+
+      await setDoc(doc(db, "users", user.uid), {
+        unreadThreadIds: newUnread
+      }, { merge: true });
+    } catch (e) {
+      console.error("Failed to toggle read status", e);
+    }
+  }, [user, unreadThreadIds]);
+
+  const handleDeleteThread = useCallback(async (thread) => {
+    if (!user || !window.confirm("Delete this conversation?")) return;
+    try {
+       if (thread.lineId) {
+         await deleteDoc(doc(db, "users", user.uid, "lines", thread.lineId, "threads", thread.id));
+       } else {
+         await deleteDoc(doc(db, "users", user.uid, "synced_threads", thread.id));
+       }
+    } catch (e) {
+      console.error("Failed to delete thread", e);
+    }
+  }, [user]);
+
   // Bolt: Stable handler to prevent ghost content when switching threads
   const handleThreadSelect = useCallback((thread) => {
     setMessages([]); // Clear previous messages immediately
@@ -3423,7 +3623,11 @@ function App() {
     if (thread?.lineId) {
       setActiveLineId((prev) => prev ?? thread.lineId);
     }
-  }, []);
+    // Auto-mark as read when selected
+    if (unreadThreadIds.includes(thread.id)) {
+        handleToggleRead(thread.id); // Remove from unread list
+    }
+  }, [unreadThreadIds, handleToggleRead]);
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
@@ -3598,6 +3802,13 @@ function App() {
           onSelect={handleThreadSelect}
           showPreviews={showPreviews}
           openCommandPalette={() => setShowCommandPalette(true)}
+          pinnedThreadIds={pinnedThreadIds}
+          archivedThreadIds={archivedThreadIds}
+          unreadThreadIds={unreadThreadIds}
+          onTogglePin={handleTogglePin}
+          onToggleRead={handleToggleRead}
+          onToggleArchive={handleToggleArchive}
+          onDeleteThread={handleDeleteThread}
         />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (

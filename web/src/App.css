@@ -1953,3 +1953,126 @@ textarea:focus-visible,
   from { opacity: 0; transform: translateY(-20px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Thread List Enhancements (Pin, Unread, Archive)                           */
+/* -------------------------------------------------------------------------- */
+
+.thread-item {
+  /* Ensure relative positioning for absolute children */
+  position: relative;
+  padding-right: 40px; /* Make space for unread dot / timestamp */
+}
+
+.thread-item.unread .thread-name {
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.thread-item.unread .thread-snippet {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.thread-unread-dot {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.thread-pin-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--accent);
+  margin-right: 6px;
+  vertical-align: middle;
+  opacity: 0.8;
+}
+
+.thread-actions {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 4px;
+  background: rgba(3, 5, 10, 0.95); /* Match bg to cover timestamp/dot */
+  padding: 4px;
+  border-radius: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  box-shadow: -10px 0 20px rgba(3, 5, 10, 0.95);
+  z-index: 5;
+}
+
+.thread-item:hover .thread-actions,
+.thread-item:focus-within .thread-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.thread-action-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.thread-action-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ink);
+}
+
+.thread-action-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Sidebar Filters (Inbox / Archived) */
+.sidebar-filters {
+  display: flex;
+  gap: 8px;
+  padding: 0 12px 12px;
+  border-bottom: 1px solid var(--glass-border);
+  margin-bottom: 12px;
+}
+
+.filter-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 0.85em;
+  font-weight: 600;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.filter-tab:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ink);
+}
+
+.filter-tab.active {
+  background: rgba(0, 255, 255, 0.1);
+  color: var(--accent);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
