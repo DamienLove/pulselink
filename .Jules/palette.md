@@ -10,3 +10,6 @@
 ## 2024-05-25 - Accessible Icon Buttons & Input Helpers
 **Learning:** Icon-only buttons (like Sidebar toggle) are invisible to screen readers without `aria-label`. Visual cues like character counts are missed unless linked via `aria-describedby`.
 **Action:** Audit all icon buttons for `aria-label` and programmatically link input helper text using `aria-describedby`.
+## 2024-05-26 - Custom Combobox Accessibility
+**Learning:** Custom "command palette" modals often lack standard ARIA roles, making them confusing for screen readers which don't announce them as dialogs or handle the list navigation context.
+**Action:** Apply the WAI-ARIA Combobox pattern (`role="combobox"`, `aria-activedescendant`) and mark the container as `role="dialog"` to ensure accessible navigation.
