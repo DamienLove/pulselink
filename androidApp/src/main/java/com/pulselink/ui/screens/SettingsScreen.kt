@@ -162,6 +162,13 @@ fun SettingsScreen(
                 leadingIcon = Icons.Filled.AddCircle
             )
 
+            SettingsActionRow(
+                title = stringResource(id = R.string.settings_report_bug),
+                actionLabel = "Report",
+                onAction = onReportBug,
+                leadingIcon = Icons.Filled.BugReport
+            )
+
             // Profile
             CollapsibleSettingsSection(
                 title = "Profile",
@@ -496,12 +503,6 @@ fun SettingsScreen(
                         leadingIcon = Icons.Filled.Person
                     )
                 }
-                SettingsActionRow(
-                    title = stringResource(id = R.string.settings_report_bug),
-                    actionLabel = "Report",
-                    onAction = onReportBug,
-                    leadingIcon = Icons.Filled.BugReport
-                )
                 SettingsActionRow(
                     title = stringResource(id = R.string.settings_beta_testers),
                     actionLabel = "Manage",
