@@ -2264,11 +2264,45 @@ function App() {
   }, [getContactSearchIndex, contactSearch, deviceContacts]);
 
   // Bolt: Memoize list elements to avoid re-creating them on every render
-  const messageListElements = useMemo(() => (
-    messages.map(msg => (
-      <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} />
-    ))
-  ), [messages, showPreviews]);
+  // Bolt: Updated to include Date Separators
+  const messageListElements = useMemo(() => {
+    const elements = [];
+    let lastDate = null;
+
+    const formatDateSeparator = (date) => {
+      const now = new Date();
+      const d = new Date(date);
+      const isToday = d.toDateString() === now.toDateString();
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      const isYesterday = d.toDateString() === yesterday.toDateString();
+
+      if (isToday) return "Today";
+      if (isYesterday) return "Yesterday";
+      return d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+    };
+
+    messages.forEach((msg) => {
+      const msgDate = new Date(msg.date);
+      // Group by simple date string (e.g. "Mon Jan 01 2024")
+      const dateStr = msgDate.toDateString();
+
+      if (dateStr !== lastDate) {
+        elements.push(
+          <div key={`sep-${dateStr}`} className="date-separator">
+            {formatDateSeparator(msgDate)}
+          </div>
+        );
+        lastDate = dateStr;
+      }
+
+      elements.push(
+        <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} />
+      );
+    });
+
+    return elements;
+  }, [messages, showPreviews]);
 
   // Bolt: Pagination for contact list to improve performance
   const contactListElements = useMemo(() => (
