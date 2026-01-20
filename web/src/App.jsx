@@ -3416,6 +3416,11 @@ function App() {
     setSelectedThread(null);
   }, []);
 
+  // Bolt: Stable handler for opening command palette
+  const handleOpenCommandPalette = useCallback(() => {
+    setShowCommandPalette(true);
+  }, []);
+
   // Bolt: Stable handler to prevent ghost content when switching threads
   const handleThreadSelect = useCallback((thread) => {
     setMessages([]); // Clear previous messages immediately
@@ -3597,7 +3602,7 @@ function App() {
           selectedThreadId={selectedThread?.id}
           onSelect={handleThreadSelect}
           showPreviews={showPreviews}
-          openCommandPalette={() => setShowCommandPalette(true)}
+          openCommandPalette={handleOpenCommandPalette}
         />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
