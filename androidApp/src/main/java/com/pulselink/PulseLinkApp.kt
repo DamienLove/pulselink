@@ -60,8 +60,8 @@ class PulseLinkApp : Application(), Configuration.Provider {
             appOpenAdController.updateAvailability(false)
         }
 
-        // SMS sync is now triggered on-demand when messages are sent/received
-        // No need for periodic sync
+        // POLICY: SMS sync is strictly EVENT-DRIVEN (triggered by SmsSyncManager/SmsStore).
+        // Periodic sync for messages is explicitly forbidden.
 
         val otpCleanupRequest = PeriodicWorkRequest.Builder(
             com.pulselink.data.sms.OtpCleanupWorker::class.java,

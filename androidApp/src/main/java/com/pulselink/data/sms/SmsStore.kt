@@ -12,6 +12,8 @@ import javax.inject.Singleton
 /**
  * Persists SMS rows into the system Telephony provider. This must only be used
  * while the app holds the default SMS role; otherwise the inserts will fail.
+ *
+ * Ensures IMMEDIATE sync trigger upon message insertion/update.
  */
 @Singleton
 class SmsStore @Inject constructor(
@@ -37,6 +39,7 @@ class SmsStore @Inject constructor(
         runCatching {
             context.contentResolver.insert(Telephony.Sms.Inbox.CONTENT_URI, values)
         }.onSuccess {
+            // Explicitly trigger sync immediately to satisfy "keep synced as new messages come in"
             smsSyncTrigger.triggerSync()
         }.onFailure { error ->
             Log.w(TAG, "Failed to insert incoming SMS into Telephony provider", error)
@@ -63,6 +66,7 @@ class SmsStore @Inject constructor(
         runCatching {
             context.contentResolver.insert(Telephony.Sms.Sent.CONTENT_URI, values)
         }.onSuccess {
+            // Explicitly trigger sync immediately to satisfy "keep synced as they send them"
             smsSyncTrigger.triggerSync()
         }.onFailure { error ->
             Log.w(TAG, "Failed to insert outgoing SMS into Telephony provider", error)

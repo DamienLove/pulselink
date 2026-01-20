@@ -15,6 +15,15 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import java.util.concurrent.atomic.AtomicBoolean
 
+/**
+ * Manages event-driven SMS synchronization.
+ *
+ * POLICY: SMS sync is strictly EVENT-DRIVEN.
+ * - Triggers immediately when Premium/Pro status unlocks.
+ * - Triggers immediately when "Remote Web Access" is enabled.
+ * - Triggers immediately when a new message is received or sent (via SmsRepository/SmsStore).
+ * - NO periodic/interval synchronization is allowed for SMS.
+ */
 @Singleton
 class SmsSyncManager @Inject constructor(
     private val smsRepository: SmsRepository,
@@ -29,6 +38,8 @@ class SmsSyncManager @Inject constructor(
         if (!isStarted.compareAndSet(false, true)) return
 
         // 1. Observe SMS DB changes
+        // This catches changes from default SMS app if it's not PulseLink, or generic updates.
+        // SmsStore also explicitly triggers sync for immediate reaction.
         smsRepository.changes()
             .debounce(500L) // Debounce for 0.5 seconds to batch rapid changes
             .onEach {
@@ -45,6 +56,7 @@ class SmsSyncManager @Inject constructor(
             .launchIn(scope)
 
         // 2. Observe Settings changes to immediately sync when Premium/Web Access changes
+        // This ensures that "As soon as they get premium" requirement is met.
         settingsRepository.settings
             .distinctUntilChanged { old, new ->
                 old.remoteWebAccessEnabled == new.remoteWebAccessEnabled &&
