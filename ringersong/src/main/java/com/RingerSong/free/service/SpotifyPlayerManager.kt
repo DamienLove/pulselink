@@ -137,4 +137,21 @@ class SpotifyPlayerManager @Inject constructor(
             continuation.resume("Error")
         }
     }
+
+    suspend fun isPremiumUser(): Boolean = suspendCancellableCoroutine { continuation ->
+        if (spotifyAppRemote?.isConnected != true) {
+            // Assume false if not connected, though caller should ensure connection
+            continuation.resume(false)
+            return@suspendCancellableCoroutine
+        }
+
+        spotifyAppRemote?.userApi?.capabilities?.setResultCallback { capabilities ->
+            val isPremium = capabilities.canPlayOnDemand
+            Log.d(TAG, "User isPremium: $isPremium")
+            continuation.resume(isPremium)
+        }?.setErrorCallback {
+            Log.e(TAG, "Error checking premium status", it)
+            continuation.resume(false)
+        }
+    }
 }

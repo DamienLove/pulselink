@@ -252,6 +252,20 @@ class RingerPlaybackService : Service() {
     private suspend fun playSpotifySong(song: SongEntry, startMs: Long, durationMs: Long) {
         Log.d(TAG, "Attempting to stream Spotify track: ${song.title} (${song.uri})")
 
+        // Ensure connection and check for Premium
+        // We want to "activate" the user's paid membership benefits.
+        if (!spotifyPlayer.connect()) {
+             Log.e(TAG, "Failed to connect to Spotify")
+             playFallbackRingtone()
+             return
+        }
+
+        val isPremium = spotifyPlayer.isPremiumUser()
+        if (!isPremium) {
+            Log.w(TAG, "User is not Spotify Premium. Playback behavior may be limited (Shuffle).")
+            // Proceeding as best-effort, but specific track playback is not guaranteed without Premium.
+        }
+
         // Try streaming using Spotify App Remote
         val streamSuccess = spotifyPlayer.playUri(song.uri, startMs)
 
@@ -272,10 +286,34 @@ class RingerPlaybackService : Service() {
         }
 
         Log.e(TAG, "Spotify streaming failed: ${song.title} (${song.uri})")
-        stopPlayback()
-        restoreSystemRinger()
-        stopForeground(true)
-        stopSelf()
+        playFallbackRingtone()
+    }
+
+    private fun playFallbackRingtone() {
+        Log.w(TAG, "Playing fallback ringtone")
+        try {
+            val fallbackUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
+            mediaPlayer = MediaPlayer().apply {
+                setDataSource(applicationContext, fallbackUri)
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .build()
+                )
+                isLooping = true
+                prepare()
+                start()
+            }
+            isPlaying = true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to play fallback ringtone", e)
+            // Last resort: ensure we don't leave service running doing nothing
+            stopPlayback()
+            restoreSystemRinger()
+            stopForeground(true)
+            stopSelf()
+        }
     }
 
     private fun playLocalSong(song: SongEntry, startMs: Long, durationMs: Long) {

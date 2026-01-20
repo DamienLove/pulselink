@@ -74,7 +74,31 @@ class RingtoneSegmentManager @Inject constructor(
             val song = segmentPlay.song
             Log.d(TAG, "Playing segment: ${song.title} from ${segmentPlay.startMs}ms for ${segmentPlay.durationMs}ms")
 
-            // Get the actual file path
+            // Handle Streaming sources by setting a silent ringtone to prevent default ringer overlap
+            var isYouTubeLocal = false
+            if (song.source == SongSource.YOUTUBE_MUSIC) {
+                val videoId = song.uri.removePrefix("youtube:video:")
+                val youtubeMusicRepo = YouTubeMusicRepository(context)
+                // Check if we have the file locally, if so we can use it as a normal ringtone
+                if (youtubeMusicRepo.isTrackDownloaded(videoId)) {
+                    isYouTubeLocal = true
+                }
+            }
+
+            if (song.source == SongSource.SPOTIFY ||
+                (song.source == SongSource.YOUTUBE_MUSIC && !isYouTubeLocal)) {
+
+                val silentFile = setupSilentRingtone()
+                if (silentFile != null) {
+                    Log.d(TAG, "Setting silent ringtone for streaming source: ${song.source}")
+                    setAsSystemRingtone(silentFile, "Silent")
+                } else {
+                    Log.e(TAG, "Failed to setup silent ringtone")
+                }
+                return@withContext
+            }
+
+            // Get the actual file path for local/downloaded files
             val sourceFilePath = when (song.source) {
                 SongSource.YOUTUBE_MUSIC -> {
                     val videoId = song.uri.removePrefix("youtube:video:")
@@ -89,12 +113,8 @@ class RingtoneSegmentManager @Inject constructor(
                         song.uri.removePrefix("file://")
                     }
                 }
-                SongSource.SPOTIFY -> {
-                    Log.w(TAG, "Spotify streaming not supported for ringtones")
-                    null
-                }
                 else -> {
-                    Log.w(TAG, "Unsupported song source: ${song.source}")
+                    Log.w(TAG, "Unsupported song source for file extraction: ${song.source}")
                     null
                 }
             }
@@ -117,6 +137,26 @@ class RingtoneSegmentManager @Inject constructor(
 
         } catch (e: Exception) {
             Log.e(TAG, "Error setting ringtone", e)
+        }
+    }
+
+    private fun setupSilentRingtone(): File? {
+        return try {
+            val ringtoneDir = File(context.getExternalFilesDir(null), RINGTONE_DIR)
+            if (!ringtoneDir.exists()) ringtoneDir.mkdirs()
+
+            val silentFile = File(ringtoneDir, "ringer_silence.wav")
+
+            // Always overwrite to ensure it exists and is correct
+            context.resources.openRawResource(com.RingerSong.free.R.raw.silent).use { input ->
+                FileOutputStream(silentFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            silentFile
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting up silent ringtone", e)
+            null
         }
     }
 
