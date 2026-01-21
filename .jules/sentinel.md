@@ -16,3 +16,8 @@
 **Vulnerability:** The `callerIdCache` collection in `firestore.rules` used `allow read`, which implicitly grants `list` permission. This allowed any authenticated user to download the entire dataset of cached phone numbers and names, a potential privacy leak.
 **Learning:** `allow read` is a shorthand for `get` and `list`. For collections containing user data or PII that are accessed via key-value lookups (like caches or user profiles), `allow get` is safer than `allow read`.
 **Prevention:** Always verify if `list` permission is actually required. If the app only looks up documents by ID, restrict the rule to `allow get`.
+
+## 2026-01-20 - [Mass Assignment in Firestore Functions]
+**Vulnerability:** The `approveTheme` Cloud Function blindly copied all fields from the submission document (`themes_submissions`) to the public document (`themes_public`). This allowed authenticated users to inject arbitrary fields (e.g., `isAdmin`, malicious scripts) into public documents by including them in their submission.
+**Learning:** Copying an entire object (using spread syntax `...data`) without filtering is dangerous when the source is user-controlled and the destination is privileged or public. This is known as Mass Assignment or Excessive Data Exposure.
+**Prevention:** Always use an allowlist (whitelist) of fields when copying data from a user-controlled source to a trusted destination. Explicitly construct the destination object with only the fields you expect.

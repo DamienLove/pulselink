@@ -64,9 +64,24 @@ export const approveTheme = functions.https.onCall(async (data, context) => {
     // 5. Promote to public
     const publicRef = db.collection("themes_public").doc(themeId);
 
+    // Sentinel: Whitelist allowed fields to prevent Mass Assignment
+    // / Excessive Data Exposure
+    const allowedFields = [
+      "name", "nameLowercase", "ownerUid", "anonymous", "authorName",
+      "authorHandle", "theme", "createdAt", "updatedAt", "hasImages",
+    ];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sanitizedData: Record<string, any> = {};
+    for (const field of allowedFields) {
+      if (Object.prototype.hasOwnProperty.call(themeData, field)) {
+        sanitizedData[field] = themeData[field];
+      }
+    }
+
     // Sanitize/Update status
     const publicData = {
-      ...themeData,
+      ...sanitizedData,
       status: "approved",
       approvedBy: context.auth.uid,
       approvedAt: admin.firestore.FieldValue.serverTimestamp(),
