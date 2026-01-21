@@ -130,6 +130,7 @@ const areThreadsEqual = (prev, next) => {
          prev.onSelect === next.onSelect &&
          prev.thread.id === next.thread.id &&
          prev.thread.address === next.thread.address &&
+         prev.thread.display_name === next.thread.display_name &&
          prev.thread.snippet === next.thread.snippet;
 };
 
@@ -3416,6 +3417,11 @@ function App() {
     setSelectedThread(null);
   }, []);
 
+  // Bolt: Stable handler for command palette to prevent Sidebar re-renders
+  const handleOpenCommandPalette = useCallback(() => {
+    setShowCommandPalette(true);
+  }, []);
+
   // Bolt: Stable handler to prevent ghost content when switching threads
   const handleThreadSelect = useCallback((thread) => {
     setMessages([]); // Clear previous messages immediately
@@ -3597,7 +3603,7 @@ function App() {
           selectedThreadId={selectedThread?.id}
           onSelect={handleThreadSelect}
           showPreviews={showPreviews}
-          openCommandPalette={() => setShowCommandPalette(true)}
+          openCommandPalette={handleOpenCommandPalette}
         />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
