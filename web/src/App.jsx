@@ -3456,6 +3456,21 @@ function App() {
      return logo;
   }, [remoteSettings.mergedExperienceEnabled]);
 
+  // Bolt: Expose internal state for testing
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      window.debugSetUser = setUser;
+      window.debugSetRemoteSettings = setRemoteSettings;
+      window.debugSetIsLoadingThreads = setIsLoadingThreads;
+      window.debugSetLegacyThreads = setLegacyThreads;
+      window.debugSetLines = setLines;
+      window.debugSetLineThreads = setLineThreads;
+      window.debugSetMessages = setMessages;
+      window.debugSetAlertLocations = setAlertLocations;
+      window.debugSetDeviceContacts = setDeviceContacts;
+    }
+  }, []);
+
   if (!user) {
     return (
       <div className={`app-shell ${themePrefs.useGlassEffect ? 'glass-mode' : ''} ${themePrefs.useHolographicGlow ? 'holographic-mode' : ''}`} style={themeVars}>
