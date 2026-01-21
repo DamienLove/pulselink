@@ -4784,18 +4784,17 @@ function App() {
               </>
             ) : (
               <div className="empty-state">
-                <img src={beaconLogo} alt="Beacon" className="empty-logo" style={{ marginBottom: '24px', opacity: 1, filter: 'none' }} />
+                <img src={beaconLogo} alt="Beacon" className="empty-logo beacon-promo" />
                 <h2 style={{ marginBottom: '16px' }}>Beacon Inbox</h2>
-                <div className="badge badge-premium" style={{ background: 'var(--accent)', color: '#fff', marginBottom: '24px' }}>
+                <div className="badge badge-premium premium-promo">
                   Premium Feature
                 </div>
-                <p style={{ maxWidth: '400px', textAlign: 'center', lineHeight: '1.6', color: 'var(--muted)' }}>
+                <p className="text-center-limited">
                   Upgrade to PulseLink Premium to access your SMS messages directly from the web.
                   Send and receive texts even when your phone is in the other room.
                 </p>
                 <button
-                  className="primary-btn"
-                  style={{ marginTop: '32px' }}
+                  className="primary-btn mt-32"
                   onClick={() => setActivePanel('settings')}
                 >
                   Go to Settings
