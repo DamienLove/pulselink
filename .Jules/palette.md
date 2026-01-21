@@ -10,3 +10,7 @@
 ## 2024-05-25 - Accessible Icon Buttons & Input Helpers
 **Learning:** Icon-only buttons (like Sidebar toggle) are invisible to screen readers without `aria-label`. Visual cues like character counts are missed unless linked via `aria-describedby`.
 **Action:** Audit all icon buttons for `aria-label` and programmatically link input helper text using `aria-describedby`.
+
+## 2024-05-21 - Accessible Search & Live Regions
+**Learning:** React components calling `user.getIdTokenResult()` in `useEffect` will crash if the mock user object lacks this method, even if wrapped in `catch`. When testing auth-dependent components, ensuring the mock user shape matches the Firebase User interface (including methods) is critical.
+**Action:** When mocking complex objects like Firebase User, use a helper that includes no-op implementations of common methods like `getIdTokenResult` or `reload`.

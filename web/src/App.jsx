@@ -1911,6 +1911,18 @@ const getToastClass = (msg) => {
   return 'toast';
 };
 
+// Palette: Reusable handler for search inputs (Escape to clear/blur)
+const handleSearchKeyDown = (e, setValue, value) => {
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    if (value) {
+      setValue('');
+    } else {
+      e.currentTarget.blur();
+    }
+  }
+};
+
 function App() {
   const webHintStorageKey = 'pulselink.hideWebHint';
   const [user, setUser] = useState(null);
@@ -2056,6 +2068,15 @@ function App() {
   const [settingsSearch, setSettingsSearch] = useState('');
   const [premiumClaimActive, setPremiumClaimActive] = useState(false);
   const [proClaimActive, setProClaimActive] = useState(false);
+
+  // Palette: Expose debug setters for testing
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      window.debugSetUser = setUser;
+      window.debugSetRemoteSettings = setRemoteSettings;
+      window.debugSetDeviceContacts = setDeviceContacts;
+    }
+  }, []);
 
   const subscriptionStatus = userData?.subscriptionStatus;
   const premiumSubscriptionStatus = userData?.premiumSubscriptionStatus;
@@ -3920,7 +3941,7 @@ function App() {
                 <p>Browse all device contacts synced from your phone.</p>
               </div>
               <div className="contacts-toolbar">
-                <div className="contact-count" style={{ marginBottom: 12, fontSize: '0.9em', color: 'var(--muted)' }}>
+                <div className="contact-count" style={{ marginBottom: 12, fontSize: '0.9em', color: 'var(--muted)' }} role="status" aria-live="polite">
                   {filteredDeviceContacts.length} contact{filteredDeviceContacts.length === 1 ? '' : 's'}
                 </div>
                 <div className="settings-search-container" style={{ flex: 1, marginBottom: 0 }}>
@@ -3931,6 +3952,7 @@ function App() {
                     aria-label="Search contacts"
                     value={contactSearch}
                     onChange={(e) => setContactSearch(e.target.value)}
+                    onKeyDown={(e) => handleSearchKeyDown(e, setContactSearch, contactSearch)}
                   />
                   {contactSearch && (
                     <button
@@ -4118,7 +4140,13 @@ function App() {
                                 aria-label="Search Spotify for songs"
                                 value={spotifySearch}
                                 onChange={(e) => setSpotifySearch(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSpotifySearch()}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleSpotifySearch();
+                                    return;
+                                  }
+                                  handleSearchKeyDown(e, setSpotifySearch, spotifySearch);
+                                }}
                             />
                             <button
                                 className="primary-btn"
@@ -4167,8 +4195,12 @@ function App() {
                         onChange={(e) => setThemeSearch(e.target.value)}
                         placeholder="Search by name or creator"
                         aria-label="Search themes"
+                        onKeyDown={(e) => handleSearchKeyDown(e, setThemeSearch, themeSearch)}
                       />
                     </label>
+                    <div className="sr-only" role="status" aria-live="polite">
+                      {themeSearch ? `${filteredThemes.length} themes found` : ''}
+                    </div>
                     <button className="secondary-btn" type="button" onClick={() => setThemeSearch('')}>
                       Clear
                     </button>
@@ -4538,6 +4570,7 @@ function App() {
                   aria-label="Search settings"
                   value={settingsSearch}
                   onChange={(e) => setSettingsSearch(e.target.value)}
+                  onKeyDown={(e) => handleSearchKeyDown(e, setSettingsSearch, settingsSearch)}
                 />
                 {settingsSearch && (
                   <button
