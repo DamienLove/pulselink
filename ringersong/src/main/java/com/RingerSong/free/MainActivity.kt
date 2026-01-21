@@ -2,6 +2,7 @@ package com.RingerSong.free
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -51,7 +52,12 @@ class MainActivity : ComponentActivity() {
 
     private fun updateSharedIntent(intent: Intent?) {
         if (intent?.action == Intent.ACTION_SEND && intent.type?.startsWith("audio/") == true) {
-            val uri = intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+            val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(Intent.EXTRA_STREAM) as? Uri
+            }
             if (uri != null) {
                 sharedUriState.value = uri
             }

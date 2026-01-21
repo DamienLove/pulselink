@@ -130,7 +130,8 @@ fun UnifiedHomeScreen(
     }
 
     val context = LocalContext.current
-    var selectedFilter by rememberSaveable { mutableStateOf(InboxFilter.ALL) }
+    // Default to CONTACTS in unified view to remove "All" clutter
+    var selectedFilter by rememberSaveable { mutableStateOf(InboxFilter.CONTACTS) }
     val totalUnread = remember(threads) { threads.count { it.unread } }
     val previewThreads = remember(threads, isPremium, activeLineId, deviceLineId, selectedFilter, contactsByNumber) {
         val lineFiltered = if (isPremium && orderedLines.isNotEmpty()) {

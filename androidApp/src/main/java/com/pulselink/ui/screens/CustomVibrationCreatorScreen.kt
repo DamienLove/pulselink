@@ -209,19 +209,22 @@ fun CustomVibrationCreatorScreen(
                                 if (!isRecording) return@detectTapGestures
                                 val pressStart = System.currentTimeMillis()
                                 vibrator?.let {
+                                    // Start a long vibration on press so user feels it while holding
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                                         it.vibrate(
                                             VibrationEffect.createOneShot(
-                                                minPulseMs,
+                                                maxPulseMs,
                                                 VibrationEffect.DEFAULT_AMPLITUDE
                                             )
                                         )
                                     } else {
                                         @Suppress("DEPRECATION")
-                                        it.vibrate(minPulseMs)
+                                        it.vibrate(maxPulseMs)
                                     }
                                 }
                                 tryAwaitRelease()
+                                // Stop vibration on release
+                                vibrator?.cancel()
                                 val duration = (System.currentTimeMillis() - pressStart)
                                     .coerceIn(minPulseMs, maxPulseMs)
                                 tapEvents.add(VibrationTap(pressStart, duration))
