@@ -26,7 +26,13 @@ export default function CommandPalette({ isOpen, onClose, setActivePanel, action
       setSelectedIndex(0);
       // Small timeout to allow render before focus
       setTimeout(() => inputRef.current?.focus(), 50);
+
+      // Prevent body scroll
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
     }
+    return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
   const filteredItems = useMemo(() => {
@@ -37,6 +43,7 @@ export default function CommandPalette({ isOpen, onClose, setActivePanel, action
     );
   }, [query]);
 
+  // Ensure selected index stays within bounds when list changes
   useEffect(() => {
     setSelectedIndex(0);
   }, [filteredItems]);
@@ -75,8 +82,16 @@ export default function CommandPalette({ isOpen, onClose, setActivePanel, action
 
   if (!isOpen) return null;
 
+  const activeOptionId = filteredItems[selectedIndex] ? `cmd-option-${filteredItems[selectedIndex].id}` : undefined;
+
   return (
-    <div className="command-palette-overlay" onClick={onClose}>
+    <div
+      className="command-palette-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Command Palette"
+    >
       <div className="command-palette-modal" onClick={e => e.stopPropagation()}>
         <div className="command-palette-header">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="search-icon">
@@ -90,24 +105,42 @@ export default function CommandPalette({ isOpen, onClose, setActivePanel, action
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
+            role="combobox"
+            aria-expanded="true"
+            aria-controls="command-list"
+            aria-haspopup="listbox"
+            aria-activedescendant={activeOptionId}
+            aria-label="Search commands"
           />
           <div className="command-palette-hint">Esc to close</div>
         </div>
-        <div className="command-palette-list" ref={listRef}>
-          {filteredItems.map((item, index) => (
-            <div
-              key={item.id}
-              className={`command-palette-item ${index === selectedIndex ? 'selected' : ''}`}
-              onClick={() => handleSelect(item)}
-              onMouseEnter={() => setSelectedIndex(index)}
-            >
-              <span className="item-icon">{item.icon}</span>
-              <span className="item-label">{item.label}</span>
-              {index === selectedIndex && <span className="item-enter">↵</span>}
-            </div>
-          ))}
+        <div
+          className="command-palette-list"
+          ref={listRef}
+          id="command-list"
+          role="listbox"
+          aria-label="Commands"
+        >
+          {filteredItems.map((item, index) => {
+            const isSelected = index === selectedIndex;
+            return (
+              <div
+                key={item.id}
+                id={`cmd-option-${item.id}`}
+                className={`command-palette-item ${isSelected ? 'selected' : ''}`}
+                onClick={() => handleSelect(item)}
+                onMouseEnter={() => setSelectedIndex(index)}
+                role="option"
+                aria-selected={isSelected}
+              >
+                <span className="item-icon" aria-hidden="true">{item.icon}</span>
+                <span className="item-label">{item.label}</span>
+                {isSelected && <span className="item-enter" aria-hidden="true">↵</span>}
+              </div>
+            );
+          })}
           {filteredItems.length === 0 && (
-            <div className="command-palette-empty">No results found.</div>
+            <div className="command-palette-empty" role="status">No results found.</div>
           )}
         </div>
       </div>
