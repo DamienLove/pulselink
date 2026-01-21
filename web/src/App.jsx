@@ -83,6 +83,10 @@ const LockIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="non
 const MessageSquareIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>;
 const SearchIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
 const CloseIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+const PinIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4a2 2 0 0 0-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7A1.5 1.5 0 1 1 5.5 4 1.5 1.5 0 0 1 5.5 7z"></path></svg>; // Used Tag icon visual for Pin as placeholder, will replace with PushPin
+const PushPinIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>;
+const ArchiveIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>;
+const UnarchiveIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line><line x1="12" y1="10" x2="12" y2="16"></line></svg>;
 const Spinner = ({ className = '', style = {} }) => (
   <svg className={`spinner ${className}`} style={style} viewBox="0 0 50 50" aria-hidden="true">
     <defs>
@@ -128,23 +132,60 @@ const areThreadsEqual = (prev, next) => {
   return prev.isActive === next.isActive &&
          prev.showPreviews === next.showPreviews &&
          prev.onSelect === next.onSelect &&
+         prev.onPin === next.onPin &&
+         prev.onArchive === next.onArchive &&
          prev.thread.id === next.thread.id &&
          prev.thread.address === next.thread.address &&
-         prev.thread.snippet === next.thread.snippet;
+         prev.thread.snippet === next.thread.snippet &&
+         prev.thread.unread === next.thread.unread &&
+         prev.thread.webPinned === next.thread.webPinned &&
+         prev.thread.archived === next.thread.archived;
 };
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
 // when only the selection state changes or when unrelated threads update.
-const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
-  <button
-    className={`thread-item ${isActive ? 'active' : ''}`}
+const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onArchive }) => (
+  <div
+    className={`thread-item ${isActive ? 'active' : ''} ${thread.unread ? 'unread' : ''}`}
+    role="button"
+    tabIndex={0}
     onClick={() => onSelect(thread)}
+    onKeyDown={(e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onSelect(thread);
+      }
+    }}
     aria-current={isActive ? 'true' : undefined}
     aria-label={`Select conversation with ${thread.display_name || thread.address}${showPreviews && thread.snippet ? `, ${thread.snippet}` : ''}`}
   >
-    <div className="thread-name">{thread.display_name || thread.address}</div>
-    <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
-  </button>
+    <div className="thread-content">
+      <div className="thread-header">
+         <div className="thread-name">{thread.display_name || thread.address}</div>
+         <div className="thread-meta-icons">
+           {thread.webPinned && <PushPinIcon />}
+           {thread.unread && <div className="unread-dot" />}
+         </div>
+      </div>
+      <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
+    </div>
+    <div className="thread-actions-hover">
+       <button
+         className="icon-btn-mini"
+         onClick={(e) => { e.stopPropagation(); onPin(thread); }}
+         title={thread.webPinned ? "Unpin" : "Pin"}
+       >
+          <PushPinIcon />
+       </button>
+       <button
+         className="icon-btn-mini"
+         onClick={(e) => { e.stopPropagation(); onArchive(thread); }}
+         title={thread.archived ? "Unarchive" : "Archive"}
+       >
+          {thread.archived ? <UnarchiveIcon /> : <ArchiveIcon />}
+       </button>
+    </div>
+  </div>
 ), areThreadsEqual);
 
 ThreadItem.displayName = 'ThreadItem';
@@ -1600,9 +1641,12 @@ const Sidebar = memo(({
   selectedThreadId,
   onSelect,
   showPreviews,
-  openCommandPalette
+  openCommandPalette,
+  onPin,
+  onArchive
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewArchived, setViewArchived] = useState(false);
   const searchInputRef = useRef(null);
 
   useEffect(() => {
@@ -1628,12 +1672,33 @@ const Sidebar = memo(({
   const getSearchIndex = useLazySearchIndex(threads, threadMapper);
 
   const filteredThreads = useMemo(() => {
+    let result = threads;
+
+    // 1. Archive Filtering
+    if (viewArchived) {
+       result = result.filter(t => t.archived === true);
+    } else {
+       result = result.filter(t => t.archived !== true);
+    }
+
+    // 2. Search
     const term = searchQuery.trim().toLowerCase();
-    if (!term) return threads;
-    return getSearchIndex()
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ thread }) => thread);
-  }, [getSearchIndex, searchQuery, threads]);
+    if (term) {
+       const ids = new Set(getSearchIndex()
+        .filter(({ searchString }) => searchString.includes(term))
+        .map(({ thread }) => thread.id));
+       result = result.filter(t => ids.has(t.id));
+    }
+
+    // 3. Sorting (Pinned first, then Date)
+    // Note: 'threads' prop is already sorted by date descending from parent.
+    // We just need to stable sort pinned to top.
+    return [...result].sort((a, b) => {
+       const pinA = a.webPinned ? 1 : 0;
+       const pinB = b.webPinned ? 1 : 0;
+       return pinB - pinA; // Pinned (1) comes before Unpinned (0)
+    });
+  }, [getSearchIndex, searchQuery, threads, viewArchived]);
 
   const [collapsed, setCollapsed] = useState(false);
 
@@ -1819,7 +1884,21 @@ const Sidebar = memo(({
             </button>
           </div>
           <div className="thread-list">
-            {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
+            <div className="sidebar-sub-header" style={{ display: 'flex', gap: 8, padding: '0 12px 8px', overflowX: 'auto' }}>
+                <button
+                    className={`chip small ${!viewArchived ? 'active' : ''}`}
+                    onClick={() => setViewArchived(false)}
+                >
+                    Inbox
+                </button>
+                <button
+                    className={`chip small ${viewArchived ? 'active' : ''}`}
+                    onClick={() => setViewArchived(true)}
+                >
+                    Archived
+                </button>
+            </div>
+            {lineInboxMode === 'PER_LINE' && lines.length > 0 && !viewArchived && (
               <div className="line-tabs" aria-label="Device lines">
                 <button
                   className={`chip ${!activeLineId ? 'active' : ''}`}
@@ -1844,9 +1923,9 @@ const Sidebar = memo(({
             ) : filteredThreads.length === 0 ? (
               <div className="sidebar-placeholder">
                 <div className="sidebar-tip">
-                  <strong>{searchQuery ? "No matches found" : "No conversations found"}</strong>
+                  <strong>{searchQuery ? "No matches found" : (viewArchived ? "No archived conversations" : "No conversations found")}</strong>
                 </div>
-                {!searchQuery && (
+                {!searchQuery && !viewArchived && (
                   <div className="sidebar-tip muted">
                     To see your messages here:
                     <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
@@ -1869,6 +1948,8 @@ const Sidebar = memo(({
                   thread={thread}
                   isActive={selectedThreadId === thread.id}
                   onSelect={onSelect}
+                  onPin={onPin}
+                  onArchive={onArchive}
                   showPreviews={showPreviews}
                 />
               ))
@@ -1898,6 +1979,8 @@ const Sidebar = memo(({
          prev.onSelect === next.onSelect &&
          prev.showPreviews === next.showPreviews &&
          prev.navLogo === next.navLogo &&
+         prev.onPin === next.onPin &&
+         prev.onArchive === next.onArchive &&
          prev.brandTitle === next.brandTitle;
 });
 
@@ -2015,6 +2098,22 @@ function App() {
   useEffect(() => {
     localStorage.setItem('pulselink.devExtensions', JSON.stringify(devExtensions));
   }, [devExtensions]);
+
+  // Bolt: Expose internal state for testing/debugging in development
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      window.debugSetUser = (u) => {
+          console.log("Debug: Setting user", u);
+          setUser(u);
+      };
+      window.debugSetLegacyThreads = (t) => {
+          console.log("Debug: Setting threads", t);
+          setLegacyThreads(t);
+      };
+      window.debugSetIsLoadingThreads = (l) => setIsLoadingThreads(l);
+      window.debugSetRemoteSettings = (s) => setRemoteSettings(prev => ({...prev, ...s}));
+    }
+  }, []);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -3423,7 +3522,67 @@ function App() {
     if (thread?.lineId) {
       setActiveLineId((prev) => prev ?? thread.lineId);
     }
-  }, []);
+    // Mark as read immediately when selecting (optimistic update)
+    if (thread && thread.unread) {
+        const basePath = thread.lineId
+            ? ["users", user.uid, "lines", thread.lineId, "threads", thread.id]
+            : ["users", user.uid, "synced_threads", thread.id];
+        const docRef = doc(db, ...basePath);
+        setDoc(docRef, { unread: false, unreadCount: 0 }, { merge: true }).catch(console.error);
+    }
+  }, [user]);
+
+  // Bolt: Keep selected thread read status in sync if it updates (e.g. incoming message)
+  useEffect(() => {
+    if (!user || !selectedThread) return;
+
+    // Find the latest version of the selected thread to check its unread status
+    let liveThread = null;
+    if (selectedThread.lineId) {
+       liveThread = lineThreads[selectedThread.lineId]?.find(t => t.id === selectedThread.id);
+    } else {
+       liveThread = legacyThreads.find(t => t.id === selectedThread.id);
+    }
+
+    if (liveThread?.unread) {
+        const basePath = liveThread.lineId
+            ? ["users", user.uid, "lines", liveThread.lineId, "threads", liveThread.id]
+            : ["users", user.uid, "synced_threads", liveThread.id];
+        setDoc(doc(db, ...basePath), { unread: false, unreadCount: 0 }, { merge: true })
+          .catch(console.error);
+    }
+  }, [user, selectedThread?.id, legacyThreads, lineThreads]);
+
+  const handlePinThread = useCallback(async (thread) => {
+      if (!user) return;
+      const newStatus = !thread.webPinned;
+      const basePath = thread.lineId
+          ? ["users", user.uid, "lines", thread.lineId, "threads", thread.id]
+          : ["users", user.uid, "synced_threads", thread.id];
+      const docRef = doc(db, ...basePath);
+      try {
+          await setDoc(docRef, { webPinned: newStatus }, { merge: true });
+      } catch (e) {
+          console.error("Failed to pin thread", e);
+      }
+  }, [user]);
+
+  const handleArchiveThread = useCallback(async (thread) => {
+      if (!user) return;
+      const newStatus = !thread.archived;
+      const basePath = thread.lineId
+          ? ["users", user.uid, "lines", thread.lineId, "threads", thread.id]
+          : ["users", user.uid, "synced_threads", thread.id];
+      const docRef = doc(db, ...basePath);
+      try {
+          await setDoc(docRef, { archived: newStatus }, { merge: true });
+          if (newStatus) {
+             setSelectedThread(prev => (prev && prev.id === thread.id) ? null : prev);
+          }
+      } catch (e) {
+          console.error("Failed to archive thread", e);
+      }
+  }, [user]);
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
@@ -3596,6 +3755,8 @@ function App() {
           threads={activeLineThreads}
           selectedThreadId={selectedThread?.id}
           onSelect={handleThreadSelect}
+          onPin={handlePinThread}
+          onArchive={handleArchiveThread}
           showPreviews={showPreviews}
           openCommandPalette={() => setShowCommandPalette(true)}
         />

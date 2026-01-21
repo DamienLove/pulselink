@@ -933,6 +933,14 @@ textarea:focus-visible,
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.thread-content {
+  flex: 1;
+  min-width: 0; /* Ensures truncation works */
 }
 
 .thread-item:hover {
@@ -942,6 +950,7 @@ textarea:focus-visible,
 .thread-item:focus-visible {
   background: rgba(0, 255, 255, 0.05);
   border-color: var(--accent-dim);
+  outline: none;
 }
 
 .thread-item.active {
@@ -950,11 +959,41 @@ textarea:focus-visible,
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
+.thread-item.unread .thread-name {
+  font-weight: 800;
+  color: var(--ink);
+  text-shadow: 0 0 1px currentColor;
+}
+
+.thread-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
 .thread-name {
   font-weight: 600;
-  margin-bottom: 4px;
   color: var(--ink);
   font-size: 0.95em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thread-meta-icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+}
+
+.unread-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 
 .thread-snippet {
@@ -968,6 +1007,67 @@ textarea:focus-visible,
 
 .thread-item.active .thread-name {
   color: var(--accent);
+}
+
+/* Hover Actions */
+.thread-actions-hover {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.thread-item:hover .thread-actions-hover {
+  display: flex;
+}
+
+.icon-btn-mini {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.icon-btn-mini:hover {
+  background: var(--accent);
+  color: #000;
+}
+
+/* Chips */
+.chip {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85em;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ink);
+}
+
+.chip.active {
+  background: rgba(0, 255, 255, 0.15);
+  color: var(--accent);
+  border-color: rgba(0, 255, 255, 0.3);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.1);
+}
+
+.chip.small {
+  padding: 4px 10px;
+  font-size: 0.75em;
 }
 
 /* Skeleton Loading */
