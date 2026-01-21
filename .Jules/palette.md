@@ -1,3 +1,6 @@
+## 2024-05-26 - Command Palette Accessibility Gap
+**Learning:** Visual modals with search inputs often miss the semantic `dialog` and `combobox` roles, making them confusing for screen reader users who don't know they've entered a new context.
+**Action:** Enforce `role="dialog"` on overlays and full `combobox` pattern (controls, activedescendant) on command inputs.
 ## 2024-05-24 - Search Keyboard Shortcuts
 **Learning:** Power users often rely on keyboard shortcuts like `Ctrl+K` or `/` to navigate quickly. Adding these shortcuts reduces friction and aligns with common productivity app patterns.
 **Action:** Implemented global shortcut listeners in the Sidebar to focus the search input, and added a visual hint in the placeholder.
