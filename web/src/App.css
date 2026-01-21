@@ -933,10 +933,14 @@ textarea:focus-visible,
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .thread-item:hover {
   background: rgba(255, 255, 255, 0.04);
+  transform: translateX(4px);
 }
 
 .thread-item:focus-visible {
@@ -950,11 +954,40 @@ textarea:focus-visible,
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
+.thread-item.unread {
+  background: rgba(0, 255, 255, 0.03);
+}
+
+.thread-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.thread-row-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
 .thread-name {
   font-weight: 600;
-  margin-bottom: 4px;
   color: var(--ink);
   font-size: 0.95em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.thread-time {
+  font-size: 0.75em;
+  color: var(--muted);
+  margin-left: 8px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
 }
 
 .thread-snippet {
@@ -964,10 +997,38 @@ textarea:focus-visible,
   overflow: hidden;
   text-overflow: ellipsis;
   opacity: 0.8;
+  flex: 1;
 }
 
 .thread-item.active .thread-name {
   color: var(--accent);
+}
+
+.thread-item.unread .thread-name {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.thread-item.unread .thread-snippet {
+  color: var(--ink);
+  opacity: 1;
+}
+
+.thread-item.unread .thread-time {
+  color: var(--accent);
+  opacity: 1;
+  font-weight: 600;
+}
+
+.thread-unread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+  margin-left: 8px;
+  flex-shrink: 0;
+  animation: pulseGlow 2s infinite;
 }
 
 /* Skeleton Loading */
@@ -998,6 +1059,39 @@ textarea:focus-visible,
   position: absolute;
   top: 0; left: -100%; width: 50%; height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  animation: shimmer 1.5s infinite;
+}
+
+.skeleton-message-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  padding-top: 20px;
+}
+
+.skeleton-message {
+  height: 48px;
+  width: 60%;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 24px;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-message.received {
+  align-self: flex-start;
+  border-bottom-right-radius: 24px;
+  border-bottom-left-radius: 4px;
+}
+
+.skeleton-message::after {
+  content: "";
+  position: absolute;
+  top: 0; left: -100%; width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
   animation: shimmer 1.5s infinite;
 }
 
