@@ -9,7 +9,9 @@ import {
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  RecaptchaVerifier,
+  signInWithPhoneNumber
 } from "firebase/auth";
 import {
   collection,
@@ -2023,6 +2025,79 @@ function App() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [activePanel, setActivePanel] = useState('home');
 
+  // Phone Auth State
+  const [isPhoneAuthMode, setIsPhoneAuthMode] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState(null);
+  const recaptchaVerifierRef = useRef(null);
+
+  // Initialize Recaptcha
+  useEffect(() => {
+    if (!auth || user || !isPhoneAuthMode || recaptchaVerifierRef.current) return;
+    try {
+      // Ensure the container exists before initializing
+      const container = document.getElementById('recaptcha-container');
+      if (container) {
+        recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          'size': 'normal',
+          'callback': (response) => {
+            // reCAPTCHA solved, allow signInWithPhoneNumber.
+          },
+          'expired-callback': () => {
+            // Response expired. Ask user to solve reCAPTCHA again.
+          }
+        });
+        recaptchaVerifierRef.current.render();
+      }
+    } catch (err) {
+      console.error("Recaptcha init failed", err);
+    }
+  }, [user, isPhoneAuthMode]);
+
+  const handleSendCode = async () => {
+    if (!phoneNumber) {
+      setAuthError("Enter phone number.");
+      return;
+    }
+    setIsLoggingIn(true);
+    setAuthError('');
+    try {
+      const appVerifier = recaptchaVerifierRef.current;
+      const result = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+      setConfirmationResult(result);
+      setAuthError('');
+    } catch (error) {
+      console.error("SMS send failed", error);
+      setAuthError(error?.message ?? "SMS send failed.");
+      // Reset recaptcha on error so user can try again
+      if (recaptchaVerifierRef.current) {
+        recaptchaVerifierRef.current.clear();
+        recaptchaVerifierRef.current = null;
+      }
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (!verificationCode || !confirmationResult) {
+      setAuthError("Enter verification code.");
+      return;
+    }
+    setIsLoggingIn(true);
+    setAuthError('');
+    try {
+      await confirmationResult.confirm(verificationCode);
+      // User signed in successfully
+    } catch (error) {
+      console.error("Code verification failed", error);
+      setAuthError(error?.message ?? "Verification failed.");
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
   // Bolt: Reset contact list limit when search or panel changes
   useEffect(() => {
     setContactListLimit(50);
@@ -3468,94 +3543,174 @@ function App() {
             <h1>PulseLink Web</h1>
             <p>Login to access your messages</p>
             <div className="login-form">
-              <label className="login-field">
-                Email
-                <input
-                  className="login-input"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                />
-              </label>
-              <div className="login-field">
-                <label htmlFor="login-password">Password</label>
-                <div className="password-input-wrapper">
-                  <input
-                    id="login-password"
-                    className="login-input"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="password"
-                    autoComplete="current-password"
-                  />
+              {!isPhoneAuthMode ? (
+                <>
+                  <label className="login-field">
+                    Email
+                    <input
+                      className="login-input"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                    />
+                  </label>
+                  <div className="login-field">
+                    <label htmlFor="login-password">Password</label>
+                    <div className="password-input-wrapper">
+                      <input
+                        id="login-password"
+                        className="login-input"
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="password"
+                        autoComplete="current-password"
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle-btn"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? (
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                          </svg>
+                        ) : (
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  {authError && <div className="auth-error" role="alert">{authError}</div>}
+                  <div className="login-actions">
+                    <button
+                      onClick={() => handleEmailAuth('signin')}
+                      disabled={isLoggingIn}
+                      aria-busy={isLoggingIn}
+                      className="primary-btn"
+                    >
+                      {isLoggingIn ? (
+                        <>
+                          <Spinner />
+                          Signing in...
+                        </>
+                      ) : 'Sign in'}
+                    </button>
+                    <button
+                      onClick={() => handleEmailAuth('signup')}
+                      disabled={isLoggingIn}
+                      className="secondary-btn"
+                    >
+                      Create account
+                    </button>
+                  </div>
                   <button
                     type="button"
-                    className="password-toggle-btn"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    className="link-button"
+                    onClick={handlePasswordReset}
+                    disabled={isLoggingIn}
                   >
-                    {showPassword ? (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                        <line x1="1" y1="1" x2="23" y2="23"></line>
-                      </svg>
-                    ) : (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                      </svg>
-                    )}
+                    Forgot password?
                   </button>
-                </div>
-              </div>
-              {authError && <div className="auth-error" role="alert">{authError}</div>}
-              <div className="login-actions">
-                <button
-                  onClick={() => handleEmailAuth('signin')}
-                  disabled={isLoggingIn}
-                  aria-busy={isLoggingIn}
-                  className="primary-btn"
-                >
-                  {isLoggingIn ? (
+                  <div className="login-divider">or</div>
+                  <div className="login-actions" style={{ flexDirection: 'column', gap: 8 }}>
+                    <button
+                      onClick={handleLogin}
+                      disabled={isLoggingIn}
+                      aria-busy={isLoggingIn}
+                      className="primary-btn"
+                      style={{ width: '100%' }}
+                    >
+                      {isLoggingIn ? (
+                        <>
+                          <Spinner />
+                          Signing in...
+                        </>
+                      ) : 'Sign in with Google'}
+                    </button>
+                    <button
+                      onClick={() => setIsPhoneAuthMode(true)}
+                      disabled={isLoggingIn}
+                      className="secondary-btn"
+                      style={{ width: '100%' }}
+                    >
+                      Sign in with Phone
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {!confirmationResult ? (
                     <>
-                      <Spinner />
-                      Signing in...
+                      <label className="login-field">
+                        Phone Number
+                        <input
+                          className="login-input"
+                          type="tel"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value)}
+                          placeholder="+1 555 555 5555"
+                        />
+                      </label>
+                      <div id="recaptcha-container"></div>
                     </>
-                  ) : 'Sign in'}
-                </button>
-                <button
-                  onClick={() => handleEmailAuth('signup')}
-                  disabled={isLoggingIn}
-                  className="secondary-btn"
-                >
-                  Create account
-                </button>
-              </div>
-              <button
-                type="button"
-                className="link-button"
-                onClick={handlePasswordReset}
-                disabled={isLoggingIn}
-              >
-                Forgot password?
-              </button>
-              <div className="login-divider">or</div>
-              <button
-                onClick={handleLogin}
-                disabled={isLoggingIn}
-                aria-busy={isLoggingIn}
-                className="primary-btn"
-              >
-                {isLoggingIn ? (
-                  <>
-                    <Spinner />
-                    Signing in...
-                  </>
-                ) : 'Sign in with Google'}
-              </button>
+                  ) : (
+                    <label className="login-field">
+                      Verification Code
+                      <input
+                        className="login-input"
+                        type="text"
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value)}
+                        placeholder="123456"
+                      />
+                    </label>
+                  )}
+                  {authError && <div className="auth-error" role="alert">{authError}</div>}
+                  <div className="login-actions" style={{ flexDirection: 'column', gap: 8 }}>
+                    {!confirmationResult ? (
+                      <button
+                        onClick={handleSendCode}
+                        disabled={isLoggingIn}
+                        aria-busy={isLoggingIn}
+                        className="primary-btn"
+                        style={{ width: '100%' }}
+                      >
+                         {isLoggingIn ? <><Spinner /> Sending...</> : 'Send Code'}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleVerifyCode}
+                        disabled={isLoggingIn}
+                        aria-busy={isLoggingIn}
+                        className="primary-btn"
+                        style={{ width: '100%' }}
+                      >
+                         {isLoggingIn ? <><Spinner /> Verifying...</> : 'Verify Code'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setIsPhoneAuthMode(false);
+                        setConfirmationResult(null);
+                        setAuthError('');
+                      }}
+                      disabled={isLoggingIn}
+                      className="secondary-btn"
+                      style={{ width: '100%' }}
+                    >
+                      Back to Email Login
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -4515,7 +4670,7 @@ function App() {
                 <p className="settings-note">Share your extension with other testers.</p>
                 <div className="settings-row" style={{gap: 8, flexWrap: 'wrap'}}>
                   <a className="secondary-btn" href="https://github.com/DamienLove/pulselink/blob/Suite-Beta/docs/extensions-dev.md" target="_blank" rel="noreferrer">Read dev guide</a>
-                  <a className="ghost-btn" href="mailto:extensions@pulselink.app?subject=PulseLink%20Extension%20Submission">Email us your zip</a>
+                  <a className="ghost-btn" href="mailto:extensions@pulselink.app?subject=PulseLink%20Extension%20Submission&body=Please%20attach%20your%20extension%20zip%20file%20and%20provide%20a%20brief%20description.">Email us your zip</a>
                 </div>
               </div>
             </div>

@@ -13,6 +13,7 @@ test('visual verification of login page', async ({ page }) => {
   await expect(page.locator('.login-card')).toBeVisible();
   await expect(page.locator('.brand-logo')).toBeVisible();
   await expect(page.getByText('PulseLink Web')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign in with Phone' })).toBeVisible();
 
   // Verify Fonts are loaded (Inter and Space Grotesk)
   // This is a basic check to see if the computed style matches
