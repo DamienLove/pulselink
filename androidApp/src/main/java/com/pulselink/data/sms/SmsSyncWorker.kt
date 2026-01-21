@@ -13,6 +13,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.storage.FirebaseStorage
 import com.pulselink.BuildConfig
 import com.pulselink.R
 import com.pulselink.data.alert.NotificationRegistrar
@@ -178,11 +179,16 @@ class SmsSyncWorker @AssistedInject constructor(
 
                 for (msg in messages) {
                     val lineMsgDoc = lineMessagesRef.document(msg.id.toString())
-                    val msgData = mapOf(
+                    val msgData = mutableMapOf<String, Any>(
                         "body" to msg.body,
                         "date" to msg.timestamp,
-                        "type" to (if (msg.outgoing) 2 else 1)
+                        "type" to (if (msg.outgoing) 2 else 1),
+                        "read" to (msg.status == SmsMessageStatus.READ || msg.status == SmsMessageStatus.SENT || msg.status == SmsMessageStatus.DELIVERED),
+                        "isMms" to msg.isMms
                     )
+                    if (msg.status != null) {
+                        msgData["status"] = msg.status.name
+                    }
                     lineBatch.set(lineMsgDoc, msgData, SetOptions.merge())
                     batchCount++
                     syncedMessages++
