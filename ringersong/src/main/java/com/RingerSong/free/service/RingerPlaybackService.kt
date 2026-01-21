@@ -18,6 +18,7 @@ import com.RingerSong.free.data.AppStateStore
 import com.RingerSong.free.data.SongEntry
 import com.RingerSong.free.data.SongSource
 import com.RingerSong.free.data.SpotifyDownloaderRepository
+import com.RingerSong.free.data.YouTubeMusicRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -250,6 +251,16 @@ class RingerPlaybackService : Service() {
     }
 
     private suspend fun playSpotifySong(song: SongEntry, startMs: Long, durationMs: Long) {
+        // Check for local download first
+        val spotifyDownloaderRepo = SpotifyDownloaderRepository(this)
+        val localPath = spotifyDownloaderRepo.getLocalFilePathFromUri(song.uri)
+
+        if (localPath != null) {
+            Log.d(TAG, "Found local download for Spotify track: $localPath")
+            playLocalSong(song.copy(uri = localPath), startMs, durationMs)
+            return
+        }
+
         Log.d(TAG, "Attempting to stream Spotify track: ${song.title} (${song.uri})")
 
         // Try streaming using Spotify App Remote
@@ -328,7 +339,7 @@ class RingerPlaybackService : Service() {
     private suspend fun playYouTubeSong(song: SongEntry, startMs: Long, durationMs: Long) {
         // Extract the video ID from the URI (format: "youtube:video:VIDEO_ID")
         val videoId = song.uri.removePrefix("youtube:video:")
-        val youtubeMusicRepo = com.RingerSong.free.data.YouTubeMusicRepository(this)
+        val youtubeMusicRepo = YouTubeMusicRepository(this)
 
         Log.d(TAG, "Attempting to stream YouTube track: $videoId")
 
@@ -351,26 +362,29 @@ class RingerPlaybackService : Service() {
 
     private suspend fun playAppleMusicSong(song: SongEntry, startMs: Long, durationMs: Long) {
         Log.d(TAG, "Attempting to play Apple Music song: ${song.title}")
-        val success = appleMusicPlayer.playTrack(song)
-        if (success) {
-            // Since we just launched the app, we can't easily control duration/stop.
-            // But we can schedule a stopSelf to cleanup the service.
-            // The Apple Music app will continue playing.
-            // This is "best effort".
-            isPlaying = true
-            playbackJob = scope.launch {
-                delay(durationMs)
-                Log.d(TAG, "Apple Music segment duration passed")
-                // We cannot stop Apple Music, but we stop our service and restore ringer
-                stopPlayback()
-                restoreSystemRinger()
-                stopForeground(true)
-                stopSelf()
+
+        // Fallback: Search on YouTube Music since deep-linking interrupts the call UI
+        val youtubeMusicRepo = YouTubeMusicRepository(this)
+        val query = "${song.title} audio"
+        Log.d(TAG, "Searching YouTube for Apple Music fallback: $query")
+
+        val searchResults = youtubeMusicRepo.searchSongs(query)
+        val bestMatch = searchResults?.firstOrNull()
+
+        if (bestMatch?.videoId != null) {
+            Log.d(TAG, "Found YouTube match: ${bestMatch.title} (${bestMatch.videoId})")
+            val details = youtubeMusicRepo.getSongDetails(bestMatch.videoId)
+            val streamUrl = details?.downloadUrl
+
+            if (!streamUrl.isNullOrBlank()) {
+                Log.d(TAG, "Streaming via YouTube fallback")
+                playLocalSong(song.copy(uri = streamUrl), startMs, durationMs)
+                return
             }
-        } else {
-            Log.e(TAG, "Failed to launch Apple Music")
-            stopSelf()
         }
+
+        Log.e(TAG, "Failed to find fallback for Apple Music song")
+        stopSelf()
     }
 
     private fun stopPlayback() {
