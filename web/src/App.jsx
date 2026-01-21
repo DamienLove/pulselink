@@ -2288,6 +2288,37 @@ function App() {
     return () => unsubscribe();
   }, []);
 
+  // Bolt: Expose debug helpers for testing/preview
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      window.debugSetUser = (mockUser) => {
+        if (!mockUser) {
+          setUser(null);
+          return;
+        }
+        // Create a mock user object that mimics Firebase User structure
+        const userObj = {
+          uid: mockUser.uid || 'test_user_123',
+          email: mockUser.email || 'test@example.com',
+          displayName: mockUser.displayName || 'Test User',
+          getIdTokenResult: async () => ({
+            claims: { premium: true, pro: true, ...mockUser.claims }
+          }),
+          ...mockUser
+        };
+        setUser(userObj);
+        // Ensure settings allow access
+        setRemoteSettings(prev => ({
+           ...prev,
+           remoteWebAccessEnabled: true,
+           beaconLauncherEnabled: true,
+           ...mockUser.settings
+        }));
+        setActivePanel('home');
+      };
+    }
+  }, []);
+
   useEffect(() => {
     if (!user) {
       setProfile({ ownerName: '', avatarUrl: '', email: '', phoneNumber: '' });
@@ -3621,9 +3652,9 @@ function App() {
                       localStorage.setItem(webHintStorageKey, 'true');
                     }}
                   >
-                    x
+                    <CloseIcon />
                   </button>
-                  <div className="hint-icon">??</div>
+                  <div className="hint-icon"><BoltIcon /></div>
                   <div className="hint-content">
                     <strong>Access PulseLink Web anytime:</strong> Visit pulselink.damiennichols.com (or app.damiennichols.com / pulselink-24899.web.app) from any browser to manage contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.
                   </div>
@@ -4767,9 +4798,32 @@ function App() {
                     </div>
                   </>
                 ) : (
-                  <div className="empty-state">
-                    <img src={beaconLogo} alt="Beacon" className="empty-logo" />
-                    <div>Select a thread or start a new message</div>
+                  <div className="command-center">
+                    <img src={beaconLogo} alt="Beacon" className="command-center-logo" />
+                    <h2>Beacon Command</h2>
+                    <p>
+                      {user ? `Welcome back, ${profile.ownerName.split(' ')[0] || 'Operator'}.` : 'System Ready.'}
+                      <br />
+                      Secure line active. Awaiting input.
+                    </p>
+                    <div className="command-actions">
+                      <button className="command-action-btn" onClick={handleNewThread}>
+                        <MessageSquareIcon />
+                        <span>New Transmission</span>
+                      </button>
+                      <button className="command-action-btn" onClick={() => setShowCommandPalette(true)}>
+                        <SearchIcon />
+                        <span>Global Search</span>
+                      </button>
+                      <button className="command-action-btn" onClick={() => setActivePanel('themes')}>
+                        <ThemeIcon />
+                        <span>Visual Interface</span>
+                      </button>
+                      <button className="command-action-btn" onClick={() => setActivePanel('settings')}>
+                        <SettingsIcon />
+                        <span>System Config</span>
+                      </button>
+                    </div>
                   </div>
                 )}
                 <MessageComposer
