@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, memo, useCallback, useDeferredValue } from 'react';
 import { auth, db, functions } from './firebase';
 import DevTools from './DevTools';
 import CommandPalette from './CommandPalette';
@@ -1603,6 +1603,8 @@ const Sidebar = memo(({
   openCommandPalette
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  // Bolt: Defer filtering to keep input responsive while searching large thread lists
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const searchInputRef = useRef(null);
 
   useEffect(() => {
@@ -1628,12 +1630,12 @@ const Sidebar = memo(({
   const getSearchIndex = useLazySearchIndex(threads, threadMapper);
 
   const filteredThreads = useMemo(() => {
-    const term = searchQuery.trim().toLowerCase();
+    const term = deferredSearchQuery.trim().toLowerCase();
     if (!term) return threads;
     return getSearchIndex()
       .filter(({ searchString }) => searchString.includes(term))
       .map(({ thread }) => thread);
-  }, [getSearchIndex, searchQuery, threads]);
+  }, [getSearchIndex, deferredSearchQuery, threads]);
 
   const [collapsed, setCollapsed] = useState(false);
 
@@ -2243,25 +2245,31 @@ function App() {
   // Bolt: Pre-compute search strings for themes to avoid redundant lowercasing during typing
   const getThemeSearchIndex = useLazySearchIndex(publicThemes, themeMapper);
 
+  // Bolt: Defer filtering to prevent UI blocking when searching themes
+  const deferredThemeSearch = useDeferredValue(themeSearch);
+
   const filteredThemes = useMemo(() => {
-    const term = themeSearch.trim().toLowerCase();
+    const term = deferredThemeSearch.trim().toLowerCase();
     if (!term) return publicThemes;
     return getThemeSearchIndex()
       .filter(({ searchString }) => searchString.includes(term))
       .map(({ theme }) => theme);
-  }, [getThemeSearchIndex, themeSearch, publicThemes]);
+  }, [getThemeSearchIndex, deferredThemeSearch, publicThemes]);
   // Bolt: Pre-compute search strings for contacts to avoid expensive string operations on every keystroke
   const getContactSearchIndex = useLazySearchIndex(deviceContacts, contactMapper);
 
+  // Bolt: Defer filtering to keep typing smooth when searching large contact lists
+  const deferredContactSearch = useDeferredValue(contactSearch);
+
   const filteredDeviceContacts = useMemo(() => {
-    const term = contactSearch.trim().toLowerCase();
+    const term = deferredContactSearch.trim().toLowerCase();
     if (!term) return deviceContacts;
 
     // Bolt: Use the pre-computed index for O(N) simple string inclusion check
     return getContactSearchIndex()
       .filter(({ searchString }) => searchString.includes(term))
       .map(({ contact }) => contact);
-  }, [getContactSearchIndex, contactSearch, deviceContacts]);
+  }, [getContactSearchIndex, deferredContactSearch, deviceContacts]);
 
   // Bolt: Memoize list elements to avoid re-creating them on every render
   const messageListElements = useMemo(() => (
