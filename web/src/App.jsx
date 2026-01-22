@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, memo, useCallback, useDeferredValue } from 'react';
 import { auth, db, functions } from './firebase';
 import DevTools from './DevTools';
 import CommandPalette from './CommandPalette';
@@ -1603,6 +1603,7 @@ const Sidebar = memo(({
   openCommandPalette
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const searchInputRef = useRef(null);
 
   useEffect(() => {
@@ -1628,12 +1629,12 @@ const Sidebar = memo(({
   const getSearchIndex = useLazySearchIndex(threads, threadMapper);
 
   const filteredThreads = useMemo(() => {
-    const term = searchQuery.trim().toLowerCase();
+    const term = deferredSearchQuery.trim().toLowerCase();
     if (!term) return threads;
     return getSearchIndex()
       .filter(({ searchString }) => searchString.includes(term))
       .map(({ thread }) => thread);
-  }, [getSearchIndex, searchQuery, threads]);
+  }, [getSearchIndex, deferredSearchQuery, threads]);
 
   const [collapsed, setCollapsed] = useState(false);
 
@@ -1934,6 +1935,7 @@ function App() {
   const [trustedContacts, setTrustedContacts] = useState([]);
   const [deviceContacts, setDeviceContacts] = useState([]);
   const [contactSearch, setContactSearch] = useState('');
+  const deferredContactSearch = useDeferredValue(contactSearch);
   const [contactListLimit, setContactListLimit] = useState(50);
   const [unlockedAvatars, setUnlockedAvatars] = useState([]);
   const [contactForm, setContactForm] = useState({
@@ -1957,6 +1959,7 @@ function App() {
   const [publicThemes, setPublicThemes] = useState([]);
   const [themeGalleryStatus, setThemeGalleryStatus] = useState('');
   const [themeSearch, setThemeSearch] = useState('');
+  const deferredThemeSearch = useDeferredValue(themeSearch);
   const [themePublishForm, setThemePublishForm] = useState({
     name: '',
     authorName: '',
@@ -2244,24 +2247,24 @@ function App() {
   const getThemeSearchIndex = useLazySearchIndex(publicThemes, themeMapper);
 
   const filteredThemes = useMemo(() => {
-    const term = themeSearch.trim().toLowerCase();
+    const term = deferredThemeSearch.trim().toLowerCase();
     if (!term) return publicThemes;
     return getThemeSearchIndex()
       .filter(({ searchString }) => searchString.includes(term))
       .map(({ theme }) => theme);
-  }, [getThemeSearchIndex, themeSearch, publicThemes]);
+  }, [getThemeSearchIndex, deferredThemeSearch, publicThemes]);
   // Bolt: Pre-compute search strings for contacts to avoid expensive string operations on every keystroke
   const getContactSearchIndex = useLazySearchIndex(deviceContacts, contactMapper);
 
   const filteredDeviceContacts = useMemo(() => {
-    const term = contactSearch.trim().toLowerCase();
+    const term = deferredContactSearch.trim().toLowerCase();
     if (!term) return deviceContacts;
 
     // Bolt: Use the pre-computed index for O(N) simple string inclusion check
     return getContactSearchIndex()
       .filter(({ searchString }) => searchString.includes(term))
       .map(({ contact }) => contact);
-  }, [getContactSearchIndex, contactSearch, deviceContacts]);
+  }, [getContactSearchIndex, deferredContactSearch, deviceContacts]);
 
   // Bolt: Memoize list elements to avoid re-creating them on every render
   const messageListElements = useMemo(() => (
