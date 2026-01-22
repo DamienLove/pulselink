@@ -76,10 +76,16 @@ export default function CommandPalette({ isOpen, onClose, setActivePanel, action
   if (!isOpen) return null;
 
   return (
-    <div className="command-palette-overlay" onClick={onClose}>
+    <div
+      className="command-palette-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Command Palette"
+    >
       <div className="command-palette-modal" onClick={e => e.stopPropagation()}>
         <div className="command-palette-header">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="search-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="search-icon" aria-hidden="true">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
@@ -90,24 +96,39 @@ export default function CommandPalette({ isOpen, onClose, setActivePanel, action
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded="true"
+            aria-controls="command-palette-listbox"
+            aria-activedescendant={filteredItems[selectedIndex]?.id}
+            aria-label="Search commands"
           />
-          <div className="command-palette-hint">Esc to close</div>
+          <div className="command-palette-hint" aria-hidden="true">Esc to close</div>
         </div>
-        <div className="command-palette-list" ref={listRef}>
+        <div
+          className="command-palette-list"
+          ref={listRef}
+          role="listbox"
+          id="command-palette-listbox"
+          aria-label="Commands"
+        >
           {filteredItems.map((item, index) => (
             <div
               key={item.id}
+              id={item.id}
               className={`command-palette-item ${index === selectedIndex ? 'selected' : ''}`}
               onClick={() => handleSelect(item)}
               onMouseEnter={() => setSelectedIndex(index)}
+              role="option"
+              aria-selected={index === selectedIndex}
             >
-              <span className="item-icon">{item.icon}</span>
+              <span className="item-icon" aria-hidden="true">{item.icon}</span>
               <span className="item-label">{item.label}</span>
-              {index === selectedIndex && <span className="item-enter">↵</span>}
+              {index === selectedIndex && <span className="item-enter" aria-hidden="true">↵</span>}
             </div>
           ))}
           {filteredItems.length === 0 && (
-            <div className="command-palette-empty">No results found.</div>
+            <div className="command-palette-empty" role="status">No results found.</div>
           )}
         </div>
       </div>
