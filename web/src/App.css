@@ -157,25 +157,27 @@
   filter: drop-shadow(0 0 10px var(--accent-glow));
 }
 
-/* "Lit LED" Active State v8 - More Glow */
+/* "Lit LED" Active State v11 - Light Leak & Holographic Glow */
 .nav-item.active {
-  background: linear-gradient(90deg, rgba(0, 255, 255, 0.15), transparent);
+  background: linear-gradient(90deg, rgba(0, 243, 255, 0.15), transparent);
   color: var(--accent);
-  border: 1px solid rgba(0, 255, 255, 0.2);
-  box-shadow: inset 0 0 25px rgba(0, 255, 255, 0.1), 0 0 15px rgba(0, 255, 255, 0.05);
-  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  border: 1px solid transparent; /* Border handled by left accent */
+  box-shadow:
+    inset 10px 0 30px -10px rgba(0, 243, 255, 0.25),
+    0 0 20px rgba(0, 243, 255, 0.1);
+  text-shadow: 0 0 12px var(--accent);
 }
 
 .nav-item.active::before {
   content: "";
   position: absolute;
   left: 0;
-  top: 10%;
-  bottom: 10%;
+  top: 15%;
+  bottom: 15%;
   width: 3px;
   background: var(--accent);
   border-radius: 0 4px 4px 0;
-  box-shadow: 0 0 15px var(--accent), 0 0 8px #fff;
+  box-shadow: 0 0 15px var(--accent), 0 0 5px #fff;
 }
 
 .nav-item.active svg, .nav-item.active img {
@@ -336,10 +338,13 @@
 }
 
 .home-card:hover {
-  transform: translateY(-8px) scale(1.02);
+  transform: translateY(-6px) scale(1.01);
   border-color: var(--accent);
-  background: rgba(0, 255, 255, 0.06);
-  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.8), 0 0 30px var(--accent-glow), inset 0 0 20px rgba(0, 255, 255, 0.05);
+  background: rgba(0, 243, 255, 0.04);
+  box-shadow:
+    0 20px 40px -10px rgba(0, 0, 0, 0.8),
+    0 0 20px var(--accent-glow),
+    inset 0 0 20px rgba(0, 243, 255, 0.05);
 }
 
 .home-card:hover::after {
@@ -431,8 +436,11 @@
 }
 
 .settings-card:hover {
-  border-color: rgba(0, 255, 255, 0.3);
-  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5), inset 0 0 20px rgba(0, 255, 255, 0.02);
+  border-color: var(--accent);
+  box-shadow:
+    0 15px 40px -10px rgba(0, 0, 0, 0.6),
+    0 0 15px rgba(0, 243, 255, 0.1),
+    inset 0 0 20px rgba(0, 243, 255, 0.02);
   transform: translateY(-2px);
 }
 
@@ -495,12 +503,12 @@
 .composer-textarea:focus {
   outline: none;
   border-color: var(--accent);
-  background: rgba(0, 255, 255, 0.08);
+  background: rgba(0, 243, 255, 0.08);
   box-shadow:
     0 0 0 1px var(--accent),
-    0 0 30px rgba(0, 255, 255, 0.25),
+    0 0 20px rgba(0, 243, 255, 0.2),
     inset 0 2px 4px rgba(0,0,0,0.3);
-  transform: scale(1.01);
+  transform: scale(1.005);
 }
 
 .login-input::placeholder {
@@ -1801,21 +1809,6 @@ textarea:focus-visible,
     0 0 80px var(--accent);
 }
 
-/* Enhanced Scrollbar for Chrome/Edge/Safari */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
 /* Shortcut Hint Badge */
 .shortcut-hint {
   font-family: var(--font-mono);
