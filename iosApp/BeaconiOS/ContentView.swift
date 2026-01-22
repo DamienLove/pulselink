@@ -14,6 +14,18 @@ struct ContentView: View {
         #endif
     }
 
+    init(viewModel: BeaconViewModel) {
+        self.viewModel = viewModel
+        // Customize TabBar for Future Deep v11
+        let appearance = UITabBarAppearance()
+        appearance.configureWithTransparentBackground()
+        appearance.backgroundColor = UIColor(Color.black.opacity(0.8))
+        appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
+    }
+
     var body: some View {
         if viewModel.isLoggedIn {
             TabView {
@@ -45,6 +57,7 @@ struct ContentView: View {
                         Label("Settings", systemImage: "gear")
                     }
             }
+            .tint(RelayColors.primary)
         } else {
             LoginView {
                 // Auth listener will handle transition
@@ -121,76 +134,102 @@ private struct BeaconTab: View {
 
     var body: some View {
         NavigationStack {
-            VStack {
-                if filter != .private {
-                    VStack(spacing: 8) {
-                        Picker("Filter", selection: $subFilter) {
-                            ForEach(InboxSubFilter.allCases, id: \.self) { f in
-                                Text(f.rawValue).tag(f)
-                            }
-                        }
-                        .pickerStyle(.segmented)
+            ZStack {
+                RelayColors.deep.ignoresSafeArea()
 
-                        if let date = viewModel.lastUpdated {
-                            Text("Synced \(date, style: .time)")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 10)
-                }
+                // Cinematic Gradient
+                LinearGradient(
+                    colors: [
+                        RelayColors.primary.opacity(0.1),
+                        RelayColors.tertiary.opacity(0.05),
+                        .black
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
 
-                Group {
-                    if filter == .private && !isUnlocked {
-                        VStack(spacing: 20) {
-                            Image(systemName: "lock.circle.fill")
-                                .font(.system(size: 60))
-                                .foregroundStyle(.secondary)
-                            Text(storedPin.isEmpty ? "Setup Private Safe" : "Private Safe Locked")
-                                .font(.title2.bold())
-                            Button(storedPin.isEmpty ? "Set PIN" : "Unlock") {
-                                showPinSheet = true
-                            }
-                            .buttonStyle(.borderedProminent)
-                        }
-                    } else {
-                        List(filteredContacts) { contact in
-                            NavigationLink(value: contact) {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(contact.name).font(.headline)
-                                        Text(contact.role).font(.caption).foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    if contact.unread > 0 {
-                                        Text("\(contact.unread)")
-                                            .font(.caption.bold())
-                                            .foregroundStyle(.white)
-                                            .padding(.horizontal, 8)
-                                            .padding(.vertical, 4)
-                                            .background(themeColor.color)
-                                            .clipShape(Capsule())
-                                    }
+                VStack {
+                    if filter != .private {
+                        VStack(spacing: 8) {
+                            Picker("Filter", selection: $subFilter) {
+                                ForEach(InboxSubFilter.allCases, id: \.self) { f in
+                                    Text(f.rawValue).tag(f)
                                 }
                             }
+                            .pickerStyle(.segmented)
+                            .padding(.horizontal)
+
+                            // Custom segmented control styling is hard in SwiftUI native picker,
+                            // relying on dark mode default which is decent.
+
+                            if let date = viewModel.lastUpdated {
+                                Text("Synced \(date, style: .time)")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
-                        .scrollContentBackground(.hidden)
-                        .background(RelayColors.deep.ignoresSafeArea())
-                        .searchable(text: $searchText)
-                        .overlay {
-                            if filteredContacts.isEmpty {
-                                ContentUnavailableView(
-                                    "No conversations",
-                                    systemImage: "bubble.left.and.bubble.right",
-                                    description: Text("Start a new chat on your Android device.")
-                                )
+                        .padding(.top, 10)
+                    }
+
+                    Group {
+                        if filter == .private && !isUnlocked {
+                            VStack(spacing: 20) {
+                                Image(systemName: "lock.circle.fill")
+                                    .font(.system(size: 60))
+                                    .foregroundStyle(RelayColors.primary.opacity(0.7))
+                                    .shadow(color: RelayColors.primary.opacity(0.5), radius: 10)
+                                Text(storedPin.isEmpty ? "Setup Private Safe" : "Private Safe Locked")
+                                    .font(.title2.bold())
+                                    .foregroundStyle(.white)
+                                Button(storedPin.isEmpty ? "Set PIN" : "Unlock") {
+                                    showPinSheet = true
+                                }
+                                .buttonStyle(GlassButtonStyle(color: RelayColors.primary))
+                            }
+                            .frame(maxHeight: .infinity)
+                        } else {
+                            List(filteredContacts) { contact in
+                                NavigationLink(value: contact) {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(contact.name)
+                                                .font(.headline)
+                                                .foregroundStyle(.white)
+                                            Text(contact.role)
+                                                .font(.caption)
+                                                .foregroundStyle(RelayColors.primary)
+                                        }
+                                        Spacer()
+                                        if contact.unread > 0 {
+                                            Text("\(contact.unread)")
+                                                .font(.caption.bold())
+                                                .foregroundStyle(.black)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(themeColor.color) // Use user theme
+                                                .clipShape(Capsule())
+                                                .shadow(color: themeColor.color.opacity(0.6), radius: 4)
+                                        }
+                                    }
+                                }
+                                .listRowBackground(Color.black.opacity(0.3))
+                            }
+                            .scrollContentBackground(.hidden)
+                            .searchable(text: $searchText)
+                            .overlay {
+                                if filteredContacts.isEmpty {
+                                    ContentUnavailableView(
+                                        "No conversations",
+                                        systemImage: "bubble.left.and.bubble.right",
+                                        description: Text("Start a new chat on your Android device.")
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
-            .background(RelayColors.deep.ignoresSafeArea())
             .navigationDestination(for: BeaconContactCard.self) { contact in
                 ConversationView(
                     contact: contact,
@@ -203,17 +242,23 @@ private struct BeaconTab: View {
                 )
             }
             .navigationTitle(isPro && filter == .inbox ? "\(filter.title) Pro" : filter.title)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(Color.black.opacity(0.8), for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .sheet(isPresented: $showPinSheet) {
                 NavigationStack {
                     VStack(spacing: 20) {
                         Text(storedPin.isEmpty ? "Create a PIN" : "Enter PIN")
                             .font(.headline)
+                            .foregroundStyle(.white)
                         SecureField("PIN", text: $pinInput)
                             .keyboardType(.numberPad)
                             .padding()
-                            .background(Color(.secondarySystemBackground))
+                            .background(Color.white.opacity(0.1))
                             .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1)))
                             .padding(.horizontal)
+                            .foregroundStyle(.white)
 
                         Button(storedPin.isEmpty ? "Save PIN" : "Unlock") {
                             if storedPin.isEmpty {
@@ -233,11 +278,12 @@ private struct BeaconTab: View {
                                 }
                             }
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(GlassButtonStyle(color: RelayColors.primary))
                         .disabled(pinInput.count < 4)
                     }
                     .padding()
                     .presentationDetents([.height(300)])
+                    .background(RelayColors.deep.ignoresSafeArea())
                 }
             }
         }
@@ -266,9 +312,17 @@ private struct ConversationView: View {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(msg.text)
                                         .padding(12)
-                                        .background(msg.isIncoming ? Color(.secondarySystemBackground) : themeColor.color)
-                                        .foregroundStyle(msg.isIncoming ? .primary : .white)
+                                        .background(
+                                            msg.isIncoming ? Color.white.opacity(0.1) : themeColor.color.opacity(0.8)
+                                        )
+                                        .background(.ultraThinMaterial)
+                                        .foregroundStyle(msg.isIncoming ? .white : .black)
                                         .clipShape(bubbleStyle.shape)
+                                        .overlay(
+                                            bubbleStyle.shapeOverlay
+                                                .stroke(msg.isIncoming ? Color.white.opacity(0.1) : Color.clear, lineWidth: 1)
+                                        )
+                                        .shadow(color: msg.isIncoming ? .clear : themeColor.color.opacity(0.4), radius: 5)
                                     Text(msg.timestamp, style: .time)
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)
@@ -289,7 +343,12 @@ private struct ConversationView: View {
 
             HStack {
                 TextField("Message", text: $draft)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .padding(10)
+                    .background(Color.white.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .foregroundStyle(.white)
+
                 Button {
                     guard !draft.trimmingCharacters(in: .whitespaces).isEmpty else { return }
                     onSend(draft)
@@ -297,11 +356,12 @@ private struct ConversationView: View {
                 } label: {
                     Image(systemName: "paperplane.fill")
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(GlassButtonStyle(color: themeColor.color))
             }
             .padding()
-            .background(.thinMaterial)
+            .background(.ultraThinMaterial)
         }
+        .background(RelayColors.deep.ignoresSafeArea())
         .navigationTitle(contact.name)
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -325,17 +385,21 @@ private struct SettingsTab: View {
                                 Text(color.rawValue.capitalized).tag(color)
                             }
                         }
+                        .listRowBackground(Color.black.opacity(0.5))
+
                         Picker("Bubble Style", selection: $bubbleStyle) {
                             ForEach(BubbleStyle.allCases, id: \.self) { style in
                                 Text(style.rawValue.capitalized).tag(style)
                             }
                         }
+                        .listRowBackground(Color.black.opacity(0.5))
                     }
                 } else {
                      Section("Appearance") {
                          Text("Upgrade to Pro to customize themes.")
                              .foregroundStyle(.secondary)
                      }
+                     .listRowBackground(Color.black.opacity(0.5))
                 }
                 Section("Account") {
                     Button("Sign Out", role: .destructive) {
@@ -343,17 +407,25 @@ private struct SettingsTab: View {
                         try? FirebaseAuth.Auth.auth().signOut()
                         #endif
                     }
+
                     Button("Delete Account", role: .destructive) {
                         showDeleteConfirmation = true
                     }
                 }
+                .listRowBackground(Color.black.opacity(0.5))
+
                 Section("About") {
                     Text("Beacon iOS")
+                        .foregroundStyle(.white)
                 }
+                .listRowBackground(Color.black.opacity(0.5))
             }
             .scrollContentBackground(.hidden)
             .background(RelayColors.deep.ignoresSafeArea())
             .navigationTitle("Settings")
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(Color.black.opacity(0.8), for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
         }
         .alert("Delete Account", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) { }
@@ -369,19 +441,36 @@ private struct SettingsTab: View {
                 }
             }
         } message: {
-            Text("This will permanently delete your account and all associated data. This action cannot be undone.")
+            Text("This will permanently delete your account and all associated data.")
         }
-        .overlay {
-            if isDeleting {
+    }
+}
+
+// Reuse GlassButtonStyle and RelayColors
+struct GlassButtonStyle: ButtonStyle {
+    let color: Color
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundColor(color == .white ? .black : .white) // Fix contrast
+            .padding(.horizontal, 16) // Ensure padding
+            .padding(.vertical, 10)
+            .background(
                 ZStack {
-                    Color.black.opacity(0.4).ignoresSafeArea()
-                    ProgressView("Deleting...")
-                        .padding()
-                        .background(.regularMaterial)
-                        .cornerRadius(8)
+                    color.opacity(0.6)
+                    if configuration.isPressed {
+                        Color.white.opacity(0.2)
+                    }
                 }
-            }
-        }
+            )
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(color.opacity(0.8), lineWidth: 1)
+            )
+            .shadow(color: color.opacity(0.3), radius: 8)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .animation(.easeOut(duration: 0.2), value: configuration.isPressed)
     }
 }
 
@@ -411,20 +500,20 @@ enum BubbleStyle: String, CaseIterable {
         case .capsule: return AnyShape(Capsule())
         }
     }
+
+    var shapeOverlay: AnyShape {
+        switch self {
+        case .rounded: return AnyShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        case .square: return AnyShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+        case .capsule: return AnyShape(Capsule())
+        }
+    }
 }
 
 enum RelayColors {
-    // Future Deep v10 (Absolute Zero)
-    // Primary: #00F3FF -> Laser Blue
+    // Future Deep v11
     static let primary = Color(red: 0.0, green: 0.953, blue: 1.0)
-    // Secondary: #E000FF -> Neon Purple
     static let tertiary = Color(red: 0.878, green: 0.0, blue: 1.0)
-    // Background: #000000 -> Pitch Black
     static let deep    = Color.black
-
-    // Complementary shades
-    static let accent  = Color(red: 0.0, green: 0.953, blue: 1.0).opacity(0.8)
-    static let surface = Color(red: 0.05, green: 0.05, blue: 0.05) // Dark gray for surface
-
-    static let cardBackground = surface.opacity(0.8)
+    static let glass   = Color(red: 0.08, green: 0.08, blue: 0.08).opacity(0.6)
 }
