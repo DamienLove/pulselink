@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import './App.css';
 
 const ACTIONS = [
@@ -14,7 +14,7 @@ const ACTIONS = [
   { id: 'act-new-msg', label: 'New Message', icon: '✏️', action: (setActivePanel, actions) => actions.newThread() },
 ];
 
-export default function CommandPalette({ isOpen, onClose, setActivePanel, actions }) {
+const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
@@ -113,4 +113,8 @@ export default function CommandPalette({ isOpen, onClose, setActivePanel, action
       </div>
     </div>
   );
-}
+});
+
+CommandPalette.displayName = 'CommandPalette';
+
+export default CommandPalette;

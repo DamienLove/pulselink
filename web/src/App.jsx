@@ -3416,6 +3416,20 @@ function App() {
     setSelectedThread(null);
   }, []);
 
+  // Bolt: Stable handlers for CommandPalette to prevent re-renders
+  const handleCloseCommandPalette = useCallback(() => {
+    setShowCommandPalette(false);
+  }, []);
+
+  const handleOpenCommandPalette = useCallback(() => {
+    setShowCommandPalette(true);
+  }, []);
+
+  const commandPaletteActions = useMemo(() => ({
+    logout: handleLogout,
+    newThread: handleNewThread
+  }), [handleLogout, handleNewThread]);
+
   // Bolt: Stable handler to prevent ghost content when switching threads
   const handleThreadSelect = useCallback((thread) => {
     setMessages([]); // Clear previous messages immediately
@@ -3569,12 +3583,9 @@ function App() {
       {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
       <CommandPalette
         isOpen={showCommandPalette}
-        onClose={() => setShowCommandPalette(false)}
+        onClose={handleCloseCommandPalette}
         setActivePanel={setActivePanel}
-        actions={{
-          logout: handleLogout,
-          newThread: handleNewThread
-        }}
+        actions={commandPaletteActions}
       />
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <div className="app-container">
@@ -3597,7 +3608,7 @@ function App() {
           selectedThreadId={selectedThread?.id}
           onSelect={handleThreadSelect}
           showPreviews={showPreviews}
-          openCommandPalette={() => setShowCommandPalette(true)}
+          openCommandPalette={handleOpenCommandPalette}
         />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
