@@ -970,6 +970,23 @@ textarea:focus-visible,
   color: var(--accent);
 }
 
+.thread-item.unread .thread-name {
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.thread-unread-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: var(--accent);
+  border-radius: 50%;
+  margin-left: 8px;
+  box-shadow: 0 0 8px var(--accent);
+  vertical-align: middle;
+}
+
 /* Skeleton Loading */
 .skeleton-thread {
   padding: 16px 20px;

@@ -61,6 +61,14 @@ const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
   timeStyle: 'short'
 });
 
+const toMillis = (value) => {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  if (typeof value.toMillis === 'function') return value.toMillis();
+  if (typeof value.seconds === 'number') return value.seconds * 1000;
+  return 0;
+};
+
 // Icons
 const HomeIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
 const MapIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>;
@@ -130,22 +138,30 @@ const areThreadsEqual = (prev, next) => {
          prev.onSelect === next.onSelect &&
          prev.thread.id === next.thread.id &&
          prev.thread.address === next.thread.address &&
-         prev.thread.snippet === next.thread.snippet;
+         prev.thread.snippet === next.thread.snippet &&
+         prev.thread.read === next.thread.read &&
+         prev.thread.unread === next.thread.unread;
 };
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
 // when only the selection state changes or when unrelated threads update.
-const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
-  <button
-    className={`thread-item ${isActive ? 'active' : ''}`}
-    onClick={() => onSelect(thread)}
-    aria-current={isActive ? 'true' : undefined}
-    aria-label={`Select conversation with ${thread.display_name || thread.address}${showPreviews && thread.snippet ? `, ${thread.snippet}` : ''}`}
-  >
-    <div className="thread-name">{thread.display_name || thread.address}</div>
-    <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
-  </button>
-), areThreadsEqual);
+const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => {
+  const isUnread = thread.read === false || thread.unread === true;
+  return (
+    <button
+      className={`thread-item ${isActive ? 'active' : ''} ${isUnread ? 'unread' : ''}`}
+      onClick={() => onSelect(thread)}
+      aria-current={isActive ? 'true' : undefined}
+      aria-label={`Select conversation with ${thread.display_name || thread.address}${showPreviews && thread.snippet ? `, ${thread.snippet}` : ''}`}
+    >
+      <div className="thread-name">
+        {thread.display_name || thread.address}
+        {isUnread && <span className="thread-unread-dot" />}
+      </div>
+      <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
+    </button>
+  );
+}, areThreadsEqual);
 
 ThreadItem.displayName = 'ThreadItem';
 
@@ -177,7 +193,7 @@ const MessageItem = memo(({ msg, showPreviews }) => (
       {showPreviews ? msg.body : '••••••'}
     </div>
     <div className="message-time">
-      {timeFormatter.format(new Date(msg.date))}
+      {timeFormatter.format(new Date(toMillis(msg.date)))}
     </div>
   </div>
 ), areMessagesEqual);
@@ -1486,13 +1502,6 @@ const buildContactDocId = (contact) => {
   return contact.displayName.trim().toLowerCase().replace(/\s+/g, '_') || `contact_${Date.now()}`;
 };
 
-const toMillis = (value) => {
-  if (!value) return 0;
-  if (typeof value === 'number') return value;
-  if (typeof value.toMillis === 'function') return value.toMillis();
-  if (typeof value.seconds === 'number') return value.seconds * 1000;
-  return 0;
-};
 
 // Sentinel: Prevent XSS in map info windows
 const escapeHtml = (unsafe) => {
@@ -2220,6 +2229,7 @@ function App() {
   }, [user]);
 
   const messagesEndRef = useRef(null);
+  const isThreadSwitchRef = useRef(false);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const mapMarkersRef = useRef(new Map());
@@ -2596,8 +2606,15 @@ function App() {
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
-    if (autoScroll) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (autoScroll && messagesEndRef.current) {
+      if (isThreadSwitchRef.current) {
+        if (messages.length > 0) {
+          messagesEndRef.current.scrollIntoView({ behavior: "auto" });
+          isThreadSwitchRef.current = false;
+        }
+      } else {
+        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      }
     }
   }, [messages, autoScroll]);
 
@@ -3420,6 +3437,7 @@ function App() {
   const handleThreadSelect = useCallback((thread) => {
     setMessages([]); // Clear previous messages immediately
     setSelectedThread(thread);
+    isThreadSwitchRef.current = true;
     if (thread?.lineId) {
       setActiveLineId((prev) => prev ?? thread.lineId);
     }
@@ -3434,14 +3452,14 @@ function App() {
     const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
 
     const all = [...uniqueLegacy, ...lineFlattened];
-    return all.sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
+    return all.sort((a, b) => toMillis(b.date) - toMillis(a.date));
   }, [legacyThreads, lineThreads, lineInboxMode]);
 
   const activeLineThreads = useMemo(() => {
     if (lineInboxMode === 'COMBINED') return combinedThreads;
     const chosenLine = activeLineId || lines[0]?.id || null;
     const current = chosenLine ? lineThreads[chosenLine] || [] : [];
-    return [...current].sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
+    return [...current].sort((a, b) => toMillis(b.date) - toMillis(a.date));
   }, [lineInboxMode, activeLineId, lines, lineThreads, combinedThreads]);
 
 
