@@ -183,46 +183,11 @@ fun SettingsScreen(
                 )
             }
 
-            // Delivery & permissions
+            // Delivery Settings
             CollapsibleSettingsSection(
-                title = "Delivery & permissions",
+                title = "Delivery Settings",
                 initiallyExpanded = false
             ) {
-                SettingsActionRow(
-                    title = stringResource(R.string.dnd_override_title),
-                    subtitle = if (hasDndAccess) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-                            stringResource(R.string.dnd_override_android15_note)
-                        } else {
-                            stringResource(R.string.dnd_override_ready)
-                        }
-                    } else {
-                        stringResource(R.string.dnd_override_permission_prompt)
-                    },
-                    actionLabel = if (hasDndAccess) {
-                        stringResource(R.string.dnd_override_action_manage)
-                    } else {
-                        stringResource(R.string.dnd_override_action_allow)
-                    },
-                    onAction = onRequestDndAccess,
-                    leadingIcon = Icons.Filled.NotificationsActive
-                )
-                SettingsActionRow(
-                    title = "Battery optimizations",
-                    subtitle = "Disable optimizations so alerts can always send.",
-                    actionLabel = "Open",
-                    onAction = onRequestBatteryOpt,
-                    leadingIcon = Icons.Filled.BugReport
-                )
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    SettingsActionRow(
-                        title = "Unused app reminders",
-                        subtitle = "Make sure PulseLink isn’t auto-disabled by Android.",
-                        actionLabel = "Open",
-                        onAction = onRequestUnusedApps,
-                        leadingIcon = Icons.Filled.Schedule
-                    )
-                }
                 if (settings.firebaseMessagingEnabled) {
                     SettingsToggleRow(
                         title = stringResource(R.string.extension_relay_title),
@@ -252,6 +217,25 @@ fun SettingsScreen(
                 title = "Permissions & System",
                 initiallyExpanded = false
             ) {
+                SettingsActionRow(
+                    title = stringResource(R.string.dnd_override_title),
+                    subtitle = if (hasDndAccess) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                            stringResource(R.string.dnd_override_android15_note)
+                        } else {
+                            stringResource(R.string.dnd_override_ready)
+                        }
+                    } else {
+                        stringResource(R.string.dnd_override_permission_prompt)
+                    },
+                    actionLabel = if (hasDndAccess) {
+                        stringResource(R.string.dnd_override_action_manage)
+                    } else {
+                        stringResource(R.string.dnd_override_action_allow)
+                    },
+                    onAction = onRequestDndAccess,
+                    leadingIcon = Icons.Filled.NotificationsActive
+                )
                 SettingsToggleRow(
                     title = "Share location in alerts",
                     subtitle = null,
@@ -278,13 +262,15 @@ fun SettingsScreen(
                     onAction = onRequestBatteryOpt,
                     leadingIcon = Icons.Filled.PowerSettingsNew
                 )
-                SettingsActionRow(
-                    title = stringResource(R.string.permission_unused_apps_title),
-                    subtitle = null,
-                    actionLabel = stringResource(R.string.permission_unused_apps_action),
-                    onAction = onRequestUnusedApps,
-                    leadingIcon = Icons.Filled.Schedule
-                )
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    SettingsActionRow(
+                        title = stringResource(R.string.permission_unused_apps_title),
+                        subtitle = null,
+                        actionLabel = stringResource(R.string.permission_unused_apps_action),
+                        onAction = onRequestUnusedApps,
+                        leadingIcon = Icons.Filled.Schedule
+                    )
+                }
                 val defaultSmsSubtitle = when {
                     isDefaultSmsApp -> stringResource(id = R.string.settings_default_sms_ready)
                     defaultSmsSupported -> stringResource(id = R.string.settings_default_sms_required)
@@ -418,26 +404,6 @@ fun SettingsScreen(
                     title = "Beacon Feature",
                     initiallyExpanded = false
                 ) {
-                val smsStatusIcon = if (isDefaultSmsApp) Icons.Filled.CheckCircle else Icons.Filled.Error
-                val smsStatusColor = if (isDefaultSmsApp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                if (isDefaultSmsApp) {
-                    Text(
-                        text = "PulseLink is your default SMS app",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = smsStatusColor,
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
-                } else {
-                    SettingsActionRow(
-                        title = "Default SMS",
-                        subtitle = "PulseLink is NOT set as default",
-                        actionLabel = "Make default",
-                        onAction = onRequestDefaultSms,
-                        leadingIcon = smsStatusIcon,
-                        iconTint = smsStatusColor
-                    )
-                }
-
                 SettingsToggleRow(
                     title = stringResource(id = R.string.settings_beacon_icon_title),
                     subtitle = stringResource(id = R.string.settings_beacon_icon_subtitle),
