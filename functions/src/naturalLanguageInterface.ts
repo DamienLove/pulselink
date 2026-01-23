@@ -3,6 +3,7 @@ import {genkit, z} from "genkit";
 import {vertexAI, gemini15Flash} from "@genkit-ai/vertexai";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {defineSecret} from "firebase-functions/params";
+import {sanitizeScalar} from "./security";
 
 const apiKey = defineSecret("GOOGLE_GENAI_API_KEY");
 
@@ -12,17 +13,10 @@ const ai = genkit({
   ],
 });
 
-export const naturalLanguageQueryFlow = ai.defineFlow({
-  name: "naturalLanguageQueryFlow",
-  inputSchema: z.string()
-      .describe("A natural language query from a PulseLink user"),
-  outputSchema: z.object({
-    intent: z.string().describe("One of the supported PulseLink intents"),
-    entities: z.record(z.string())
-        .describe("Key/value pairs that parameterize the intent"),
-  }),
-}, async (query) => {
-  const prompt = `
+export function buildNaturalLanguagePrompt(query: string): string {
+  // Sentinel: Sanitize input to prevent prompt injection (newlines/control chars)
+  const safeQuery = sanitizeScalar(query);
+  return `
     You are the natural language interface for PulseLink, an emergency alert + escalation app.
     You MUST classify the user's sentence into one of the intents below and capture any relevant entities.
 
@@ -48,8 +42,21 @@ export const naturalLanguageQueryFlow = ai.defineFlow({
 
     If the query cannot be mapped, set intent to "unknown" and return an empty entities object.
 
-    Query: ${query}
+    Query: """${safeQuery}"""
   `;
+}
+
+export const naturalLanguageQueryFlow = ai.defineFlow({
+  name: "naturalLanguageQueryFlow",
+  inputSchema: z.string()
+      .describe("A natural language query from a PulseLink user"),
+  outputSchema: z.object({
+    intent: z.string().describe("One of the supported PulseLink intents"),
+    entities: z.record(z.string())
+        .describe("Key/value pairs that parameterize the intent"),
+  }),
+}, async (query) => {
+  const prompt = buildNaturalLanguagePrompt(query);
 
   const response = await ai.generate({
     model: gemini15Flash,
