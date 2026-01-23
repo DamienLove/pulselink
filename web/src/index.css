@@ -88,15 +88,15 @@
 
   /* Glassmorphism Refined v8 */
   --glass-bg: rgba(2, 2, 2, 0.75);
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --glass-highlight: rgba(255, 255, 255, 0.15);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --glass-highlight: rgba(255, 255, 255, 0.2);
   --glass-blur: 40px; /* Increased blur for premium feel */
 
   /* Shadows */
   --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.6);
   --shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.9);
   --shadow-lg: 0 32px 64px -12px rgba(0, 0, 0, 0.95);
-  --shadow-glow: 0 0 40px var(--accent-glow);
+  --shadow-glow: 0 0 50px var(--accent-glow);
   --shadow-neon: 0 0 15px var(--accent-glow), 0 0 30px var(--accent-dim);
 
   /* Typography */

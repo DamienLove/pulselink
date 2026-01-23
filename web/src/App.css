@@ -181,7 +181,7 @@
 .nav-item.active svg, .nav-item.active img {
   opacity: 1;
   color: var(--accent);
-  filter: drop-shadow(0 0 15px var(--accent));
+  filter: drop-shadow(0 0 8px var(--accent));
   transform: scale(1.05);
 }
 
@@ -498,7 +498,7 @@
   background: rgba(0, 255, 255, 0.08);
   box-shadow:
     0 0 0 1px var(--accent),
-    0 0 30px rgba(0, 255, 255, 0.25),
+    0 0 30px rgba(0, 255, 255, 0.4),
     inset 0 2px 4px rgba(0,0,0,0.3);
   transform: scale(1.01);
 }
@@ -618,6 +618,24 @@ textarea:focus-visible,
   position: relative;
   overflow: hidden;
   text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+
+/* Sweep Shimmer Effect on Hover */
+.primary-btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 150%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.5s;
+}
+
+.primary-btn:hover::after {
+  left: 150%;
+  transition: left 0.7s ease-in-out;
 }
 
 .primary-btn:hover {
@@ -740,7 +758,7 @@ textarea:focus-visible,
   border-radius: 28px;
   padding: 40px 32px;
   text-align: center;
-  animation: slideUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: slideUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), pulseGlow 4s infinite;
   max-height: calc(100svh - 32px);
   overflow: auto;
 }
@@ -1111,6 +1129,7 @@ textarea:focus-visible,
   line-height: 1.5;
   position: relative;
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .message.sent .message-bubble {
