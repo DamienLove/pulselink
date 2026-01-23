@@ -2128,7 +2128,6 @@ function App() {
   const [deleteAction, setDeleteAction] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [showPreviews, setShowPreviews] = useState(true);
-  const [autoScroll, setAutoScroll] = useState(true);
   const [spotifyToken, setSpotifyToken] = useState(null);
   const [spotifySearch, setSpotifySearch] = useState('');
   const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
@@ -2303,7 +2302,6 @@ function App() {
       }
   }, [user]);
 
-  const messagesEndRef = useRef(null);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const mapMarkersRef = useRef(new Map());
@@ -2583,7 +2581,6 @@ function App() {
 
   useEffect(() => {
     if (!user || !userData?.remoteWebAccessEnabled) {
-      setLineThreads({});
       setLines([]);
       return;
     }
@@ -2594,25 +2591,35 @@ function App() {
         ...doc.data()
       }));
       setLines(linesData);
-
-      // For each line, listen to its threads
-      const unsubscribes = linesData.map(line => {
-        const lineThreadsRef = collection(db, "users", user.uid, "lines", line.id, "threads");
-        const q = query(lineThreadsRef, orderBy("date", "desc"), limit(50));
-        return onSnapshot(q, (threadSnap) => {
-          const threads = threadSnap.docs.map(d => ({
-            id: d.id,
-            lineId: line.id,
-            ...d.data()
-          }));
-          setLineThreads(prev => ({ ...prev, [line.id]: threads }));
-        });
-      });
-
-      return () => unsubscribes.forEach(unsub => unsub());
     });
     return () => unsubscribe();
   }, [user, userData?.remoteWebAccessEnabled]);
+
+  useEffect(() => {
+    if (!user || !userData?.remoteWebAccessEnabled) {
+      setLineThreads({});
+      return;
+    }
+
+    if (lines.length === 0) {
+      return;
+    }
+
+    const unsubscribes = lines.map(line => {
+      const lineThreadsRef = collection(db, "users", user.uid, "lines", line.id, "threads");
+      const q = query(lineThreadsRef, orderBy("date", "desc"), limit(50));
+      return onSnapshot(q, (threadSnap) => {
+        const threads = threadSnap.docs.map(d => ({
+          id: d.id,
+          lineId: line.id,
+          ...d.data()
+        }));
+        setLineThreads(prev => ({ ...prev, [line.id]: threads }));
+      });
+    });
+
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [user, userData?.remoteWebAccessEnabled, lines]);
 
   useEffect(() => {
     const themesRef = collection(db, "themes_public");
@@ -2641,7 +2648,7 @@ function App() {
         ? ["users", user.uid, "lines", selectedThread.lineId, "threads", selectedThread.id, "messages"]
         : ["users", user.uid, "synced_threads", selectedThread.id, "messages"];  
       const messagesRef = collection(db, ...basePath);
-      const q = query(messagesRef, orderBy("date", "asc"));
+      const q = query(messagesRef, orderBy("date", "desc"));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const messagesData = snapshot.docs.map(doc => ({
           id: doc.id,
@@ -2654,14 +2661,6 @@ function App() {
       setMessages([]);
     }
   }, [user, selectedThread]);
-
-
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    if (autoScroll) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages, autoScroll]);
 
   useEffect(() => {
     if (!user) {
@@ -3556,7 +3555,13 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
+
+    // Bolt: Only include threads from currently active lines to avoid stale data
+    const activeLineIds = new Set(lines.map(l => l.id));
+    const lineFlattened = Object.entries(lineThreads)
+        .filter(([id]) => activeLineIds.has(id))
+        .map(([, threads]) => threads)
+        .flat();
 
     // Create a Set of addresses present in the new line threads to filter out legacy duplicates
     const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
@@ -3570,9 +3575,9 @@ function App() {
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      return (b.date ?? 0) - (a.date ?? 0);
+      return toMillis(b.date) - toMillis(a.date);
     });
-  }, [legacyThreads, lineThreads, lineInboxMode, showArchived]);
+  }, [legacyThreads, lineThreads, lineInboxMode, showArchived, lines]);
 
   const activeLineThreads = useMemo(() => {
     if (lineInboxMode === 'COMBINED') return combinedThreads;
@@ -3585,7 +3590,7 @@ function App() {
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      return (b.date ?? 0) - (a.date ?? 0);
+      return toMillis(b.date) - toMillis(a.date);
     });
   }, [lineInboxMode, activeLineId, lines, lineThreads, combinedThreads, showArchived]);
 
@@ -4746,14 +4751,6 @@ function App() {
                             />
                             Show message previews
                           </label>
-                          <label className="settings-toggle">
-                            <input
-                              type="checkbox"
-                              checked={autoScroll}
-                              onChange={(e) => setAutoScroll(e.target.checked)}
-                            />
-                            Auto-scroll to latest message
-                          </label>
                           <p className="settings-note">
                             Preferences apply to this browser only.
                           </p>
@@ -4931,7 +4928,6 @@ function App() {
                     </div>
                     <div className="messages-list">
                       {messageListElements}
-                      <div ref={messagesEndRef} />
                     </div>
                   </>
                 ) : (
