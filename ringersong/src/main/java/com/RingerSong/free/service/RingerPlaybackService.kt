@@ -34,6 +34,7 @@ class RingerPlaybackService : Service() {
     @Inject lateinit var appStateStore: AppStateStore
     @Inject lateinit var spotifyPlayer: SpotifyPlayerManager
     @Inject lateinit var appleMusicPlayer: AppleMusicPlayerManager
+    @Inject lateinit var youTubeMusicPlayer: YouTubeMusicPlayerManager
 
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var mediaPlayer: MediaPlayer? = null
@@ -328,25 +329,27 @@ class RingerPlaybackService : Service() {
     private suspend fun playYouTubeSong(song: SongEntry, startMs: Long, durationMs: Long) {
         // Extract the video ID from the URI (format: "youtube:video:VIDEO_ID")
         val videoId = song.uri.removePrefix("youtube:video:")
-        val youtubeMusicRepo = com.RingerSong.free.data.YouTubeMusicRepository(this)
+        Log.d(TAG, "Attempting to play YouTube song: ${song.title} ($videoId)")
 
-        Log.d(TAG, "Attempting to stream YouTube track: $videoId")
+        val success = youTubeMusicPlayer.playVideo(videoId)
 
-        // Fetch stream URL via Repository (RapidAPI)
-        // This keeps it "streaming" (no local file import) but allows us to use MediaPlayer
-        // which gives us start/stop control, unlike launching the external app.
-        val details = youtubeMusicRepo.getSongDetails(videoId)
-        val streamUrl = details?.downloadUrl
-
-        if (!streamUrl.isNullOrBlank()) {
-            Log.d(TAG, "Streaming YouTube URL: $streamUrl")
-            // Stream the URL using MediaPlayer
-            playLocalSong(song.copy(uri = streamUrl), startMs, durationMs)
-            return
+        if (success) {
+            isPlaying = true
+            // Schedule stop logic (same as Apple Music)
+            playbackJob = scope.launch {
+                delay(durationMs)
+                Log.d(TAG, "YouTube Music segment duration passed")
+                stopPlayback()
+                restoreSystemRinger()
+                stopForeground(true)
+                stopSelf()
+            }
+        } else {
+            Log.e(TAG, "Failed to launch YouTube Music")
+            restoreSystemRinger()
+            stopForeground(true)
+            stopSelf()
         }
-
-        Log.e(TAG, "YouTube track stream unavailable: $videoId")
-        stopSelf()
     }
 
     private suspend fun playAppleMusicSong(song: SongEntry, startMs: Long, durationMs: Long) {
@@ -376,12 +379,18 @@ class RingerPlaybackService : Service() {
     private fun stopPlayback() {
         Log.d(TAG, "Executing stopPlayback")
 
+        // Steal focus first to pause external apps (YouTube Music, Apple Music)
+        stealFocus()
+
         // Cancel any pending stop/cleanup jobs
         playbackJob?.cancel()
         playbackJob = null
 
         // Ensure we pause Spotify explicitly - simplified logic
         spotifyPlayer.pause()
+
+        // Stop YouTube Player (Intent based relies on focus stealing and media keys)
+        youTubeMusicPlayer.stop()
 
         // Attempt to stop external players (like Apple Music) by sending a media pause key event
         // This is a workaround since we don't control the external app directly.

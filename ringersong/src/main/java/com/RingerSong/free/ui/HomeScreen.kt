@@ -917,7 +917,7 @@ private fun SpotifySection(
                     }
                 }
                 Text(
-                    text = "Search for tracks on Spotify. Songs are downloaded for ringtone playback.",
+                    text = "Search for tracks on Spotify. Songs are streamed directly via the Spotify app.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1597,12 +1597,12 @@ private fun HowToAddMusicHelper() {
             fontWeight = FontWeight.SemiBold
         )
         Text(
-            text = "Download First: Spotify and YouTube Music tracks are downloaded before use.",
+            text = "Streaming: Spotify and YouTube Music tracks are streamed directly.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "We automatically silence your default ringer and play your downloaded track instead.",
+            text = "We automatically silence your default ringer and play your selected track instead.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
