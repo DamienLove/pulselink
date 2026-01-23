@@ -83,6 +83,9 @@ const LockIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="non
 const MessageSquareIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>;
 const SearchIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
 const CloseIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+const RequiredIndicator = () => (
+  <span style={{ color: 'var(--danger)', marginLeft: '4px' }} aria-hidden="true">*</span>
+);
 const Spinner = ({ className = '', style = {} }) => (
   <svg className={`spinner ${className}`} style={style} viewBox="0 0 50 50" aria-hidden="true">
     <defs>
@@ -3469,8 +3472,9 @@ function App() {
             <p>Login to access your messages</p>
             <div className="login-form">
               <label className="login-field">
-                Email
+                <span>Email <RequiredIndicator /></span>
                 <input
+                  required
                   className="login-input"
                   type="email"
                   value={email}
@@ -3480,9 +3484,12 @@ function App() {
                 />
               </label>
               <div className="login-field">
-                <label htmlFor="login-password">Password</label>
+                <label htmlFor="login-password">
+                  <span>Password <RequiredIndicator /></span>
+                </label>
                 <div className="password-input-wrapper">
                   <input
+                    required
                     id="login-password"
                     className="login-input"
                     type={showPassword ? "text" : "password"}
@@ -3807,8 +3814,9 @@ function App() {
                 <div className="settings-card">
                   <h4>{editingContactId ? 'Edit trusted contact' : 'Add trusted contact'}</h4>
                   <label className="login-field">
-                    Name
+                    <span>Name <RequiredIndicator /></span>
                     <input
+                      required
                       className="login-input"
                       value={contactForm.displayName}
                       onChange={(e) => setContactForm((prev) => ({ ...prev, displayName: e.target.value }))}
@@ -4192,8 +4200,9 @@ function App() {
                 <div className="settings-card themes-card">
                   <h4>Publish your theme</h4>
                   <label className="login-field">
-                    Theme name
+                    <span>Theme name <RequiredIndicator /></span>
                     <input
+                      required
                       className="login-input"
                       value={themePublishForm.name}
                       onChange={(e) => setThemePublishForm((prev) => ({ ...prev, name: e.target.value }))}
@@ -4495,8 +4504,8 @@ function App() {
                 </div>
                 <form className="login-form" style={{marginTop: 12}} onSubmit={handleAddExtension}>
                   <label className="login-field">
-                    Name
-                    <input className="login-input" value={extensionForm.name} onChange={(e) => setExtensionForm((prev) => ({ ...prev, name: e.target.value }))} />
+                    <span>Name <RequiredIndicator /></span>
+                    <input required className="login-input" value={extensionForm.name} onChange={(e) => setExtensionForm((prev) => ({ ...prev, name: e.target.value }))} />
                   </label>
                   <label className="login-field">
                     Webhook URL (https://…)
