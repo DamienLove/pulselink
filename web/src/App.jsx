@@ -86,6 +86,7 @@ const CloseIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="no
 const PinIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>;
 const ArchiveIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>;
 const InboxIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>;
+const EmojiIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>;
 
 const Spinner = ({ className = '', style = {} }) => (
   <svg className={`spinner ${className}`} style={style} viewBox="0 0 50 50" aria-hidden="true">
@@ -128,40 +129,63 @@ const CopyButton = ({ text, label = "Copy" }) => {
   );
 };
 
+const highlightText = (text, query) => {
+  if (!query || !text) return text;
+  // Escape special regex chars in query to prevent crashes
+  const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.toString().split(new RegExp(`(${safeQuery})`, 'gi'));
+  return parts.map((part, i) =>
+    part.toLowerCase() === query.toLowerCase() ?
+      <span key={i} className="highlight">{part}</span> : part
+  );
+};
+
 const areThreadsEqual = (prev, next) => {
   return prev.isActive === next.isActive &&
          prev.showPreviews === next.showPreviews &&
          prev.onSelect === next.onSelect &&
+         prev.searchQuery === next.searchQuery &&
          prev.thread.id === next.thread.id &&
          prev.thread.address === next.thread.address &&
-         prev.thread.snippet === next.thread.snippet;
+         prev.thread.snippet === next.thread.snippet &&
+         prev.thread.pinned === next.thread.pinned &&
+         prev.thread.archived === next.thread.archived &&
+         prev.thread.read === next.thread.read;
 };
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
 // when only the selection state changes or when unrelated threads update.
-const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onArchive }) => (
-  <div
-    className={`thread-item ${isActive ? 'active' : ''}`}
-    onClick={() => onSelect(thread)}
-    role="button"
-    tabIndex={0}
-    aria-current={isActive ? 'true' : undefined}
-    aria-label={`Select conversation with ${thread.display_name || thread.address}${showPreviews && thread.snippet ? `, ${thread.snippet}` : ''}`}
-    onKeyDown={(e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onSelect(thread);
-      }
-    }}
-  >
-    <div className="thread-main">
-      <div className="thread-header">
-        {thread.pinned && <PinIcon className="pin-icon" style={{width: 14, height: 14}} />}
-        <div className="thread-name">{thread.display_name || thread.address}</div>
+const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onArchive, searchQuery }) => {
+  const isUnread = thread.read === false || thread.read === 0;
+
+  return (
+    <div
+      className={`thread-item ${isActive ? 'active' : ''} ${isUnread ? 'unread' : ''}`}
+      onClick={() => onSelect(thread)}
+      role="button"
+      tabIndex={0}
+      aria-current={isActive ? 'true' : undefined}
+      aria-label={`Select conversation with ${thread.display_name || thread.address}${showPreviews && thread.snippet ? `, ${thread.snippet}` : ''}`}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect(thread);
+        }
+      }}
+    >
+      <div className="thread-main">
+        <div className="thread-header">
+          {thread.pinned && <PinIcon className="pin-icon" style={{width: 14, height: 14}} />}
+          {isUnread && <span className="unread-dot"></span>}
+          <div className="thread-name">
+            {highlightText(thread.display_name || thread.address, searchQuery)}
+          </div>
+        </div>
+        <div className="thread-snippet">
+          {showPreviews ? highlightText(thread.snippet, searchQuery) : '••••••'}
+        </div>
       </div>
-      <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
-    </div>
-    <div className="thread-actions">
+      <div className="thread-actions">
       <button
         className="thread-action-btn"
         onClick={(e) => { e.stopPropagation(); onPin(thread); }}
@@ -179,8 +203,9 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onAr
         {thread.archived ? <InboxIcon style={{ width: 16, height: 16 }} /> : <ArchiveIcon style={{ width: 16, height: 16 }} />}
       </button>
     </div>
-  </div>
-), areThreadsEqual);
+    </div>
+  );
+}, areThreadsEqual);
 
 ThreadItem.displayName = 'ThreadItem';
 
@@ -213,6 +238,11 @@ const MessageItem = memo(({ msg, showPreviews }) => (
     </div>
     <div className="message-time">
       {timeFormatter.format(new Date(msg.date))}
+      {msg.type !== 1 && (
+        <span className="message-status" title="Sent">
+          <CheckIcon style={{ width: 12, height: 12, marginLeft: 4, opacity: 0.7 }} />
+        </span>
+      )}
     </div>
   </div>
 ), areMessagesEqual);
@@ -640,13 +670,18 @@ const SpotifyResultItem = memo(({ track, onAdd, isAdding }) => (
 SpotifyResultItem.displayName = 'SpotifyResultItem';
 
 // Bolt: MessageComposer extracted to prevent App re-renders on typing
+const quickReplies = ["Yes", "No", "On my way!", "Can't talk right now.", "Ok", "Thanks", "Call you later?"];
+const commonEmojis = ["👍", "❤️", "😂", "😮", "😢", "🔥", "🎉", "🤔", "👋", "🙏", "💯", "👀"];
+
 const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn }) => {
   const [address, setAddress] = useState('');
   const [body, setBody] = useState('');
   const [lineId, setLineId] = useState('');
   const [status, setStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const textareaRef = useRef(null);
+  const draftsRef = useRef({});
 
   useLayoutEffect(() => {
     const el = textareaRef.current;
@@ -659,14 +694,30 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
     if (selectedThread) {
       setAddress(selectedThread.address || '');
       setLineId(selectedThread.lineId || '');
+      // Restore draft
+      setBody(draftsRef.current[selectedThread.id] || '');
     } else {
       setAddress('');
       // When clearing (New message), reset lineId to empty to allow user selection or fallback
       setLineId('');
+      setBody('');
     }
-    setBody('');
     setStatus('');
+    setShowEmojiPicker(false);
   }, [selectedThread]);
+
+  const handleBodyChange = (val) => {
+    setBody(val);
+    if (selectedThread?.id) {
+      draftsRef.current[selectedThread.id] = val;
+    }
+  };
+
+  const insertText = (text) => {
+    const newBody = body + text;
+    handleBodyChange(newBody);
+    textareaRef.current?.focus();
+  };
 
   const handleSendMessage = async () => {
     if (!user) return;
@@ -688,6 +739,10 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
         source: "web",
         lineId: effectiveLineId
       });
+      // Clear draft
+      if (selectedThread?.id) {
+        delete draftsRef.current[selectedThread.id];
+      }
       setBody('');
       setStatus("Queued for sending from your device.");
     } catch (error) {
@@ -700,6 +755,19 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
 
   return (
     <div className="composer">
+      {selectedThread && (
+        <div className="quick-replies">
+          {quickReplies.map(reply => (
+            <button
+              key={reply}
+              className="quick-reply-chip"
+              onClick={() => insertText(reply + " ")}
+            >
+              {reply}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="composer-row">
         <label className="composer-label" htmlFor="compose-address">To</label>
         <input
@@ -740,7 +808,7 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
             aria-label="Message body"
             aria-describedby="message-char-count"
             value={body}
-            onChange={(e) => setBody(e.target.value)}
+            onChange={(e) => handleBodyChange(e.target.value)}
             onKeyDown={(e) => {
               if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
@@ -762,6 +830,32 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
               }}
             >
               {body.length}
+            </div>
+          )}
+        </div>
+        <div style={{ position: 'relative' }}>
+          <button
+            className="ghost-btn icon-only"
+            title="Add emoji"
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            style={{ height: '100%', marginRight: 8 }}
+          >
+            <EmojiIcon />
+          </button>
+          {showEmojiPicker && (
+            <div className="emoji-picker">
+              {commonEmojis.map(emoji => (
+                <button
+                  key={emoji}
+                  className="emoji-btn"
+                  onClick={() => {
+                    insertText(emoji);
+                    setShowEmojiPicker(false);
+                  }}
+                >
+                  {emoji}
+                </button>
+              ))}
             </div>
           )}
         </div>
@@ -1930,6 +2024,7 @@ const Sidebar = memo(({
                   showPreviews={showPreviews}
                   onPin={onPinThread}
                   onArchive={onArchiveThread}
+                  searchQuery={searchQuery}
                 />
               ))
             )}
