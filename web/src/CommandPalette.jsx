@@ -6,6 +6,7 @@ const ACTIONS = [
   { id: 'nav-beacon', label: 'Open Beacon Inbox', icon: '📨', action: (setActivePanel) => setActivePanel('beacon') },
   { id: 'nav-pulselink', label: 'Manage Profile', icon: '👤', action: (setActivePanel) => setActivePanel('pulselink') },
   { id: 'nav-contacts', label: 'View Contacts', icon: '👥', action: (setActivePanel) => setActivePanel('contacts') },
+  { id: 'nav-ringersong', label: 'Open RingerSong', icon: '🎵', action: (setActivePanel) => setActivePanel('ringersong') },
   { id: 'nav-map', label: 'Emergency Map', icon: '🗺️', action: (setActivePanel) => setActivePanel('map') },
   { id: 'nav-themes', label: 'Theme Gallery', icon: '🎨', action: (setActivePanel) => setActivePanel('themes') },
   { id: 'nav-extensions', label: 'Extensions Store', icon: '🧩', action: (setActivePanel) => setActivePanel('extensions') },
@@ -14,7 +15,7 @@ const ACTIONS = [
   { id: 'act-new-msg', label: 'New Message', icon: '✏️', action: (setActivePanel, actions) => actions.newThread() },
 ];
 
-export default function CommandPalette({ isOpen, onClose, setActivePanel, actions }) {
+export default function CommandPalette({ isOpen, onClose, setActivePanel, actions, remoteSettings }) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
@@ -29,13 +30,27 @@ export default function CommandPalette({ isOpen, onClose, setActivePanel, action
     }
   }, [isOpen]);
 
+  const availableActions = useMemo(() => {
+    if (!remoteSettings) return ACTIONS;
+    return ACTIONS.filter(action => {
+      if (action.id === 'nav-beacon' || action.id === 'act-new-msg') return remoteSettings.beaconLauncherEnabled;
+      if (action.id === 'nav-pulselink') return remoteSettings.pulseLinkEnabled;
+      if (action.id === 'nav-contacts') return remoteSettings.contactsEnabled;
+      if (action.id === 'nav-map') return remoteSettings.mapEnabled;
+      if (action.id === 'nav-themes') return remoteSettings.themesEnabled;
+      if (action.id === 'nav-ringersong') return remoteSettings.ringerSongEnabled;
+      return true;
+    });
+  }, [remoteSettings]);
+
   const filteredItems = useMemo(() => {
-    if (!query) return ACTIONS;
+    const items = availableActions;
+    if (!query) return items;
     const lower = query.toLowerCase();
-    return ACTIONS.filter(item =>
+    return items.filter(item =>
       item.label.toLowerCase().includes(lower)
     );
-  }, [query]);
+  }, [query, availableActions]);
 
   useEffect(() => {
     setSelectedIndex(0);
