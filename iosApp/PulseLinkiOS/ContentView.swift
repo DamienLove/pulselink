@@ -67,29 +67,33 @@ private struct HomeTab: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    emergencyCard
+            ZStack {
+                NoiseOverlay()
 
-                    if viewModel.statusText != "Idle" {
-                        Text(viewModel.statusText)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.vertical, 4)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Capsule())
+                ScrollView {
+                    VStack(spacing: 20) {
+                        emergencyCard
+
+                        if viewModel.statusText != "Idle" {
+                            Text(viewModel.statusText)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.vertical, 4)
+                                .background(.ultraThinMaterial)
+                                .clipShape(Capsule())
+                        }
+
+                        relayCard
+                        overrideCard
+                        activityCard
+
+                        if !isPro {
+                            proUpsellCard
+                        }
                     }
-
-                    relayCard
-                    overrideCard
-                    activityCard
-
-                    if !isPro {
-                        proUpsellCard
-                    }
+                    .padding(16)
                 }
-                .padding(16)
             }
             .background(
                 LinearGradient(colors: [.black, RelayColors.deep],
@@ -470,7 +474,14 @@ private struct Card<Content: View>: View {
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(RelayColors.primary.opacity(0.3), lineWidth: 1)
+                .stroke(
+                    LinearGradient(
+                        colors: [RelayColors.primary.opacity(0.6), RelayColors.tertiary.opacity(0.3)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         )
     }
 }
@@ -553,7 +564,7 @@ private struct CancelEmergencySheet: View {
 // MARK: - Theme
 
 enum RelayColors {
-    // Future Deep v10 (Absolute Zero)
+    // Future Deep v11 (Neon Noir)
     // Primary: #00F3FF -> Laser Blue
     static let primary = Color(red: 0.0, green: 0.953, blue: 1.0)
     // Secondary: #E000FF -> Neon Purple
@@ -566,7 +577,7 @@ enum RelayColors {
     static let surface = Color(red: 0.05, green: 0.05, blue: 0.05) // Dark gray for surface
 
     // Using surface with slight opacity for glass effect
-    static let cardBackground = surface.opacity(0.8)
+    static let cardBackground = surface.opacity(0.7) // Slightly more transparent for glassmorphism
 }
 
 #Preview {

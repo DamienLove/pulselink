@@ -121,70 +121,74 @@ private struct BeaconTab: View {
 
     var body: some View {
         NavigationStack {
-            VStack {
-                if filter != .private {
-                    VStack(spacing: 8) {
-                        Picker("Filter", selection: $subFilter) {
-                            ForEach(InboxSubFilter.allCases, id: \.self) { f in
-                                Text(f.rawValue).tag(f)
+            ZStack {
+                NoiseOverlay()
+
+                VStack {
+                    if filter != .private {
+                        VStack(spacing: 8) {
+                            Picker("Filter", selection: $subFilter) {
+                                ForEach(InboxSubFilter.allCases, id: \.self) { f in
+                                    Text(f.rawValue).tag(f)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+
+                            if let date = viewModel.lastUpdated {
+                                Text("Synced \(date, style: .time)")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
                             }
                         }
-                        .pickerStyle(.segmented)
-
-                        if let date = viewModel.lastUpdated {
-                            Text("Synced \(date, style: .time)")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
+                        .padding(.horizontal)
+                        .padding(.top, 10)
                     }
-                    .padding(.horizontal)
-                    .padding(.top, 10)
-                }
 
-                Group {
-                    if filter == .private && !isUnlocked {
-                        VStack(spacing: 20) {
-                            Image(systemName: "lock.circle.fill")
+                    Group {
+                        if filter == .private && !isUnlocked {
+                            VStack(spacing: 20) {
+                                Image(systemName: "lock.circle.fill")
                                 .font(.system(size: 60))
                                 .foregroundStyle(.secondary)
-                            Text(storedPin.isEmpty ? "Setup Private Safe" : "Private Safe Locked")
-                                .font(.title2.bold())
-                            Button(storedPin.isEmpty ? "Set PIN" : "Unlock") {
-                                showPinSheet = true
+                                Text(storedPin.isEmpty ? "Setup Private Safe" : "Private Safe Locked")
+                                    .font(.title2.bold())
+                                Button(storedPin.isEmpty ? "Set PIN" : "Unlock") {
+                                    showPinSheet = true
+                                }
+                                .buttonStyle(.borderedProminent)
                             }
-                            .buttonStyle(.borderedProminent)
-                        }
-                    } else {
-                        List(filteredContacts) { contact in
-                            NavigationLink(value: contact) {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(contact.name).font(.headline)
-                                        Text(contact.role).font(.caption).foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    if contact.unread > 0 {
-                                        Text("\(contact.unread)")
-                                            .font(.caption.bold())
-                                            .foregroundStyle(.white)
-                                            .padding(.horizontal, 8)
-                                            .padding(.vertical, 4)
-                                            .background(themeColor.color)
-                                            .clipShape(Capsule())
+                        } else {
+                            List(filteredContacts) { contact in
+                                NavigationLink(value: contact) {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(contact.name).font(.headline)
+                                            Text(contact.role).font(.caption).foregroundStyle(.secondary)
+                                        }
+                                        Spacer()
+                                        if contact.unread > 0 {
+                                            Text("\(contact.unread)")
+                                                .font(.caption.bold())
+                                                .foregroundStyle(.white)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(themeColor.color)
+                                                .clipShape(Capsule())
+                                        }
                                     }
                                 }
                             }
-                        }
-                        .scrollContentBackground(.hidden)
-                        .background(RelayColors.deep.ignoresSafeArea())
-                        .searchable(text: $searchText)
-                        .overlay {
-                            if filteredContacts.isEmpty {
-                                ContentUnavailableView(
-                                    "No conversations",
-                                    systemImage: "bubble.left.and.bubble.right",
-                                    description: Text("Start a new chat on your Android device.")
-                                )
+                            .scrollContentBackground(.hidden)
+                            .background(RelayColors.deep.ignoresSafeArea())
+                            .searchable(text: $searchText)
+                            .overlay {
+                                if filteredContacts.isEmpty {
+                                    ContentUnavailableView(
+                                        "No conversations",
+                                        systemImage: "bubble.left.and.bubble.right",
+                                        description: Text("Start a new chat on your Android device.")
+                                    )
+                                }
                             }
                         }
                     }
@@ -266,7 +270,17 @@ private struct ConversationView: View {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(msg.text)
                                         .padding(12)
-                                        .background(msg.isIncoming ? Color(.secondarySystemBackground) : themeColor.color)
+                                        .background(
+                                            msg.isIncoming
+                                            ? AnyShapeStyle(Color(.secondarySystemBackground))
+                                            : AnyShapeStyle(
+                                                LinearGradient(
+                                                    colors: [RelayColors.primary, RelayColors.tertiary],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                )
+                                            )
+                                        )
                                         .foregroundStyle(msg.isIncoming ? .primary : .white)
                                         .clipShape(bubbleStyle.shape)
                                     Text(msg.timestamp, style: .time)
@@ -414,7 +428,7 @@ enum BubbleStyle: String, CaseIterable {
 }
 
 enum RelayColors {
-    // Future Deep v10 (Absolute Zero)
+    // Future Deep v11 (Neon Noir)
     // Primary: #00F3FF -> Laser Blue
     static let primary = Color(red: 0.0, green: 0.953, blue: 1.0)
     // Secondary: #E000FF -> Neon Purple
@@ -426,5 +440,5 @@ enum RelayColors {
     static let accent  = Color(red: 0.0, green: 0.953, blue: 1.0).opacity(0.8)
     static let surface = Color(red: 0.05, green: 0.05, blue: 0.05) // Dark gray for surface
 
-    static let cardBackground = surface.opacity(0.8)
+    static let cardBackground = surface.opacity(0.7)
 }
