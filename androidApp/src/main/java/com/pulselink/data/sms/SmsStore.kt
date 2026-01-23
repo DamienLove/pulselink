@@ -20,6 +20,7 @@ class SmsStore @Inject constructor(
 ){
     fun insertIncoming(address: String, body: String, timestamp: Long = System.currentTimeMillis()) {
         if (SmsCodec.isPulseLinkPayload(body)) return
+        var capturedThreadId: Long? = null
         val values = ContentValues().apply {
             put(Telephony.TextBasedSmsColumns.ADDRESS, address)
             put(Telephony.TextBasedSmsColumns.BODY, body)
@@ -31,13 +32,14 @@ class SmsStore @Inject constructor(
             runCatching {
                 Telephony.Threads.getOrCreateThreadId(context, setOf(address))
             }.getOrNull()?.let { threadId ->
+                capturedThreadId = threadId
                 put(Telephony.TextBasedSmsColumns.THREAD_ID, threadId)
             }
         }
         runCatching {
             context.contentResolver.insert(Telephony.Sms.Inbox.CONTENT_URI, values)
         }.onSuccess {
-            smsSyncTrigger.triggerSync()
+            smsSyncTrigger.triggerSync(capturedThreadId)
         }.onFailure { error ->
             Log.w(TAG, "Failed to insert incoming SMS into Telephony provider", error)
         }
@@ -45,6 +47,7 @@ class SmsStore @Inject constructor(
 
     fun insertOutgoing(address: String, body: String, timestamp: Long = System.currentTimeMillis()) {
         if (SmsCodec.isPulseLinkPayload(body)) return
+        var capturedThreadId: Long? = null
         val values = ContentValues().apply {
             put(Telephony.TextBasedSmsColumns.ADDRESS, address)
             put(Telephony.TextBasedSmsColumns.BODY, body)
@@ -57,13 +60,14 @@ class SmsStore @Inject constructor(
             runCatching {
                 Telephony.Threads.getOrCreateThreadId(context, setOf(address))
             }.getOrNull()?.let { threadId ->
+                capturedThreadId = threadId
                 put(Telephony.TextBasedSmsColumns.THREAD_ID, threadId)
             }
         }
         runCatching {
             context.contentResolver.insert(Telephony.Sms.Sent.CONTENT_URI, values)
         }.onSuccess {
-            smsSyncTrigger.triggerSync()
+            smsSyncTrigger.triggerSync(capturedThreadId)
         }.onFailure { error ->
             Log.w(TAG, "Failed to insert outgoing SMS into Telephony provider", error)
         }
@@ -75,6 +79,7 @@ class SmsStore @Inject constructor(
         timestamp: Long = System.currentTimeMillis()
     ): Long? {
         if (SmsCodec.isPulseLinkPayload(body)) return null
+        var capturedThreadId: Long? = null
         val values = ContentValues().apply {
             put(Telephony.TextBasedSmsColumns.ADDRESS, address)
             put(Telephony.TextBasedSmsColumns.BODY, body)
@@ -87,13 +92,14 @@ class SmsStore @Inject constructor(
             runCatching {
                 Telephony.Threads.getOrCreateThreadId(context, setOf(address))
             }.getOrNull()?.let { threadId ->
+                capturedThreadId = threadId
                 put(Telephony.TextBasedSmsColumns.THREAD_ID, threadId)
             }
         }
         return runCatching {
             context.contentResolver.insert(Telephony.Sms.Outbox.CONTENT_URI, values)
         }.onSuccess {
-            smsSyncTrigger.triggerSync()
+            smsSyncTrigger.triggerSync(capturedThreadId)
         }.onFailure { error ->
             Log.w(TAG, "Failed to insert pending SMS into Telephony provider", error)
         }.getOrNull()?.lastPathSegment?.toLongOrNull()

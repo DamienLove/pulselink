@@ -64,8 +64,6 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
             try {
                 try {
                     smsStore.insertIncoming(origin, body, timestamp)
-                    // Trigger immediate sync to cloud when message received
-                    smsSyncTrigger.triggerSync()
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to insert incoming SMS from $origin", e)
                 }

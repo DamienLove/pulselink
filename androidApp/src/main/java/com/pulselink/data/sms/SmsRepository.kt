@@ -71,6 +71,111 @@ class SmsRepository @Inject constructor(
 
     fun changes(): SharedFlow<Unit> = observerFlow.asSharedFlow()
 
+    suspend fun getThread(threadId: Long): SmsThreadItem? {
+        if (!hasReadPerms()) return null
+        ensureObserversRegistered()
+
+        val threadProjection = arrayOf(
+            Telephony.Threads._ID,
+            Telephony.Threads.DATE,
+            Telephony.Threads.READ,
+            Telephony.Threads.SNIPPET,
+            Telephony.Threads.RECIPIENT_IDS
+        )
+        val threadCursor = runCatching {
+            context.contentResolver.query(
+                Telephony.Threads.CONTENT_URI,
+                threadProjection,
+                "${Telephony.Threads._ID}=?",
+                arrayOf(threadId.toString()),
+                null
+            )
+        }.getOrNull() ?: return null
+
+        data class ThreadRow(
+            val threadId: Long,
+            val timestamp: Long,
+            val unread: Boolean,
+            val snippet: String,
+            val recipientIds: String
+        )
+
+        var row: ThreadRow? = null
+        val recipientIdSet = linkedSetOf<Long>()
+        threadCursor.use { c ->
+            val idIdx = c.getColumnIndexOrThrow(Telephony.Threads._ID)
+            val readIdx = c.getColumnIndexOrThrow(Telephony.Threads.READ)
+            val dateIdx = c.getColumnIndexOrThrow(Telephony.Threads.DATE)
+            val snippetIdx = c.getColumnIndexOrThrow(Telephony.Threads.SNIPPET)
+            val recipientsIdx = c.getColumnIndexOrThrow(Telephony.Threads.RECIPIENT_IDS)
+            if (c.moveToFirst()) {
+                val tId = c.getLong(idIdx)
+                val unread = c.getInt(readIdx) == 0
+                val snippet = c.getString(snippetIdx) ?: ""
+                val recipientIds = c.getString(recipientsIdx).orEmpty()
+                row = ThreadRow(
+                    threadId = tId,
+                    timestamp = c.getLong(dateIdx),
+                    unread = unread,
+                    snippet = snippet,
+                    recipientIds = recipientIds
+                )
+                recipientIds.split(' ')
+                    .asSequence()
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .mapNotNull { it.toLongOrNull() }
+                    .forEach { recipientIdSet.add(it) }
+            }
+        }
+
+        if (row == null) return null
+
+        if (!loadCanonicalAddresses(recipientIdSet)) {
+             if (!hasReadPerms()) return null
+        }
+
+        val recipients = row!!.recipientIds.split(' ')
+            .mapNotNull { id ->
+                val trimmed = id.trim()
+                if (trimmed.isEmpty()) return@mapNotNull null
+                canonicalAddressCache.get(trimmed)?.takeIf { it.isNotBlank() }
+            }
+
+        val displayAddress = recipients.joinToString(", ") { resolveAddress(it) }
+        val primaryRecipient = recipients.firstOrNull().orEmpty()
+        val phone = if (primaryRecipient.isNotBlank()) primaryRecipient else stripSmsDisplayName(displayAddress)
+        val normalized = normalizePhone(phone)
+
+        val contact = contactDao.getByPhones(listOf(phone, normalized)).firstOrNull()
+
+        val trustedUrgency = contact?.let {
+            when {
+                OtpHelper.isUrgentBody(row!!.snippet) -> MessageUrgency.URGENT
+                it.escalationTier == EscalationTier.EMERGENCY -> MessageUrgency.EMERGENCY
+                else -> MessageUrgency.STANDARD
+            }
+        }
+
+        val unreadCounts = loadUnreadCounts(listOf(threadId))
+        val unreadCount = unreadCounts[threadId] ?: 0
+        val resolvedUnreadCount = if (row!!.unread && unreadCount == 0) 1 else unreadCount
+
+        return SmsThreadItem(
+            threadId = row!!.threadId,
+            address = displayAddress,
+            snippet = row!!.snippet,
+            timestamp = row!!.timestamp,
+            unread = row!!.unread,
+            unreadCount = resolvedUnreadCount,
+            isPrivate = contact?.isPrivate == true,
+            isFavorite = contact?.isFavorite == true,
+            isTrusted = contact != null,
+            trustedUrgency = trustedUrgency,
+            isOtp = OtpHelper.isOtpMessage(phone, row!!.snippet)
+        )
+    }
+
     suspend fun listThreads(
         limit: Int = 50,
         includeArchived: Boolean = false,
