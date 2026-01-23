@@ -149,6 +149,7 @@ fun InboxScreen(
     onPinSelected: () -> Unit = {},
     onMarkAsUnread: (Long) -> Unit = {},
     onMarkAllRead: () -> Unit = {},
+    onAvatarClick: (String) -> Unit = {},
     userMessage: String? = null,
     onClearUserMessage: () -> Unit = {},
     delayedSendTimeout: Int = 5,
@@ -650,6 +651,7 @@ fun InboxScreen(
                                         onTogglePin = { onTogglePin(item.threadId) },
                                         onToggleArchive = { onToggleArchive(item.threadId) },
                                         onMarkAsUnread = { onMarkAsUnread(item.threadId) },
+                                        onAvatarClick = { onAvatarClick(item.address) },
                                         onLongClick = { onToggleSelection(item.threadId) },
                                         modifier = Modifier.animateItemPlacement()
                                     )
@@ -1011,6 +1013,7 @@ private fun SwipeableThreadRow(
     onTogglePin: () -> Unit,
     onToggleArchive: () -> Unit,
     onMarkAsUnread: () -> Unit,
+    onAvatarClick: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -1048,6 +1051,7 @@ private fun SwipeableThreadRow(
                 onTogglePin = onTogglePin,
                 onToggleArchive = onToggleArchive,
                 onMarkAsUnread = onMarkAsUnread,
+                onAvatarClick = onAvatarClick,
                 onLongClick = onLongClick
             )
         },
@@ -1068,6 +1072,7 @@ private fun ThreadRow(
     onTogglePin: () -> Unit = {},
     onToggleArchive: () -> Unit = {},
     onMarkAsUnread: () -> Unit = {},
+    onAvatarClick: () -> Unit = {},
     onLongClick: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -1094,7 +1099,9 @@ private fun ThreadRow(
         ) {
             // Avatar / Selection State
             Box(
-                modifier = Modifier.padding(end = 16.dp),
+                modifier = Modifier
+                    .padding(end = 16.dp)
+                    .clickable(enabled = !selectionMode && !isSelected) { onAvatarClick() },
                 contentAlignment = Alignment.BottomEnd
             ) {
                 if (isSelected) {

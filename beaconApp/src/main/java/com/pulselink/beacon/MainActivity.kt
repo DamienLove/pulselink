@@ -47,9 +47,11 @@ import android.provider.Telephony
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     private val notificationTarget = mutableStateOf<NotificationTarget?>(null)
@@ -244,6 +246,11 @@ private fun BeaconNav(
                     onPinSelected = { vm.pinSelected() },
                     onMarkAsUnread = { vm.markAsUnread(it) },
                     onMarkAllRead = { vm.markAllRead() },
+                    onAvatarClick = { address ->
+                        scope.launch(Dispatchers.IO) {
+                            openContact(context, address)
+                        }
+                    },
                     userMessage = vm.userMessage,
                     onClearUserMessage = { vm.clearUserMessage() },
                     delayedSendTimeout = vm.delayedSendTimeout,
@@ -491,6 +498,52 @@ private fun requiredPermissions(context: android.content.Context): List<String> 
     val all = basePerms + notif
     return all.filter {
         ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+    }
+}
+
+private suspend fun openContact(context: android.content.Context, addressString: String) {
+    val parts = addressString.split(" • ")
+    // Prefer the last part as it is likely the number if formatted as "Name • Number"
+    val query = if (parts.size > 1) parts.last() else addressString
+
+    if (query.isBlank()) return
+
+    val lookupUri = Uri.withAppendedPath(android.provider.ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(query))
+    var contactUri: Uri? = null
+
+    try {
+        context.contentResolver.query(
+            lookupUri,
+            arrayOf(android.provider.ContactsContract.PhoneLookup._ID, android.provider.ContactsContract.PhoneLookup.LOOKUP_KEY),
+            null,
+            null,
+            null
+        )?.use {
+            if (it.moveToFirst()) {
+                val lookupKey = it.getString(it.getColumnIndexOrThrow(android.provider.ContactsContract.PhoneLookup.LOOKUP_KEY))
+                val id = it.getLong(it.getColumnIndexOrThrow(android.provider.ContactsContract.PhoneLookup._ID))
+                contactUri = android.provider.ContactsContract.Contacts.getLookupUri(id, lookupKey)
+            }
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+
+    withContext(Dispatchers.Main) {
+        if (contactUri != null) {
+            val intent = Intent(Intent.ACTION_VIEW, contactUri)
+            context.startActivity(intent)
+        } else {
+            val intent = Intent(Intent.ACTION_INSERT_OR_EDIT).apply {
+                type = android.provider.ContactsContract.Contacts.CONTENT_ITEM_TYPE
+                putExtra(android.provider.ContactsContract.Intents.Insert.PHONE, query)
+            }
+            try {
+                context.startActivity(intent)
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
     }
 }
 
