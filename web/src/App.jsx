@@ -1799,12 +1799,12 @@ const Sidebar = memo(({
         <button
           className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
           onClick={() => setActivePanel('extensions')}
-          title="Extensions"
-          aria-label="Extensions"
+          title="Features"
+          aria-label="Features"
           aria-current={activePanel === 'extensions' ? 'page' : undefined}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-          <span>Extensions</span>
+          <span>Features</span>
           <span className="badge-new">NEW</span>
         </button>
         <button
@@ -1909,7 +1909,7 @@ const Sidebar = memo(({
                     To see your messages here:
                     <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
                       <li>Open PulseLink on your phone</li>
-                      <li>Go to Extensions Store</li>
+                      <li>Go to Features</li>
                       <li>Enable &quot;Remote Web Access&quot;</li>
                     </ol>
                     {!isPremium && (
@@ -1979,7 +1979,7 @@ function App() {
   const webHintStorageKey = 'pulselink.hideWebHint';
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
-  const [isLoggingIn, setIsLoggingIn] = useState(true);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isLoadingThreads, setIsLoadingThreads] = useState(false);
   const [legacyThreads, setLegacyThreads] = useState([]);
   const [lineThreads, setLineThreads] = useState({});
@@ -3490,6 +3490,24 @@ function App() {
     }
   };
 
+  const handleRefreshPremium = async () => {
+    if (!user) return;
+    setSettingsStatus("Checking premium status...");
+    try {
+      const callable = httpsCallable(functions, "getPremiumStatus");
+      const { data } = await callable();
+      const tokenResult = await user.getIdTokenResult(true); // force refresh
+
+      setPremiumClaimActive(data.hasClaim === true);
+      setProClaimActive(tokenResult?.claims?.pro === true || tokenResult?.claims?.premium === true);
+
+      setSettingsStatus("Premium status updated.");
+    } catch (e) {
+      console.error("Premium check failed", e);
+      setSettingsStatus("Check failed: " + e.message);
+    }
+  };
+
   const handleLogout = useCallback(async () => {
     await signOut(auth);
     setSelectedThread(null);
@@ -3825,13 +3843,13 @@ function App() {
                   className="home-card"
                   onClick={() => setActivePanel('extensions')}
                   disabled={!remoteSettings.thirdPartyExtensionsEnabled}
-                  title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage extensions" : "Enable 3rd-party extensions in Settings"}
+                  title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage features" : "Enable 3rd-party extensions in Settings"}
                 >
                   <div className="home-icon pulselink">
-                    <img src={logo} alt="Extensions" />
+                    <img src={logo} alt="Features" />
                   </div>
-                  <h3>Extensions</h3>
-                  <p>{remoteSettings.thirdPartyExtensionsEnabled ? "Attach 3rd-party add-ons (coming soon)" : "Enable 3rd-party extensions to start."}</p>
+                  <h3>Features</h3>
+                  <p>Manage built-in capabilities and add-ons.</p>
                 </button>
               </div>
             </div>
@@ -4507,8 +4525,8 @@ function App() {
           {activePanel === 'extensions' && (
             <div className="pulselink-panel">
               <div className="panel-header">
-                <h3>Extensions</h3>
-                <p>Enhance your PulseLink experience with powerful add-ons.</p>
+                <h3>Features</h3>
+                <p>Manage built-in capabilities and add-ons.</p>
               </div>
 
               <div className="settings-card" style={{marginBottom: 20}}>
@@ -4730,6 +4748,9 @@ function App() {
                           </div>
                           <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
                             Send password reset email
+                          </button>
+                          <button className="ghost-btn" type="button" onClick={handleRefreshPremium} style={{marginTop: 8}}>
+                            Refresh Premium Status
                           </button>
                           {settingsStatus && <div className={getToastClass(settingsStatus)} role="status" aria-live="polite">{settingsStatus}</div>}
                         </div>
@@ -4967,6 +4988,13 @@ function App() {
                   onClick={() => setActivePanel('settings')}
                 >
                   Go to Settings
+                </button>
+                <button
+                  className="ghost-btn"
+                  style={{ marginTop: '12px' }}
+                  onClick={handleRefreshPremium}
+                >
+                  Restore Purchase / Refresh Status
                 </button>
               </div>
             )
