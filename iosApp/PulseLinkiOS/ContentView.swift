@@ -470,8 +470,9 @@ private struct Card<Content: View>: View {
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(RelayColors.primary.opacity(0.3), lineWidth: 1)
+                .stroke(RelayColors.primary.opacity(0.4), lineWidth: 1)
         )
+        .shadow(color: RelayColors.primary.opacity(0.15), radius: 10, x: 0, y: 0)
     }
 }
 
@@ -563,7 +564,7 @@ enum RelayColors {
 
     // Complementary shades
     static let accent  = Color(red: 0.0, green: 0.953, blue: 1.0).opacity(0.8)
-    static let surface = Color(red: 0.05, green: 0.05, blue: 0.05) // Dark gray for surface
+    static let surface = Color(red: 0.02, green: 0.02, blue: 0.02) // V11 Deep Gray
 
     // Using surface with slight opacity for glass effect
     static let cardBackground = surface.opacity(0.8)

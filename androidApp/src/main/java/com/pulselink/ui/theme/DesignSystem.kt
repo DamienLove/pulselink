@@ -10,8 +10,8 @@ import androidx.compose.ui.unit.dp
 
 // Colors
 val DeepBackground = Color(0xFF000000) // V9 Pitch Black
-val DeepSurface = Color(0xFF05080E) // V9 Surface (Very Deep Blue)
-val DeepSurfaceAlt = Color(0xFF0A0F1C) // V9 Surface Alt
+val DeepSurface = Color(0xFF050505) // V11 Deep Gray
+val DeepSurfaceAlt = Color(0xFF0A0A0A) // V11 Deep Gray Alt
 val DeepAccent = Color(0xFF00F0FF) // V9 Electric Cyan
 val DeepAccentStrong = Color(0xFF00B8D4) // Cyan 700
 val DeepTertiary = Color(0xFFE000FF) // V9 Neon Magenta
@@ -111,8 +111,17 @@ object Gradients {
     // V9 New: Holographic Surface for cards
     val HolographicSurface = Brush.linearGradient(
         colors = listOf(
-            Color(0xFF0A0F1C).copy(alpha = 0.9f),
-            Color(0xFF05080E).copy(alpha = 0.95f)
+            Color(0xFF0A0A0A).copy(alpha = 0.9f),
+            Color(0xFF050505).copy(alpha = 0.95f)
+        )
+    )
+
+    // V11 Holographic Overlay (Scanning effect)
+    val HolographicScan = Brush.linearGradient(
+        colors = listOf(
+            Color.Transparent,
+            DeepAccent.copy(alpha = 0.1f),
+            Color.Transparent
         )
     )
 }

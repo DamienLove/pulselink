@@ -52,12 +52,12 @@
 }
 
 :root {
-  /* Core Palette: "Future Deep v9" - Neon Noir */
-  --bg: #000000; /* v9 Pitch Black */
-  --bg-accent: #020408;
-  --surface: #05080E;
-  --surface-alt: #0A0F1C;
-  --surface-hover: #0F1521;
+  /* Core Palette: "Future Deep v11" - Neon Noir */
+  --bg: #000000; /* Pitch Black */
+  --bg-accent: #020202;
+  --surface: #050505; /* Deep Gray */
+  --surface-alt: #0A0A0A;
+  --surface-hover: #0F0F0F;
 
   /* Text & Ink */
   --ink: #e0f7fa;
@@ -65,38 +65,38 @@
   --muted: #64748b;
   --ink-muted: #64748b;
 
-  /* Accents - v9 Electric Cyan & Neon Magenta */
-  --accent: #00F0FF;        /* v9 Electric Cyan */
-  --accent-glow: rgba(0, 240, 255, 0.6);
+  /* Accents - v11 Electric Cyan & Neon Purple */
+  --accent: #00F3FF;        /* Laser Blue */
+  --accent-glow: rgba(0, 243, 255, 0.6);
   --accent-strong: #00b8d4;
-  --accent-dim: rgba(0, 240, 255, 0.15);
+  --accent-dim: rgba(0, 243, 255, 0.15);
 
-  --secondary: #e000ff;     /* v8 Electric Magenta */
+  --secondary: #E000FF;     /* Neon Purple */
   --secondary-glow: rgba(224, 0, 255, 0.5);
 
   --tertiary: #a855f7;      /* Neon Purple */
   --tertiary-glow: rgba(168, 85, 247, 0.5);
 
-  --danger: #ff2e4d;        /* v8 Warning Red */
-  --success: #00ff9d;       /* v8 Cyber Green */
+  --danger: #ff2e4d;        /* Warning Red */
+  --success: #00ff9d;       /* Cyber Green */
   --warning: #ffb800;
 
   --border: rgba(255, 255, 255, 0.1);
   --border-light: rgba(255, 255, 255, 0.18);
-  --border-neon: rgba(0, 255, 255, 0.4);
+  --border-neon: rgba(0, 243, 255, 0.4);
   --bg-radial-start: #0a0f1c;
 
-  /* Glassmorphism Refined v8 */
-  --glass-bg: rgba(2, 2, 2, 0.75);
+  /* Glassmorphism Refined v11 */
+  --glass-bg: rgba(5, 5, 5, 0.7);
   --glass-border: rgba(255, 255, 255, 0.12);
   --glass-highlight: rgba(255, 255, 255, 0.15);
-  --glass-blur: 40px; /* Increased blur for premium feel */
+  --glass-blur: 30px;
 
   /* Shadows */
   --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.6);
   --shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.9);
   --shadow-lg: 0 32px 64px -12px rgba(0, 0, 0, 0.95);
-  --shadow-glow: 0 0 40px var(--accent-glow);
+  --shadow-glow: 0 0 20px rgba(0, 243, 255, 0.3);
   --shadow-neon: 0 0 15px var(--accent-glow), 0 0 30px var(--accent-dim);
 
   /* Typography */
@@ -314,4 +314,97 @@ select {
 }
 .neon-border:hover::before {
     opacity: 1;
+}
+
+@keyframes hologram-scan {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 100% 100%; }
+}
+
+.holographic {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.0) 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.holographic::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(45deg, transparent 40%, rgba(0, 243, 255, 0.1) 45%, transparent 50%);
+  background-size: 200% 200%;
+  animation: hologram-scan 3s linear infinite;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.welcome-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 600px;
+  background: rgba(5, 5, 5, 0.95);
+  border: 1px solid var(--accent);
+  border-radius: 24px;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 30px var(--accent-dim);
+  z-index: 10000;
+  padding: 32px;
+  animation: scaleIn 0.3s ease-out;
+  text-align: center;
+}
+
+.welcome-overlay h2 {
+  font-size: 2em;
+  margin-bottom: 16px;
+  color: var(--accent);
+  text-shadow: 0 0 10px var(--accent-glow);
+}
+
+.welcome-overlay p {
+  color: var(--muted);
+  font-size: 1.1em;
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+.welcome-features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.welcome-feature {
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+}
+
+.welcome-feature-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.welcome-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.sidebar-active-indicator {
+  position: absolute;
+  left: 0;
+  top: 10%;
+  bottom: 10%;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 15px var(--accent), 0 0 8px #fff;
 }

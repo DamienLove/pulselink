@@ -639,6 +639,33 @@ const SpotifyResultItem = memo(({ track, onAdd, isAdding }) => (
 ), areSpotifyResultsEqual);
 SpotifyResultItem.displayName = 'SpotifyResultItem';
 
+const WelcomeOverlay = ({ onDismiss }) => (
+  <div className="welcome-overlay-backdrop">
+    <div className="welcome-overlay holographic">
+      <h2>Welcome to PulseLink Web</h2>
+      <p>Your futuristic command center for messaging and emergency safety.</p>
+      <div className="welcome-features">
+        <div className="welcome-feature">
+          <span className="welcome-feature-icon">📡</span>
+          <strong>Beacon Inbox</strong>
+          <p style={{fontSize: '0.9em', marginTop: '8px', color: 'var(--muted)'}}>Send & receive SMS from your browser.</p>
+        </div>
+        <div className="welcome-feature">
+          <span className="welcome-feature-icon">⚡</span>
+          <strong>Relay</strong>
+          <p style={{fontSize: '0.9em', marginTop: '8px', color: 'var(--muted)'}}>Instant sync with your device.</p>
+        </div>
+        <div className="welcome-feature">
+          <span className="welcome-feature-icon">🎵</span>
+          <strong>RingerSong</strong>
+          <p style={{fontSize: '0.9em', marginTop: '8px', color: 'var(--muted)'}}>Manage ringtone playlists.</p>
+        </div>
+      </div>
+      <button className="primary-btn" onClick={onDismiss}>Get Started</button>
+    </div>
+  </div>
+);
+
 // Bolt: MessageComposer extracted to prevent App re-renders on typing
 const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn }) => {
   const [address, setAddress] = useState('');
@@ -1725,6 +1752,7 @@ const Sidebar = memo(({
           aria-label="Home"
           aria-current={activePanel === 'home' ? 'page' : undefined}
         >
+          {activePanel === 'home' && <div className="sidebar-active-indicator" />}
           <HomeIcon />
           <span>Home</span>
         </button>
@@ -1735,6 +1763,7 @@ const Sidebar = memo(({
           aria-label="PulseLink"
           aria-current={activePanel === 'pulselink' ? 'page' : undefined}
         >
+          {activePanel === 'pulselink' && <div className="sidebar-active-indicator" />}
           <img src={logo} alt="PulseLink" />
           <span>PulseLink</span>
         </button>
@@ -1745,6 +1774,7 @@ const Sidebar = memo(({
           aria-label="Beacon"
           aria-current={activePanel === 'beacon' ? 'page' : undefined}
         >
+          {activePanel === 'beacon' && <div className="sidebar-active-indicator" />}
           <img src={beaconLogo} alt="Beacon" />
           <span>Beacon</span>
         </button>
@@ -1756,6 +1786,7 @@ const Sidebar = memo(({
             aria-label="RingerSong"
             aria-current={activePanel === 'ringersong' ? 'page' : undefined}
           >
+            {activePanel === 'ringersong' && <div className="sidebar-active-indicator" />}
             <img src={ringersongLogo} alt="RingerSong" />
             <span>RingerSong</span>
           </button>
@@ -1768,6 +1799,7 @@ const Sidebar = memo(({
             aria-label="Map"
             aria-current={activePanel === 'map' ? 'page' : undefined}
           >
+            {activePanel === 'map' && <div className="sidebar-active-indicator" />}
             <MapIcon />
             <span>Map</span>
           </button>
@@ -1780,6 +1812,7 @@ const Sidebar = memo(({
             aria-label="Contacts"
             aria-current={activePanel === 'contacts' ? 'page' : undefined}
           >
+            {activePanel === 'contacts' && <div className="sidebar-active-indicator" />}
             <ContactIcon />
             <span>Contacts</span>
           </button>
@@ -1792,6 +1825,7 @@ const Sidebar = memo(({
             aria-label="Themes"
             aria-current={activePanel === 'themes' ? 'page' : undefined}
           >
+            {activePanel === 'themes' && <div className="sidebar-active-indicator" />}
             <ThemeIcon />
             <span>Themes</span>
           </button>
@@ -1803,6 +1837,7 @@ const Sidebar = memo(({
           aria-label="Extensions"
           aria-current={activePanel === 'extensions' ? 'page' : undefined}
         >
+          {activePanel === 'extensions' && <div className="sidebar-active-indicator" />}
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
           <span>Extensions</span>
           <span className="badge-new">NEW</span>
@@ -1814,6 +1849,7 @@ const Sidebar = memo(({
           aria-label="Settings"
           aria-current={activePanel === 'settings' ? 'page' : undefined}
         >
+          {activePanel === 'settings' && <div className="sidebar-active-indicator" />}
           <SettingsIcon />
           <span>Settings</span>
         </button>
@@ -2052,6 +2088,10 @@ function App() {
   const [showWebHint, setShowWebHint] = useState(() => {
     if (typeof window === 'undefined') return true;
     return localStorage.getItem(webHintStorageKey) !== 'true';
+  });
+  const [showWelcomeOverlay, setShowWelcomeOverlay] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('pulselink.v11_tour') !== 'true';
   });
   const [remoteSettings, setRemoteSettings] = useState({
     remoteWebAccessEnabled: false,
@@ -3749,6 +3789,12 @@ function App() {
           onArchiveThread={handleArchiveThread}
         />
         <div className="main-content" id="main-content">
+          {showWelcomeOverlay && (
+            <WelcomeOverlay onDismiss={() => {
+              setShowWelcomeOverlay(false);
+              localStorage.setItem('pulselink.v11_tour', 'true');
+            }} />
+          )}
           {activePanel === 'home' && (
             <div className="home-panel">
               <div className="home-hero">
