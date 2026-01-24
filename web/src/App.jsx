@@ -3786,21 +3786,21 @@ function App() {
                   <h3>Beacon Inbox</h3>
                   <p>View SMS synced from your phone.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('pulselink')}>
+                <button className="home-card holographic-card" onClick={() => setActivePanel('pulselink')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink" />
                   </div>
                   <h3>PulseLink</h3>
                   <p>Update your profile and trusted contacts.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('contacts')}>
+                <button className="home-card holographic-card" onClick={() => setActivePanel('contacts')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink contacts" />
                   </div>
                   <h3>Contacts</h3>
                   <p>Browse all device contacts synced from your phone.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('ringersong')}>
+                <button className="home-card holographic-card" onClick={() => setActivePanel('ringersong')}>
                   <div className="home-icon ringersong">
                     <img src={ringersongLogo} alt="RingerSong" />
                   </div>

@@ -159,23 +159,22 @@
 
 /* "Lit LED" Active State v8 - More Glow */
 .nav-item.active {
-  background: linear-gradient(90deg, rgba(0, 255, 255, 0.15), transparent);
+  background: linear-gradient(90deg, rgba(0, 255, 255, 0.1), transparent);
   color: var(--accent);
-  border: 1px solid rgba(0, 255, 255, 0.2);
-  box-shadow: inset 0 0 25px rgba(0, 255, 255, 0.1), 0 0 15px rgba(0, 255, 255, 0.05);
-  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  box-shadow: inset 0 0 25px rgba(0, 255, 255, 0.1), 0 0 15px rgba(0, 255, 255, 0.1);
+  text-shadow: 0 0 12px rgba(0, 255, 255, 0.6);
 }
 
 .nav-item.active::before {
   content: "";
   position: absolute;
   left: 0;
-  top: 10%;
-  bottom: 10%;
-  width: 3px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
   background: var(--accent);
-  border-radius: 0 4px 4px 0;
-  box-shadow: 0 0 15px var(--accent), 0 0 8px #fff;
+  box-shadow: 0 0 20px var(--accent), 0 0 10px #fff;
 }
 
 .nav-item.active svg, .nav-item.active img {
@@ -950,9 +949,10 @@ textarea:focus-visible,
 }
 
 .thread-item.active {
-  background: rgba(0, 255, 255, 0.1);
-  border-color: rgba(0, 255, 255, 0.2);
+  background: linear-gradient(90deg, rgba(0, 255, 255, 0.15), transparent);
+  border-color: rgba(0, 255, 255, 0.3);
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  border-left: 3px solid var(--accent);
 }
 
 .thread-main {
@@ -1105,21 +1105,22 @@ textarea:focus-visible,
 }
 
 .message-bubble {
-  padding: 16px 24px;
-  border-radius: 28px;
+  padding: 14px 22px;
+  border-radius: 24px;
   font-size: 1.05em;
-  line-height: 1.5;
+  line-height: 1.6;
   position: relative;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transition: all 0.2s ease;
 }
 
 .message.sent .message-bubble {
   background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   color: #000;
   border-bottom-right-radius: 4px;
-  font-weight: 500;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 6px 16px rgba(0,0,0,0.5);
-  text-shadow: 0 1px 1px rgba(255,255,255,0.2);
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 4px 12px rgba(0,0,0,0.3);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.25);
 }
 
 .message.received .message-bubble {

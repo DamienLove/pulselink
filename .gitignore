@@ -95,3 +95,4 @@ ringersong/libs/android-sdk-*-appremote*/
 # Web artifacts
 web/*.log
 web/playwright-report/
+web/test-results/
