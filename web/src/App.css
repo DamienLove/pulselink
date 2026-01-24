@@ -301,7 +301,7 @@
 }
 
 .home-card {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(var(--accent-rgb), 0.03);
   border: 1px solid var(--glass-border);
   border-radius: 20px;
   padding: 18px;
@@ -338,8 +338,8 @@
 .home-card:hover {
   transform: translateY(-8px) scale(1.02);
   border-color: var(--accent);
-  background: rgba(0, 255, 255, 0.06);
-  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.8), 0 0 30px var(--accent-glow), inset 0 0 20px rgba(0, 255, 255, 0.05);
+  background: rgba(var(--accent-rgb), 0.06);
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.8), 0 0 30px var(--accent-glow), inset 0 0 20px rgba(var(--accent-rgb), 0.05);
 }
 
 .home-card:hover::after {
@@ -352,15 +352,15 @@
   border-radius: 14px;
   display: grid;
   place-items: center;
-  background: rgba(0, 255, 255, 0.05);
+  background: rgba(var(--accent-rgb), 0.05);
   color: var(--accent);
   margin-bottom: 2px;
-  border: 1px solid rgba(0, 255, 255, 0.15);
+  border: 1px solid rgba(var(--accent-rgb), 0.15);
   transition: all 0.3s ease;
 }
 
 .home-card:hover .home-icon {
-  background: rgba(0, 255, 255, 0.2);
+  background: rgba(var(--accent-rgb), 0.2);
   border-color: var(--accent);
   box-shadow: 0 0 25px var(--accent-glow);
   transform: rotate(-5deg) scale(1.1);

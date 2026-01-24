@@ -134,12 +134,13 @@ const areThreadsEqual = (prev, next) => {
          prev.onSelect === next.onSelect &&
          prev.thread.id === next.thread.id &&
          prev.thread.address === next.thread.address &&
-         prev.thread.snippet === next.thread.snippet;
+         prev.thread.snippet === next.thread.snippet &&
+         prev.contact === next.contact;
 };
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
 // when only the selection state changes or when unrelated threads update.
-const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onArchive }) => (
+const ThreadItem = memo(({ thread, contact, isActive, onSelect, showPreviews, onPin, onArchive, onAvatarClick }) => (
   <div
     className={`thread-item ${isActive ? 'active' : ''}`}
     onClick={() => onSelect(thread)}
@@ -154,10 +155,32 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onAr
       }
     }}
   >
+    <div
+      className="thread-avatar"
+      onClick={(e) => {
+          e.stopPropagation();
+          if (onAvatarClick) onAvatarClick(thread);
+      }}
+      role="button"
+      tabIndex={0}
+      title="View contact"
+      style={{
+          width: 40, height: 40, borderRadius: '50%', background: 'var(--surface-alt)',
+          display: 'grid', placeItems: 'center', marginRight: 12, flexShrink: 0,
+          overflow: 'hidden', border: '1px solid var(--border)', fontSize: '1.2em', fontWeight: 600,
+          color: 'var(--accent)', cursor: 'pointer'
+      }}
+    >
+      {contact && contact.photoUri ? (
+          <img src={contact.photoUri} alt="" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+      ) : (
+          (contact?.displayName || thread.display_name || '?').charAt(0).toUpperCase()
+      )}
+    </div>
     <div className="thread-main">
       <div className="thread-header">
         {thread.pinned && <PinIcon className="pin-icon" style={{width: 14, height: 14}} />}
-        <div className="thread-name">{thread.display_name || thread.address}</div>
+        <div className="thread-name">{contact?.displayName || thread.display_name || thread.address}</div>
       </div>
       <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
     </div>
@@ -1438,6 +1461,11 @@ const isValidImageUrl = (url) => {
   return lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('data:image/') || lower.startsWith('/');
 };
 
+const hexToRgb = (hex) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '0, 240, 255';
+};
+
 const normalizeTheme = (input = {}) => {
   const bgUrl = input.backgroundImageUrl ?? defaultTheme.backgroundImageUrl;
   const safeBgUrl = isValidImageUrl(bgUrl) ? bgUrl : null;
@@ -1474,8 +1502,10 @@ const normalizeTheme = (input = {}) => {
 
 const buildThemeVars = (theme) => {
   const active = normalizeTheme(theme);
+  const accentRgb = hexToRgb(active.primaryColor);
   const vars = {
     "--accent": active.primaryColor,
+    "--accent-rgb": accentRgb,
     "--accent-strong": active.secondaryColor,
     "--bg": active.appBackgroundGradientEnd ?? active.backgroundColor,
     "--bg-accent": active.appBackgroundGradientStart ?? active.backgroundColor,
@@ -1648,7 +1678,9 @@ const Sidebar = memo(({
   showArchived,
   setShowArchived,
   onPinThread,
-  onArchiveThread
+  onArchiveThread,
+  contactLookup,
+  onAvatarClick
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef(null);
@@ -1799,12 +1831,12 @@ const Sidebar = memo(({
         <button
           className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
           onClick={() => setActivePanel('extensions')}
-          title="Extensions"
-          aria-label="Extensions"
+          title="Features"
+          aria-label="Features"
           aria-current={activePanel === 'extensions' ? 'page' : undefined}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-          <span>Extensions</span>
+          <span>Features</span>
           <span className="badge-new">NEW</span>
         </button>
         <button
@@ -1909,7 +1941,7 @@ const Sidebar = memo(({
                     To see your messages here:
                     <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
                       <li>Open PulseLink on your phone</li>
-                      <li>Go to Extensions Store</li>
+                      <li>Go to Features</li>
                       <li>Enable &quot;Remote Web Access&quot;</li>
                     </ol>
                     {!isPremium && (
@@ -1921,17 +1953,23 @@ const Sidebar = memo(({
                 )}
               </div>
             ) : (
-              filteredThreads.map(thread => (
-                <ThreadItem
-                  key={`${thread.lineId || 'legacy'}_${thread.id}`}
-                  thread={thread}
-                  isActive={selectedThreadId === thread.id}
-                  onSelect={onSelect}
-                  showPreviews={showPreviews}
-                  onPin={onPinThread}
-                  onArchive={onArchiveThread}
-                />
-              ))
+              filteredThreads.map(thread => {
+                const cleanAddr = (thread.address || '').replace(/\D/g, '');
+                const contact = contactLookup ? (contactLookup[cleanAddr] || contactLookup[thread.address]) : null;
+                return (
+                  <ThreadItem
+                    key={`${thread.lineId || 'legacy'}_${thread.id}`}
+                    thread={thread}
+                    contact={contact}
+                    isActive={selectedThreadId === thread.id}
+                    onSelect={onSelect}
+                    showPreviews={showPreviews}
+                    onPin={onPinThread}
+                    onArchive={onArchiveThread}
+                    onAvatarClick={onAvatarClick}
+                  />
+                );
+              })
             )}
           </div>
         </>
@@ -1962,7 +2000,9 @@ const Sidebar = memo(({
          prev.onPinThread === next.onPinThread &&
          prev.onArchiveThread === next.onArchiveThread &&
          prev.navLogo === next.navLogo &&
-         prev.brandTitle === next.brandTitle;
+         prev.brandTitle === next.brandTitle &&
+         prev.contactLookup === next.contactLookup &&
+         prev.onAvatarClick === next.onAvatarClick;
 });
 
 Sidebar.displayName = 'Sidebar';
@@ -2998,6 +3038,20 @@ function App() {
     }
   };
 
+  const handleRefreshPremium = async () => {
+    if (!user) return;
+    setSettingsStatus("Refreshing premium status...");
+    try {
+      const callable = httpsCallable(functions, "getPremiumStatus");
+      await callable();
+      await user.getIdToken(true); // Force refresh
+      setSettingsStatus("Premium status updated.");
+    } catch (e) {
+      console.error("Failed to refresh premium", e);
+      setSettingsStatus("Refresh failed: " + e.message);
+    }
+  };
+
   const handlePasswordResetForUser = async () => {
     if (!user?.email) {
       setSettingsStatus("No email address on file.");
@@ -3064,6 +3118,46 @@ function App() {
     setEditingContactId(null);
     setContactStatus('');
   };
+
+  const contactLookup = useMemo(() => {
+    const map = {};
+    const add = (c) => {
+        const nums = [c.phoneNumber, ...(c.additionalPhones || [])].filter(Boolean);
+        nums.forEach(n => {
+            const clean = n.replace(/\D/g, '');
+            if (clean) map[clean] = c;
+            map[n] = c;
+        });
+    };
+    deviceContacts.forEach(add);
+    trustedContacts.forEach(add);
+    return map;
+  }, [deviceContacts, trustedContacts]);
+
+  const handleAvatarClick = useCallback((thread) => {
+      const cleanAddr = (thread.address || '').replace(/\D/g, '');
+      const contact = contactLookup[cleanAddr] || contactLookup[thread.address];
+
+      if (contact) {
+          handleEditContact(contact);
+      } else {
+          setContactForm({
+            displayName: '',
+            phoneNumber: thread.address || '',
+            email: '',
+            additionalPhones: '',
+            additionalEmails: '',
+            escalationTier: 'EMERGENCY',
+            includeLocation: true,
+            autoCall: false,
+            allowRemoteOverride: true,
+            allowRemoteSoundChange: false
+          });
+          setEditingContactId(null);
+          setContactStatus('');
+          setActivePanel('pulselink');
+      }
+  }, [contactLookup, handleEditContact]); // handleEditContact is stable
 
   const handleEditContact = useCallback((contact) => {
     setContactForm({
@@ -3747,6 +3841,8 @@ function App() {
           setShowArchived={setShowArchived}
           onPinThread={handlePinThread}
           onArchiveThread={handleArchiveThread}
+          contactLookup={contactLookup}
+          onAvatarClick={handleAvatarClick}
         />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
@@ -3825,13 +3921,13 @@ function App() {
                   className="home-card"
                   onClick={() => setActivePanel('extensions')}
                   disabled={!remoteSettings.thirdPartyExtensionsEnabled}
-                  title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage extensions" : "Enable 3rd-party extensions in Settings"}
+                  title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage features" : "Enable 3rd-party features in Settings"}
                 >
                   <div className="home-icon pulselink">
-                    <img src={logo} alt="Extensions" />
+                    <img src={logo} alt="Features" />
                   </div>
-                  <h3>Extensions</h3>
-                  <p>{remoteSettings.thirdPartyExtensionsEnabled ? "Attach 3rd-party add-ons (coming soon)" : "Enable 3rd-party extensions to start."}</p>
+                  <h3>Features</h3>
+                  <p>{remoteSettings.thirdPartyExtensionsEnabled ? "Manage enabled features and extensions" : "Enable 3rd-party features to start."}</p>
                 </button>
               </div>
             </div>
@@ -4507,7 +4603,7 @@ function App() {
           {activePanel === 'extensions' && (
             <div className="pulselink-panel">
               <div className="panel-header">
-                <h3>Extensions</h3>
+                <h3>Features</h3>
                 <p>Enhance your PulseLink experience with powerful add-ons.</p>
               </div>
 
@@ -4728,9 +4824,14 @@ function App() {
                               <CopyButton text={user.uid} label="Copy User ID" />
                             </span>
                           </div>
-                          <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
-                            Send password reset email
-                          </button>
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                            <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser} style={{ flex: 1 }}>
+                              Reset Password
+                            </button>
+                            <button className="secondary-btn" type="button" onClick={handleRefreshPremium} style={{ flex: 1 }}>
+                              Refresh Premium
+                            </button>
+                          </div>
                           {settingsStatus && <div className={getToastClass(settingsStatus)} role="status" aria-live="polite">{settingsStatus}</div>}
                         </div>
                       )}
