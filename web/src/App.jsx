@@ -132,14 +132,16 @@ const areThreadsEqual = (prev, next) => {
   return prev.isActive === next.isActive &&
          prev.showPreviews === next.showPreviews &&
          prev.onSelect === next.onSelect &&
+         prev.onAvatarClick === next.onAvatarClick &&
          prev.thread.id === next.thread.id &&
          prev.thread.address === next.thread.address &&
-         prev.thread.snippet === next.thread.snippet;
+         prev.thread.snippet === next.thread.snippet &&
+         prev.contact === next.contact;
 };
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
 // when only the selection state changes or when unrelated threads update.
-const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onArchive }) => (
+const ThreadItem = memo(({ thread, contact, isActive, onSelect, showPreviews, onPin, onArchive, onAvatarClick }) => (
   <div
     className={`thread-item ${isActive ? 'active' : ''}`}
     onClick={() => onSelect(thread)}
@@ -153,11 +155,21 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onAr
         onSelect(thread);
       }
     }}
+    style={{ gridTemplateColumns: 'auto 1fr auto' }}
   >
+    <div className="thread-avatar-container" onClick={(e) => { e.stopPropagation(); onAvatarClick && onAvatarClick(contact || thread.address); }}>
+        {contact?.avatarUrl ? (
+            <img src={contact.avatarUrl} alt="" className="thread-avatar" />
+        ) : (
+            <div className="thread-avatar placeholder">
+                {(contact?.displayName || thread.display_name || thread.address || '?').charAt(0).toUpperCase()}
+            </div>
+        )}
+    </div>
     <div className="thread-main">
       <div className="thread-header">
         {thread.pinned && <PinIcon className="pin-icon" style={{width: 14, height: 14}} />}
-        <div className="thread-name">{thread.display_name || thread.address}</div>
+        <div className="thread-name">{contact?.displayName || thread.display_name || thread.address}</div>
       </div>
       <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
     </div>
@@ -1648,7 +1660,9 @@ const Sidebar = memo(({
   showArchived,
   setShowArchived,
   onPinThread,
-  onArchiveThread
+  onArchiveThread,
+  contactLookup,
+  onAvatarClick
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef(null);
@@ -1921,17 +1935,22 @@ const Sidebar = memo(({
                 )}
               </div>
             ) : (
-              filteredThreads.map(thread => (
-                <ThreadItem
-                  key={`${thread.lineId || 'legacy'}_${thread.id}`}
-                  thread={thread}
-                  isActive={selectedThreadId === thread.id}
-                  onSelect={onSelect}
-                  showPreviews={showPreviews}
-                  onPin={onPinThread}
-                  onArchive={onArchiveThread}
-                />
-              ))
+              filteredThreads.map(thread => {
+                const contact = contactLookup?.get(thread.address) || contactLookup?.get((thread.address || '').replace(/\D/g, ''));
+                return (
+                  <ThreadItem
+                    key={`${thread.lineId || 'legacy'}_${thread.id}`}
+                    thread={thread}
+                    contact={contact}
+                    isActive={selectedThreadId === thread.id}
+                    onSelect={onSelect}
+                    showPreviews={showPreviews}
+                    onPin={onPinThread}
+                    onArchive={onArchiveThread}
+                    onAvatarClick={onAvatarClick}
+                  />
+                );
+              })
             )}
           </div>
         </>
@@ -1962,7 +1981,9 @@ const Sidebar = memo(({
          prev.onPinThread === next.onPinThread &&
          prev.onArchiveThread === next.onArchiveThread &&
          prev.navLogo === next.navLogo &&
-         prev.brandTitle === next.brandTitle;
+         prev.brandTitle === next.brandTitle &&
+         prev.contactLookup === next.contactLookup &&
+         prev.onAvatarClick === next.onAvatarClick;
 });
 
 Sidebar.displayName = 'Sidebar';
@@ -2312,6 +2333,40 @@ function App() {
   const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const defaultMapCenter = useMemo(() => ({ lat: 39.5, lng: -98.35 }), []);
   const themeVars = useMemo(() => buildThemeVars(themePrefs), [themePrefs]);
+
+  // Bolt: Contact lookup map for O(1) avatar resolution
+  const contactLookup = useMemo(() => {
+    const map = new Map();
+    const add = (contact) => {
+      if (!contact) return;
+      const phones = [contact.phoneNumber, ...(contact.additionalPhones || [])].filter(Boolean);
+      phones.forEach(p => {
+        map.set(p, contact);
+        const stripped = p.replace(/\D/g, '');
+        if (stripped) map.set(stripped, contact);
+        if (p.startsWith('+')) map.set(p.slice(1), contact);
+      });
+    };
+    deviceContacts.forEach(add);
+    trustedContacts.forEach(add);
+    return map;
+  }, [deviceContacts, trustedContacts]);
+
+  const handleAvatarClick = useCallback((identifier) => {
+    if (!identifier) return;
+    const contact = typeof identifier === 'object' ? identifier : contactLookup.get(identifier) || contactLookup.get(identifier.replace(/\D/g, ''));
+
+    if (contact) {
+      handleEditContact(contact);
+    } else if (typeof identifier === 'string') {
+      // New contact flow
+      resetContactForm();
+      setContactForm(prev => ({ ...prev, phoneNumber: identifier }));
+      setEditingContactId(null);
+      setContactStatus('');
+      setActivePanel('pulselink');
+    }
+  }, [contactLookup, handleEditContact]);
 
   // Fix for undefined function causing crash/lint error
   // Removed duplicate declaration
@@ -3010,6 +3065,25 @@ function App() {
     } catch (error) {
       console.error("Password reset failed", error);
       setSettingsStatus(error?.message ?? "Password reset failed.");
+    }
+  };
+
+  const handleRefreshPremium = async () => {
+    if (!user) return;
+    setSettingsStatus("Refreshing premium status...");
+    try {
+      const callable = httpsCallable(functions, "getPremiumStatus");
+      const [result, tokenResult] = await Promise.all([
+        callable(),
+        user.getIdTokenResult(true)
+      ]);
+      const data = result?.data || {};
+      setPremiumClaimActive(data.hasClaim === true);
+      setProClaimActive(tokenResult?.claims?.pro === true || tokenResult?.claims?.premium === true);
+      setSettingsStatus("Premium status updated.");
+    } catch (e) {
+      console.error("Refresh premium failed", e);
+      setSettingsStatus("Failed to refresh status.");
     }
   };
 
@@ -3747,6 +3821,8 @@ function App() {
           setShowArchived={setShowArchived}
           onPinThread={handlePinThread}
           onArchiveThread={handleArchiveThread}
+          contactLookup={contactLookup}
+          onAvatarClick={handleAvatarClick}
         />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
@@ -4728,9 +4804,14 @@ function App() {
                               <CopyButton text={user.uid} label="Copy User ID" />
                             </span>
                           </div>
-                          <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
-                            Send password reset email
-                          </button>
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                            <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser} style={{flex: 1}}>
+                              Reset Password
+                            </button>
+                            <button className="secondary-btn" type="button" onClick={handleRefreshPremium} style={{flex: 1}}>
+                              Refresh Premium
+                            </button>
+                          </div>
                           {settingsStatus && <div className={getToastClass(settingsStatus)} role="status" aria-live="polite">{settingsStatus}</div>}
                         </div>
                       )}

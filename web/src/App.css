@@ -2011,3 +2011,35 @@ textarea:focus-visible,
   from { opacity: 0; transform: translateY(-20px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* Thread Avatar */
+.thread-avatar-container {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.thread-avatar-container:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.thread-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thread-avatar.placeholder {
+  font-size: 1.2em;
+  font-weight: 700;
+  color: var(--accent);
+}
