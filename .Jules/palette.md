@@ -14,3 +14,7 @@
 ## 2024-05-26 - Auto-expanding Text Inputs
 **Learning:** Fixed-height textareas in chat interfaces force users to scroll unnecessarily while composing long messages, breaking their train of thought and hiding context.
 **Action:** Implemented an auto-resize mechanism using `scrollHeight` to dynamically adjust the textarea height as the user types, improving the composition experience significantly.
+
+## 2024-05-27 - Message Draft Persistence
+**Learning:** In a multi-thread messaging interface, users frequently switch contexts to check incoming info. Losing typed text upon switching causes significant frustration and data loss.
+**Action:** Implemented a ref-based persistence layer that saves unfinished message drafts keyed by thread ID, automatically restoring them when the user returns to the conversation.

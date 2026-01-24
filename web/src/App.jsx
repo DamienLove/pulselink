@@ -640,13 +640,14 @@ const SpotifyResultItem = memo(({ track, onAdd, isAdding }) => (
 SpotifyResultItem.displayName = 'SpotifyResultItem';
 
 // Bolt: MessageComposer extracted to prevent App re-renders on typing
-const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn }) => {
+const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn, draftsRef }) => {
   const [address, setAddress] = useState('');
   const [body, setBody] = useState('');
   const [lineId, setLineId] = useState('');
   const [status, setStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
   const textareaRef = useRef(null);
+  const addressInputRef = useRef(null);
 
   useLayoutEffect(() => {
     const el = textareaRef.current;
@@ -655,18 +656,31 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
     el.style.height = `${el.scrollHeight + 2}px`;
   }, [body]);
 
+  const bodyRef = useRef(body);
+  useEffect(() => { bodyRef.current = body; }, [body]);
+
   useEffect(() => {
-    if (selectedThread) {
+    const currentId = selectedThread?.id || '__new__';
+    const savedBody = draftsRef.current[currentId] || '';
+
+    setBody(savedBody);
+    bodyRef.current = savedBody; // Sync ref immediately for Strict Mode safety
+
+    if (selectedThread?.id) {
       setAddress(selectedThread.address || '');
       setLineId(selectedThread.lineId || '');
+      setTimeout(() => textareaRef.current?.focus(), 10);
     } else {
       setAddress('');
-      // When clearing (New message), reset lineId to empty to allow user selection or fallback
       setLineId('');
+      setTimeout(() => addressInputRef.current?.focus(), 10);
     }
-    setBody('');
     setStatus('');
-  }, [selectedThread]);
+
+    return () => {
+      draftsRef.current[currentId] = bodyRef.current;
+    };
+  }, [selectedThread, draftsRef]);
 
   const handleSendMessage = async () => {
     if (!user) return;
@@ -703,6 +717,7 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
       <div className="composer-row">
         <label className="composer-label" htmlFor="compose-address">To</label>
         <input
+          ref={addressInputRef}
           id="compose-address"
           className="composer-input"
           type="tel"
@@ -1989,6 +2004,7 @@ function App() {
   const [selectedThread, setSelectedThread] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
   const [messages, setMessages] = useState([]);
+  const draftsRef = useRef({});
 
   // Fix: Use setUser to clear lint error or remove mock override if switching to real auth
   useEffect(() => {
@@ -4948,6 +4964,7 @@ function App() {
                   activeLineId={activeLineId}
                   lines={lines}
                   isLoggingIn={isLoggingIn}
+                  draftsRef={draftsRef}
                 />
               </>
             ) : (
