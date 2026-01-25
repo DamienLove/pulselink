@@ -495,7 +495,7 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
 
   return (
     <div className="theme-card">
-      <div className="theme-preview" style={previewStyle}>
+      <div className="theme-preview" style={previewStyle} aria-hidden="true">
         <div className="theme-preview-chat">
           <div
             className="theme-bubble incoming"
@@ -553,7 +553,7 @@ const ThemePresetItem = memo(({ preset, onApply }) => (
       <span className="theme-dot" style={{ background: preset.theme.primaryColor }} />
       <strong>{preset.name}</strong>
     </div>
-    <div className="theme-chip-preview">
+    <div className="theme-chip-preview" aria-hidden="true">
       <div
         className="theme-bubble incoming"
         style={{
@@ -614,7 +614,7 @@ const RingerSongItem = memo(({ song, onDelete }) => {
       {song.albumArtUrl ? (
         <img src={song.albumArtUrl} alt="" className="song-art" loading="lazy" />
       ) : (
-        <div className="song-art" style={{ display: 'grid', placeItems: 'center' }}>♫</div>
+        <div className="song-art" style={{ display: 'grid', placeItems: 'center' }} aria-hidden="true">♫</div>
       )}
       <div className="song-info">
         <div className="song-title">{song.title}</div>
@@ -1938,7 +1938,7 @@ const Sidebar = memo(({
                   }
                 }}
               />
-              {!searchQuery && <span className="shortcut-hint">/</span>}
+              {!searchQuery && <span className="shortcut-hint" aria-hidden="true">/</span>}
               {searchQuery && (
                 <button
                   className="ghost-btn icon-only sidebar-search-clear-btn"
