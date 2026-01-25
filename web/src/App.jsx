@@ -2123,6 +2123,7 @@ function App() {
   const [trustedContacts, setTrustedContacts] = useState([]);
   const [deviceContacts, setDeviceContacts] = useState([]);
   const [contactSearch, setContactSearch] = useState('');
+  const [contactSearchInput, setContactSearchInput] = useState('');
   const [contactListLimit, setContactListLimit] = useState(50);
   const [unlockedAvatars, setUnlockedAvatars] = useState([]);
   const [contactForm, setContactForm] = useState({
@@ -2211,6 +2212,14 @@ function App() {
   const [authError, setAuthError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [activePanel, setActivePanel] = useState('beacon');
+
+  // Bolt: Debounce search input to avoid filtering large lists on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setContactSearch(contactSearchInput);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [contactSearchInput]);
 
   // Bolt: Reset contact list limit when search or panel changes
   useEffect(() => {
@@ -4305,13 +4314,16 @@ function App() {
                     className="settings-search-input"
                     placeholder="Search by name, phone, or email (/)"
                     aria-label="Search contacts (/)"
-                    value={contactSearch}
-                    onChange={(e) => setContactSearch(e.target.value)}
+                    value={contactSearchInput}
+                    onChange={(e) => setContactSearchInput(e.target.value)}
                   />
-                  {contactSearch && (
+                  {contactSearchInput && (
                     <button
                       className="ghost-btn icon-only"
-                      onClick={() => setContactSearch('')}
+                      onClick={() => {
+                        setContactSearchInput('');
+                        setContactSearch('');
+                      }}
                       aria-label="Clear search"
                       title="Clear search"
                       style={{ width: '28px', height: '28px' }}
@@ -4339,7 +4351,7 @@ function App() {
                         No contacts match that search.
                         <button
                           className="link-button"
-                          onClick={() => setContactSearch('')}
+                          onClick={() => setContactSearchInput('')}
                           style={{ marginLeft: 4, padding: 0, textDecoration: 'underline' }}
                         >
                           Clear search
