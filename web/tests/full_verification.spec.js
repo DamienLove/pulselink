@@ -1,4 +1,3 @@
-
 /* eslint-env node */
 import { test, expect } from '@playwright/test';
 
@@ -20,7 +19,7 @@ test.describe('Full Feature Verification', () => {
       'RingerSong',
       'Emergency Map',
       'Theme Gallery',
-      'Extensions'
+      'Features'
     ];
 
     for (const title of cardTitles) {
@@ -43,6 +42,26 @@ test.describe('Full Feature Verification', () => {
     }
 
     await expect(page.getByRole('button', { name: 'Start new conversation' })).toBeVisible();
+  });
+
+  test('should display attachment in Beacon messages', async ({ page }) => {
+    // Navigate to Beacon
+    await page.locator('.home-card h3', { hasText: 'Beacon Inbox' }).click();
+    const thread = page.locator('.thread-item').first();
+    await thread.click();
+
+    // Inject message with attachment
+    await page.evaluate(() => {
+        window.debugSetMessages([{
+            id: 'msg_img_1',
+            type: 1, // received
+            body: 'Check this image',
+            date: Date.now(),
+            imageUrl: 'https://via.placeholder.com/150'
+        }]);
+    });
+
+    await expect(page.locator('.message-image')).toBeVisible();
   });
 
   test('should navigate to PulseLink and verify profile', async ({ page }) => {
@@ -71,20 +90,20 @@ test.describe('Full Feature Verification', () => {
   test('should navigate to Themes and verify gallery', async ({ page }) => {
     await page.locator('.home-card h3', { hasText: 'Theme Gallery' }).click();
     await expect(page.getByRole('heading', { name: 'Theme Gallery' })).toBeVisible();
-    await expect(page.getByText('Future Hologram')).toBeVisible();
+    await expect(page.getByText('Future Deep V11')).toBeVisible();
   });
 
-  test('should navigate to Extensions and verify list', async ({ page }) => {
+  test('should navigate to Features and verify list', async ({ page }) => {
     // Target the card in the grid specifically
-    const btn = page.locator('.home-grid .home-card').filter({ hasText: 'Extensions' }).first();
+    const btn = page.locator('.home-grid .home-card').filter({ hasText: 'Features' }).first();
 
     if (await btn.isDisabled()) {
-        console.log('Extensions button is disabled in UI.');
+        console.log('Features button is disabled in UI.');
         return;
     }
 
     await btn.click();
-    await expect(page.getByRole('heading', { name: 'Extensions', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Features', exact: true })).toBeVisible();
     await expect(page.getByText('Beacon Inbox')).toBeVisible();
     await expect(page.getByText('Firebase Relay')).toBeVisible();
   });
@@ -95,5 +114,19 @@ test.describe('Full Feature Verification', () => {
     await expect(page.getByText('Signed in as')).toBeVisible();
     await expect(page.getByText('test@example.com')).toBeVisible();
     await expect(page.getByText('Enable remote web access')).toBeVisible();
+  });
+
+  test('should verify Unified Navigation title toggle', async ({ page }) => {
+      // Default title check (mergedExperienceEnabled is true in mock)
+      // Check Sidebar brand title
+      await expect(page.locator('.brand-title')).toHaveText('PulseLink Unified');
+      await expect(page.locator('.brand-logo')).toHaveAttribute('src', /beacon-logo/);
+
+      // Disable unified experience
+      await page.evaluate(() => {
+          window.debugSetRemoteSettings((prev) => ({ ...prev, mergedExperienceEnabled: false }));
+      });
+      await expect(page.locator('.brand-title')).toHaveText('PulseLink Suite');
+      await expect(page.locator('.brand-logo')).toHaveAttribute('src', /pulselink-pro-logo/);
   });
 });
