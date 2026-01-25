@@ -18,3 +18,7 @@
 ## 2024-05-27 - Visual Required Field Indicators
 **Learning:** HTML `required` attribute provides validation but lacks immediate visual feedback for users scanning a form. Screen readers announce "required", but sighted users might miss it until submission fails.
 **Action:** Created a reusable `<RequiredIndicator />` component (red asterisk with `aria-hidden="true"`) to pair with `required` inputs, ensuring visual clarity without redundant screen reader announcements.
+
+## 2024-05-28 - Search Input Focus on Clear
+**Learning:** Clicking a "Clear" button often shifts focus to the button itself, forcing keyboard users to Tab back or click again to resume typing. This breaks the search flow.
+**Action:** Implemented explicit `ref.current.focus()` in the clear button's `onClick` handler to immediately return focus to the search input, allowing seamless re-typing.

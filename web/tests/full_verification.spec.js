@@ -20,7 +20,7 @@ test.describe('Full Feature Verification', () => {
       'RingerSong',
       'Emergency Map',
       'Theme Gallery',
-      'Extensions'
+      'Features'
     ];
 
     for (const title of cardTitles) {
@@ -71,20 +71,20 @@ test.describe('Full Feature Verification', () => {
   test('should navigate to Themes and verify gallery', async ({ page }) => {
     await page.locator('.home-card h3', { hasText: 'Theme Gallery' }).click();
     await expect(page.getByRole('heading', { name: 'Theme Gallery' })).toBeVisible();
-    await expect(page.getByText('Future Hologram')).toBeVisible();
+    await expect(page.getByText('Future Deep V11')).toBeVisible();
   });
 
-  test('should navigate to Extensions and verify list', async ({ page }) => {
+  test('should navigate to Features and verify list', async ({ page }) => {
     // Target the card in the grid specifically
-    const btn = page.locator('.home-grid .home-card').filter({ hasText: 'Extensions' }).first();
+    const btn = page.locator('.home-grid .home-card').filter({ hasText: 'Features' }).first();
 
     if (await btn.isDisabled()) {
-        console.log('Extensions button is disabled in UI.');
+        console.log('Features button is disabled in UI.');
         return;
     }
 
     await btn.click();
-    await expect(page.getByRole('heading', { name: 'Extensions', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Features', exact: true })).toBeVisible();
     await expect(page.getByText('Beacon Inbox')).toBeVisible();
     await expect(page.getByText('Firebase Relay')).toBeVisible();
   });
