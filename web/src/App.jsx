@@ -3856,6 +3856,16 @@ function App() {
   const tierLabel = isPremiumUser ? 'Premium' : (isProUser ? 'Pro' : 'Free');
   const hasBeaconData = isPremiumUser || lines.length > 0 || legacyThreads.length > 0;
 
+  // Bolt: Dashboard Statistics
+  const totalThreadCount = useMemo(() => {
+    const lineCount = Object.values(lineThreads).reduce((acc, threads) => acc + threads.length, 0);
+    return legacyThreads.length + lineCount;
+  }, [legacyThreads, lineThreads]);
+
+  const activeAlertsCount = useMemo(() => alertLocations.length, [alertLocations]);
+  const playlistCount = ringerPlaylist.length;
+  const contactCount = deviceContacts.length;
+
   const navLogo = useMemo(() => {
      if (remoteSettings.mergedExperienceEnabled) {
          return beaconLogo;
@@ -4078,11 +4088,17 @@ function App() {
               )}
               <div className="home-grid">
                 <button className="home-card holographic-card" onClick={() => setActivePanel('beacon')}>
-                  <div className="home-icon beacon">
-                    <img src={beaconLogo} alt="Beacon" />
+                  <div className="card-header-row">
+                    <div className="home-icon beacon">
+                      <img src={beaconLogo} alt="Beacon" />
+                    </div>
+                    {totalThreadCount > 0 && <div className="pulse-dot"></div>}
                   </div>
-                  <h3>Beacon Inbox</h3>
-                  <p>View SMS synced from your phone.</p>
+                  <div className="card-content">
+                    <h3>Beacon Inbox</h3>
+                    <div className="card-stat">{totalThreadCount}</div>
+                    <div className="card-label">Conversations</div>
+                  </div>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('pulselink')}>
                   <div className="home-icon pulselink">
@@ -4096,21 +4112,27 @@ function App() {
                     <img src={logo} alt="PulseLink contacts" />
                   </div>
                   <h3>Contacts</h3>
-                  <p>Browse all device contacts synced from your phone.</p>
+                  <div className="card-stat">{contactCount}</div>
+                  <div className="card-label">Synced Contacts</div>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('ringersong')}>
                   <div className="home-icon ringersong">
                     <img src={ringersongLogo} alt="RingerSong" />
                   </div>
                   <h3>RingerSong</h3>
-                  <p>Manage ringtone progressions and streaming.</p>
+                  <div className="card-stat">{playlistCount}</div>
+                  <div className="card-label">Songs in Playlist</div>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('map')}>
-                  <div className="home-icon pulselink">
-                    <img src={logo} alt="PulseLink map" />
+                  <div className="card-header-row">
+                    <div className="home-icon pulselink">
+                      <img src={logo} alt="PulseLink map" />
+                    </div>
+                    {activeAlertsCount > 0 && <div className="pulse-dot alert"></div>}
                   </div>
                   <h3>Emergency Map</h3>
-                  <p>Track shared locations from PulseLink alerts.</p>
+                  <div className="card-stat">{activeAlertsCount}</div>
+                  <div className="card-label">{activeAlertsCount === 1 ? 'Active Alert' : 'Active Alerts'}</div>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('themes')}>
                   <div className="home-icon pulselink">
