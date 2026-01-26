@@ -102,6 +102,13 @@ import com.pulselink.beacon.data.scheduled.MessageReaction
 import com.pulselink.beacon.ui.ads.NativeAdCard
 import com.pulselink.beacon.util.LinkPreviewData
 import com.pulselink.beacon.util.LinkPreviewHelper
+import com.pulselink.beacon.util.AudioRecorder
+import androidx.core.content.FileProvider
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Stop
+import java.io.File
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
@@ -124,7 +131,7 @@ fun ThreadScreen(
     onSaveDraft: (String) -> Unit = {},
     onBack: () -> Unit,
     onSend: (String) -> Unit,
-    onSendAttachment: (Uri) -> Unit = {},
+    onSendAttachment: (Uri, String) -> Unit = { _, _ -> },
     onCancelPending: () -> Unit = {},
     onSendNow: () -> Unit = {},
     onScheduleMessage: (String, Long) -> Unit = { _, _ -> },
@@ -161,10 +168,30 @@ fun ThreadScreen(
     var selectedDateMillis by remember { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
 
+    // Voice Recorder
+    var isRecording by remember { mutableStateOf(false) }
+    val recorder = remember { AudioRecorder(context) }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            recorder.stop()
+        }
+    }
+
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (!isGranted) {
+             Toast.makeText(context, "Permission needed to record audio", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     val attachmentLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        if (uri != null) onSendAttachment(uri)
+        if (uri != null) {
+            val type = context.contentResolver.getType(uri) ?: "image/*"
+            onSendAttachment(uri, type)
+        }
     }
 
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -508,47 +535,94 @@ fun ThreadScreen(
                             .fillMaxWidth()
                             .padding(start = 8.dp, end = 8.dp, bottom = 8.dp, top = 4.dp)
                     ) {
+                        // Attachment Button (Left)
                         IconButton(onClick = { attachmentLauncher.launch("image/*") }) {
                             Icon(Icons.Default.AttachFile, contentDescription = "Attach", tint = iconTint)
                         }
+
+                        // Schedule Button (Left)
                         IconButton(onClick = {
                             if (draft.isNotBlank()) showDatePicker = true
                         }) {
                             Icon(Icons.Default.Schedule, contentDescription = "Schedule", tint = iconTint)
                         }
 
+                        // Input Field
                         TextField(
-                            value = draft,
-                            onValueChange = { draft = it },
+                            value = if (isRecording) "Recording..." else draft,
+                            onValueChange = { if (!isRecording) draft = it },
                             modifier = Modifier
                                 .weight(1f)
                                 .padding(horizontal = 4.dp)
                                 .clip(RoundedCornerShape(24.dp)),
                             placeholder = { Text("Text message", fontSize = 14.sp) },
                             colors = TextFieldDefaults.colors(
-                                focusedContainerColor = theme.threadBackgroundColor.copy(alpha = 0.5f),
-                                unfocusedContainerColor = theme.threadBackgroundColor.copy(alpha = 0.5f),
+                                focusedContainerColor = if (isRecording) MaterialTheme.colorScheme.errorContainer else theme.threadBackgroundColor.copy(alpha = 0.5f),
+                                unfocusedContainerColor = if (isRecording) MaterialTheme.colorScheme.errorContainer else theme.threadBackgroundColor.copy(alpha = 0.5f),
                                 focusedIndicatorColor = Color.Transparent,
                                 unfocusedIndicatorColor = Color.Transparent
                             ),
-                            maxLines = 4
+                            maxLines = 4,
+                            readOnly = isRecording
                         )
 
-                        IconButton(
-                            onClick = {
-                                val text = draft.trim()
-                                if (text.isNotEmpty()) {
-                                    onSend(text)
-                                    draft = ""
+                        if (draft.isBlank() && !isRecording) {
+                             // Show Mic if no text
+                             IconButton(
+                                onClick = { },
+                                modifier = Modifier.pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onPress = {
+                                            if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                                try {
+                                                    val file = File(context.cacheDir, "voice_note_${System.currentTimeMillis()}.m4a")
+                                                    recorder.start(file)
+                                                    isRecording = true
+                                                    tryAwaitRelease()
+                                                    recorder.stop()
+                                                    isRecording = false
+
+                                                    // Send
+                                                    if (file.exists() && file.length() > 500) { // Min size check
+                                                        val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+                                                        onSendAttachment(uri, "audio/mp4")
+                                                    } else {
+                                                        Toast.makeText(context, "Recording too short", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                } catch (e: Exception) {
+                                                    isRecording = false
+                                                    e.printStackTrace()
+                                                }
+                                            } else {
+                                                audioPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                                            }
+                                        }
+                                    )
                                 }
-                            },
-                            enabled = draft.isNotBlank()
-                        ) {
-                            Icon(
-                                Icons.Default.Send,
-                                contentDescription = "Send",
-                                tint = if (draft.isNotBlank()) iconTint else iconTint.copy(alpha = 0.5f)
-                            )
+                             ) {
+                                 Icon(Icons.Default.Mic, contentDescription = "Hold to Record", tint = iconTint)
+                             }
+                        } else {
+                            // Show Send if text exists OR if recording (to provide a way to stop/cancel if we wanted, but we use hold)
+                            // Actually if recording, the logic above stops on release.
+                            // If isRecording is true (due to some state lag), we might want to show Stop icon?
+                            // But onPress waits for release. So UI updates to "Recording..." then back.
+                            IconButton(
+                                onClick = {
+                                    val text = draft.trim()
+                                    if (text.isNotEmpty()) {
+                                        onSend(text)
+                                        draft = ""
+                                    }
+                                },
+                                enabled = draft.isNotBlank()
+                            ) {
+                                Icon(
+                                    Icons.Default.Send,
+                                    contentDescription = "Send",
+                                    tint = if (draft.isNotBlank()) iconTint else iconTint.copy(alpha = 0.5f)
+                                )
+                            }
                         }
                     }
                 }

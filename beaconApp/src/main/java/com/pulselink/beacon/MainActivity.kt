@@ -286,15 +286,15 @@ private fun BeaconNav(
                         onSaveDraft = { vm.saveDraft(threadId, it) },
                         onBack = { navController.popBackStack() },
                         onSend = { vm.sendDelayedMessage(it) },
-                        onSendAttachment = { uri ->
+                        onSendAttachment = { uri, mimeType ->
                             val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = "image/*"
+                                type = mimeType
                                 putExtra(Intent.EXTRA_STREAM, uri)
                                 putExtra("address", address)
                                 putExtra(Intent.EXTRA_PHONE_NUMBER, address)
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
-                            context.startActivity(Intent.createChooser(intent, "Send MMS"))
+                            context.startActivity(Intent.createChooser(intent, "Send Attachment"))
                         },
                         onCancelPending = { vm.cancelDelayedMessage() },
                         onSendNow = { vm.sendNow() },

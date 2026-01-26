@@ -1,6 +1,6 @@
 package com.pulselink.beacon.data
 
-import com.pulselink.beacon.ui.InboxFilter
+import com.pulselink.beacon.ui.BeaconInboxFilter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -21,35 +21,36 @@ class InboxFilterTest {
         )
 
         // Test ALL filter (should show unarchived)
-        val all = filter(threads, InboxFilter.ALL)
+        val all = filter(threads, BeaconInboxFilter.ALL)
         assertEquals(2, all.size)
         assertTrue(all.any { it.threadId == 1L })
         assertTrue(all.any { it.threadId == 2L })
 
         // Test ARCHIVED filter (should show archived)
-        val archived = filter(threads, InboxFilter.ARCHIVED)
+        val archived = filter(threads, BeaconInboxFilter.ARCHIVED)
         assertEquals(2, archived.size)
         assertTrue(archived.any { it.threadId == 3L })
         assertTrue(archived.any { it.threadId == 4L })
 
         // Test READ (should show read & unarchived)
-        val read = filter(threads, InboxFilter.READ)
+        val read = filter(threads, BeaconInboxFilter.READ)
         assertEquals(1, read.size)
         assertEquals(2L, read[0].threadId)
 
         // Test UNREAD (should show unread & unarchived)
-        val unread = filter(threads, InboxFilter.UNREAD)
+        val unread = filter(threads, BeaconInboxFilter.UNREAD)
         assertEquals(1, unread.size)
         assertEquals(1L, unread[0].threadId)
     }
 
-    private fun filter(list: List<SmsThreadItem>, filter: InboxFilter): List<SmsThreadItem> {
+    private fun filter(list: List<SmsThreadItem>, filter: BeaconInboxFilter): List<SmsThreadItem> {
         return list.filter { thread ->
             when (filter) {
-                InboxFilter.ALL -> !thread.isArchived // Note: Repository handles main split, UI handles sub-filtering
-                InboxFilter.READ -> !thread.unread && !thread.isArchived
-                InboxFilter.UNREAD -> thread.unread && !thread.isArchived
-                InboxFilter.ARCHIVED -> thread.isArchived
+                BeaconInboxFilter.ALL -> !thread.isArchived // Note: Repository handles main split, UI handles sub-filtering
+                BeaconInboxFilter.READ -> !thread.unread && !thread.isArchived
+                BeaconInboxFilter.UNREAD -> thread.unread && !thread.isArchived
+                BeaconInboxFilter.ARCHIVED -> thread.isArchived
+                else -> true // Fallback for other filters
             }
         }
     }

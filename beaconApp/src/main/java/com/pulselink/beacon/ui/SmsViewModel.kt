@@ -37,14 +37,6 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
-sealed class SearchResultState {
-    object Idle : SearchResultState()
-    object Searching : SearchResultState()
-    data class Contact(val threadId: Long, val address: String) : SearchResultState()
-    data class Messages(val hits: List<SmsMessageItem>) : SearchResultState()
-    object Empty : SearchResultState()
-}
-
 class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = SmsRepository(app.applicationContext)
@@ -109,7 +101,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var currentAddress by mutableStateOf("")
         private set
-    var searchState: SearchResultState by mutableStateOf(SearchResultState.Idle)
+    var searchState: BeaconSearchResultState by mutableStateOf(BeaconSearchResultState.Idle)
         private set
     var isLoading by mutableStateOf(true)
         private set
@@ -150,7 +142,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     // Filtered state
     var filteredThreads by mutableStateOf<List<SmsThreadItem>>(emptyList())
         private set
-    var currentFilter by mutableStateOf(InboxFilter.ALL)
+    var currentFilter by mutableStateOf(BeaconInboxFilter.ALL)
         private set
     var currentSearchText by mutableStateOf("")
         private set
@@ -189,7 +181,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                 starredMessageIds = stars.map { it.messageId }.toSet()
                 threadsWithStars = stars.map { it.threadId }.toSet()
                 // Refresh list if filter is STARRED
-                if (currentFilter == InboxFilter.STARRED) updateFilteredList()
+                if (currentFilter == BeaconInboxFilter.STARRED) updateFilteredList()
             }
         }
 
@@ -216,9 +208,9 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun updateFilter(filter: InboxFilter) {
+    fun updateFilter(filter: BeaconInboxFilter) {
         currentFilter = filter
-        if (filter == InboxFilter.CONTACTS && contacts.isEmpty()) {
+        if (filter == BeaconInboxFilter.CONTACTS && contacts.isEmpty()) {
             loadContacts()
         }
         updateFilteredList()
@@ -311,15 +303,15 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                 }
             } else {
                  when (filter) {
-                    InboxFilter.ALL -> list.filter { !it.isArchived }
-                    InboxFilter.READ -> list.filter { !it.unread && !it.isArchived }
-                    InboxFilter.UNREAD -> list.filter { it.unread && !it.isArchived }
-                    InboxFilter.STARRED -> list.filter { threadsWithStars.contains(it.threadId) && !it.isArchived }
-                    InboxFilter.PERSONAL -> list.filter { it.category == ThreadCategory.PERSONAL && !it.isArchived }
-                    InboxFilter.TRANSACTIONS -> list.filter { it.category == ThreadCategory.TRANSACTIONS && !it.isArchived }
-                    InboxFilter.PROMOTIONS -> list.filter { it.category == ThreadCategory.PROMOTIONS && !it.isArchived }
-                    InboxFilter.ARCHIVED -> list.filter { it.isArchived }
-                    InboxFilter.CONTACTS -> emptyList()
+                    BeaconInboxFilter.ALL -> list.filter { !it.isArchived }
+                    BeaconInboxFilter.READ -> list.filter { !it.unread && !it.isArchived }
+                    BeaconInboxFilter.UNREAD -> list.filter { it.unread && !it.isArchived }
+                    BeaconInboxFilter.STARRED -> list.filter { threadsWithStars.contains(it.threadId) && !it.isArchived }
+                    BeaconInboxFilter.PERSONAL -> list.filter { it.category == ThreadCategory.PERSONAL && !it.isArchived }
+                    BeaconInboxFilter.TRANSACTIONS -> list.filter { it.category == ThreadCategory.TRANSACTIONS && !it.isArchived }
+                    BeaconInboxFilter.PROMOTIONS -> list.filter { it.category == ThreadCategory.PROMOTIONS && !it.isArchived }
+                    BeaconInboxFilter.ARCHIVED -> list.filter { it.isArchived }
+                    BeaconInboxFilter.CONTACTS -> emptyList()
                 }
             }
 
@@ -795,14 +787,14 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     fun search(query: String) {
         searchJob?.cancel()
         if (query.isBlank()) {
-            searchState = SearchResultState.Idle
+            searchState = BeaconSearchResultState.Idle
             return
         }
 
         // Debounce
         searchJob = viewModelScope.launch(Dispatchers.IO) {
             delay(300)
-            withContext(Dispatchers.Main) { searchState = SearchResultState.Searching }
+            withContext(Dispatchers.Main) { searchState = BeaconSearchResultState.Searching }
 
             val direct = threads.firstOrNull {
                 it.address.contains(query, ignoreCase = true)
@@ -810,21 +802,21 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
             }
             if (direct != null) {
                 withContext(Dispatchers.Main) {
-                    searchState = SearchResultState.Contact(direct.threadId, direct.address)
+                    searchState = BeaconSearchResultState.Contact(direct.threadId, direct.address)
                 }
                 return@launch
             }
 
             val hits = repo.searchMessages(query)
             withContext(Dispatchers.Main) {
-                searchState = if (hits.isEmpty()) SearchResultState.Empty else SearchResultState.Messages(hits)
+                searchState = if (hits.isEmpty()) BeaconSearchResultState.Empty else BeaconSearchResultState.Messages(hits)
             }
         }
     }
 
     fun clearSearch() {
         searchJob?.cancel()
-        searchState = SearchResultState.Idle
+        searchState = BeaconSearchResultState.Idle
     }
 
     companion object {
