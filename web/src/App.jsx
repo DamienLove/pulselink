@@ -23,7 +23,8 @@ import {
   deleteDoc,
   getDocs,
   limit,
-  writeBatch
+  writeBatch,
+  where
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import './App.css';
@@ -2246,10 +2247,76 @@ function App() {
     ];
   });
   const [extensionForm, setExtensionForm] = useState({ name: '', endpoint: '', description: '' });
+  const [publishForm, setPublishForm] = useState({ id: '', name: '', entry_point: '', description: '', iconUrl: '' });
   const [extensionStatus, setExtensionStatus] = useState('');
+  const [activeStoreTab, setActiveStoreTab] = useState('official');
+  const [storeExtensions, setStoreExtensions] = useState([]);
+  const [installedExtensionIds, setInstalledExtensionIds] = useState([]);
+  const [extensionSearch, setExtensionSearch] = useState('');
+
   useEffect(() => {
     localStorage.setItem('pulselink.devExtensions', JSON.stringify(devExtensions));
   }, [devExtensions]);
+
+  useEffect(() => {
+    const q = query(collection(db, "extensions_store"), where("status", "==", "approved"), orderBy("updatedAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setStoreExtensions(items);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleInstallExtension = async (ext) => {
+    if (!user) return;
+    try {
+      const newIds = [...new Set([...installedExtensionIds, ext.id])];
+      await setDoc(doc(db, "users", user.uid), { installedExtensionIds: newIds }, { merge: true });
+      setExtensionStatus(`Installed ${ext.name}`);
+    } catch (e) {
+      console.error("Install failed", e);
+      setExtensionStatus("Failed to install: " + e.message);
+    }
+  };
+
+  const handleUninstallExtension = async (extId) => {
+    if (!user) return;
+    try {
+      const newIds = installedExtensionIds.filter(id => id !== extId);
+      await setDoc(doc(db, "users", user.uid), { installedExtensionIds: newIds }, { merge: true });
+      setExtensionStatus("Uninstalled extension");
+    } catch (e) {
+      console.error("Uninstall failed", e);
+      setExtensionStatus("Failed to uninstall: " + e.message);
+    }
+  };
+
+  const handlePublishExtension = async (e) => {
+    e.preventDefault();
+    if (!user) return;
+    setExtensionStatus("Submitting...");
+    try {
+      const submitFn = httpsCallable(functions, 'submitExtension');
+      const manifest = {
+        id: publishForm.id,
+        name: publishForm.name,
+        description: publishForm.description,
+        entry_point: publishForm.entry_point,
+        iconUrl: publishForm.iconUrl || null,
+        version: "1.0.0",
+        author: profile.ownerName || "Anonymous"
+      };
+      await submitFn({ manifest });
+      setExtensionStatus("Submitted successfully! Pending review.");
+      setPublishForm({ id: '', name: '', entry_point: '', description: '', iconUrl: '' });
+    } catch (err) {
+      console.error(err);
+      setExtensionStatus("Submission failed: " + err.message);
+    }
+  };
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -2652,6 +2719,7 @@ function App() {
       } else {
         setThemePrefs(defaultTheme);
       }
+      setInstalledExtensionIds(data.installedExtensionIds || []);
       setRemoteSettings({
         remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? isPro,
         autoUpdateContactInfo: data.autoUpdateContactInfo ?? true,
@@ -4820,162 +4888,283 @@ function App() {
                 <p>Enhance your PulseLink experience with powerful add-ons.</p>
               </div>
 
-              <div className="settings-card" style={{marginBottom: 20}}>
-                <h4>Quick Setup</h4>
-                <div className="settings-row" style={{alignItems: 'stretch', gap: 16}}>
-                  <button className="home-card" style={{margin: 0, flex: 1, textAlign: 'left', alignItems: 'flex-start'}} onClick={() => handleQuickSetup('essentials')}>
-                    <div className="home-icon" style={{width: 40, height: 40, background: 'rgba(34, 211, 238, 0.1)', color: 'var(--accent)'}}>
-                      <BoltIcon />
-                    </div>
-                    <h4 style={{marginTop: 8}}>Essentials</h4>
-                    <p style={{fontSize: '0.9em', color: 'var(--muted)', margin: 0}}>Just the basics: Beacon, Relay, Email Backup, and OTP Cleanup.</p>
-                  </button>
-                  <button className="home-card" style={{margin: 0, flex: 1, textAlign: 'left', alignItems: 'flex-start'}} onClick={() => handleQuickSetup('power')}>
-                    <div className="home-icon" style={{width: 40, height: 40, background: 'rgba(34, 211, 238, 0.1)', color: 'var(--accent)'}}>
-                      <StarIcon />
-                    </div>
-                    <h4 style={{marginTop: 8}}>Power User</h4>
-                    <p style={{fontSize: '0.9em', color: 'var(--muted)', margin: 0}}>Everything enabled: AI, Crash Detection, Web Access, and more.</p>
-                  </button>
+              <div className="settings-card" style={{ marginBottom: 20 }}>
+                <div className="settings-search-container" style={{ marginBottom: 16 }}>
+                  <div style={{ opacity: 0.5, display: 'flex' }}><SearchIcon /></div>
+                  <input
+                    className="settings-search-input"
+                    value={extensionSearch}
+                    onChange={(e) => setExtensionSearch(e.target.value)}
+                    placeholder="Search features..."
+                    aria-label="Search features"
+                  />
+                  {extensionSearch && (
+                    <button
+                      className="ghost-btn icon-only"
+                      onClick={() => setExtensionSearch('')}
+                      aria-label="Clear search"
+                      title="Clear search"
+                      style={{ width: '28px', height: '28px' }}
+                    >
+                      <CloseIcon />
+                    </button>
+                  )}
+                </div>
+                <div className="line-tabs" style={{ marginBottom: 0 }}>
+                  <button className={`chip ${activeStoreTab === 'official' ? 'active' : ''}`} onClick={() => setActiveStoreTab('official')}>Official Features</button>
+                  <button className={`chip ${activeStoreTab === 'community' ? 'active' : ''}`} onClick={() => setActiveStoreTab('community')}>Community Store</button>
+                  <button className={`chip ${activeStoreTab === 'developer' ? 'active' : ''}`} onClick={() => setActiveStoreTab('developer')}>Developer</button>
                 </div>
               </div>
 
-              {[
-                {
-                  title: "Core",
-                  items: [
-                    { id: 'beaconLauncherEnabled', name: 'Beacon Inbox', desc: 'Separate launcher icon for quick access to your SMS inbox.', icon: beaconLogo, isImg: true },
-                    { id: 'firebaseMessagingEnabled', name: 'Firebase Relay', desc: 'Faster messaging between PulseLink users.', icon: <CloudSyncIcon /> }
-                  ]
-                },
-                {
-                  title: "PulseLink Apps",
-                  items: [
-                    { id: 'ringerSongEnabled', name: 'RingerSong', desc: 'Progressive ringtone streaming & playlist manager.', icon: ringersongLogo, isImg: true },
-                    { id: 'mapEnabled', name: 'Emergency Map', desc: 'Track shared locations from PulseLink alerts.', icon: <MapIcon /> },
-                    { id: 'contactsEnabled', name: 'Contacts Manager', desc: 'Browse and manage synced device contacts.', icon: <ContactIcon /> },
-                    { id: 'themesEnabled', name: 'Theme Gallery', desc: 'Browse, import, and publish custom themes.', icon: <ThemeIcon /> }
-                  ]
-                },
-                {
-                  title: "Safety & Security",
-                  items: [
-                    { id: 'emailFallbackEnabled', name: 'Email Backup', desc: 'Forward urgent alerts to email if SMS fails.', icon: <EmailIcon /> },
-                    { id: 'crashDetectionEnabled', name: 'Crash Detection', desc: 'Detects car crashes and notifies emergency contacts.', icon: <CarCrashIcon />, premium: true },
-                    { id: 'privateSafeEnabled', name: 'Private Safe', desc: 'Lock and hide sensitive conversations.', icon: <LockIcon /> }
-                  ]
-                },
-                {
-                  title: "Smart Features",
-                  items: [
-                    { id: 'smartRepliesEnabled', name: 'Smart Replies', desc: 'One-tap suggestion chips for incoming messages.', icon: <MessageSquareIcon /> },
-                    { id: 'otpCleanupEnabled', name: 'Smart OTP Cleanup', desc: 'Automatically deletes one-time passwords after 24 hours.', icon: <DeleteSweepIcon /> },
-                    { id: 'aiSummariesEnabled', name: 'PulseLink AI', desc: 'Smart summaries and urgency detection for your chats.', icon: <SmartToyIcon />, premium: true }
-                  ]
-                },
-                {
-                  title: "Integrations",
-                  items: [
-                    { id: 'remoteWebAccessEnabled', name: 'Remote Web Access', desc: 'Sync messages and contacts to this web portal.', icon: logo, isImg: true, premium: true },
-                    { id: 'mergedExperienceEnabled', name: 'Unified Home', desc: 'Merge PulseLink and Beacon navigation into a single simplified experience.', icon: <HomeIcon />, premium: true },
-                    { id: 'thirdPartyExtensionsEnabled', name: '3rd Party Extensions', desc: 'Allow community-built plugins (Beta).', icon: <ExtensionIcon />, premium: true },
-                    { id: 'truecallerEnabled', name: 'Truecaller Caller ID', desc: 'Identify unknown callers and block spam using Truecaller directory.', icon: <SearchIcon /> }
-                  ]
-                }
-              ].map((category) => (
-                <div key={category.title} className="extension-category" style={{marginBottom: 32}}>
-                  <h4 style={{marginBottom: 16, color: 'var(--ink)'}}>{category.title}</h4>
+              {activeStoreTab === 'official' && (
+                <>
+                  <div className="settings-card" style={{marginBottom: 20}}>
+                    <h4>Quick Setup</h4>
+                    <div className="settings-row" style={{alignItems: 'stretch', gap: 16}}>
+                      <button className="home-card" style={{margin: 0, flex: 1, textAlign: 'left', alignItems: 'flex-start'}} onClick={() => handleQuickSetup('essentials')}>
+                        <div className="home-icon" style={{width: 40, height: 40, background: 'rgba(34, 211, 238, 0.1)', color: 'var(--accent)'}}>
+                          <BoltIcon />
+                        </div>
+                        <h4 style={{marginTop: 8}}>Essentials</h4>
+                        <p style={{fontSize: '0.9em', color: 'var(--muted)', margin: 0}}>Just the basics: Beacon, Relay, Email Backup, and OTP Cleanup.</p>
+                      </button>
+                      <button className="home-card" style={{margin: 0, flex: 1, textAlign: 'left', alignItems: 'flex-start'}} onClick={() => handleQuickSetup('power')}>
+                        <div className="home-icon" style={{width: 40, height: 40, background: 'rgba(34, 211, 238, 0.1)', color: 'var(--accent)'}}>
+                          <StarIcon />
+                        </div>
+                        <h4 style={{marginTop: 8}}>Power User</h4>
+                        <p style={{fontSize: '0.9em', color: 'var(--muted)', margin: 0}}>Everything enabled: AI, Crash Detection, Web Access, and more.</p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {[
+                    {
+                      title: "Core",
+                      items: [
+                        { id: 'beaconLauncherEnabled', name: 'Beacon Inbox', desc: 'Separate launcher icon for quick access to your SMS inbox.', icon: beaconLogo, isImg: true },
+                        { id: 'firebaseMessagingEnabled', name: 'Firebase Relay', desc: 'Faster messaging between PulseLink users.', icon: <CloudSyncIcon /> }
+                      ]
+                    },
+                    {
+                      title: "PulseLink Apps",
+                      items: [
+                        { id: 'ringerSongEnabled', name: 'RingerSong', desc: 'Progressive ringtone streaming & playlist manager.', icon: ringersongLogo, isImg: true },
+                        { id: 'mapEnabled', name: 'Emergency Map', desc: 'Track shared locations from PulseLink alerts.', icon: <MapIcon /> },
+                        { id: 'contactsEnabled', name: 'Contacts Manager', desc: 'Browse and manage synced device contacts.', icon: <ContactIcon /> },
+                        { id: 'themesEnabled', name: 'Theme Gallery', desc: 'Browse, import, and publish custom themes.', icon: <ThemeIcon /> }
+                      ]
+                    },
+                    {
+                      title: "Safety & Security",
+                      items: [
+                        { id: 'emailFallbackEnabled', name: 'Email Backup', desc: 'Forward urgent alerts to email if SMS fails.', icon: <EmailIcon /> },
+                        { id: 'crashDetectionEnabled', name: 'Crash Detection', desc: 'Detects car crashes and notifies emergency contacts.', icon: <CarCrashIcon />, premium: true },
+                        { id: 'privateSafeEnabled', name: 'Private Safe', desc: 'Lock and hide sensitive conversations.', icon: <LockIcon /> }
+                      ]
+                    },
+                    {
+                      title: "Smart Features",
+                      items: [
+                        { id: 'smartRepliesEnabled', name: 'Smart Replies', desc: 'One-tap suggestion chips for incoming messages.', icon: <MessageSquareIcon /> },
+                        { id: 'otpCleanupEnabled', name: 'Smart OTP Cleanup', desc: 'Automatically deletes one-time passwords after 24 hours.', icon: <DeleteSweepIcon /> },
+                        { id: 'aiSummariesEnabled', name: 'PulseLink AI', desc: 'Smart summaries and urgency detection for your chats.', icon: <SmartToyIcon />, premium: true }
+                      ]
+                    },
+                    {
+                      title: "Integrations",
+                      items: [
+                        { id: 'remoteWebAccessEnabled', name: 'Remote Web Access', desc: 'Sync messages and contacts to this web portal.', icon: logo, isImg: true, premium: true },
+                        { id: 'mergedExperienceEnabled', name: 'Unified Home', desc: 'Merge PulseLink and Beacon navigation into a single simplified experience.', icon: <HomeIcon />, premium: true },
+                        { id: 'thirdPartyExtensionsEnabled', name: '3rd Party Extensions', desc: 'Allow community-built plugins (Beta).', icon: <ExtensionIcon />, premium: true },
+                        { id: 'truecallerEnabled', name: 'Truecaller Caller ID', desc: 'Identify unknown callers and block spam using Truecaller directory.', icon: <SearchIcon /> }
+                      ]
+                    }
+                  ].map((category) => {
+                    const filteredItems = category.items.filter(item =>
+                      !extensionSearch.trim() ||
+                      item.name.toLowerCase().includes(extensionSearch.toLowerCase()) ||
+                      item.desc.toLowerCase().includes(extensionSearch.toLowerCase())
+                    );
+
+                    if (filteredItems.length === 0) return null;
+
+                    return (
+                      <div key={category.title} className="extension-category" style={{marginBottom: 32}}>
+                        <h4 style={{marginBottom: 16, color: 'var(--ink)'}}>{category.title}</h4>
+                        <div className="home-grid">
+                          {filteredItems.map(ext => {
+                            const isEnabled = remoteSettings[ext.id];
+                            const isLocked = ext.premium && !isPremiumUser;
+
+                            return (
+                              <div className="home-card" key={ext.id} style={{ opacity: isLocked ? 0.6 : 1, position: 'relative' }}>
+                                <div className="home-icon" style={{
+                                  background: ext.isImg ? 'transparent' : 'rgba(255, 255, 255, 0.05)',
+                                  display: 'grid',
+                                  placeItems: 'center'
+                                }}>
+                                  {ext.isImg ? <img src={ext.icon} alt={ext.name} /> : ext.icon}
+                                </div>
+                                <h3 style={{marginTop: 12, marginBottom: 4}}>{ext.name}</h3>
+                                <p style={{marginBottom: 16, minHeight: 40}}>{ext.desc}</p>
+
+                                {isLocked ? (
+                                  <div className="badge badge-premium" style={{background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)'}}>
+                                    Premium Required
+                                  </div>
+                                ) : (
+                                  <button
+                                    className={isEnabled ? "secondary-btn" : "primary-btn"}
+                                    style={{width: '100%'}}
+                                    aria-label={`${isEnabled ? "Remove" : "Install"} ${ext.name}`}
+                                    title={`${isEnabled ? "Remove" : "Install"} ${ext.name}`}
+                                    onClick={() => {
+                                      setRemoteSettings(prev => ({ ...prev, [ext.id]: !prev[ext.id] }));
+                                      const next = { ...remoteSettings, [ext.id]: !isEnabled };
+                                      setDoc(doc(db, "users", user.uid), {
+                                        ...next,
+                                        settingsUpdatedAt: serverTimestamp()
+                                      }, { merge: true });
+                                    }}
+                                  >
+                                    {isEnabled ? "Remove" : "Install"}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+
+              {activeStoreTab === 'community' && (
+                <>
                   <div className="home-grid">
-                    {category.items.map(ext => {
-                      const isEnabled = remoteSettings[ext.id];
-                      const isLocked = ext.premium && !isPremiumUser;
-
+                    {storeExtensions.filter(ext =>
+                      !extensionSearch.trim() ||
+                      ext.name.toLowerCase().includes(extensionSearch.toLowerCase()) ||
+                      (ext.description && ext.description.toLowerCase().includes(extensionSearch.toLowerCase()))
+                    ).map(ext => {
+                      const isInstalled = installedExtensionIds.includes(ext.id);
                       return (
-                        <div className="home-card" key={ext.id} style={{ opacity: isLocked ? 0.6 : 1, position: 'relative' }}>
+                        <div className="home-card" key={ext.id} style={{ position: 'relative' }}>
                           <div className="home-icon" style={{
-                             background: ext.isImg ? 'transparent' : 'rgba(255, 255, 255, 0.05)',
-                             display: 'grid',
-                             placeItems: 'center'
+                            background: ext.iconUrl ? 'transparent' : 'rgba(255, 255, 255, 0.05)',
+                            display: 'grid',
+                            placeItems: 'center'
                           }}>
-                            {ext.isImg ? <img src={ext.icon} alt={ext.name} /> : ext.icon}
+                            {ext.iconUrl ? <img src={ext.iconUrl} alt={ext.name} /> : <ExtensionIcon />}
                           </div>
-                          <h3 style={{marginTop: 12, marginBottom: 4}}>{ext.name}</h3>
-                          <p style={{marginBottom: 16, minHeight: 40}}>{ext.desc}</p>
+                          <h3 style={{ marginTop: 12, marginBottom: 4 }}>{ext.name}</h3>
+                          <p style={{ marginBottom: 12, minHeight: 40, flex: 1 }}>{ext.description}</p>
+                          <div style={{ fontSize: '0.8em', color: 'var(--muted)', marginBottom: 16 }}>
+                            By {ext.author || 'Community'}
+                          </div>
 
-                          {isLocked ? (
-                            <div className="badge badge-premium" style={{background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)'}}>
-                              Premium Required
-                            </div>
-                          ) : (
+                          <div style={{ display: 'flex', gap: 8 }}>
                             <button
-                              className={isEnabled ? "secondary-btn" : "primary-btn"}
-                              style={{width: '100%'}}
-                              aria-label={`${isEnabled ? "Remove" : "Install"} ${ext.name}`}
-                              title={`${isEnabled ? "Remove" : "Install"} ${ext.name}`}
-                              onClick={() => {
-                                setRemoteSettings(prev => ({ ...prev, [ext.id]: !prev[ext.id] }));
-                                const next = { ...remoteSettings, [ext.id]: !isEnabled };
-                                setDoc(doc(db, "users", user.uid), {
-                                  ...next,
-                                  settingsUpdatedAt: serverTimestamp()
-                                }, { merge: true });
-                              }}
+                              className={isInstalled ? "ghost-btn" : "primary-btn"}
+                              style={{ flex: 1 }}
+                              onClick={() => isInstalled ? handleUninstallExtension(ext.id) : handleInstallExtension(ext)}
                             >
-                              {isEnabled ? "Remove" : "Install"}
+                              {isInstalled ? "Uninstall" : "Install"}
                             </button>
-                          )}
+                            {isInstalled && (
+                              <button
+                                className="secondary-btn"
+                                onClick={() => handleTestExtension({ name: ext.name, endpoint: ext.entry_point })}
+                              >
+                                Test
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
                   </div>
-                </div>
-              ))}
-
-              <div className="settings-card">
-                <h4>Developer sandbox</h4>
-                <p className="settings-note">Add webhook-style extensions that run against your own account. Stored locally so you can iterate safely.</p>
-                {!remoteSettings.thirdPartyExtensionsEnabled && (
-                  <div className="settings-warning">Extensions stay dormant until you enable 3rd-party access in Settings.</div>
-                )}
-                <div className="extensions-list" style={{display: 'grid', gap: 12}}>
-                  {devExtensions.map((ext) => (
-                    <div key={ext.id} className="home-card" style={{margin: 0}}>
-                      <h4>{ext.name}</h4>
-                      <p className="settings-note">{ext.description || ext.endpoint || 'No description provided.'}</p>
-                      {ext.endpoint && <code className="mono" style={{fontSize: 12}}>{ext.endpoint}</code>}
-                      <div className="settings-row" style={{justifyContent: 'flex-start', gap: 8, marginTop: 8}}>
-                        <button className="secondary-btn" type="button" onClick={() => handleTestExtension(ext)}>Test</button>
-                        <button className="ghost-btn" type="button" onClick={() => setDevExtensions((prev) => prev.filter((d) => d.id !== ext.id))}>Remove</button>
-                      </div>
+                  {storeExtensions.length === 0 && (
+                    <div className="settings-card">
+                      <p className="settings-note">No community extensions found.</p>
                     </div>
-                  ))}
-                  {devExtensions.length === 0 && <p className="settings-note">No custom extensions yet.</p>}
-                </div>
-                <form className="login-form" style={{marginTop: 12}} onSubmit={handleAddExtension}>
-                  <label className="login-field">
-                    Name<RequiredIndicator />
-                    <input className="login-input" value={extensionForm.name} onChange={(e) => setExtensionForm((prev) => ({ ...prev, name: e.target.value }))} required />
-                  </label>
-                  <label className="login-field">
-                    Webhook URL (https://…)
-                    <input className="login-input" value={extensionForm.endpoint} onChange={(e) => setExtensionForm((prev) => ({ ...prev, endpoint: e.target.value }))} />
-                  </label>
-                  <label className="login-field">
-                    Description
-                    <textarea className="login-input" rows={2} value={extensionForm.description} onChange={(e) => setExtensionForm((prev) => ({ ...prev, description: e.target.value }))} />
-                  </label>
-                  <button type="submit" className="primary-btn">Save extension</button>
-                </form>
-                {extensionStatus && <div className={getToastClass(extensionStatus)} role="status">{extensionStatus}</div>}
-              </div>
-              <div className="settings-card">
-                <h4>Submit to gallery</h4>
-                <p className="settings-note">Share your extension with other testers.</p>
-                <div className="settings-row" style={{gap: 8, flexWrap: 'wrap'}}>
-                  <a className="secondary-btn" href="https://github.com/DamienLove/pulselink/blob/Suite-Beta/docs/extensions-dev.md" target="_blank" rel="noreferrer">Read dev guide</a>
-                  <a className="ghost-btn" href="mailto:extensions@pulselink.app?subject=PulseLink%20Extension%20Submission">Email us your zip</a>
-                </div>
-              </div>
+                  )}
+                  {extensionStatus && <div className={getToastClass(extensionStatus)} role="status">{extensionStatus}</div>}
+                </>
+              )}
+
+              {activeStoreTab === 'developer' && (
+                <>
+                  <div className="settings-card">
+                    <h4>Developer Sandbox (Local)</h4>
+                    <p className="settings-note">Add webhook-style extensions that run against your own account. Stored locally so you can iterate safely.</p>
+                    <div className="extensions-list" style={{ display: 'grid', gap: 12 }}>
+                      {devExtensions.map((ext) => (
+                        <div key={ext.id} className="home-card" style={{ margin: 0 }}>
+                          <h4>{ext.name}</h4>
+                          <p className="settings-note">{ext.description || ext.endpoint || 'No description provided.'}</p>
+                          {ext.endpoint && <code className="mono" style={{ fontSize: 12 }}>{ext.endpoint}</code>}
+                          <div className="settings-row" style={{ justifyContent: 'flex-start', gap: 8, marginTop: 8 }}>
+                            <button className="secondary-btn" type="button" onClick={() => handleTestExtension(ext)}>Test</button>
+                            <button className="ghost-btn" type="button" onClick={() => setDevExtensions((prev) => prev.filter((d) => d.id !== ext.id))}>Remove</button>
+                          </div>
+                        </div>
+                      ))}
+                      {devExtensions.length === 0 && <p className="settings-note">No custom extensions yet.</p>}
+                    </div>
+                    <form className="login-form" style={{ marginTop: 12 }} onSubmit={handleAddExtension}>
+                      <label className="login-field">
+                        Name<RequiredIndicator />
+                        <input className="login-input" value={extensionForm.name} onChange={(e) => setExtensionForm((prev) => ({ ...prev, name: e.target.value }))} required />
+                      </label>
+                      <label className="login-field">
+                        Webhook URL (https://…)
+                        <input className="login-input" value={extensionForm.endpoint} onChange={(e) => setExtensionForm((prev) => ({ ...prev, endpoint: e.target.value }))} />
+                      </label>
+                      <label className="login-field">
+                        Description
+                        <textarea className="login-input" rows={2} value={extensionForm.description} onChange={(e) => setExtensionForm((prev) => ({ ...prev, description: e.target.value }))} />
+                      </label>
+                      <button type="submit" className="primary-btn">Save to Sandbox</button>
+                    </form>
+                  </div>
+
+                  <div className="settings-card">
+                    <h4>Publish to Store</h4>
+                    <p className="settings-note">Submit your extension to the community store. Requires review.</p>
+                    <form className="login-form" onSubmit={handlePublishExtension}>
+                      <label className="login-field">
+                        Extension ID (unique)<RequiredIndicator />
+                        <input className="login-input" value={publishForm.id} onChange={(e) => setPublishForm((prev) => ({ ...prev, id: e.target.value }))} placeholder="my-extension-id" required />
+                      </label>
+                      <label className="login-field">
+                        Display Name<RequiredIndicator />
+                        <input className="login-input" value={publishForm.name} onChange={(e) => setPublishForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="My Extension" required />
+                      </label>
+                      <label className="login-field">
+                        Webhook Endpoint (https://)<RequiredIndicator />
+                        <input className="login-input" value={publishForm.entry_point} onChange={(e) => setPublishForm((prev) => ({ ...prev, entry_point: e.target.value }))} placeholder="https://api.example.com/webhook" required />
+                      </label>
+                      <label className="login-field">
+                        Icon URL (optional)
+                        <input className="login-input" value={publishForm.iconUrl} onChange={(e) => setPublishForm((prev) => ({ ...prev, iconUrl: e.target.value }))} placeholder="https://..." />
+                      </label>
+                      <label className="login-field">
+                        Description
+                        <textarea className="login-input" rows={3} value={publishForm.description} onChange={(e) => setPublishForm((prev) => ({ ...prev, description: e.target.value }))} />
+                      </label>
+                      <div className="settings-row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                        <button type="submit" className="primary-btn" disabled={extensionStatus === "Submitting..."}>Submit for Review</button>
+                        <a className="ghost-btn" href="https://github.com/DamienLove/pulselink/blob/Suite-Beta/docs/extensions-dev.md" target="_blank" rel="noreferrer">Read Docs</a>
+                      </div>
+                    </form>
+                  </div>
+                  {extensionStatus && <div className={getToastClass(extensionStatus)} role="status">{extensionStatus}</div>}
+                </>
+              )}
             </div>
           )}
 
