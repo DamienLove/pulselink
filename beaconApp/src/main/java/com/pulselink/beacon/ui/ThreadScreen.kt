@@ -76,6 +76,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -172,7 +173,20 @@ fun ThreadScreen(
 
     // Constants
     val SCROLL_THRESHOLD_ITEMS = 2
-    val AUTO_SCROLL_THRESHOLD = 3
+    val AUTO_SCROLL_THRESHOLD = 5
+
+    // Initial Scroll to First Unread (Oldest Unread Message)
+    var hasScrolledToUnread by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(uiItems) {
+        if (!hasScrolledToUnread && uiItems.isNotEmpty()) {
+            // uiItems are ordered Newest -> Oldest. Last unread is the "first" new message.
+            val index = uiItems.indexOfLast { it is ThreadUiItem.Message && !it.message.read }
+            if (index > 0) {
+                listState.scrollToItem(index)
+            }
+            hasScrolledToUnread = true
+        }
+    }
 
     // UX: Show "Scroll to Bottom" if user is scrolled up
     val showScrollToBottom by androidx.compose.runtime.remember {

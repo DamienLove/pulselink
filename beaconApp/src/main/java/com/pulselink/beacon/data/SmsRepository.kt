@@ -188,7 +188,7 @@ class SmsRepository(private val context: Context) {
         return ThreadCategory.PERSONAL
     }
 
-    private fun resolveAddressesForThreads(threads: List<RawThreadData>): Map<Long, String> {
+    private suspend fun resolveAddressesForThreads(threads: List<RawThreadData>): Map<Long, String> = withContext(Dispatchers.IO) {
         val result = mutableMapOf<Long, String>()
         val threadsToResolve = mutableListOf<RawThreadData>()
 
@@ -202,7 +202,7 @@ class SmsRepository(private val context: Context) {
             }
         }
 
-        if (threadsToResolve.isEmpty()) return result
+        if (threadsToResolve.isEmpty()) return@withContext result
 
         val threadToRecipients = mutableMapOf<Long, List<Long>>()
         val neededRecipients = mutableSetOf<Long>()
@@ -300,7 +300,7 @@ class SmsRepository(private val context: Context) {
                 result[thread.id] = finalStr
             }
         }
-        return result
+        return@withContext result
     }
 
     private suspend fun readMmsMessages(threadId: Long, limit: Int): List<SmsMessageItem> = withContext(Dispatchers.IO) {
@@ -309,7 +309,8 @@ class SmsRepository(private val context: Context) {
             Telephony.Mms._ID,
             Telephony.Mms.THREAD_ID,
             Telephony.Mms.DATE,
-            Telephony.Mms.MESSAGE_BOX
+            Telephony.Mms.MESSAGE_BOX,
+            Telephony.Mms.READ
         )
         val cursor = runCatching {
             context.contentResolver.query(
@@ -325,6 +326,7 @@ class SmsRepository(private val context: Context) {
             val idIdx = c.getColumnIndexOrThrow(Telephony.Mms._ID)
             val dateIdx = c.getColumnIndexOrThrow(Telephony.Mms.DATE)
             val boxIdx = c.getColumnIndexOrThrow(Telephony.Mms.MESSAGE_BOX)
+            val readIdx = c.getColumnIndexOrThrow(Telephony.Mms.READ)
             val items = mutableListOf<SmsMessageItem>()
             var count = 0
             while (c.moveToNext() && count < limit) {
@@ -335,6 +337,7 @@ class SmsRepository(private val context: Context) {
                 val ts = c.getLong(dateIdx) * 1000 // Mms dates are in seconds
                 val msgBox = c.getInt(boxIdx)
                 val outgoing = msgBox == Telephony.Mms.MESSAGE_BOX_SENT || msgBox == Telephony.Mms.MESSAGE_BOX_OUTBOX
+                val read = c.getInt(readIdx) == 1
                 items += SmsMessageItem(
                     id = -mmsId, // avoid collision with SMS ids
                     threadId = threadId,
@@ -342,6 +345,7 @@ class SmsRepository(private val context: Context) {
                     body = textPart,
                     timestamp = ts,
                     outgoing = outgoing,
+                    read = read,
                     isMms = true,
                     mediaParts = parts
                 )
@@ -427,7 +431,8 @@ class SmsRepository(private val context: Context) {
             Telephony.Sms.ADDRESS,
             Telephony.Sms.BODY,
             Telephony.Sms.DATE,
-            Telephony.Sms.TYPE
+            Telephony.Sms.TYPE,
+            Telephony.Sms.READ
         )
         if (!hasReadPerms()) return@withContext emptyList()
         ensureObserversRegistered()
@@ -448,6 +453,7 @@ class SmsRepository(private val context: Context) {
             val bodyIdx = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
             val dateIdx = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
             val typeIdx = c.getColumnIndexOrThrow(Telephony.Sms.TYPE)
+            val readIdx = c.getColumnIndexOrThrow(Telephony.Sms.READ)
             val items = mutableListOf<SmsMessageItem>()
             var count = 0
             while (c.moveToNext() && count < limit) {
@@ -457,6 +463,7 @@ class SmsRepository(private val context: Context) {
                 val ts = c.getLong(dateIdx)
                 val type = c.getInt(typeIdx)
                 val outgoing = type == Telephony.Sms.MESSAGE_TYPE_SENT || type == Telephony.Sms.MESSAGE_TYPE_OUTBOX
+                val read = c.getInt(readIdx) == 1
                 items += SmsMessageItem(
                     id = id,
                     threadId = c.getLong(threadIdx),
@@ -464,6 +471,7 @@ class SmsRepository(private val context: Context) {
                     body = body,
                     timestamp = ts,
                     outgoing = outgoing,
+                    read = read,
                     isMms = false
                 )
                 count++

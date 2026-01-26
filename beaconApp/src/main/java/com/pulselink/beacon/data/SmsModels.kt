@@ -27,6 +27,7 @@ data class SmsMessageItem(
     val body: String,
     val timestamp: Long,
     val outgoing: Boolean,
+    val read: Boolean = true,
     val isMms: Boolean = false,
     val mediaParts: List<MmsPart> = emptyList(),
     val status: MessageStatus = MessageStatus.NONE

@@ -57,8 +57,8 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     private val workManager = WorkManager.getInstance(app)
 
     private companion object {
-        const val THREAD_LIMIT = 100
-        const val MESSAGE_LIMIT = 300
+        const val THREAD_LIMIT = 60
+        const val MESSAGE_LIMIT = 100
     }
 
     var threads by mutableStateOf<List<SmsThreadItem>>(emptyList())
