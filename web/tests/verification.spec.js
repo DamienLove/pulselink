@@ -36,12 +36,21 @@ test('Full Verification Suite', async ({ page }) => {
         ...settings
       });
 
+      // Inject Profile
+      window.debugSetProfile({
+        ownerName: 'Test User',
+        email: 'tester@pulselink.app'
+      });
+
       // Inject Remote Settings to ensure Sidebar shows items
       window.debugSetRemoteSettings(settings);
+
+      // Force Home Panel
+      window.debugSetActivePanel('home');
     });
 
     // Verify Home Screen
-    await expect(page.locator('.home-hero h2')).toHaveText('Welcome back');
+    await expect(page.locator('.home-hero h2')).toHaveText(/Good (morning|afternoon|evening), Test/);
     // Use specific locators for Home Cards
     await expect(page.locator('.home-card h3', { hasText: 'Beacon Inbox' })).toBeVisible();
     await expect(page.locator('.home-card h3', { hasText: 'Contacts' })).toBeVisible();

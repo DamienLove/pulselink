@@ -239,6 +239,7 @@ const ThreadSkeleton = () => (
 
 const areMessagesEqual = (prev, next) => {
   return prev.showPreviews === next.showPreviews &&
+         prev.groupClass === next.groupClass &&
          prev.msg.id === next.msg.id &&
          prev.msg.body === next.msg.body &&
          prev.msg.date === next.msg.date &&
@@ -247,8 +248,8 @@ const areMessagesEqual = (prev, next) => {
 
 // Bolt: Optimized MessageItem with memo to prevent re-rendering all messages when typing
 // or when new messages arrive (which creates new object references).
-const MessageItem = memo(({ msg, showPreviews }) => (
-  <div className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
+const MessageItem = memo(({ msg, showPreviews, groupClass }) => (
+  <div className={`message ${msg.type === 1 ? 'received' : 'sent'} ${groupClass || 'group-single'}`}>
     <div className="message-bubble">
       {msg.imageUrl && (
         <div className="message-image-container">
@@ -1560,6 +1561,12 @@ const normalizeTheme = (input = {}) => {
 
 const buildThemeVars = (theme) => {
   const active = normalizeTheme(theme);
+  const fontMap = {
+    "Monospace": "var(--font-mono)",
+    "Serif": "serif",
+    "Cursive": "cursive",
+    "Default": "var(--font-body)"
+  };
   const vars = {
     "--accent": active.primaryColor,
     "--accent-strong": active.secondaryColor,
@@ -1575,7 +1582,9 @@ const buildThemeVars = (theme) => {
     "--on-bubble-outgoing": active.onBubbleOutgoing,
     "--on-bubble-incoming": active.onBubbleIncoming,
     "--app-gradient-start": active.appBackgroundGradientStart ?? active.backgroundColor,
-    "--app-gradient-end": active.appBackgroundGradientEnd ?? active.backgroundColor
+    "--app-gradient-end": active.appBackgroundGradientEnd ?? active.backgroundColor,
+    "--bubble-radius": `${active.bubbleCornerRadius}px`,
+    "--font-override": fontMap[active.fontStyle] || "var(--font-body)"
   };
   if (active.backgroundImageUrl) {
     vars["backgroundImage"] = `url(${active.backgroundImageUrl})`;
@@ -2526,9 +2535,35 @@ function App() {
 
   // Bolt: Memoize list elements to avoid re-creating them on every render
   const messageListElements = useMemo(() => (
-    messages.map(msg => (
-      <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} />
-    ))
+    messages.map((msg, index) => {
+      const prev = messages[index - 1];
+      const next = messages[index + 1];
+
+      const isSamePrev = prev && prev.type === msg.type;
+      const isSameNext = next && next.type === msg.type;
+
+      // Time check: 2 minutes grouping threshold
+      const isClosePrev = prev && (msg.date - prev.date) < 120000;
+      const isCloseNext = next && (next.date - msg.date) < 120000;
+
+      let groupClass = 'group-single';
+      if (isSamePrev && isClosePrev && isSameNext && isCloseNext) {
+        groupClass = 'group-middle';
+      } else if (isSamePrev && isClosePrev) {
+        groupClass = 'group-bottom';
+      } else if (isSameNext && isCloseNext) {
+        groupClass = 'group-top';
+      }
+
+      return (
+        <MessageItem
+          key={msg.id}
+          msg={msg}
+          showPreviews={showPreviews}
+          groupClass={groupClass}
+        />
+      );
+    })
   ), [messages, showPreviews]);
 
   // Bolt: Pagination for contact list to improve performance
@@ -3868,6 +3903,7 @@ function App() {
     if (import.meta.env.DEV) {
       window.debugSetUser = setUser;
       window.debugSetUserData = setUserData;
+      window.debugSetProfile = setProfile;
       window.debugSetRemoteSettings = setRemoteSettings;
       window.debugSetMessages = setMessages;
       window.debugSetDeviceContacts = setDeviceContacts;
