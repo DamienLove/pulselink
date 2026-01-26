@@ -172,7 +172,7 @@ fun SettingsScreen(
             // Profile
             CollapsibleSettingsSection(
                 title = "Profile",
-                initiallyExpanded = false
+                initiallyExpanded = true
             ) {
                 SettingsActionRow(
                     title = "My Profile",

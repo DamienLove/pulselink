@@ -1458,7 +1458,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun getDeviceInfo(context: Context): String {
+    fun getDeviceInfo(context: Context, deviceId: String? = null): String {
         val packageManager = context.packageManager
         val packageInfo = runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -1488,6 +1488,9 @@ class MainViewModel @Inject constructor(
         return buildString {
             appendLine("App Version: $versionName ($versionCode)")
             appendLine("Build Flavor: ${if (BuildConfig.PREMIUM_FEATURES) "Premium" else if (BuildConfig.PRO_FEATURES) "Pro" else "Free"}")
+            if (!deviceId.isNullOrBlank()) {
+                appendLine("Link ID: $deviceId")
+            }
             appendLine("Device: $manufacturer $model")
             appendLine("OS: Android $osVersion (API $apiLevel)")
         }

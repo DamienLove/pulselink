@@ -1077,11 +1077,10 @@ class MainActivity : AppCompatActivity() {
                             onMessageConsumed = loginViewModel::clearTransientMessages,
                             useProBranding = false
                         )
-                        val initialAnonymous = rememberSaveable { (authState as? AuthState.Authenticated)?.user?.isAnonymous == true }
                         LaunchedEffect(authState, state.onboardingComplete) {
                             val authenticated = authState as? AuthState.Authenticated
                             if (authenticated != null) {
-                                if (!authenticated.user.isAnonymous || !initialAnonymous) {
+                                if (!authenticated.user.isAnonymous) {
                                     val destination = if (state.onboardingComplete) "home" else "onboarding_intro"
                                     navController.navigate(destination) {
                                         popUpTo(0) { inclusive = true }
@@ -2296,7 +2295,7 @@ class MainActivity : AppCompatActivity() {
                             mutableStateOf(
                                 BugReportData(
                                     userEmail = (authState as? AuthState.Authenticated)?.user?.email.orEmpty(),
-                                    deviceInfo = viewModel.getDeviceInfo(context)
+                                    deviceInfo = viewModel.getDeviceInfo(context, state.settings.deviceId)
                                 )
                             )
                         }
