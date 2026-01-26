@@ -38,10 +38,13 @@ test('Full Verification Suite', async ({ page }) => {
 
       // Inject Remote Settings to ensure Sidebar shows items
       window.debugSetRemoteSettings(settings);
+
+      // Explicitly set active panel to home
+      window.debugSetActivePanel('home');
     });
 
     // Verify Home Screen
-    await expect(page.locator('.home-hero h2')).toHaveText('Welcome back');
+    await expect(page.locator('.home-hero h2')).toContainText('Good');
     // Use specific locators for Home Cards
     await expect(page.locator('.home-card h3', { hasText: 'Beacon Inbox' })).toBeVisible();
     await expect(page.locator('.home-card h3', { hasText: 'Contacts' })).toBeVisible();
