@@ -111,7 +111,7 @@ fun InboxScreen(
     groupedThreads: Map<String, List<SmsThreadItem>>,
     contacts: List<BeaconContact> = emptyList(),
     theme: ThemePalette,
-    searchState: SearchResultState,
+    searchState: BeaconSearchResultState,
     isDefaultSms: Boolean,
     isCheckingDefaultSms: Boolean,
     missingPermissions: List<String>,
@@ -133,8 +133,8 @@ fun InboxScreen(
     notificationsEnabled: Boolean,
     notificationsSilent: Boolean,
     onOpenNotificationSettings: () -> Unit,
-    filter: InboxFilter,
-    onFilterChange: (InboxFilter) -> Unit,
+    filter: BeaconInboxFilter,
+    onFilterChange: (BeaconInboxFilter) -> Unit,
     searchText: String,
     isLoading: Boolean = false,
     isRefreshing: Boolean = false,
@@ -354,12 +354,12 @@ fun InboxScreen(
     val beaconIconAlpha = (1f - scrollBehavior.state.collapsedFraction).coerceIn(0f, 1f)
 
     LaunchedEffect(searchState) {
-        if (searchState is SearchResultState.Contact && !navigatedFromSearch) {
+        if (searchState is BeaconSearchResultState.Contact && !navigatedFromSearch) {
             navigatedFromSearch = true
             onOpenThread(searchState.threadId, searchState.address)
             onClearSearch()
             // searchText = "" // Avoid loop if managed by VM
-        } else if (searchState !is SearchResultState.Contact) {
+        } else if (searchState !is BeaconSearchResultState.Contact) {
             navigatedFromSearch = false
         }
     }
@@ -549,17 +549,17 @@ fun InboxScreen(
 
             // Search Results or List
             Box(modifier = Modifier.weight(1f)) {
-                if (filter == InboxFilter.CONTACTS && searchText.isBlank()) {
+                if (filter == BeaconInboxFilter.CONTACTS && searchText.isBlank()) {
                     ContactsList(contacts, theme, onOpenThread)
                 } else if (searchText.isNotBlank()) {
                      when (searchState) {
-                        is SearchResultState.Messages -> SearchResults(
+                        is BeaconSearchResultState.Messages -> SearchResults(
                             hits = searchState.hits,
                             theme = theme,
                             query = searchText,
                             onOpenThread = onOpenThread
                         )
-                        SearchResultState.Empty -> {
+                        BeaconSearchResultState.Empty -> {
                              Column(
                                 modifier = Modifier.fillMaxSize().padding(top = 40.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
@@ -569,7 +569,7 @@ fun InboxScreen(
                                  Text("No results found", color = mutedTint)
                              }
                         }
-                        SearchResultState.Searching -> {
+                        BeaconSearchResultState.Searching -> {
                              Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                  CircularProgressIndicator(color = theme.accentColor)
                              }
@@ -682,7 +682,7 @@ fun InboxScreen(
 }
 
 @Composable
-private fun EmptyState(filter: InboxFilter, theme: ThemePalette, iconTint: Color) {
+private fun EmptyState(filter: BeaconInboxFilter, theme: ThemePalette, iconTint: Color) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -713,9 +713,9 @@ private fun EmptyState(filter: InboxFilter, theme: ThemePalette, iconTint: Color
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = when(filter) {
-                                InboxFilter.ARCHIVED -> Icons.Default.Inbox
-                                InboxFilter.UNREAD -> Icons.Default.CheckCircle
-                                    InboxFilter.STARRED -> Icons.Default.Star
+                                BeaconInboxFilter.ARCHIVED -> Icons.Default.Inbox
+                                BeaconInboxFilter.UNREAD -> Icons.Default.CheckCircle
+                                    BeaconInboxFilter.STARRED -> Icons.Default.Star
                                 else -> Icons.Default.Sms
                             },
                             contentDescription = null,
@@ -728,9 +728,9 @@ private fun EmptyState(filter: InboxFilter, theme: ThemePalette, iconTint: Color
             Spacer(modifier = Modifier.height(32.dp))
             Text(
                 text = when (filter) {
-                    InboxFilter.UNREAD -> "All caught up"
-                    InboxFilter.ARCHIVED -> "No archives"
-                    InboxFilter.STARRED -> "No starred messages"
+                    BeaconInboxFilter.UNREAD -> "All caught up"
+                    BeaconInboxFilter.ARCHIVED -> "No archives"
+                    BeaconInboxFilter.STARRED -> "No starred messages"
                     else -> "Inbox Empty"
                 },
                 style = MaterialTheme.typography.headlineMedium,
@@ -740,12 +740,12 @@ private fun EmptyState(filter: InboxFilter, theme: ThemePalette, iconTint: Color
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = when (filter) {
-                    InboxFilter.UNREAD -> "No unread messages. Nice work!"
-                    InboxFilter.PERSONAL -> "Personal conversations will appear here."
-                    InboxFilter.TRANSACTIONS -> "Bank alerts and codes appear here."
-                    InboxFilter.PROMOTIONS -> "Marketing offers appear here."
-                    InboxFilter.ARCHIVED -> "Archived threads are hidden here."
-                    InboxFilter.STARRED -> "Star important messages to find them here."
+                    BeaconInboxFilter.UNREAD -> "No unread messages. Nice work!"
+                    BeaconInboxFilter.PERSONAL -> "Personal conversations will appear here."
+                    BeaconInboxFilter.TRANSACTIONS -> "Bank alerts and codes appear here."
+                    BeaconInboxFilter.PROMOTIONS -> "Marketing offers appear here."
+                    BeaconInboxFilter.ARCHIVED -> "Archived threads are hidden here."
+                    BeaconInboxFilter.STARRED -> "Star important messages to find them here."
                     else -> "Your messages will appear here once you start chatting."
                 },
                 style = MaterialTheme.typography.bodyLarge,
@@ -761,61 +761,6 @@ private fun EmptyState(filter: InboxFilter, theme: ThemePalette, iconTint: Color
 // I'll keep them as is for now as the major UI polish was in TopBar and EmptyState/Tabs
 
 // ...
-
-@Composable
-private fun TabsRow(
-    filter: InboxFilter,
-    unreadCount: Int,
-    onFilterChange: (InboxFilter) -> Unit,
-    theme: ThemePalette
-) {
-    val scrollState = rememberScrollState()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .selectableGroup()
-            .horizontalScroll(scrollState)
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Compact Tabs
-        TabChip("All", filter == InboxFilter.ALL, theme) { onFilterChange(InboxFilter.ALL) }
-        TabChip("Personal", filter == InboxFilter.PERSONAL, theme) { onFilterChange(InboxFilter.PERSONAL) }
-        TabChip("Transactions", filter == InboxFilter.TRANSACTIONS, theme) { onFilterChange(InboxFilter.TRANSACTIONS) }
-        TabChip("Promotions", filter == InboxFilter.PROMOTIONS, theme) { onFilterChange(InboxFilter.PROMOTIONS) }
-        TabChip("Unread${if(unreadCount > 0) " ($unreadCount)" else ""}", filter == InboxFilter.UNREAD, theme) { onFilterChange(InboxFilter.UNREAD) }
-        TabChip("Archived", filter == InboxFilter.ARCHIVED, theme) { onFilterChange(InboxFilter.ARCHIVED) }
-    }
-}
-
-@Composable
-private fun TabChip(label: String, selected: Boolean, theme: ThemePalette, onClick: () -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = if (selected) theme.accentColor.copy(alpha = 0.15f) else Color.Transparent,
-        border = if (selected)
-                    BorderStroke(1.dp, theme.accentColor.copy(alpha = 0.6f))
-                 else
-                    BorderStroke(1.dp, theme.frameColor.copy(alpha = 0.15f)),
-        modifier = Modifier.selectable(selected = selected, role = Role.Tab, onClick = onClick)
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            color = if (selected) theme.accentColor else theme.frameColor.copy(alpha = 0.7f),
-            fontWeight = if(selected) FontWeight.SemiBold else FontWeight.Normal,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-    }
-}
-
-// Helper needed as I used it in EmptyState
-// Brush is already imported
-
-
-// Missing composables need to be re-added or the file will be incomplete.
-// I will just copy the rest of the file content I saw earlier to ensure it's valid.
 
 @Composable
 private fun PermissionsBanners(
@@ -1226,9 +1171,9 @@ fun LetterAvatar(name: String, theme: ThemePalette, size: androidx.compose.ui.un
 
 @Composable
 private fun TabsRow(
-    filter: InboxFilter,
+    filter: BeaconInboxFilter,
     unreadCount: Int,
-    onFilterChange: (InboxFilter) -> Unit,
+    onFilterChange: (BeaconInboxFilter) -> Unit,
     theme: ThemePalette
 ) {
     val scrollState = rememberScrollState()
@@ -1242,15 +1187,15 @@ private fun TabsRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Compact Tabs
-        TabChip("All", filter == InboxFilter.ALL, theme) { onFilterChange(InboxFilter.ALL) }
-        TabChip("Unread${if(unreadCount > 0) " ($unreadCount)" else ""}", filter == InboxFilter.UNREAD, theme) { onFilterChange(InboxFilter.UNREAD) }
-        TabChip("Personal", filter == InboxFilter.PERSONAL, theme) { onFilterChange(InboxFilter.PERSONAL) }
-        TabChip("Transactions", filter == InboxFilter.TRANSACTIONS, theme) { onFilterChange(InboxFilter.TRANSACTIONS) }
-        TabChip("Promotions", filter == InboxFilter.PROMOTIONS, theme) { onFilterChange(InboxFilter.PROMOTIONS) }
-        TabChip("Unread${if(unreadCount > 0) " ($unreadCount)" else ""}", filter == InboxFilter.UNREAD, theme) { onFilterChange(InboxFilter.UNREAD) }
-        TabChip("Starred", filter == InboxFilter.STARRED, theme) { onFilterChange(InboxFilter.STARRED) }
-        TabChip("Contacts", filter == InboxFilter.CONTACTS, theme) { onFilterChange(InboxFilter.CONTACTS) }
-        TabChip("Archived", filter == InboxFilter.ARCHIVED, theme) { onFilterChange(InboxFilter.ARCHIVED) }
+        TabChip("All", filter == BeaconInboxFilter.ALL, theme) { onFilterChange(BeaconInboxFilter.ALL) }
+        TabChip("Unread${if(unreadCount > 0) " ($unreadCount)" else ""}", filter == BeaconInboxFilter.UNREAD, theme) { onFilterChange(BeaconInboxFilter.UNREAD) }
+        TabChip("Personal", filter == BeaconInboxFilter.PERSONAL, theme) { onFilterChange(BeaconInboxFilter.PERSONAL) }
+        TabChip("Transactions", filter == BeaconInboxFilter.TRANSACTIONS, theme) { onFilterChange(BeaconInboxFilter.TRANSACTIONS) }
+        TabChip("Promotions", filter == BeaconInboxFilter.PROMOTIONS, theme) { onFilterChange(BeaconInboxFilter.PROMOTIONS) }
+        TabChip("Unread${if(unreadCount > 0) " ($unreadCount)" else ""}", filter == BeaconInboxFilter.UNREAD, theme) { onFilterChange(BeaconInboxFilter.UNREAD) }
+        TabChip("Starred", filter == BeaconInboxFilter.STARRED, theme) { onFilterChange(BeaconInboxFilter.STARRED) }
+        TabChip("Contacts", filter == BeaconInboxFilter.CONTACTS, theme) { onFilterChange(BeaconInboxFilter.CONTACTS) }
+        TabChip("Archived", filter == BeaconInboxFilter.ARCHIVED, theme) { onFilterChange(BeaconInboxFilter.ARCHIVED) }
     }
 }
 
@@ -1330,4 +1275,3 @@ private fun TabChip(label: String, selected: Boolean, theme: ThemePalette, onCli
     }
 }
 
-enum class InboxFilter { ALL, READ, UNREAD, STARRED, ARCHIVED, PERSONAL, TRANSACTIONS, PROMOTIONS, CONTACTS }

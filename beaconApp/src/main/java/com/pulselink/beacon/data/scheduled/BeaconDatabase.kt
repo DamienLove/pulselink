@@ -16,12 +16,12 @@ import androidx.room.AutoMigration
         ThreadDraft::class
     ],
     version = 4,
-    exportSchema = true,
-    autoMigrations = [
-        AutoMigration(from = 1, to = 2),
-        AutoMigration(from = 2, to = 3),
-        AutoMigration(from = 3, to = 4)
-    ]
+    exportSchema = false
+    // autoMigrations = [
+    //     AutoMigration(from = 1, to = 2),
+    //     AutoMigration(from = 2, to = 3),
+    //     AutoMigration(from = 3, to = 4)
+    // ]
 )
 abstract class BeaconDatabase : RoomDatabase() {
     abstract fun scheduledMessageDao(): ScheduledMessageDao
