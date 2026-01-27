@@ -3867,6 +3867,10 @@ function App() {
   const tierLabel = isPremiumUser ? 'Premium' : (isProUser ? 'Pro' : 'Free');
   const hasBeaconData = isPremiumUser || lines.length > 0 || legacyThreads.length > 0;
 
+  const activeAlertCount = useMemo(() => alertLocations.length, [alertLocations]);
+  const threadCount = useMemo(() => combinedThreads.length, [combinedThreads]);
+  const playlistCount = useMemo(() => ringerPlaylist.length, [ringerPlaylist]);
+
   const navLogo = useMemo(() => {
      if (remoteSettings.mergedExperienceEnabled) {
          return beaconLogo;
@@ -4087,48 +4091,69 @@ function App() {
                   </div>
                 </div>
               )}
+
+              <div className="status-widget glass-panel" style={{ marginBottom: '24px', display: 'flex', gap: '24px', padding: '16px 24px', borderRadius: '16px', alignItems: 'center' }}>
+                <div className="status-item" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className={`status-dot ${remoteSettings.remoteWebAccessEnabled ? 'active' : ''}`} style={{ width: 8, height: 8, borderRadius: '50%', background: remoteSettings.remoteWebAccessEnabled ? 'var(--success)' : 'var(--muted)', boxShadow: remoteSettings.remoteWebAccessEnabled ? '0 0 10px var(--success)' : 'none' }}></span>
+                  <span style={{ fontSize: '0.9em', fontWeight: 600 }}>Web Relay</span>
+                </div>
+                <div className="status-item" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className={`status-dot ${syncDiagnostics ? 'active' : 'warning'}`} style={{ width: 8, height: 8, borderRadius: '50%', background: syncDiagnostics ? 'var(--accent)' : 'var(--warning)', boxShadow: syncDiagnostics ? '0 0 10px var(--accent)' : 'none' }}></span>
+                  <span style={{ fontSize: '0.9em', fontWeight: 600 }}>Sync Status</span>
+                </div>
+                <div className="status-item" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+                  <span className="badge badge-premium" style={{ fontSize: '0.8em' }}>{tierLabel}</span>
+                </div>
+              </div>
+
               <div className="home-grid">
                 <button className="home-card holographic-card" onClick={() => setActivePanel('beacon')}>
                   <div className="home-icon beacon">
                     <img src={beaconLogo} alt="Beacon" />
                   </div>
                   <h3>Beacon Inbox</h3>
-                  <p>View SMS synced from your phone.</p>
+                  <div className="stat-number">{threadCount}</div>
+                  <p>Synced conversations</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('pulselink')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink" />
                   </div>
                   <h3>PulseLink</h3>
-                  <p>Update your profile and trusted contacts.</p>
+                  <div className="stat-number">{trustedContacts.length}</div>
+                  <p>Trusted contacts</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('contacts')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink contacts" />
                   </div>
                   <h3>Contacts</h3>
-                  <p>Browse all device contacts synced from your phone.</p>
+                  <div className="stat-number">{deviceContacts.length}</div>
+                  <p>Device contacts</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('ringersong')}>
                   <div className="home-icon ringersong">
                     <img src={ringersongLogo} alt="RingerSong" />
                   </div>
                   <h3>RingerSong</h3>
-                  <p>Manage ringtone progressions and streaming.</p>
+                  <div className="stat-number">{playlistCount}</div>
+                  <p>Songs in playlist</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('map')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink map" />
                   </div>
                   <h3>Emergency Map</h3>
-                  <p>Track shared locations from PulseLink alerts.</p>
+                  <div className="stat-number" style={{ color: activeAlertCount > 0 ? 'var(--danger)' : 'inherit' }}>{activeAlertCount}</div>
+                  <p>Active alerts</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('themes')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink themes" />
                   </div>
                   <h3>Theme Gallery</h3>
-                  <p>Browse, import, and publish custom themes.</p>
+                  <div className="stat-number">{publicThemes.length}</div>
+                  <p>Community themes</p>
                 </button>
                 <button
                   className="home-card holographic-card"

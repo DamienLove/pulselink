@@ -2062,3 +2062,47 @@ textarea:focus-visible,
   from { opacity: 0; transform: translateY(-20px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Dashboard Enhancements                                                    */
+/* -------------------------------------------------------------------------- */
+
+.stat-number {
+  font-family: var(--font-display);
+  font-size: 2.5em;
+  font-weight: 700;
+  margin: 8px 0;
+  color: var(--ink);
+  text-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
+  letter-spacing: -0.05em;
+  line-height: 1;
+  transition: all 0.3s ease;
+}
+
+.status-widget {
+  backdrop-filter: blur(40px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+  animation: slideUp 0.5s ease-out;
+}
+
+.status-dot {
+  transition: all 0.3s ease;
+}
+
+.status-dot.active {
+  box-shadow: 0 0 10px currentColor;
+  animation: pulseGlow 2s infinite;
+}
+
+.status-dot.warning {
+  background: var(--warning) !important;
+  box-shadow: 0 0 10px var(--warning);
+}
+
+/* Enhanced Hover for Holographic Cards */
+.holographic-card:hover .stat-number {
+  color: var(--accent);
+  text-shadow: 0 0 30px var(--accent-glow);
+  transform: scale(1.05);
+}
