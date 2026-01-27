@@ -22,3 +22,7 @@
 ## 2024-05-28 - Image Load Error Fallbacks
 **Learning:** User-provided URLs for avatars often break (404s), resulting in ugly browser-default broken image icons that degrade perceived app quality. Relying solely on "if URL exists" logic is insufficient.
 **Action:** Implemented a `useState` + `onError` handler pattern in the `Avatar` component to detect load failures and automatically revert to the deterministic initial fallback, maintaining UI elegance even with bad data.
+
+## 2026-01-27 - Live Filter Feedback
+**Learning:** In dynamic search lists (like Contacts or Themes), sighted users see the list shrink immediately, but screen reader users get no feedback that the filter worked or how many items remain.
+**Action:** Use `aria-live="polite"` on the result count element and `role="status"` on empty state messages to announce changes or "No results found" without user intervention.

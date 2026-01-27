@@ -2059,7 +2059,7 @@ const Sidebar = memo(({
             {isLoadingThreads ? (
                Array.from({ length: 5 }).map((_, i) => <ThreadSkeleton key={i} />)
             ) : filteredThreads.length === 0 ? (
-              <div className="sidebar-placeholder">
+              <div className="sidebar-placeholder" role="status">
                 <div className="sidebar-tip">
                   <strong>{searchQuery ? "No matches found" : "No conversations found"}</strong>
                 </div>
@@ -4377,7 +4377,7 @@ function App() {
                 <p>Browse all device contacts synced from your phone.</p>
               </div>
               <div className="contacts-toolbar">
-                <div className="contact-count" style={{ marginBottom: 12, fontSize: '0.9em', color: 'var(--muted)' }}>
+                <div className="contact-count" style={{ marginBottom: 12, fontSize: '0.9em', color: 'var(--muted)' }} aria-live="polite" aria-atomic="true">
                   {filteredDeviceContacts.length} contact{filteredDeviceContacts.length === 1 ? '' : 's'}
                 </div>
                 <div className="settings-search-container" style={{ flex: 1, marginBottom: 0 }}>
@@ -4419,7 +4419,7 @@ function App() {
                   </button>
                 )}
                 {filteredDeviceContacts.length === 0 && (
-                  <div className="settings-note">
+                  <div className="settings-note" role="status">
                     {contactSearch.trim() ? (
                       <>
                         No contacts match that search.
@@ -4659,7 +4659,7 @@ function App() {
                       />
                     ))}
                     {filteredThemes.length === 0 && (
-                      <div className="theme-empty">
+                      <div className="theme-empty" role="status">
                         No themes found.
                       </div>
                     )}
