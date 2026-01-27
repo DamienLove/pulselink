@@ -52,13 +52,13 @@ test.describe('Comprehensive Feature Verification', () => {
     expect(src).toContain('placehold.co/100x100.png');
   });
 
-  test('should verify Features (Extensions) functionality', async ({ page }) => {
-    // Navigate to Features (Extensions)
-    // The button title might be "Features" or "Extensions" depending on state, but Sidebar usually renders it as "Features"
-    const btn = page.locator('.nav-item[title="Features"]');
+  test('should verify Extensions Store functionality', async ({ page }) => {
+    // Navigate to Extensions Store
+    // The button title is "Store"
+    const btn = page.locator('.nav-item[title="Store"]');
     await btn.click();
 
-    await expect(page.getByRole('heading', { name: 'Features', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Extensions Store', exact: true })).toBeVisible();
 
     // Check for "Crash Detection" card presence
     const crashCard = page.locator('.home-card h3', { hasText: 'Crash Detection' });

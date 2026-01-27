@@ -27,7 +27,9 @@ test('Full Verification Suite', async ({ page }) => {
         mapEnabled: true,
         contactsEnabled: true,
         themesEnabled: true,
-        ringerSongEnabled: true
+        ringerSongEnabled: true,
+        beaconEnabled: true,
+        pulseLinkEnabled: true
       };
 
       // Inject Mock User Data (Settings)
@@ -159,11 +161,11 @@ test('Full Verification Suite', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Account', exact: true })).not.toBeVisible();
   });
 
-  // 7. Features
-  await test.step('Features Page', async () => {
-      await page.locator('.sidebar-nav button[title="Features"]').click();
+  // 7. Extensions Store
+  await test.step('Extensions Store Page', async () => {
+      await page.locator('.sidebar-nav button[title="Store"]').click();
       await expect(page.getByRole('heading', { name: 'Quick Setup' })).toBeVisible();
-      await expect(page.locator('.home-card h3', { hasText: 'Beacon Inbox' })).toBeVisible();
+      await expect(page.locator('.home-card h3', { hasText: 'Beacon Web Inbox' })).toBeVisible();
   });
 
   // 8. PulseLink Emergency Features (Map & Trusted Contacts)

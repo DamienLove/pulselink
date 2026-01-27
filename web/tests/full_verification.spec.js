@@ -20,7 +20,7 @@ test.describe('Full Feature Verification', () => {
       'RingerSong',
       'Emergency Map',
       'Theme Gallery',
-      'Features'
+      'Extensions Store'
     ];
 
     for (const title of cardTitles) {
@@ -74,18 +74,18 @@ test.describe('Full Feature Verification', () => {
     await expect(page.getByText('Future Deep V11')).toBeVisible();
   });
 
-  test('should navigate to Features and verify list', async ({ page }) => {
+  test('should navigate to Extensions Store and verify list', async ({ page }) => {
     // Target the card in the grid specifically
-    const btn = page.locator('.home-grid .home-card').filter({ hasText: 'Features' }).first();
+    const btn = page.locator('.home-grid .home-card').filter({ hasText: 'Extensions Store' }).first();
 
     if (await btn.isDisabled()) {
-        console.log('Features button is disabled in UI.');
+        console.log('Extensions Store button is disabled in UI.');
         return;
     }
 
     await btn.click();
-    await expect(page.getByRole('heading', { name: 'Features', exact: true })).toBeVisible();
-    await expect(page.getByText('Beacon Inbox')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Extensions Store', exact: true })).toBeVisible();
+    await expect(page.getByText('Beacon Web Inbox')).toBeVisible();
     await expect(page.getByText('Firebase Relay')).toBeVisible();
   });
 
