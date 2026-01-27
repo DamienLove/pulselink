@@ -57,7 +57,7 @@
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border-right: 1px solid var(--glass-border);
   z-index: 20;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .sidebar.collapsed {
@@ -162,7 +162,7 @@
   background: linear-gradient(90deg, rgba(0, 255, 255, 0.15), transparent);
   color: var(--accent);
   border: 1px solid rgba(0, 255, 255, 0.2);
-  box-shadow: inset 0 0 25px rgba(0, 255, 255, 0.1), 0 0 15px rgba(0, 255, 255, 0.05);
+  box-shadow: inset 0 0 30px rgba(0, 255, 255, 0.15), 0 0 20px rgba(0, 255, 255, 0.1);
   text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
 }
 
@@ -175,7 +175,7 @@
   width: 3px;
   background: var(--accent);
   border-radius: 0 4px 4px 0;
-  box-shadow: 0 0 15px var(--accent), 0 0 8px #fff;
+  box-shadow: 0 0 15px var(--accent), 0 0 10px #fff;
 }
 
 .nav-item.active svg, .nav-item.active img {
@@ -598,6 +598,15 @@ textarea:focus-visible,
   outline-offset: 4px;
   box-shadow: 0 0 0 4px rgba(0, 255, 255, 0.2);
   z-index: 10;
+}
+
+button:active,
+.home-card:active,
+.nav-item:active,
+.settings-toggle:active,
+.theme-chip:active {
+  transform: scale(0.98);
+  transition: transform 0.1s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .primary-btn {
@@ -1154,7 +1163,7 @@ textarea:focus-visible,
   color: #000;
   border-bottom-right-radius: 4px;
   font-weight: 500;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 6px 16px rgba(0,0,0,0.5);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 4px 15px rgba(0, 0, 0, 0.3);
   text-shadow: 0 1px 1px rgba(255,255,255,0.2);
 }
 
