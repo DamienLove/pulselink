@@ -672,6 +672,10 @@ class SettingsRepositoryImpl @Inject constructor(
                 prefs[MESSAGE_NOTIFICATION_SOUND_OVERRIDES]
             ) { json.decodeFromString<Map<String, String>>(it) }
                 ?: PulseLinkSettings().messageNotificationSoundOverrides,
+            customVibrationPatternName = prefs[CUSTOM_VIBRATION_NAME],
+            customVibrationPattern = prefs[CUSTOM_VIBRATION_PATTERN]?.let { raw ->
+                decodeJsonOrNull(raw) { json.decodeFromString<List<Long>>(it) }
+            },
             betaAgreementAccepted = prefs[BETA_AGREEMENT_ACCEPTED] ?: PulseLinkSettings().betaAgreementAccepted,
             betaAgreementVersion = prefs[BETA_AGREEMENT_VERSION] ?: PulseLinkSettings().betaAgreementVersion,
             autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,

@@ -1845,7 +1845,7 @@ class MainViewModel @Inject constructor(
         private const val REMOTE_BETA_AGREEMENT_TIMEOUT_MS = 10_000L
         private const val COLLECTION_USERS = "users"
         private const val COLLECTION_TRUSTED_CONTACTS = "trustedContacts"
-        const val BUG_REPORT_PAGE_URL = "https://github.com/DamienLove/pulselink/issues/new"
+        const val BUG_REPORT_PAGE_URL = "https://github.com/DamienLove/pulselink/issues/new?template=bug_report.md&labels=bug"
     }
 }
 
