@@ -241,7 +241,7 @@ fun BeaconSettingsScreen(
                 BeaconSettingsToggleRow(
                     title = "Web access to messages",
                     subtitle = if (remoteWebAccessEnabled) {
-                        "Enabled" + if (isPremiumActive) " (Premium)" else ""
+                        "Enabled • Visit app.damiennichols.com"
                     } else {
                         "Premium-only: securely access SMS from the web"
                     },
