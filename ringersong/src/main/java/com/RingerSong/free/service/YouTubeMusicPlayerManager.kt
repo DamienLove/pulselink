@@ -26,12 +26,13 @@ class YouTubeMusicPlayerManager @Inject constructor(
      */
     suspend fun playTrack(song: SongEntry): Boolean = withContext(Dispatchers.Main) {
         try {
-            // Extract video ID from uri "youtube:video:VIDEO_ID"
-            val videoId = song.uri.removePrefix("youtube:video:")
-
-            // Construct Deep Link
-            // Tapping this link on Android usually opens YouTube Music if installed
-            val uri = Uri.parse("https://music.youtube.com/watch?v=$videoId")
+            val uri = if (song.uri.startsWith("http")) {
+                Uri.parse(song.uri)
+            } else {
+                // Extract video ID from uri "youtube:video:VIDEO_ID"
+                val videoId = song.uri.removePrefix("youtube:video:")
+                Uri.parse("https://music.youtube.com/watch?v=$videoId")
+            }
 
             Log.d(TAG, "Attempting to launch YouTube Music with URI: $uri")
 

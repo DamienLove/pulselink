@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 fun RingerSongApp(
     viewModel: RingerViewModel,
     sharedUri: Uri?,
+    sharedText: String?,
     onSharedConsumed: () -> Unit
 ) {
     val navController = rememberNavController()
@@ -40,6 +41,19 @@ fun RingerSongApp(
             viewModel.addSongs(listOf(sharedUri)) { result ->
                 coroutineScope.launch { snackbarHostState.showResult(result) }
                 if (result.addedCount > 0) {
+                    activity?.let { AdServices.showInterstitial(it) }
+                }
+            }
+            onSharedConsumed()
+        }
+    }
+
+    LaunchedEffect(sharedText) {
+        if (sharedText != null) {
+            viewModel.addTrackFromUrl(sharedText) { message ->
+                coroutineScope.launch { snackbarHostState.showSnackbar(message) }
+                // Only show interstitial if success? addTrackFromUrl returns a message.
+                if (!message.startsWith("Error")) {
                     activity?.let { AdServices.showInterstitial(it) }
                 }
             }
@@ -137,6 +151,14 @@ private fun AppNavHost(
                     viewModel.addSpotifyTrack(track) { message ->
                         coroutineScope.launch { snackbarHostState.showSnackbar(message) }
                         activity?.let { AdServices.showInterstitial(it) }
+                    }
+                },
+                onAddLink = { url ->
+                    viewModel.addTrackFromUrl(url) { message ->
+                        coroutineScope.launch { snackbarHostState.showSnackbar(message) }
+                        if (!message.startsWith("Error")) {
+                            activity?.let { AdServices.showInterstitial(it) }
+                        }
                     }
                 },
                 onConnectSpotify = { onResult ->

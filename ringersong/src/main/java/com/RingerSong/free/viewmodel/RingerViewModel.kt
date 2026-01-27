@@ -32,6 +32,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import okhttp3.OkHttpClient
+import org.jsoup.Jsoup
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -739,5 +740,119 @@ class RingerViewModel @Inject constructor(
             val info = truecallerRepo.getCallerInfo(phoneNumber, "US")
             onComplete(info)
         }
+    }
+
+    fun addTrackFromUrl(url: String, onResult: (String) -> Unit) {
+        val uid = auth?.currentUser?.uid ?: run {
+            onResult("Error: Please sign in to add songs")
+            return
+        }
+        val safeDb = db ?: run {
+            onResult("Error: Database unavailable")
+            return
+        }
+
+        viewModelScope.launch {
+            val cleanUrl = url.trim()
+            var source = SongSource.LOCAL
+            var uri = cleanUrl
+            var title = "Unknown Track"
+            var spotifyId: String? = null
+
+            // Detect Source
+            if (cleanUrl.contains("music.apple.com")) {
+                source = SongSource.APPLE_MUSIC
+            } else if (cleanUrl.contains("youtube.com") || cleanUrl.contains("youtu.be")) {
+                source = SongSource.YOUTUBE_MUSIC
+                // Extract video ID if possible, but keeping full URL is often fine for intent handling
+                // Ideally normalize to youtube:video:ID for internal consistency if possible
+                val videoId = extractYouTubeId(cleanUrl)
+                if (videoId != null) {
+                    uri = "youtube:video:$videoId"
+                }
+            } else if (cleanUrl.contains("open.spotify.com/track")) {
+                source = SongSource.SPOTIFY
+                // Extract ID: open.spotify.com/track/ID?si=...
+                val id = cleanUrl.substringAfter("track/").substringBefore("?")
+                spotifyId = id
+                uri = "spotify:track:$id"
+            } else {
+                onResult("Error: Unsupported URL service")
+                return@launch
+            }
+
+            // Fetch Metadata (Title) via Jsoup
+            withContext(Dispatchers.IO) {
+                try {
+                    val doc = Jsoup.connect(cleanUrl)
+                        .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                        .timeout(10000)
+                        .get()
+                    val pageTitle = doc.title()
+                    // Cleanup title (e.g. "Song Name - Artist - Apple Music" -> "Song Name - Artist")
+                    title = pageTitle.replace(" - Apple Music", "")
+                        .replace(" - YouTube Music", "")
+                        .replace(" - YouTube", "")
+                        .replace(" | Spotify", "")
+                } catch (e: Exception) {
+                    // Fallback to existing title or simplified
+                    title = when(source) {
+                        SongSource.APPLE_MUSIC -> "Apple Music Track"
+                        SongSource.YOUTUBE_MUSIC -> "YouTube Music Track"
+                        SongSource.SPOTIFY -> "Spotify Track"
+                        else -> "Web Track"
+                    }
+                }
+            }
+
+            val songId = UUID.randomUUID().toString()
+            val songEntry = SongEntry(
+                id = songId,
+                title = title,
+                uri = uri,
+                source = source,
+                durationMs = 0L, // Unknown
+                addedAt = System.currentTimeMillis()
+            )
+
+            // Update local state
+            withContext(Dispatchers.IO) {
+                store.update { current ->
+                    val updatedSongs = current.songs + songEntry
+                    val updatedOrder = current.songOrder + songEntry.id
+                    current.copy(songs = updatedSongs, songOrder = updatedOrder)
+                }
+            }
+
+            // Sync to Firestore
+            val trackData = hashMapOf(
+                "uri" to uri,
+                "source" to source.name,
+                "title" to title,
+                "artist" to "Unknown", // Metadata scraping usually combines them in title
+                "durationMs" to 0L,
+                "addedAt" to com.google.firebase.Timestamp.now(),
+                "downloaded" to false
+            )
+            if (spotifyId != null) {
+                trackData["spotifyId"] = spotifyId
+                trackData["spotifyUri"] = uri
+            }
+
+            safeDb.collection("users").document(uid).collection("ringer_playlist")
+                .add(trackData)
+                .addOnSuccessListener {
+                    onResult("Added $title")
+                }
+                .addOnFailureListener { e ->
+                     onResult("Error syncing: ${e.message}")
+                }
+        }
+    }
+
+    private fun extractYouTubeId(url: String): String? {
+        // Simple regex for video ID
+        val regex = "(?<=v=|/videos/|embed\\/|youtu.be\\/|\\/v\\/|\\/e\\/|watch\\?v=|&v=)([^#\\&\\?]*).*".toRegex()
+        return regex.find(url)?.groupValues?.get(1)
     }
 }

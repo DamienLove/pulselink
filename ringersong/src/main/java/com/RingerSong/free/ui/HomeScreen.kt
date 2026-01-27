@@ -128,6 +128,7 @@ fun HomeScreen(
     onYouTubeSearch: () -> Unit,
     onClearYouTubeSearch: () -> Unit,
     onAddYouTubeTrack: (SpotifyTrack) -> Unit,
+    onAddLink: (String) -> Unit,
     onConnectSpotify: ( (Boolean) -> Unit ) -> Unit,
     userCapabilities: String,
     snackbarHostState: SnackbarHostState
@@ -278,6 +279,7 @@ fun HomeScreen(
                     onSearch = onYouTubeSearch,
                     onClear = onClearYouTubeSearch,
                     onAddTrack = onAddYouTubeTrack,
+                    onAddLink = onAddLink,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -287,7 +289,10 @@ fun HomeScreen(
                 visible = showContent.value,
                 enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 })
             ) {
-                AppleMusicPlaceholderSection(modifier = Modifier.fillMaxWidth())
+                AppleMusicSection(
+                    onAddLink = onAddLink,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -1054,8 +1059,12 @@ private fun YouTubeMusicSection(
     onSearch: () -> Unit,
     onClear: () -> Unit,
     onAddTrack: (SpotifyTrack) -> Unit,
+    onAddLink: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showPasteLink by remember { mutableStateOf(false) }
+    var link by remember { mutableStateOf("") }
+
     SectionCard(modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1065,7 +1074,7 @@ private fun YouTubeMusicSection(
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Search for tracks on YouTube Music and add them to your progression.",
+                    text = "Search for tracks or paste a YouTube Music link.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1095,6 +1104,34 @@ private fun YouTubeMusicSection(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("Clear")
+                }
+            }
+
+            TextButton(
+                onClick = { showPasteLink = !showPasteLink },
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Text(if (showPasteLink) "Hide Link Input" else "Or Paste Link")
+            }
+
+            if (showPasteLink) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = link,
+                        onValueChange = { link = it },
+                        label = { Text("Paste YouTube Link") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    Button(
+                        onClick = {
+                            onAddLink(link)
+                            link = ""
+                            showPasteLink = false
+                        },
+                        enabled = link.isNotBlank()
+                    ) {
+                        Text("Add")
+                    }
                 }
             }
 
@@ -1181,7 +1218,11 @@ private fun SpotifyResultRow(
 }
 
 @Composable
-private fun AppleMusicPlaceholderSection(modifier: Modifier = Modifier) {
+private fun AppleMusicSection(
+    onAddLink: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var link by remember { mutableStateOf("") }
     SectionCard(modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1191,21 +1232,31 @@ private fun AppleMusicPlaceholderSection(modifier: Modifier = Modifier) {
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Apple Music integration is coming soon.",
+                    text = "Paste a link to an Apple Music track. We'll launch the app to play it.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            OutlinedTextField(
+                value = link,
+                onValueChange = { link = it },
+                label = { Text("Paste Apple Music Link") },
+                placeholder = { Text("https://music.apple.com/...") },
+                modifier = Modifier.fillMaxWidth()
+            )
             Button(
-                onClick = { /* No-op or show info dialog */ },
-                enabled = false,
+                onClick = {
+                    onAddLink(link)
+                    link = ""
+                },
+                enabled = link.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    containerColor = Color(0xFFFA243C), // Apple Music Red-ish
+                    contentColor = Color.White
                 )
             ) {
-                Text("Coming Soon")
+                Text("Add Track")
             }
         }
     }
