@@ -185,7 +185,8 @@ const areThreadsEqual = (prev, next) => {
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
 // when only the selection state changes or when unrelated threads update.
 const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onArchive, contactLookup }) => {
-  const cleanPhone = (thread.address || '').replace(/\D/g, '');
+  // Bolt: Use pre-computed clean address to save regex ops on render
+  const cleanPhone = thread._cleanAddress ?? (thread.address || '').replace(/\D/g, '');
   const contact = contactLookup?.[cleanPhone];
   const name = contact?.displayName || thread.display_name || thread.address;
 
@@ -2521,10 +2522,12 @@ function App() {
   const contactLookup = useMemo(() => {
     const map = {};
     const add = (c) => {
-      const nums = [c.phoneNumber, ...(c.additionalPhones || [])];
-      nums.forEach(n => {
-        if (!n) return;
-        const clean = n.replace(/\D/g, '');
+      // Bolt: Use pre-computed clean phones to save regex ops loop
+      const cleanPhones = c._cleanPhones || [c.phoneNumber, ...(c.additionalPhones || [])]
+        .filter(Boolean)
+        .map(n => n.replace(/\D/g, ''));
+
+      cleanPhones.forEach(clean => {
         if (clean) map[clean] = c;
       });
     };
@@ -2785,10 +2788,16 @@ function App() {
     }
     const trustedRef = collection(db, "users", user.uid, "trustedContacts");
     const unsubscribe = onSnapshot(trustedRef, (snapshot) => {
-      const items = snapshot.docs.map(docSnap => ({
-        id: docSnap.id,
-        ...docSnap.data()
-      }));
+      const items = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        const phones = [data.phoneNumber, ...(data.additionalPhones || [])].filter(Boolean);
+        return {
+          id: docSnap.id,
+          ...data,
+          // Bolt: Pre-compute clean phones
+          _cleanPhones: phones.map(p => p.replace(/\D/g, ''))
+        };
+      });
       items.sort((a, b) => (a.contactOrder ?? 0) - (b.contactOrder ?? 0));
       setTrustedContacts(items);
     });
@@ -2803,10 +2812,16 @@ function App() {
     }
     const deviceRef = collection(db, "users", user.uid, "deviceContacts");
     const unsubscribe = onSnapshot(deviceRef, (snapshot) => {
-      const items = snapshot.docs.map(docSnap => ({
-        id: docSnap.id,
-        ...docSnap.data()
-      }));
+      const items = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        const phones = [data.phoneNumber, ...(data.additionalPhones || [])].filter(Boolean);
+        return {
+          id: docSnap.id,
+          ...data,
+          // Bolt: Pre-compute clean phones
+          _cleanPhones: phones.map(p => p.replace(/\D/g, ''))
+        };
+      });
       items.sort((a, b) => (a.displayName ?? '').localeCompare(b.displayName ?? ''));
       setDeviceContacts(items);
     });
@@ -2829,7 +2844,9 @@ function App() {
         return {
           id: doc.id,
           ...data,
-          date: toMillis(data.date)
+          date: toMillis(data.date),
+          // Bolt: Pre-compute clean address
+          _cleanAddress: (data.address || '').replace(/\D/g, '')
         };
       });
       setLegacyThreads(items);
@@ -2864,7 +2881,9 @@ function App() {
               id: d.id,
               lineId: line.id,
               ...data,
-              date: toMillis(data.date)
+              date: toMillis(data.date),
+              // Bolt: Pre-compute clean address
+              _cleanAddress: (data.address || '').replace(/\D/g, '')
             };
           });
           setLineThreads(prev => ({ ...prev, [line.id]: threads }));
