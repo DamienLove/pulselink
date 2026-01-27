@@ -17,34 +17,41 @@ struct ContentView: View {
 
     var body: some View {
         if viewModel.isLoggedIn {
-            TabView {
-                BeaconTab(viewModel: viewModel, filter: .inbox)
-                    .tabItem {
-                        Label("Inbox", systemImage: "bubble.left.and.bubble.right.fill")
-                    }
-                    .badge(isPro ? "Pro" : nil)
-
-                BeaconTab(viewModel: viewModel, filter: .trusted)
-                    .tabItem {
-                        Label("Trusted", systemImage: "shield.fill")
-                    }
-
-                BeaconTab(viewModel: viewModel, filter: .favorites)
-                    .tabItem {
-                        Label("Favorites", systemImage: "star.fill")
-                    }
-
-                if isPro {
-                    BeaconTab(viewModel: viewModel, filter: .private)
+            VStack(spacing: 0) {
+                TabView {
+                    BeaconTab(viewModel: viewModel, filter: .inbox)
                         .tabItem {
-                            Label("Private", systemImage: "lock.fill")
+                            Label("Inbox", systemImage: "bubble.left.and.bubble.right.fill")
+                        }
+                        .badge(isPro ? "Pro" : nil)
+
+                    BeaconTab(viewModel: viewModel, filter: .trusted)
+                        .tabItem {
+                            Label("Trusted", systemImage: "shield.fill")
+                        }
+
+                    BeaconTab(viewModel: viewModel, filter: .favorites)
+                        .tabItem {
+                            Label("Favorites", systemImage: "star.fill")
+                        }
+
+                    if isPro {
+                        BeaconTab(viewModel: viewModel, filter: .private)
+                            .tabItem {
+                                Label("Private", systemImage: "lock.fill")
+                            }
+                    }
+
+                    SettingsTab(viewModel: viewModel, isPro: isPro)
+                        .tabItem {
+                            Label("Settings", systemImage: "gear")
                         }
                 }
 
-                SettingsTab(viewModel: viewModel, isPro: isPro)
-                    .tabItem {
-                        Label("Settings", systemImage: "gear")
-                    }
+                if !isPro {
+                    AdBanner()
+                        .frame(height: 50)
+                }
             }
         } else {
             LoginView {

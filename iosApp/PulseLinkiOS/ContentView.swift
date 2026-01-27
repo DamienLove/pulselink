@@ -20,27 +20,34 @@ struct ContentView: View {
 
     var body: some View {
         if viewModel.isLoggedIn {
-            TabView {
-                HomeTab(viewModel: viewModel,
-                        showCancelSheet: $showCancelSheet,
-                        pinInput: $pinInput,
-                        isPro: isPro)
-                    .tabItem {
-                        Label("Home", systemImage: "shield.lefthalf.filled")
-                    }
-                    .badge(isPro ? Text("Pro") : nil)
-
-                if isPro {
-                    ContactsTab(viewModel: viewModel, selectedContact: $selectedContact)
+            VStack(spacing: 0) {
+                TabView {
+                    HomeTab(viewModel: viewModel,
+                            showCancelSheet: $showCancelSheet,
+                            pinInput: $pinInput,
+                            isPro: isPro)
                         .tabItem {
-                            Label("Contacts", systemImage: "person.2.fill")
+                            Label("Home", systemImage: "shield.lefthalf.filled")
+                        }
+                        .badge(isPro ? Text("Pro") : nil)
+
+                    if isPro {
+                        ContactsTab(viewModel: viewModel, selectedContact: $selectedContact)
+                            .tabItem {
+                                Label("Contacts", systemImage: "person.2.fill")
+                            }
+                    }
+
+                    SettingsTab(viewModel: viewModel)
+                        .tabItem {
+                            Label("Settings", systemImage: "gear")
                         }
                 }
 
-                SettingsTab(viewModel: viewModel)
-                    .tabItem {
-                        Label("Settings", systemImage: "gear")
-                    }
+                if !isPro {
+                    AdBanner()
+                        .frame(height: 50)
+                }
             }
             .sheet(isPresented: $showCancelSheet) {
                 CancelEmergencySheet(

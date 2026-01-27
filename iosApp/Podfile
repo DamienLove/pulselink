@@ -12,6 +12,7 @@ end
 
 target 'PulseLinkFree' do
   shared_pods
+  pod 'Google-Mobile-Ads-SDK'
 end
 
 target 'PulseLinkPro' do
@@ -20,6 +21,7 @@ end
 
 target 'BeaconFree' do
   shared_pods
+  pod 'Google-Mobile-Ads-SDK'
 end
 
 target 'BeaconPro' do
