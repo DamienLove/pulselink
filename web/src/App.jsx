@@ -843,17 +843,22 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
           {body.length > 0 && (
             <div
               id="message-char-count"
+              role="status"
+              aria-live="polite"
               style={{
                 position: 'absolute',
                 bottom: '8px',
                 right: '12px',
                 fontSize: '0.75em',
-                color: 'var(--muted)',
+                color: body.length > 160 ? 'var(--warning)' : 'var(--muted)',
                 pointerEvents: 'none',
-                fontWeight: 500
+                fontWeight: 500,
+                transition: 'color 0.2s ease'
               }}
             >
-              {body.length}
+              {body.length > 160
+                ? `${body.length} / ${Math.ceil(body.length / 160)}`
+                : body.length}
             </div>
           )}
         </div>

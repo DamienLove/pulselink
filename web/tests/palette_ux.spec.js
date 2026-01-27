@@ -60,4 +60,20 @@ test.describe('Palette UX Enhancements', () => {
     await expect(hint).toHaveText('/');
     await expect(hint).toHaveAttribute('aria-hidden', 'true');
   });
+
+  test('Smart character count should show segments', async ({ page }) => {
+    await page.locator('.nav-item[title="Beacon"]').click();
+    await page.getByText('Test Contact').first().click();
+
+    const textarea = page.locator('.composer-textarea');
+    await expect(textarea).toBeVisible();
+
+    await textarea.fill('Hello world');
+    const counter = page.locator('#message-char-count');
+    await expect(counter).toHaveText('11');
+
+    const longText = 'a'.repeat(165);
+    await textarea.fill(longText);
+    await expect(counter).toHaveText('165 / 2');
+  });
 });
