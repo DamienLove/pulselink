@@ -414,7 +414,9 @@ const alertBadgeColor = {
 };
 
 const buildAlertSnippet = (body = '') => {
-  const firstLine = body.split('\n')[0] ?? '';
+  if (!body) return '';
+  const idx = body.indexOf('\n');
+  const firstLine = idx === -1 ? body : body.slice(0, idx);
   if (firstLine.length <= 88) return firstLine;
   return `${firstLine.slice(0, 85)}...`;
 };

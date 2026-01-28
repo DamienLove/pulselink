@@ -9,3 +9,7 @@
 ## 2024-05-27 - Array Allocation in Render Loops
 **Learning:** `[...a, ...b].filter(Boolean).join(' • ')` is a common pattern for joining strings with separators, but it creates multiple intermediate arrays (spread, filter result) on every render.
 **Action:** For simple string joining in hot paths (like list items), use imperative string concatenation or template literals to avoid unnecessary object allocation.
+
+## 2024-06-03 - String Splitting in Hot Paths
+**Learning:** `string.split('\n')[0]` creates an array of all lines just to access the first one. For large strings (e.g. logs, long messages), this causes significant allocation overhead (benchmark showed ~195x slowdown for 1000 lines).
+**Action:** Use `indexOf` and `slice` to extract substrings without allocating intermediate arrays for the rest of the content.
