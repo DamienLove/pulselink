@@ -117,7 +117,7 @@ class SmsSyncWorker @AssistedInject constructor(
                 threads = if (item != null) listOf(item) else emptyList()
             } else {
                 val threadLimit = if (isPremium || isPro) 200 else 50
-                threads = smsRepository.listThreads(limit = threadLimit)
+                threads = smsRepository.listThreads(limit = threadLimit, includeArchived = true)
             }
 
             val lineThreadsRef = lineRef.collection("threads")
@@ -179,7 +179,8 @@ class SmsSyncWorker @AssistedInject constructor(
                     "isFavorite" to thread.isFavorite,
                     "isPrivate" to thread.isPrivate,
                     "isTrusted" to thread.isTrusted,
-                    "isPinned" to thread.isPinned
+                    "isPinned" to thread.isPinned,
+                    "archived" to thread.isArchived
                 )
                 lineThreadDoc.set(threadData, SetOptions.merge()).await()
                 syncedThreads++

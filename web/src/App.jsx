@@ -14,6 +14,7 @@ import {
 import {
   collection,
   query,
+  where,
   orderBy,
   onSnapshot,
   addDoc,
@@ -745,7 +746,8 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
     if (!user) return;
     const cleanAddress = address.trim();
     const cleanBody = body.trim();
-    const effectiveLineId = lineInboxMode === 'PER_LINE' ? (lineId || activeLineId || lines[0]?.id || null) : null;
+    // Bolt: Ensure lineId is always set to prevent race conditions in relay service
+    const effectiveLineId = (lineInboxMode === 'PER_LINE' ? (lineId || activeLineId) : null) || lines.find(l => l.primaryDeviceId)?.id || lines[0]?.id || null;
 
     if (!cleanAddress || !cleanBody) {
       setStatus("Add a phone number and message.");
@@ -2856,7 +2858,8 @@ function App() {
       // For each line, listen to its threads
       const unsubscribes = linesData.map(line => {
         const lineThreadsRef = collection(db, "users", user.uid, "lines", line.id, "threads");
-        const q = query(lineThreadsRef, orderBy("date", "desc"), limit(50));
+        // Bolt: Filter by archive status in query to support server-side pagination of archives
+        const q = query(lineThreadsRef, where("archived", "==", !!showArchived), orderBy("date", "desc"), limit(50));
         return onSnapshot(q, (threadSnap) => {
           const threads = threadSnap.docs.map(d => {
             const data = d.data();
@@ -2874,7 +2877,7 @@ function App() {
       return () => unsubscribes.forEach(unsub => unsub());
     });
     return () => unsubscribe();
-  }, [user, userData?.remoteWebAccessEnabled]);
+  }, [user, userData?.remoteWebAccessEnabled, showArchived]);
 
   useEffect(() => {
     const themesRef = collection(db, "themes_public");

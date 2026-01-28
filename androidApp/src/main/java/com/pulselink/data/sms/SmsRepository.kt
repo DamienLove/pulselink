@@ -133,6 +133,7 @@ class SmsRepository @Inject constructor(
 
         // 4. Check Pinned
         val isPinned = isThreadPinned(threadId)
+        val isArchived = isThreadArchived(threadId)
 
         // 5. Build item
         val trustedUrgency = contact?.let {
@@ -155,7 +156,8 @@ class SmsRepository @Inject constructor(
             isTrusted = contact != null,
             trustedUrgency = trustedUrgency,
             isOtp = OtpHelper.isOtpMessage(phone, latest.body),
-            isPinned = isPinned
+            isPinned = isPinned,
+            isArchived = isArchived
         )
     }
 
@@ -948,7 +950,8 @@ class SmsRepository @Inject constructor(
                 isTrusted = contact != null,
                 trustedUrgency = trustedUrgency,
                     isOtp = OtpHelper.isOtpMessage(row.primaryPhone, row.snippet),
-                    isPinned = pinnedIds.contains(row.threadId)
+                    isPinned = pinnedIds.contains(row.threadId),
+                    isArchived = isArchived
             )
         }
 
@@ -1119,6 +1122,7 @@ class SmsRepository @Inject constructor(
             val items = mutableListOf<SmsThreadItem>()
             parsedThreads.forEach { row ->
                 val contact = contactsMap[row.primaryPhone] ?: contactsMap[row.normalizedPhone]
+                val isArchived = archivedIds.contains(row.threadId)
 
                  val trustedUrgency = contact?.let {
                     when {
@@ -1142,7 +1146,8 @@ class SmsRepository @Inject constructor(
                     isTrusted = contact != null,
                     trustedUrgency = trustedUrgency,
                     isOtp = OtpHelper.isOtpMessage(row.primaryPhone, row.snippet),
-                    isPinned = pinnedIds.contains(row.threadId)
+                    isPinned = pinnedIds.contains(row.threadId),
+                    isArchived = isArchived
                 )
             }
 
