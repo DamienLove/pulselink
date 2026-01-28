@@ -28,6 +28,7 @@ import com.pulselink.beacon.worker.ScheduledMessageWorker
 import com.pulselink.beacon.util.ThreadDateUtils
 import com.pulselink.beacon.BuildConfig
 import com.pulselink.beacon.data.BeaconContact
+import com.pulselink.beacon.data.ThreadCategory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -36,14 +37,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
-
-sealed class SearchResultState {
-    object Idle : SearchResultState()
-    object Searching : SearchResultState()
-    data class Contact(val threadId: Long, val address: String) : SearchResultState()
-    data class Messages(val hits: List<SmsMessageItem>) : SearchResultState()
-    object Empty : SearchResultState()
-}
 
 class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -56,10 +49,6 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     private val draftDao = BeaconDatabase.getDatabase(app).threadDraftDao()
     private val workManager = WorkManager.getInstance(app)
 
-    private companion object {
-        const val THREAD_LIMIT = 100
-        const val MESSAGE_LIMIT = 300
-    }
 
     var threads by mutableStateOf<List<SmsThreadItem>>(emptyList())
         private set
@@ -109,7 +98,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var currentAddress by mutableStateOf("")
         private set
-    var searchState: SearchResultState by mutableStateOf(SearchResultState.Idle)
+    var searchState: UiSearchResultState by mutableStateOf(UiSearchResultState.Idle)
         private set
     var isLoading by mutableStateOf(true)
         private set
@@ -150,7 +139,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     // Filtered state
     var filteredThreads by mutableStateOf<List<SmsThreadItem>>(emptyList())
         private set
-    var currentFilter by mutableStateOf(InboxFilter.ALL)
+    var currentFilter by mutableStateOf(UiInboxFilter.ALL)
         private set
     var currentSearchText by mutableStateOf("")
         private set
@@ -189,7 +178,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                 starredMessageIds = stars.map { it.messageId }.toSet()
                 threadsWithStars = stars.map { it.threadId }.toSet()
                 // Refresh list if filter is STARRED
-                if (currentFilter == InboxFilter.STARRED) updateFilteredList()
+                if (currentFilter == UiInboxFilter.STARRED) updateFilteredList()
             }
         }
 
@@ -216,9 +205,9 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun updateFilter(filter: InboxFilter) {
+    fun updateFilter(filter: UiInboxFilter) {
         currentFilter = filter
-        if (filter == InboxFilter.CONTACTS && contacts.isEmpty()) {
+        if (filter == UiInboxFilter.CONTACTS && contacts.isEmpty()) {
             loadContacts()
         }
         updateFilteredList()
@@ -253,38 +242,101 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun mergeThreads() {
         viewModelScope.launch(Dispatchers.Default) {
+            val pendingSnapshot = synchronized(pendingOutgoingMessages) { pendingOutgoingMessages.toList() }
+            val pendingByThread = pendingSnapshot.filter { it.threadId != 0L }.groupBy { it.threadId }
+            val pendingByAddress = pendingSnapshot.filter { it.threadId == 0L }.groupBy { it.address }
+
+            // Set of thread IDs present in rawThreads
+            val existingThreadIds = rawThreads.map { it.threadId }.toSet()
+            // Set of addresses present in rawThreads (to match new threads by address if ID is missing)
+            val existingAddresses = rawThreads.map { it.address }.toSet()
+
             // Optimized sorting and filtering blocked
-            val merged = rawThreads.asSequence()
+            val processedExisting = rawThreads.asSequence()
                 .filter { !blockedNumbers.contains(it.address) }
                 .map { thread ->
                     val isPinned = inboxState.pinnedThreadIds.contains(thread.threadId)
                     val isArchived = inboxState.archivedThreadIds.contains(thread.threadId)
                     val draft = draftsMap[thread.threadId]
 
-                    // Calculate effective timestamp (max of thread or draft)
-                    // If we have a draft that is newer than the thread timestamp, use it.
-                    val effectiveTimestamp = if (draft != null && draft.timestamp > thread.timestamp) {
-                        draft.timestamp
-                    } else {
-                        thread.timestamp
+                    // Check for pending messages
+                    val pendingList = pendingByThread[thread.threadId]
+                    val latestPending = pendingList?.sortedByDescending { it.timestamp }?.firstOrNull()
+
+                    // Calculate effective timestamp (max of thread, draft, or pending)
+                    var effectiveTimestamp = thread.timestamp
+                    var snippet = thread.snippet
+
+                    if (draft != null && draft.timestamp > effectiveTimestamp) {
+                        effectiveTimestamp = draft.timestamp
                     }
 
-                    // Always create copy if draft exists or other state changed
+                    if (latestPending != null && latestPending.timestamp > effectiveTimestamp) {
+                        effectiveTimestamp = latestPending.timestamp
+                        snippet = "You: ${latestPending.body}"
+                    }
+
+                    // Always create copy if any state changed
                     if (isPinned != thread.isPinned ||
                         isArchived != thread.isArchived ||
                         draft?.body != thread.draftSnippet ||
-                        effectiveTimestamp != thread.timestamp
+                        effectiveTimestamp != thread.timestamp ||
+                        snippet != thread.snippet
                     ) {
                         thread.copy(
                             isPinned = isPinned,
                             isArchived = isArchived,
                             draftSnippet = draft?.body,
-                            timestamp = effectiveTimestamp
+                            timestamp = effectiveTimestamp,
+                            snippet = snippet
                         )
                     } else {
                         thread
                     }
                 }
+
+            // Create fake threads for pending messages that don't match existing threads
+            val newThreads = mutableListOf<SmsThreadItem>()
+
+            // Pending by Address (threadId=0)
+            pendingByAddress.forEach { (address, messages) ->
+                if (!existingAddresses.contains(address)) {
+                    val latest = messages.sortedByDescending { it.timestamp }.first()
+                    newThreads.add(
+                        SmsThreadItem(
+                            threadId = -kotlin.math.abs(address.hashCode()).toLong(), // Stable negative ID
+                            address = address,
+                            snippet = "You: ${latest.body}",
+                            timestamp = latest.timestamp,
+                            unread = false,
+                            isPinned = false,
+                            isArchived = false,
+                            category = ThreadCategory.PERSONAL
+                        )
+                    )
+                }
+            }
+
+            // Also handle pendingByThread where threadId IS NOT in rawThreads (e.g. older thread not in limit)
+            pendingByThread.forEach { (tid, messages) ->
+                if (!existingThreadIds.contains(tid)) {
+                    val latest = messages.sortedByDescending { it.timestamp }.first()
+                    newThreads.add(
+                        SmsThreadItem(
+                            threadId = tid,
+                            address = latest.address,
+                            snippet = "You: ${latest.body}",
+                            timestamp = latest.timestamp,
+                            unread = false,
+                            isPinned = false,
+                            isArchived = false,
+                            category = ThreadCategory.PERSONAL
+                        )
+                    )
+                }
+            }
+
+            val merged = (processedExisting + newThreads)
                 .sortedWith(
                     compareByDescending<SmsThreadItem> { it.isPinned }
                         .thenByDescending { it.timestamp }
@@ -311,15 +363,15 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                 }
             } else {
                  when (filter) {
-                    InboxFilter.ALL -> list.filter { !it.isArchived }
-                    InboxFilter.READ -> list.filter { !it.unread && !it.isArchived }
-                    InboxFilter.UNREAD -> list.filter { it.unread && !it.isArchived }
-                    InboxFilter.STARRED -> list.filter { threadsWithStars.contains(it.threadId) && !it.isArchived }
-                    InboxFilter.PERSONAL -> list.filter { it.category == ThreadCategory.PERSONAL && !it.isArchived }
-                    InboxFilter.TRANSACTIONS -> list.filter { it.category == ThreadCategory.TRANSACTIONS && !it.isArchived }
-                    InboxFilter.PROMOTIONS -> list.filter { it.category == ThreadCategory.PROMOTIONS && !it.isArchived }
-                    InboxFilter.ARCHIVED -> list.filter { it.isArchived }
-                    InboxFilter.CONTACTS -> emptyList()
+                    UiInboxFilter.ALL -> list.filter { !it.isArchived }
+                    UiInboxFilter.READ -> list.filter { !it.unread && !it.isArchived }
+                    UiInboxFilter.UNREAD -> list.filter { it.unread && !it.isArchived }
+                    UiInboxFilter.STARRED -> list.filter { threadsWithStars.contains(it.threadId) && !it.isArchived }
+                    UiInboxFilter.PERSONAL -> list.filter { it.category == ThreadCategory.PERSONAL && !it.isArchived }
+                    UiInboxFilter.TRANSACTIONS -> list.filter { it.category == ThreadCategory.TRANSACTIONS && !it.isArchived }
+                    UiInboxFilter.PROMOTIONS -> list.filter { it.category == ThreadCategory.PROMOTIONS && !it.isArchived }
+                    UiInboxFilter.ARCHIVED -> list.filter { it.isArchived }
+                    UiInboxFilter.CONTACTS -> emptyList()
                 }
             }
 
@@ -746,7 +798,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun getDraftForThread(threadId: Long): String? {
-        return draftsMap[threadId]
+        return draftsMap[threadId]?.body
     }
 
     fun scheduleMessage(body: String, scheduledTime: Long) {
@@ -795,14 +847,14 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     fun search(query: String) {
         searchJob?.cancel()
         if (query.isBlank()) {
-            searchState = SearchResultState.Idle
+            searchState = UiSearchResultState.Idle
             return
         }
 
         // Debounce
         searchJob = viewModelScope.launch(Dispatchers.IO) {
             delay(300)
-            withContext(Dispatchers.Main) { searchState = SearchResultState.Searching }
+            withContext(Dispatchers.Main) { searchState = UiSearchResultState.Searching }
 
             val direct = threads.firstOrNull {
                 it.address.contains(query, ignoreCase = true)
@@ -810,24 +862,27 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
             }
             if (direct != null) {
                 withContext(Dispatchers.Main) {
-                    searchState = SearchResultState.Contact(direct.threadId, direct.address)
+                    searchState = UiSearchResultState.Contact(direct.threadId, direct.address)
                 }
                 return@launch
             }
 
             val hits = repo.searchMessages(query)
             withContext(Dispatchers.Main) {
-                searchState = if (hits.isEmpty()) SearchResultState.Empty else SearchResultState.Messages(hits)
+                searchState = if (hits.isEmpty()) UiSearchResultState.Empty else UiSearchResultState.Messages(hits)
             }
         }
     }
 
     fun clearSearch() {
         searchJob?.cancel()
-        searchState = SearchResultState.Idle
+        searchState = UiSearchResultState.Idle
     }
 
     companion object {
+        private const val THREAD_LIMIT = 100
+        private const val MESSAGE_LIMIT = 300
+
         fun factory(app: Application) = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
