@@ -217,6 +217,10 @@ private struct BeaconTab: View {
                         }
                     }
                 }
+                if !isPro {
+                    AdBanner()
+                        .frame(height: 50)
+                }
             }
             .background(RelayColors.deep.ignoresSafeArea())
             .navigationDestination(for: BeaconContactCard.self) { contact in

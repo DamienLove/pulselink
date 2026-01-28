@@ -96,6 +96,9 @@ private struct HomeTab: View {
 
                     if !isPro {
                         proUpsellCard
+                        AdBanner()
+                            .frame(height: 50)
+                            .padding(.top, 10)
                     }
                 }
                 .padding(16)

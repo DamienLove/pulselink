@@ -6,6 +6,9 @@ import FirebaseCore
 #if canImport(FirebaseMessaging)
 import FirebaseMessaging
 #endif
+#if canImport(GoogleMobileAds)
+import GoogleMobileAds
+#endif
 
 @main
 struct PulseLinkiOSApp: App {
@@ -19,6 +22,10 @@ struct PulseLinkiOSApp: App {
                 .task {
                     // Configure Firebase if GoogleService-Info.plist is present
                     _ = FirebaseBootstrap.isConfigured
+                    // Initialize AdMob
+                    #if canImport(GoogleMobileAds)
+                    GADMobileAds.sharedInstance().start(completionHandler: nil)
+                    #endif
                     // Set messaging delegate
                     #if canImport(FirebaseMessaging)
                     Messaging.messaging().delegate = messagingDelegate
