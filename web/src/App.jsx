@@ -147,6 +147,14 @@ const stringToColor = (str) => {
   return '#' + '00000'.substring(0, 6 - c.length) + c;
 };
 
+const getContrastColor = (hexColor) => {
+  const r = parseInt(hexColor.substr(1, 2), 16);
+  const g = parseInt(hexColor.substr(3, 2), 16);
+  const b = parseInt(hexColor.substr(5, 2), 16);
+  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+  return (yiq >= 128) ? '#000000' : '#FFFFFF';
+};
+
 const Avatar = memo(({ name, url, size = 40, style, className = "thread-avatar" }) => {
   const [imgError, setImgError] = useState(false);
 
@@ -159,8 +167,10 @@ const Avatar = memo(({ name, url, size = 40, style, className = "thread-avatar" 
   }
   const initials = (name || '?').slice(0, 2).toUpperCase();
   const bg = stringToColor(name || '?');
+  const textColor = getContrastColor(bg);
+
   return (
-    <div className={className} style={{ width: size, height: size, background: bg, ...style, display: 'grid', placeItems: 'center', color: '#fff', fontWeight: '700' }}>
+    <div className={className} style={{ width: size, height: size, background: bg, ...style, display: 'grid', placeItems: 'center', color: textColor, fontWeight: '700' }}>
       {initials}
     </div>
   );
