@@ -65,10 +65,16 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ## 💖 Support the Project
 
-PulseLink is built on the belief that personal safety is a right, not a privilege. Your support funds our server infrastructure (Firebase, SMS gateways) and continued development.
-
 [![GitHub Sponsors](https://img.shields.io/badge/Sponsor-❤_GitHub_Sponsors-ea4aaa?logo=github)](https://github.com/sponsors/DamienLove)
 [![Ko‑fi](https://img.shields.io/badge/Buy_me_a_coffee-Ko%E2%80%91fi-29abe0?logo=kofi)](https://ko-fi.com/DamienLove)
+
+If PulseLink helps you or someone you care about, please consider supporting development. Your contributions fund:
+
+- App Store fees and infrastructure (build minutes, test devices)
+- Accessibility and safety research
+- iOS development to reach more users
+
+Sponsor or tip: GitHub Sponsors · Ko‑fi · PayPal (see badges above)
 
 ---
 
