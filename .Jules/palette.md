@@ -22,3 +22,7 @@
 ## 2024-05-28 - Image Load Error Fallbacks
 **Learning:** User-provided URLs for avatars often break (404s), resulting in ugly browser-default broken image icons that degrade perceived app quality. Relying solely on "if URL exists" logic is insufficient.
 **Action:** Implemented a `useState` + `onError` handler pattern in the `Avatar` component to detect load failures and automatically revert to the deterministic initial fallback, maintaining UI elegance even with bad data.
+
+## 2024-05-29 - Context-Aware Auto-Focus
+**Learning:** In chat applications, switching threads or starting a new conversation carries an implicit intent to type. Forcing users to manually click the input field adds unnecessary friction.
+**Action:** Implemented logic to automatically focus the message body when selecting a thread, and the "To" address field when starting a new conversation, while disabling this behavior on mobile to prevent virtual keyboard intrusion.
