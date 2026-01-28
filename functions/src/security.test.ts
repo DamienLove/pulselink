@@ -1,4 +1,4 @@
-import {escapeHtml} from "./security";
+import {escapeHtml, isValidUrl} from "./security";
 
 describe("escapeHtml", () => {
   describe("Basic HTML escaping", () => {
@@ -209,5 +209,37 @@ describe("escapeHtml", () => {
       const input = "line1\r\nline2";
       expect(escapeHtml(input)).toBe("line1\r\nline2");
     });
+  });
+});
+
+describe("isValidUrl", () => {
+  it("should return true for valid http URLs", () => {
+    expect(isValidUrl("http://example.com")).toBe(true);
+  });
+
+  it("should return true for valid https URLs", () => {
+    expect(isValidUrl("https://example.com")).toBe(true);
+  });
+
+  it("should return false for invalid schemes (ftp)", () => {
+    expect(isValidUrl("ftp://example.com")).toBe(false);
+  });
+
+  it("should return false for javascript: scheme", () => {
+    expect(isValidUrl("javascript:alert(1)")).toBe(false);
+  });
+
+  it("should return false for malformed URLs", () => {
+    expect(isValidUrl("not-a-url")).toBe(false);
+  });
+
+  it("should return false for excessively long URLs", () => {
+    const longUrl = "https://example.com/" + "a".repeat(2050);
+    expect(isValidUrl(longUrl)).toBe(false);
+  });
+
+  it("should return true for long but valid URLs under the limit", () => {
+    const longUrl = "https://example.com/" + "a".repeat(100);
+    expect(isValidUrl(longUrl)).toBe(true);
   });
 });

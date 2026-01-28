@@ -54,6 +54,10 @@ export function sanitizeScalar(unsafe: string | null | undefined): string {
  * @return {boolean} True if the string is a valid http/https URL.
  */
 export function isValidUrl(url: string): boolean {
+  // Sentinel: Prevent Denial of Service (DoS) via excessively long URLs
+  if (url.length > 2048) {
+    return false;
+  }
   try {
     const parsed = new URL(url);
     return parsed.protocol === "http:" || parsed.protocol === "https:";
