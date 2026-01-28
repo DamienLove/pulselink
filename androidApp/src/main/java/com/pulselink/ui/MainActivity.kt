@@ -1014,6 +1014,16 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                     composable("login") {
+                        if (authState is AuthState.Loading) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                            return@composable
+                        }
+
                         val loginViewModel: LoginViewModel = hiltViewModel()
                         val loginUiState by loginViewModel.uiState.collectAsStateWithLifecycle()
                         val context = LocalContext.current

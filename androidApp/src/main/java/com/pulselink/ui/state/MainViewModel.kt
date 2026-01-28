@@ -926,11 +926,15 @@ class MainViewModel @Inject constructor(
                 "deviceId" to deviceId
             )
             settings.ownerAvatarUrl?.let { payload["avatarUrl"] = it }
-            user.email?.let { email ->
+
+            val emailToPush = settings.lastKnownEmail?.takeIf { it.isNotBlank() } ?: user.email
+            emailToPush?.let { email ->
                 payload["email"] = email
                 payload["emailLowercase"] = email.lowercase()
             }
-            user.phoneNumber?.let { phone ->
+
+            val phoneToPush = settings.lastKnownPhone?.takeIf { it.isNotBlank() } ?: user.phoneNumber
+            phoneToPush?.let { phone ->
                 val normalized = normalizePhone(phone)
                 if (normalized.isNotBlank()) {
                     payload["phoneNumber"] = phone
@@ -1484,8 +1488,10 @@ class MainViewModel @Inject constructor(
         val model = Build.MODEL.orEmpty()
         val osVersion = Build.VERSION.RELEASE ?: "unknown"
         val apiLevel = Build.VERSION.SDK_INT
+        val userId = firebaseAuthManager.currentUser()?.uid ?: "unknown"
 
         return buildString {
+            appendLine("User ID: $userId")
             appendLine("App Version: $versionName ($versionCode)")
             appendLine("Build Flavor: ${if (BuildConfig.PREMIUM_FEATURES) "Premium" else if (BuildConfig.PRO_FEATURES) "Pro" else "Free"}")
             appendLine("Device: $manufacturer $model")
@@ -1759,6 +1765,12 @@ class MainViewModel @Inject constructor(
             settingsRepository.setDevicePhoneNumber(phone)
             lastKnownPhone = phone
             lastKnownEmail = email
+
+            val user = firebaseAuthManager.currentUser()
+            if (user != null && !user.isAnonymous) {
+                val name = settingsRepository.settings.first().ownerName
+                pushProfileToCloud(user, name)
+            }
         }
     }
 
