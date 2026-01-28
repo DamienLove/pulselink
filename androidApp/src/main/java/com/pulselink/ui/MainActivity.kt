@@ -253,8 +253,8 @@ class MainActivity : AppCompatActivity() {
                 val navController = rememberNavController()
 
                 LaunchedEffect(authState) {
-                    val authenticated = authState as? AuthState.Authenticated
-                    if (authenticated != null && subscriptionManager.subscriptionState.value.available) {
+                    val isAuthenticated = authState is AuthState.Authenticated || authState is AuthState.AuthenticatedOffline
+                    if (isAuthenticated && subscriptionManager.subscriptionState.value.available) {
                         subscriptionManager.refreshPremiumStatus()
                     }
                 }
@@ -876,7 +876,7 @@ class MainActivity : AppCompatActivity() {
                         }
 
                         NavHost(navController = navController, startDestination = startDestination) {
-                    val premiumBranding = state.settings.premiumUnlocked ||     
+                    val premiumBranding = state.settings.premiumUnlocked ||
                         BuildConfig.PREMIUM_FEATURES ||
                         state.isProUser
                     val proLikeUser = BuildConfig.PRO_FEATURES || state.settings.proUnlocked || state.settings.premiumUnlocked
@@ -899,16 +899,15 @@ class MainActivity : AppCompatActivity() {
                         LaunchedEffect(authState, state.onboardingComplete) {
                             if (authState is AuthState.Loading) return@LaunchedEffect
                             delay(1200)
-                            val destination = when (val auth = authState) {
-                                is AuthState.Authenticated -> {
-                                    val user = auth.user
-                                    if (state.onboardingComplete) {
-                                        if (unifiedModeActive) "unified_inbox" else "home"
-                                    } else {
-                                        "onboarding_intro"
-                                    }
+                            val isAuthenticated = authState is AuthState.Authenticated || authState is AuthState.AuthenticatedOffline
+                            val destination = if (isAuthenticated) {
+                                if (state.onboardingComplete) {
+                                    if (unifiedModeActive) "unified_inbox" else "home"
+                                } else {
+                                    "onboarding_intro"
                                 }
-                                else -> "login"
+                            } else {
+                                "login"
                             }
                             navController.navigate(destination) {
                                 popUpTo(0) { inclusive = true }
@@ -927,8 +926,8 @@ class MainActivity : AppCompatActivity() {
                             }
                             map.toMap()
                         }
-                        
-                        val isSmsOnlyUser = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true
+
+                        val isSmsOnlyUser = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true || authState is AuthState.AuthenticatedOffline
                         UnifiedHomeScreen(
                             state = state,
                             onDismissAssistantShortcuts = viewModel::dismissAssistantHint,
@@ -1077,11 +1076,13 @@ class MainActivity : AppCompatActivity() {
                             onMessageConsumed = loginViewModel::clearTransientMessages,
                             useProBranding = false
                         )
-                        val initialAnonymous = rememberSaveable { (authState as? AuthState.Authenticated)?.user?.isAnonymous == true }
+                        val isAnonymous = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true || authState is AuthState.AuthenticatedOffline
+                        val initialAnonymous = rememberSaveable { isAnonymous }
                         LaunchedEffect(authState, state.onboardingComplete) {
-                            val authenticated = authState as? AuthState.Authenticated
-                            if (authenticated != null) {
-                                if (!authenticated.user.isAnonymous || !initialAnonymous) {
+                            val isAuthenticated = authState is AuthState.Authenticated || authState is AuthState.AuthenticatedOffline
+                            val currentAnonymous = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true || authState is AuthState.AuthenticatedOffline
+                            if (isAuthenticated) {
+                                if (!currentAnonymous || !initialAnonymous) {
                                     val destination = if (state.onboardingComplete) "home" else "onboarding_intro"
                                     navController.navigate(destination) {
                                         popUpTo(0) { inclusive = true }
@@ -1294,7 +1295,7 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                     composable("home") {
-                        val isSmsOnlyUser = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true
+                        val isSmsOnlyUser = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true || authState is AuthState.AuthenticatedOffline
                         HomeScreen(
                             state = state,
                             onDismissAssistantShortcuts = viewModel::dismissAssistantHint,
@@ -1659,7 +1660,7 @@ class MainActivity : AppCompatActivity() {
                             customVibration.takeIf { state.settings.checkInProfile.vibrationPatternKey == VibrationPatterns.CUSTOM_KEY }
                                 ?: VibrationPatterns.alertOption(state.settings.checkInProfile.vibrationPatternKey)
                             ).label
-                        val isSmsOnlyUser = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true
+                        val isSmsOnlyUser = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true || authState is AuthState.AuthenticatedOffline
                         SettingsScreen(
                             settings = state.settings,
                             hasDndAccess = hasDndAccess,

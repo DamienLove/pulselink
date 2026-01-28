@@ -25,6 +25,8 @@ class FirebaseAuthManager @Inject constructor(
     private val _authState = MutableStateFlow<AuthState>(AuthState.Loading)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
+    private var isOfflineMode = false
+
     private val authListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
         updateAuthState(firebaseAuth.currentUser)
     }
@@ -35,6 +37,7 @@ class FirebaseAuthManager @Inject constructor(
     }
 
     private fun updateAuthState(user: FirebaseUser?) {
+        if (isOfflineMode) return
         Log.d(TAG, "Auth state updated user=${user?.uid ?: "null"} anon=${user?.isAnonymous}")
         _authState.value = user?.let { AuthState.Authenticated(it) } ?: AuthState.Unauthenticated
     }
@@ -53,11 +56,17 @@ class FirebaseAuthManager @Inject constructor(
         }
     }
 
-    suspend fun signInSmsOnly(): Result<FirebaseUser> {
+    suspend fun signInSmsOnly(): Result<Unit> {
         return runCatching {
-            auth.signInAnonymously().await().user ?: error("Anonymous sign-in returned no user")
-        }.onFailure { error ->
-            Log.w(TAG, "SMS-only sign-in failed", error)
+            try {
+                auth.signInAnonymously().await()
+                isOfflineMode = false
+                // updateAuthState will be called by listener
+            } catch (e: Exception) {
+                Log.w(TAG, "Anonymous sign-in failed, falling back to offline mode", e)
+                isOfflineMode = true
+                _authState.value = AuthState.AuthenticatedOffline
+            }
         }
     }
 
@@ -148,7 +157,13 @@ class FirebaseAuthManager @Inject constructor(
     }
 
     suspend fun signOut(): Result<Unit> {
-        return runCatching { auth.signOut() }
+        return runCatching {
+            isOfflineMode = false
+            auth.signOut()
+            if (_authState.value == AuthState.AuthenticatedOffline) {
+                _authState.value = AuthState.Unauthenticated
+            }
+        }
     }
 
     fun currentUser(): FirebaseUser? = auth.currentUser

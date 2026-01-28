@@ -35,7 +35,7 @@ class LoginViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             authManager.authState.collect { authState ->
-                val isAnon = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true
+                val isAnon = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true || authState is AuthState.AuthenticatedOffline
                 _uiState.update {
                     it.copy(
                         isAnonymousUser = isAnon,

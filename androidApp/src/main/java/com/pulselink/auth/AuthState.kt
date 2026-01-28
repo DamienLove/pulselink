@@ -6,4 +6,5 @@ sealed interface AuthState {
     object Loading : AuthState
     object Unauthenticated : AuthState
     data class Authenticated(val user: FirebaseUser) : AuthState
+    object AuthenticatedOffline : AuthState
 }
