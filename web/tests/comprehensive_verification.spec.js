@@ -22,7 +22,7 @@ test.describe('Comprehensive Feature Verification', () => {
   });
 
   test('should verify Beacon message attachments', async ({ page }) => {
-    await page.locator('.home-card h3', { hasText: 'Beacon Inbox' }).click();
+    await page.locator('.nav-item[title="Beacon"]').click();
 
     // Wait for threads to load/mock to appear
     const thread = page.locator('.thread-item').first();
@@ -52,9 +52,24 @@ test.describe('Comprehensive Feature Verification', () => {
     expect(src).toContain('placehold.co/100x100.png');
   });
 
+  test('should verify Beacon message composition', async ({ page }) => {
+    await page.locator('.nav-item[title="Beacon"]').click();
+    const thread = page.locator('.thread-item').first();
+    await expect(thread).toBeVisible();
+    await thread.click();
+
+    const textarea = page.locator('textarea[placeholder*="Type a message"]');
+    await expect(textarea).toBeVisible();
+    await textarea.fill('Hello World');
+    await expect(textarea).toHaveValue('Hello World');
+
+    // Check char counter
+    const counter = page.locator('#message-char-count');
+    await expect(counter).toHaveText('11');
+  });
+
   test('should verify Features (Extensions) functionality', async ({ page }) => {
     // Navigate to Features (Extensions)
-    // The button title might be "Features" or "Extensions" depending on state, but Sidebar usually renders it as "Features"
     const btn = page.locator('.nav-item[title="Features"]');
     await btn.click();
 
@@ -65,7 +80,6 @@ test.describe('Comprehensive Feature Verification', () => {
     await expect(crashCard).toBeVisible();
 
     // Find Truecaller card to test toggle
-    // It's under "Integrations" usually
     const truecallerCard = page.locator('.home-card').filter({ hasText: 'Truecaller Caller ID' });
     await expect(truecallerCard).toBeVisible();
 
@@ -77,7 +91,6 @@ test.describe('Comprehensive Feature Verification', () => {
     await toggleBtn.click();
 
     // Expect text to change (Install <-> Remove)
-    // This relies on React state update which should be fast
     await expect(toggleBtn).not.toHaveText(initialText, { timeout: 5000 });
   });
 
@@ -94,7 +107,6 @@ test.describe('Comprehensive Feature Verification', () => {
     await expect(page.getByText('Web preferences')).toBeVisible();
 
     // "Account" section should be hidden as it doesn't match "Web"
-    // "User ID" is inside Account section
     await expect(page.getByText('User ID')).toBeHidden();
 
     // Clear search by clicking the clear button
@@ -120,5 +132,86 @@ test.describe('Comprehensive Feature Verification', () => {
     await searchInput.fill('ZNonExistent');
     await expect(page.getByText('Alice')).toBeHidden();
     await expect(page.getByText('No contacts match that search')).toBeVisible();
+  });
+
+  test('should verify RingerSong functionality', async ({ page }) => {
+    await page.locator('.nav-item[title="RingerSong"]').click();
+    await expect(page.getByRole('heading', { name: 'RingerSong', exact: true })).toBeVisible();
+
+    // Verify playlist header
+    await expect(page.getByText('Current Playlist')).toBeVisible();
+
+    // Verify search input
+    const searchInput = page.locator('input[placeholder="Search Spotify for songs..."]');
+    await expect(searchInput).toBeVisible();
+
+    // Mock search results via evaluate since we can't easily mock fetch in this context without more setup
+    // But we can test the UI interaction
+    await searchInput.fill('Test Song');
+    const searchBtn = page.getByRole('button', { name: 'Search' });
+    await expect(searchBtn).toBeVisible();
+    // We won't click search as it would fail without a real token, but verification of UI is good.
+  });
+
+  test('should verify Emergency Map functionality', async ({ page }) => {
+    await page.locator('.nav-item[title="Map"]').click();
+
+    // Check map canvas existence
+    await expect(page.locator('.map-canvas')).toBeVisible();
+
+    // Check alert list container
+    await expect(page.locator('.map-list')).toBeVisible();
+
+    // Inject a mock alert location
+    await page.evaluate(() => {
+        if (window.debugSetAlertLocations) {
+            window.debugSetAlertLocations([
+                {
+                    id: 'alert_1',
+                    lat: 39.5,
+                    lng: -98.35,
+                    severity: 'emergency',
+                    incoming: true,
+                    address: 'Test Location',
+                    body: 'Help me',
+                    date: Date.now()
+                }
+            ]);
+        }
+    });
+
+    // Verify alert item appears in list
+    await expect(page.locator('.map-item-title', { hasText: 'Test Location' })).toBeVisible();
+    await expect(page.locator('.map-badge', { hasText: 'Emergency' })).toBeVisible();
+  });
+
+  test('should verify PulseLink Trusted Contacts', async ({ page }) => {
+    await page.locator('.nav-item[title="PulseLink"]').click();
+    await expect(page.getByRole('heading', { name: 'PulseLink', exact: true })).toBeVisible();
+
+    // Check Trusted Contacts section
+    await expect(page.getByRole('heading', { name: 'Trusted contacts' })).toBeVisible();
+
+    // Verify existing mock contact (Mom)
+    await expect(page.getByText('Mom')).toBeVisible();
+
+    // Test adding a contact UI (fill form)
+    // Use exact match to distinguish from "Display name"
+    const nameInput = page.getByRole('textbox', { name: 'Name', exact: true });
+    await nameInput.fill('New Friend');
+
+    // There are multiple "Phone" inputs (Profile and Contact), so we need to be specific or scope it
+    // The Contact phone input is inside the same card as the Name input we just found?
+    // Actually, let's scope to the settings card that contains "Add trusted contact" to be safe
+    const contactCard = page.locator('.settings-card', { hasText: 'Add trusted contact' });
+    // Use getByRole with exact match to avoid "Extra phones"
+    const phoneInput = contactCard.getByRole('textbox', { name: 'Phone', exact: true });
+    await phoneInput.fill('+15550000000');
+
+    const addBtn = page.getByRole('button', { name: 'Add contact' });
+    await expect(addBtn).toBeVisible();
+
+    // Note: Clicking add might fail if Firestore is not mocked perfectly for writes in this environment,
+    // but we verified the UI elements exist.
   });
 });
