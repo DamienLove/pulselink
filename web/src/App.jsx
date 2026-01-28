@@ -1760,6 +1760,48 @@ const loadGoogleMaps = (() => {
   };
 })();
 
+// Future Deep V12: Quick Actions Component
+const QuickActions = ({ onNavigate, onNewThread }) => (
+  <div className="quick-actions-grid">
+    <button className="quick-action-btn" onClick={onNewThread}>
+      <div className="quick-action-icon"><MessageSquareIcon /></div>
+      <span>New Message</span>
+    </button>
+    <button className="quick-action-btn" onClick={() => onNavigate('contacts')}>
+      <div className="quick-action-icon"><ContactIcon /></div>
+      <span>Add Contact</span>
+    </button>
+    <button className="quick-action-btn" onClick={() => onNavigate('themes')}>
+      <div className="quick-action-icon"><ThemeIcon /></div>
+      <span>Customize</span>
+    </button>
+    <button className="quick-action-btn" onClick={() => onNavigate('map')}>
+      <div className="quick-action-icon"><MapIcon /></div>
+      <span>Map View</span>
+    </button>
+  </div>
+);
+
+const PulseGuideCard = ({ setShowWebHint }) => (
+  <div className="future-card pulse-guide-card">
+    <div className="pulse-guide-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a6 6 0 0 1 6 6c0 7-6 13-6 13S6 15 6 8a6 6 0 0 1 6-6Z"/><path d="M12 2v2"/><path d="M12 22v-2"/><path d="M2 12h2"/><path d="M22 12h-2"/></svg>
+    </div>
+    <div className="pulse-guide-content">
+      <h4>PulseLink Web Guide</h4>
+      <p>Your command center is ready. Access messages, track alerts, and customize your experience from any browser.</p>
+    </div>
+    <button
+      className="ghost-btn icon-only"
+      onClick={() => setShowWebHint(false)}
+      aria-label="Dismiss"
+      style={{ marginLeft: 'auto' }}
+    >
+      <CloseIcon />
+    </button>
+  </div>
+);
+
 // Bolt: Optimized Sidebar to prevent re-renders on high-frequency parent updates (typing)
 const Sidebar = memo(({
   activePanel,
@@ -1939,7 +1981,7 @@ const Sidebar = memo(({
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
           <span>Features</span>
-          <span className="badge-new">NEW</span>
+          <span className="badge-new hot">HOT</span>
         </button>
         <button
           className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
@@ -4062,68 +4104,53 @@ function App() {
                   })()}
                   {profile.ownerName ? `, ${profile.ownerName.split(' ')[0]}` : ''}
                 </h2>
-                <p>Choose what you want to manage on PulseLink Web.</p>
+                <p>PulseLink Suite Dashboard • Future Deep V12</p>
               </div>
-              {/* Web app info tooltip - fixes #236: Users need to know about web app availability */}
-              {/* QA TEST: Visit web app home screen after login */}
-              {/* EXPECTED: Blue info banner should be visible explaining web access */}
-              {/* EXPECTED: Banner should display icon, bold heading, and feature description */}
-              {showWebHint && (
-                <div className="web-app-hint">
-                  <button
-                    className="hint-dismiss"
-                    type="button"
-                    aria-label="Dismiss web access notice"
-                    onClick={() => {
-                      setShowWebHint(false);
-                      localStorage.setItem(webHintStorageKey, 'true');
-                    }}
-                  >
-                    x
-                  </button>
-                  <div className="hint-icon">??</div>
-                  <div className="hint-content">
-                    <strong>Access PulseLink Web anytime:</strong> Visit pulselink.damiennichols.com (or app.damiennichols.com / pulselink-24899.web.app) from any browser to manage contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.
-                  </div>
-                </div>
-              )}
+
+              <QuickActions onNavigate={setActivePanel} onNewThread={handleNewThread} />
+
+              {showWebHint && <PulseGuideCard setShowWebHint={(val) => {
+                  setShowWebHint(val);
+                  if(!val) localStorage.setItem(webHintStorageKey, 'true');
+              }} />}
+
               <div className="home-grid">
-                <button className="home-card holographic-card" onClick={() => setActivePanel('beacon')}>
+                <button className="future-card" onClick={() => setActivePanel('beacon')}>
                   <div className="home-icon beacon">
                     <img src={beaconLogo} alt="Beacon" />
                   </div>
                   <h3>Beacon Inbox</h3>
                   <p>View SMS synced from your phone.</p>
                 </button>
-                <button className="home-card holographic-card" onClick={() => setActivePanel('pulselink')}>
+                <button className="future-card" onClick={() => setActivePanel('pulselink')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink" />
                   </div>
                   <h3>PulseLink</h3>
                   <p>Update your profile and trusted contacts.</p>
                 </button>
-                <button className="home-card holographic-card" onClick={() => setActivePanel('contacts')}>
+                <button className="future-card" onClick={() => setActivePanel('contacts')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink contacts" />
                   </div>
                   <h3>Contacts</h3>
                   <p>Browse all device contacts synced from your phone.</p>
                 </button>
-                <button className="home-card holographic-card" onClick={() => setActivePanel('ringersong')}>
+                <button className="future-card" onClick={() => setActivePanel('ringersong')}>
                   <div className="home-icon ringersong">
                     <img src={ringersongLogo} alt="RingerSong" />
                   </div>
                   <h3>RingerSong</h3>
                   <p>Manage ringtone progressions and streaming.</p>
                 </button>
-                <button className="home-card holographic-card" onClick={() => setActivePanel('map')}>
+                <button className="future-card" onClick={() => setActivePanel('map')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink map" />
                   </div>
                   <h3>Emergency Map</h3>
                   <p>Track shared locations from PulseLink alerts.</p>
                 </button>
-                <button className="home-card holographic-card" onClick={() => setActivePanel('themes')}>
+                <button className="future-card" onClick={() => setActivePanel('themes')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink themes" />
                   </div>
@@ -4131,7 +4158,7 @@ function App() {
                   <p>Browse, import, and publish custom themes.</p>
                 </button>
                 <button
-                  className="home-card holographic-card"
+                  className="future-card"
                   onClick={() => setActivePanel('extensions')}
                   disabled={!remoteSettings.thirdPartyExtensionsEnabled}
                   title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage features" : "Enable features in Settings"}

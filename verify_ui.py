@@ -7,20 +7,40 @@ def verify_ui():
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
 
-        # Navigate to the app (Vite port 5174 as 5173 was busy)
+        # Navigate to the app (Vite port 5176 as 5174 was busy)
         try:
-            page.goto("http://localhost:5174", timeout=10000)
+            page.goto("http://localhost:5176?mock_user=true", timeout=15000)
         except Exception as e:
             print(f"Failed to load page: {e}")
             return
 
-        # Check for the login card
-        expect(page.locator(".login-card")).to_be_visible()
+        print("Navigated to Home Panel with mock user.")
 
-        # Take a screenshot of the login page
-        os.makedirs("/home/jules/verification", exist_ok=True)
-        page.screenshot(path="/home/jules/verification/login_page.png")
-        print("Screenshot taken: /home/jules/verification/login_page.png")
+        # Take a screenshot of the dashboard
+        os.makedirs("verification", exist_ok=True)
+        page.screenshot(path="verification/dashboard_v12.png")
+        print("Screenshot taken: verification/dashboard_v12.png")
+
+        # Verify Quick Actions Grid
+        try:
+            expect(page.locator(".quick-actions-grid")).to_be_visible(timeout=5000)
+            print("Verified: .quick-actions-grid is visible")
+        except Exception as e:
+            print(f"Failed to verify Quick Actions: {e}")
+
+        # Verify Future Cards
+        try:
+            expect(page.locator(".future-card").first).to_be_visible(timeout=5000)
+            print("Verified: .future-card is visible")
+        except Exception as e:
+            print(f"Failed to verify Future Cards: {e}")
+
+        # Verify Pulse Guide Card
+        if page.locator(".pulse-guide-card").count() > 0:
+             expect(page.locator(".pulse-guide-card")).to_be_visible()
+             print("Verified: .pulse-guide-card is visible")
+        else:
+             print("Note: .pulse-guide-card not found")
 
         browser.close()
 

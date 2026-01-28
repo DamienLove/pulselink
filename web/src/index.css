@@ -360,3 +360,136 @@ select {
   border-color: var(--accent);
   box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
 }
+
+/* Future Deep V12 Additions */
+.future-card {
+  background: rgba(5, 8, 14, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+.future-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  padding: 1px;
+  background: conic-gradient(from 180deg at 50% 50%, transparent 0%, rgba(0, 243, 255, 0.3) 50%, transparent 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.5;
+  transition: opacity 0.4s ease;
+}
+
+.future-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 20px 40px -12px rgba(0, 243, 255, 0.15);
+  border-color: rgba(0, 243, 255, 0.3);
+}
+
+.future-card:hover::before {
+  opacity: 1;
+  background: conic-gradient(from var(--angle, 0deg) at 50% 50%, transparent 0%, var(--accent) 50%, transparent 100%);
+  animation: borderRotate 4s linear infinite;
+}
+
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes borderRotate {
+  from { --angle: 0deg; }
+  to { --angle: 360deg; }
+}
+
+.pulse-guide-card {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, rgba(0, 243, 255, 0.05) 0%, rgba(224, 0, 255, 0.05) 100%);
+  border: 1px solid rgba(0, 243, 255, 0.2);
+  display: flex;
+  align-items: center;
+  padding: 24px;
+  gap: 20px;
+}
+
+.pulse-guide-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(0, 243, 255, 0.1);
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+}
+
+.pulse-guide-content h4 {
+  margin: 0 0 4px 0;
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+
+.pulse-guide-content p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+  max-width: 600px;
+}
+
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.quick-action-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--muted);
+}
+
+.quick-action-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.quick-action-icon {
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.3);
+  color: var(--accent);
+  transition: all 0.3s ease;
+}
+
+.quick-action-btn:hover .quick-action-icon {
+  background: var(--accent);
+  color: #000;
+  box-shadow: 0 0 15px var(--accent-glow);
+}
+
+.badge-new.hot {
+  background: linear-gradient(135deg, #FF4D4D 0%, #F9CB28 100%);
+  color: #000;
+  font-weight: 800;
+  box-shadow: 0 0 10px rgba(255, 77, 77, 0.4);
+}
