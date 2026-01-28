@@ -60,4 +60,73 @@ test.describe('Palette UX Enhancements', () => {
     await expect(hint).toHaveText('/');
     await expect(hint).toHaveAttribute('aria-hidden', 'true');
   });
+
+  test('Avatar text should have sufficient contrast', async ({ page }) => {
+    // 1. Check "Alice" in Contacts (Expect Black text on Light BG)
+    await page.locator('.nav-item[title="Contacts"]').click();
+
+    // Find Alice's row
+    const aliceRow = page.locator('.contact-row', { hasText: 'Alice' });
+    await expect(aliceRow).toBeVisible();
+
+    // In DeviceContactItem, Avatar is not explicitly rendered, but wait...
+    // DeviceContactItem source:
+    /*
+    const DeviceContactItem = memo(({ contact }) => {
+      // ...
+      return (
+        <div className="contact-row contact-row--stacked">
+          { // No Avatar component here! It just shows text. }
+          <div className="contact-main">
+            <div className="contact-name">{contact.displayName || 'Unnamed contact'}</div>
+    */
+    // Ah! DeviceContactItem does NOT use Avatar component in the current code I read!
+    // Let me check App.jsx again.
+
+    // Sidebar ThreadItem USES Avatar.
+    // ThreadItem: <Avatar name={name} />
+
+    // "Test Contact" (thread) is in mock data.
+    // Name: Test Contact, BG: #9A3E92, Text: #FFFFFF (White)
+
+    // I need a thread with a name that produces Black text.
+    // "Alice" -> Black.
+    // Is there a thread for Alice?
+
+    // Mock data:
+    // setLegacyThreads([{ id: 'thread_1', address: '+15559998888', display_name: 'Test Contact', ... }]);
+
+    // I can modify the mock data in the test via window.debugSetLegacyThreads if I'm in DEV mode.
+    // But playwright runs against built app? Or dev server?
+    // Usually dev server.
+
+    // Let's try to verify "Test Contact" (White text) first.
+    await page.locator('.nav-item[title="Beacon"]').click();
+    const threadItem = page.locator('.thread-item', { hasText: 'Test Contact' });
+    await expect(threadItem).toBeVisible();
+
+    const avatar = threadItem.locator('.thread-avatar');
+    await expect(avatar).toHaveCSS('color', 'rgb(255, 255, 255)');
+
+    // Now let's try to inject a thread for "Alice" (Black text)
+    await page.evaluate(() => {
+        if (window.debugSetLegacyThreads) {
+            window.debugSetLegacyThreads([{
+                id: 'thread_alice',
+                address: '+15550001111',
+                display_name: 'Alice',
+                date: Date.now(),
+                snippet: 'Hello',
+                pinned: false,
+                archived: false
+            }]);
+        }
+    });
+
+    const aliceItem = page.locator('.thread-item', { hasText: 'Alice' });
+    await expect(aliceItem).toBeVisible();
+    const aliceAvatar = aliceItem.locator('.thread-avatar');
+    // Alice BG is #C6A660 -> Black text
+    await expect(aliceAvatar).toHaveCSS('color', 'rgb(0, 0, 0)');
+  });
 });
