@@ -413,8 +413,11 @@ const alertBadgeColor = {
   non_urgent: '#60a5fa'
 };
 
+// Bolt: Optimized to avoid allocating array for all lines
 const buildAlertSnippet = (body = '') => {
-  const firstLine = body.split('\n')[0] ?? '';
+  if (!body) return '';
+  const newlineIndex = body.indexOf('\n');
+  const firstLine = newlineIndex === -1 ? body : body.slice(0, newlineIndex);
   if (firstLine.length <= 88) return firstLine;
   return `${firstLine.slice(0, 85)}...`;
 };
