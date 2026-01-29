@@ -52,9 +52,37 @@ test.describe('Comprehensive Feature Verification', () => {
     expect(src).toContain('placehold.co/100x100.png');
   });
 
+  test('should verify Beacon message sending', async ({ page }) => {
+    await page.locator('.home-card h3', { hasText: 'Beacon Inbox' }).click();
+
+    // Select a thread
+    const thread = page.locator('.thread-item').first();
+    await expect(thread).toBeVisible();
+    await thread.click();
+
+    // Find composer
+    const textarea = page.locator('.composer-textarea');
+    await expect(textarea).toBeVisible();
+
+    // Type message
+    await textarea.fill('Test message via automation');
+
+    // Click send
+    const sendBtn = page.getByTitle('Send (Ctrl+Enter)');
+    await expect(sendBtn).toBeVisible();
+    await sendBtn.click();
+
+    // Verify interaction
+    // The button should show "Sending..." state or a status message should appear
+    // We race these conditions because depending on network/mock speed, "Sending..." might flash too fast or persist
+    await Promise.race([
+        expect(page.getByRole('button', { name: 'Sending...' })).toBeVisible(),
+        expect(page.locator('.compose-status')).toBeVisible()
+    ]);
+  });
+
   test('should verify Features (Extensions) functionality', async ({ page }) => {
     // Navigate to Features (Extensions)
-    // The button title might be "Features" or "Extensions" depending on state, but Sidebar usually renders it as "Features"
     const btn = page.locator('.nav-item[title="Features"]');
     await btn.click();
 
@@ -65,7 +93,6 @@ test.describe('Comprehensive Feature Verification', () => {
     await expect(crashCard).toBeVisible();
 
     // Find Truecaller card to test toggle
-    // It's under "Integrations" usually
     const truecallerCard = page.locator('.home-card').filter({ hasText: 'Truecaller Caller ID' });
     await expect(truecallerCard).toBeVisible();
 
@@ -77,7 +104,6 @@ test.describe('Comprehensive Feature Verification', () => {
     await toggleBtn.click();
 
     // Expect text to change (Install <-> Remove)
-    // This relies on React state update which should be fast
     await expect(toggleBtn).not.toHaveText(initialText, { timeout: 5000 });
   });
 
@@ -94,7 +120,6 @@ test.describe('Comprehensive Feature Verification', () => {
     await expect(page.getByText('Web preferences')).toBeVisible();
 
     // "Account" section should be hidden as it doesn't match "Web"
-    // "User ID" is inside Account section
     await expect(page.getByText('User ID')).toBeHidden();
 
     // Clear search by clicking the clear button
@@ -109,7 +134,7 @@ test.describe('Comprehensive Feature Verification', () => {
     await page.locator('.nav-item[title="Contacts"]').click();
     await expect(page.getByRole('heading', { name: 'Contacts' })).toBeVisible();
 
-    // Verify mock contact is present (Alice is usually in the mock data from App.jsx)
+    // Verify mock contact is present (Alice)
     await expect(page.getByText('Alice')).toBeVisible();
 
     // Test Search
@@ -120,5 +145,56 @@ test.describe('Comprehensive Feature Verification', () => {
     await searchInput.fill('ZNonExistent');
     await expect(page.getByText('Alice')).toBeHidden();
     await expect(page.getByText('No contacts match that search')).toBeVisible();
+  });
+
+  test('should verify RingerSong functionality', async ({ page }) => {
+    // Navigate to RingerSong
+    await page.locator('.nav-item[title="RingerSong"]').click();
+    await expect(page.locator('.ringersong-header h3')).toHaveText('RingerSong');
+
+    // Check search input
+    const searchInput = page.getByPlaceholder('Search Spotify for songs...');
+    await expect(searchInput).toBeVisible();
+
+    // Check empty state or playlist
+    // In mock mode we start with empty playlist
+    await expect(page.getByText('Your playlist is empty')).toBeVisible();
+  });
+
+  test('should verify Emergency Map functionality', async ({ page }) => {
+     // Navigate to Map
+     await page.locator('.nav-item[title="Map"]').click();
+     await expect(page.getByRole('heading', { name: 'Emergency map' })).toBeVisible();
+
+     // Check map container exists
+     await expect(page.locator('.map-canvas')).toBeVisible();
+
+     // Check controls
+     await expect(page.getByText('Incoming only')).toBeVisible();
+     await expect(page.getByText('Alert type')).toBeVisible();
+  });
+
+  test('should verify Themes Gallery', async ({ page }) => {
+    await page.locator('.nav-item[title="Themes"]').click();
+    await expect(page.getByRole('heading', { name: 'Theme Gallery' })).toBeVisible();
+
+    // Check for "Publish your theme" card
+    await expect(page.getByText('Publish your theme')).toBeVisible();
+
+    // Check for "Quick presets"
+    await expect(page.getByText('Quick presets')).toBeVisible();
+  });
+
+  test('should verify PulseLink Profile', async ({ page }) => {
+    await page.locator('.nav-item[title="PulseLink"]').click();
+    await expect(page.getByRole('heading', { name: 'PulseLink', exact: true })).toBeVisible();
+
+    // Check Public profile section
+    await expect(page.getByRole('heading', { name: 'Public profile' })).toBeVisible();
+
+    // Check Display Name input
+    // Finding input with value "Test User" (from mock)
+    // We use getByLabel because the input is wrapped in a label with text "Display name"
+    await expect(page.getByLabel('Display name')).toHaveValue('Test User');
   });
 });
