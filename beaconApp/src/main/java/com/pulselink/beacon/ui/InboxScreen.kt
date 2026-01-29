@@ -1148,9 +1148,11 @@ private fun ThreadRow(
                     }
                 }
 
+                val displayName = thread.customName ?: thread.address.ifBlank { "Unknown" }
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = thread.address.ifBlank { "Unknown" },
+                        text = displayName,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = if (thread.unread) FontWeight.ExtraBold else FontWeight.SemiBold,
                         color = if (thread.unread) theme.frameColor else theme.frameColor.copy(alpha = 0.9f),

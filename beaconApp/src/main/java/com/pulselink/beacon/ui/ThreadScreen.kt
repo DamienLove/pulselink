@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
@@ -102,6 +103,7 @@ import com.pulselink.beacon.data.scheduled.MessageReaction
 import com.pulselink.beacon.ui.ads.NativeAdCard
 import com.pulselink.beacon.util.LinkPreviewData
 import com.pulselink.beacon.util.LinkPreviewHelper
+import com.pulselink.beacon.util.MagicTone
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
@@ -113,6 +115,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun ThreadScreen(
     address: String,
+    customName: String? = null,
     uiItems: List<ThreadUiItem>,
     reactions: Map<Long, List<MessageReaction>> = emptyMap(),
     starredMessageIds: Set<Long> = emptySet(),
@@ -134,7 +137,9 @@ fun ThreadScreen(
     onCall: () -> Unit = {},
     onReact: (Long, String) -> Unit = { _, _ -> },
     onToggleStar: (Long) -> Unit = {},
-    onBlock: () -> Unit = {}
+    onBlock: () -> Unit = {},
+    onRename: (String) -> Unit = {},
+    onMagicCompose: (MagicTone, String) -> String = { _, s -> s }
 ) {
     var draft by remember { mutableStateOf("") }
     var draftLoaded by remember { mutableStateOf(false) }
@@ -158,6 +163,8 @@ fun ThreadScreen(
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var showMagicDialog by remember { mutableStateOf(false) }
     var selectedDateMillis by remember { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
 
@@ -265,12 +272,88 @@ fun ThreadScreen(
         }
     }
 
+    if (showRenameDialog) {
+        var newName by remember { mutableStateOf(customName ?: "") }
+        Dialog(onDismissRequest = { showRenameDialog = false }) {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                tonalElevation = 6.dp,
+                modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)
+            ) {
+                Column(Modifier.padding(24.dp)) {
+                    Text("Rename conversation", style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = newName,
+                        onValueChange = { newName = it },
+                        label = { Text("Name") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = { showRenameDialog = false }) { Text("Cancel") }
+                        TextButton(onClick = {
+                            onRename(newName)
+                            showRenameDialog = false
+                        }) { Text("Save") }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showMagicDialog) {
+        Dialog(onDismissRequest = { showMagicDialog = false }) {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                tonalElevation = 6.dp,
+                modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)
+            ) {
+                Column(Modifier.padding(24.dp)) {
+                    Text("Magic Compose", style = MaterialTheme.typography.titleMedium)
+                    Text("Rewrite your draft with a new tone.", style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    MagicTone.values().forEach { tone ->
+                        TextButton(
+                            onClick = {
+                                draft = onMagicCompose(tone, draft)
+                                showMagicDialog = false
+                            },
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                        ) {
+                            Text(tone.name.lowercase().replaceFirstChar { it.uppercase() })
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(onClick = { showMagicDialog = false }, modifier = Modifier.align(Alignment.End)) {
+                        Text("Cancel")
+                    }
+                }
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Column {
-                        Text(address, maxLines = 1, style = MaterialTheme.typography.titleMedium, color = theme.frameColor)
+                        Text(
+                            text = customName ?: address,
+                            maxLines = 1,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = theme.frameColor
+                        )
+                        if (customName != null) {
+                            Text(
+                                text = address,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = theme.frameColor.copy(alpha = 0.6f),
+                                fontSize = 10.sp
+                            )
+                        }
                     }
                 },
                 navigationIcon = {
@@ -299,6 +382,11 @@ fun ThreadScreen(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
+                        DropdownMenuItem(
+                            text = { Text("Rename conversation") },
+                            onClick = { showRenameDialog = true; showMenu = false },
+                            leadingIcon = { Icon(Icons.Default.Edit, null) }
+                        )
                         DropdownMenuItem(
                             text = { Text("Customize theme") },
                             onClick = { onCustomize(); showMenu = false },
@@ -511,10 +599,17 @@ fun ThreadScreen(
                         IconButton(onClick = { attachmentLauncher.launch("image/*") }) {
                             Icon(Icons.Default.AttachFile, contentDescription = "Attach", tint = iconTint)
                         }
+
+                        // Magic Wand (Only if draft exists or just to show feature)
                         IconButton(onClick = {
-                            if (draft.isNotBlank()) showDatePicker = true
+                            if (draft.isNotBlank()) showMagicDialog = true
+                            else Toast.makeText(context, "Type something first!", Toast.LENGTH_SHORT).show()
                         }) {
-                            Icon(Icons.Default.Schedule, contentDescription = "Schedule", tint = iconTint)
+                            Icon(
+                                Icons.Filled.AutoFixHigh,
+                                contentDescription = "Magic Compose",
+                                tint = iconTint
+                            )
                         }
 
                         TextField(
@@ -531,7 +626,14 @@ fun ThreadScreen(
                                 focusedIndicatorColor = Color.Transparent,
                                 unfocusedIndicatorColor = Color.Transparent
                             ),
-                            maxLines = 4
+                            maxLines = 4,
+                            trailingIcon = {
+                                if (draft.isNotBlank()) {
+                                    IconButton(onClick = { showDatePicker = true }) {
+                                        Icon(Icons.Default.Schedule, contentDescription = "Schedule", tint = iconTint.copy(alpha = 0.7f))
+                                    }
+                                }
+                            }
                         )
 
                         IconButton(

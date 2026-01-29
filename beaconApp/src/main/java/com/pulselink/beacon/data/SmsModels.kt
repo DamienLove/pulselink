@@ -17,7 +17,8 @@ data class SmsThreadItem(
     val isPinned: Boolean = false,
     val isArchived: Boolean = false,
     val category: ThreadCategory = ThreadCategory.PERSONAL,
-    val draftSnippet: String? = null
+    val draftSnippet: String? = null,
+    val customName: String? = null
 )
 
 data class SmsMessageItem(
@@ -45,5 +46,6 @@ data class InboxState(
     val autoReplyEnabled: Boolean = false,
     val autoReplyMessage: String = "",
     val quickReplies: List<String> = listOf("Ok", "Yes", "No", "Thanks", "On my way!", "Can't talk now", "Call you later?"),
-    val autoDeleteOtps: Boolean = false
+    val autoDeleteOtps: Boolean = false,
+    val customThreadNames: Map<Long, String> = emptyMap()
 )

@@ -272,9 +272,12 @@ private fun BeaconNav(
                     vm.openThread(threadId, address)
                 }
                 val contactTheme = themeState.forAddress(address)
+                val customName = vm.customThreadNames[threadId]
+
                 BeaconTheme(theme = contactTheme) {
                     ThreadScreen(
                         address = address.ifBlank { "Unknown" },
+                        customName = customName,
                         uiItems = vm.uiMessages,
                         reactions = vm.reactions,
                         starredMessageIds = vm.starredMessageIds,
@@ -282,7 +285,7 @@ private fun BeaconNav(
                         pendingMessage = vm.pendingMessage,
                         initialDraft = vm.getDraftForThread(threadId),
                         isDraftsLoaded = vm.isDraftsLoaded,
-                        quickReplies = vm.quickReplies,
+                        quickReplies = vm.smartReplies,
                         onSaveDraft = { vm.saveDraft(threadId, it) },
                         onBack = { navController.popBackStack() },
                         onSend = { vm.sendDelayedMessage(it) },
@@ -315,7 +318,9 @@ private fun BeaconNav(
                         },
                         onReact = { msgId, emoji -> vm.addReaction(msgId, emoji) },
                         onToggleStar = { msgId -> vm.toggleStar(msgId, threadId) },
-                        onBlock = { vm.blockNumber(address) }
+                        onBlock = { vm.blockNumber(address) },
+                        onRename = { vm.setThreadName(threadId, it) },
+                        onMagicCompose = { tone, text -> vm.rewriteDraft(text, tone) }
                     )
                 }
             }

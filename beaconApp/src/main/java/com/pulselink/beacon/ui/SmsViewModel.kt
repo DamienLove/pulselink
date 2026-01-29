@@ -26,6 +26,9 @@ import com.pulselink.beacon.data.MessageStatus
 import com.pulselink.beacon.data.scheduled.ThreadDraft
 import com.pulselink.beacon.worker.ScheduledMessageWorker
 import com.pulselink.beacon.util.ThreadDateUtils
+import com.pulselink.beacon.util.SmartReplyGenerator
+import com.pulselink.beacon.util.MagicComposeHelper
+import com.pulselink.beacon.util.MagicTone
 import com.pulselink.beacon.BuildConfig
 import com.pulselink.beacon.data.BeaconContact
 import kotlinx.coroutines.Dispatchers
@@ -124,6 +127,9 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     var userMessage by mutableStateOf<String?>(null)
         private set
 
+    var smartReplies by mutableStateOf<List<String>>(emptyList())
+        private set
+
     // Delayed Send
     var pendingMessage by mutableStateOf<PendingMessage?>(null)
         private set
@@ -146,6 +152,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     val autoReplyMessage: String get() = inboxState.autoReplyMessage
     val quickReplies: List<String> get() = inboxState.quickReplies
     val autoDeleteOtps: Boolean get() = inboxState.autoDeleteOtps
+    val customThreadNames: Map<Long, String> get() = inboxState.customThreadNames
 
     // Filtered state
     var filteredThreads by mutableStateOf<List<SmsThreadItem>>(emptyList())
@@ -260,6 +267,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                     val isPinned = inboxState.pinnedThreadIds.contains(thread.threadId)
                     val isArchived = inboxState.archivedThreadIds.contains(thread.threadId)
                     val draft = draftsMap[thread.threadId]
+                    val customName = inboxState.customThreadNames[thread.threadId]
 
                     // Calculate effective timestamp (max of thread or draft)
                     // If we have a draft that is newer than the thread timestamp, use it.
@@ -273,13 +281,15 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                     if (isPinned != thread.isPinned ||
                         isArchived != thread.isArchived ||
                         draft?.body != thread.draftSnippet ||
-                        effectiveTimestamp != thread.timestamp
+                        effectiveTimestamp != thread.timestamp ||
+                        customName != thread.customName
                     ) {
                         thread.copy(
                             isPinned = isPinned,
                             isArchived = isArchived,
                             draftSnippet = draft?.body,
-                            timestamp = effectiveTimestamp
+                            timestamp = effectiveTimestamp,
+                            customName = customName
                         )
                     } else {
                         thread
@@ -307,7 +317,11 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
             val result = if (search.isNotBlank()) {
                 // If searching, show all non-archived matching items in the main list
                 list.filter {
-                    !it.isArchived && (it.address.contains(search, true) || it.snippet.contains(search, true))
+                    !it.isArchived && (
+                        it.address.contains(search, true) ||
+                        it.snippet.contains(search, true) ||
+                        (it.customName != null && it.customName.contains(search, true))
+                    )
                 }
             } else {
                  when (filter) {
@@ -378,6 +392,12 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     fun togglePin(threadId: Long) {
         viewModelScope.launch {
             inboxPrefs.togglePin(threadId)
+        }
+    }
+
+    fun setThreadName(threadId: Long, name: String) {
+        viewModelScope.launch {
+            inboxPrefs.setThreadName(threadId, name)
         }
     }
 
@@ -541,6 +561,13 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         // Transform for UI (Group by Date)
         uiMessages = ThreadDateUtils.mapMessagesToUi(rawMessages)
 
+        // Smart Replies
+        val lastIncoming = rawMessages.firstOrNull { !it.outgoing }
+        val generated = if (lastIncoming != null) {
+            SmartReplyGenerator.generateReplies(lastIncoming.body)
+        } else emptyList()
+        smartReplies = generated.ifEmpty { inboxState.quickReplies }
+
         // Load reactions
         reactionJob?.cancel()
         val ids = rawMessages.map { it.id }
@@ -620,6 +647,10 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             inboxPrefs.setQuickReplies(replies)
         }
+    }
+
+    fun rewriteDraft(text: String, tone: MagicTone): String {
+        return MagicComposeHelper.rewrite(text, tone)
     }
 
     fun setAutoDeleteOtps(enabled: Boolean) {

@@ -18,6 +18,7 @@ class InboxPreferencesRepository(private val context: Context) {
     private val autoReplyMessageKey = stringPreferencesKey("auto_reply_message")
     private val quickRepliesKey = stringPreferencesKey("quick_replies")
     private val autoDeleteOtpsKey = androidx.datastore.preferences.core.booleanPreferencesKey("auto_delete_otps")
+    private val customThreadNamesKey = stringPreferencesKey("custom_thread_names")
 
     val flow: Flow<InboxState> = context.inboxDataStore.data.map { prefs ->
         val pinned = decodeSet(prefs[pinnedKey])
@@ -32,6 +33,7 @@ class InboxPreferencesRepository(private val context: Context) {
         } else {
              listOf("Ok", "Yes", "No", "Thanks", "On my way!", "Can't talk now", "Call you later?")
         }
+        val customThreadNames = decodeMap(prefs[customThreadNamesKey])
 
         InboxState(
             pinnedThreadIds = pinned,
@@ -40,7 +42,8 @@ class InboxPreferencesRepository(private val context: Context) {
             autoReplyEnabled = autoReplyEnabled,
             autoReplyMessage = autoReplyMessage,
             quickReplies = quickReplies,
-            autoDeleteOtps = autoDeleteOtps
+            autoDeleteOtps = autoDeleteOtps,
+            customThreadNames = customThreadNames
         )
     }
 
@@ -71,6 +74,18 @@ class InboxPreferencesRepository(private val context: Context) {
     suspend fun setQuickReplies(replies: List<String>) {
         context.inboxDataStore.edit { prefs ->
             prefs[quickRepliesKey] = replies.joinToString("|")
+        }
+    }
+
+    suspend fun setThreadName(threadId: Long, name: String) {
+        context.inboxDataStore.edit { prefs ->
+            val current = decodeMap(prefs[customThreadNamesKey]).toMutableMap()
+            if (name.isBlank()) {
+                current.remove(threadId)
+            } else {
+                current[threadId] = name.trim()
+            }
+            prefs[customThreadNamesKey] = encodeMap(current)
         }
     }
 
@@ -113,5 +128,31 @@ class InboxPreferencesRepository(private val context: Context) {
 
     private fun encodeSet(set: Set<Long>): String {
         return set.joinToString(",")
+    }
+
+    private fun decodeMap(raw: String?): Map<Long, String> {
+        if (raw.isNullOrBlank()) return emptyMap()
+        val result = mutableMapOf<Long, String>()
+        try {
+            val json = org.json.JSONObject(raw)
+            json.keys().forEach { key ->
+                val id = key.toLongOrNull()
+                val value = json.optString(key)
+                if (id != null && !value.isNullOrBlank()) {
+                    result[id] = value
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return result
+    }
+
+    private fun encodeMap(map: Map<Long, String>): String {
+        val json = org.json.JSONObject()
+        map.forEach { (k, v) ->
+            json.put(k.toString(), v)
+        }
+        return json.toString()
     }
 }
