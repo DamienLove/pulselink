@@ -20,7 +20,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 class SmsSyncManager @Inject constructor(
     private val smsRepository: SmsRepository,
     private val smsSyncTrigger: SmsSyncTrigger,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val smsCloudSynchronizer: SmsCloudSynchronizer
 ) {
     @androidx.annotation.VisibleForTesting
     var scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -37,8 +38,16 @@ class SmsSyncManager @Inject constructor(
                 try {
                     val settings = settingsRepository.settings.first()
                     if (settings.remoteWebAccessEnabled) {
-                        Log.d(TAG, "Repository changed, triggering web sync")
-                        smsSyncTrigger.triggerSync()
+                        if (settings.premiumUnlocked) {
+                            Log.d(TAG, "Repository changed, Premium user: running immediate sync")
+                            // Launch immediate sync in IO scope, bypassing WorkManager
+                            scope.launch {
+                                smsCloudSynchronizer.sync()
+                            }
+                        } else {
+                            Log.d(TAG, "Repository changed, Free user: triggering WorkManager sync")
+                            smsSyncTrigger.triggerSync()
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error checking settings for sync", e)
@@ -57,7 +66,11 @@ class SmsSyncManager @Inject constructor(
                     if (prev == null) {
                         // Initial load: trigger sync if enabled to ensure consistency
                         if (currentSettings.remoteWebAccessEnabled) {
-                            smsSyncTrigger.triggerSync()
+                            if (currentSettings.premiumUnlocked) {
+                                scope.launch { smsCloudSynchronizer.sync() }
+                            } else {
+                                smsSyncTrigger.triggerSync()
+                            }
                         }
                         return@collect
                     }
@@ -76,7 +89,11 @@ class SmsSyncManager @Inject constructor(
 
                     if (shouldSync) {
                         Log.d(TAG, "Settings changed (premium/web), triggering immediate sync")
-                        smsSyncTrigger.triggerSync()
+                        if (currentSettings.premiumUnlocked) {
+                            scope.launch { smsCloudSynchronizer.sync() }
+                        } else {
+                            smsSyncTrigger.triggerSync()
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error handling settings change in SmsSyncManager", e)
