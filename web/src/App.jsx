@@ -1862,26 +1862,30 @@ const Sidebar = memo(({
           <HomeIcon />
           <span>Home</span>
         </button>
-        <button
-          className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
-          onClick={() => setActivePanel('pulselink')}
-          title="PulseLink"
-          aria-label="PulseLink"
-          aria-current={activePanel === 'pulselink' ? 'page' : undefined}
-        >
-          <img src={logo} alt="PulseLink" />
-          <span>PulseLink</span>
-        </button>
-        <button
-          className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
-          onClick={() => setActivePanel('beacon')}
-          title="Beacon"
-          aria-label="Beacon"
-          aria-current={activePanel === 'beacon' ? 'page' : undefined}
-        >
-          <img src={beaconLogo} alt="Beacon" />
-          <span>Beacon</span>
-        </button>
+        {remoteSettings.pulseLinkEnabled && (
+          <button
+            className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
+            onClick={() => setActivePanel('pulselink')}
+            title="PulseLink"
+            aria-label="PulseLink"
+            aria-current={activePanel === 'pulselink' ? 'page' : undefined}
+          >
+            <img src={logo} alt="PulseLink" />
+            <span>PulseLink</span>
+          </button>
+        )}
+        {remoteSettings.beaconLauncherEnabled && (
+          <button
+            className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
+            onClick={() => setActivePanel('beacon')}
+            title="Beacon"
+            aria-label="Beacon"
+            aria-current={activePanel === 'beacon' ? 'page' : undefined}
+          >
+            <img src={beaconLogo} alt="Beacon" />
+            <span>Beacon</span>
+          </button>
+        )}
         {remoteSettings.ringerSongEnabled && (
           <button
             className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
@@ -2219,7 +2223,8 @@ function App() {
     autoUpdateContactInfo: true,
     timeFormat: 'AUTO',
     thirdPartyExtensionsEnabled: true,
-    beaconLauncherEnabled: false,
+    beaconLauncherEnabled: true,
+    pulseLinkEnabled: true,
     otpCleanupEnabled: false,
     emailFallbackEnabled: false,
     crashDetectionEnabled: false,
@@ -2580,6 +2585,7 @@ function App() {
         timeFormat: 'AUTO',
         thirdPartyExtensionsEnabled: true,
         beaconLauncherEnabled: true,
+        pulseLinkEnabled: true,
         otpCleanupEnabled: true,
         emailFallbackEnabled: true,
         crashDetectionEnabled: true,
@@ -2666,7 +2672,8 @@ function App() {
         autoUpdateContactInfo: data.autoUpdateContactInfo ?? true,
         timeFormat: data.timeFormat ?? 'AUTO',
         thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? true,
-        beaconLauncherEnabled: data.beaconLauncherEnabled ?? false,
+        beaconLauncherEnabled: data.beaconLauncherEnabled ?? true,
+        pulseLinkEnabled: data.pulseLinkEnabled ?? true,
         otpCleanupEnabled: data.otpCleanupEnabled ?? false,
         emailFallbackEnabled: data.emailFallbackEnabled ?? false,
         crashDetectionEnabled: data.crashDetectionEnabled ?? false,
@@ -3607,6 +3614,7 @@ function App() {
 
     if (isEssentials) {
       newSettings.beaconLauncherEnabled = true;
+      newSettings.pulseLinkEnabled = true;
       newSettings.firebaseMessagingEnabled = true;
       newSettings.emailFallbackEnabled = true;
       newSettings.otpCleanupEnabled = true;
@@ -3622,6 +3630,7 @@ function App() {
       newSettings.themesEnabled = false;
     } else if (isPower) {
       newSettings.beaconLauncherEnabled = true;
+      newSettings.pulseLinkEnabled = true;
       newSettings.firebaseMessagingEnabled = true;
       newSettings.emailFallbackEnabled = true;
       newSettings.otpCleanupEnabled = true;
@@ -4088,59 +4097,70 @@ function App() {
                 </div>
               )}
               <div className="home-grid">
-                <button className="home-card holographic-card" onClick={() => setActivePanel('beacon')}>
-                  <div className="home-icon beacon">
-                    <img src={beaconLogo} alt="Beacon" />
-                  </div>
-                  <h3>Beacon Inbox</h3>
-                  <p>View SMS synced from your phone.</p>
-                </button>
-                <button className="home-card holographic-card" onClick={() => setActivePanel('pulselink')}>
-                  <div className="home-icon pulselink">
-                    <img src={logo} alt="PulseLink" />
-                  </div>
-                  <h3>PulseLink</h3>
-                  <p>Update your profile and trusted contacts.</p>
-                </button>
-                <button className="home-card holographic-card" onClick={() => setActivePanel('contacts')}>
-                  <div className="home-icon pulselink">
-                    <img src={logo} alt="PulseLink contacts" />
-                  </div>
-                  <h3>Contacts</h3>
-                  <p>Browse all device contacts synced from your phone.</p>
-                </button>
-                <button className="home-card holographic-card" onClick={() => setActivePanel('ringersong')}>
-                  <div className="home-icon ringersong">
-                    <img src={ringersongLogo} alt="RingerSong" />
-                  </div>
-                  <h3>RingerSong</h3>
-                  <p>Manage ringtone progressions and streaming.</p>
-                </button>
-                <button className="home-card holographic-card" onClick={() => setActivePanel('map')}>
-                  <div className="home-icon pulselink">
-                    <img src={logo} alt="PulseLink map" />
-                  </div>
-                  <h3>Emergency Map</h3>
-                  <p>Track shared locations from PulseLink alerts.</p>
-                </button>
-                <button className="home-card holographic-card" onClick={() => setActivePanel('themes')}>
-                  <div className="home-icon pulselink">
-                    <img src={logo} alt="PulseLink themes" />
-                  </div>
-                  <h3>Theme Gallery</h3>
-                  <p>Browse, import, and publish custom themes.</p>
-                </button>
+                {remoteSettings.beaconLauncherEnabled && (
+                  <button className="home-card holographic-card" onClick={() => setActivePanel('beacon')}>
+                    <div className="home-icon beacon">
+                      <img src={beaconLogo} alt="Beacon" />
+                    </div>
+                    <h3>Beacon Inbox</h3>
+                    <p>View SMS synced from your phone.</p>
+                  </button>
+                )}
+                {remoteSettings.pulseLinkEnabled && (
+                  <button className="home-card holographic-card" onClick={() => setActivePanel('pulselink')}>
+                    <div className="home-icon pulselink">
+                      <img src={logo} alt="PulseLink" />
+                    </div>
+                    <h3>PulseLink</h3>
+                    <p>Update your profile and trusted contacts.</p>
+                  </button>
+                )}
+                {remoteSettings.contactsEnabled && (
+                  <button className="home-card holographic-card" onClick={() => setActivePanel('contacts')}>
+                    <div className="home-icon pulselink">
+                      <img src={logo} alt="PulseLink contacts" />
+                    </div>
+                    <h3>Contacts</h3>
+                    <p>Browse all device contacts synced from your phone.</p>
+                  </button>
+                )}
+                {remoteSettings.ringerSongEnabled && (
+                  <button className="home-card holographic-card" onClick={() => setActivePanel('ringersong')}>
+                    <div className="home-icon ringersong">
+                      <img src={ringersongLogo} alt="RingerSong" />
+                    </div>
+                    <h3>RingerSong</h3>
+                    <p>Manage ringtone progressions and streaming.</p>
+                  </button>
+                )}
+                {remoteSettings.mapEnabled && (
+                  <button className="home-card holographic-card" onClick={() => setActivePanel('map')}>
+                    <div className="home-icon pulselink">
+                      <img src={logo} alt="PulseLink map" />
+                    </div>
+                    <h3>Emergency Map</h3>
+                    <p>Track shared locations from PulseLink alerts.</p>
+                  </button>
+                )}
+                {remoteSettings.themesEnabled && (
+                  <button className="home-card holographic-card" onClick={() => setActivePanel('themes')}>
+                    <div className="home-icon pulselink">
+                      <img src={logo} alt="PulseLink themes" />
+                    </div>
+                    <h3>Theme Gallery</h3>
+                    <p>Browse, import, and publish custom themes.</p>
+                  </button>
+                )}
                 <button
                   className="home-card holographic-card"
                   onClick={() => setActivePanel('extensions')}
-                  disabled={!remoteSettings.thirdPartyExtensionsEnabled}
-                  title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage features" : "Enable features in Settings"}
+                  title="Manage features"
                 >
                   <div className="home-icon pulselink">
                     <img src={logo} alt="Features" />
                   </div>
                   <h3>Features</h3>
-                  <p>{remoteSettings.thirdPartyExtensionsEnabled ? "Enhance your experience with powerful add-ons." : "Enable features to start."}</p>
+                  <p>Enhance your experience with powerful add-ons.</p>
                 </button>
               </div>
             </div>
@@ -4865,6 +4885,7 @@ function App() {
                   title: "Core",
                   items: [
                     { id: 'beaconLauncherEnabled', name: 'Beacon Inbox', desc: 'Separate launcher icon for quick access to your SMS inbox.', icon: beaconLogo, isImg: true },
+                    { id: 'pulseLinkEnabled', name: 'PulseLink Manager', desc: 'Profile and trusted contacts management.', icon: logo, isImg: true },
                     { id: 'firebaseMessagingEnabled', name: 'Firebase Relay', desc: 'Faster messaging between PulseLink users.', icon: <CloudSyncIcon /> }
                   ]
                 },
