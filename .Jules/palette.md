@@ -22,3 +22,7 @@
 ## 2024-05-28 - Image Load Error Fallbacks
 **Learning:** User-provided URLs for avatars often break (404s), resulting in ugly browser-default broken image icons that degrade perceived app quality. Relying solely on "if URL exists" logic is insufficient.
 **Action:** Implemented a `useState` + `onError` handler pattern in the `Avatar` component to detect load failures and automatically revert to the deterministic initial fallback, maintaining UI elegance even with bad data.
+
+## 2026-01-29 - Dynamic Contrast for Auto-generated Avatars
+**Learning:** Avatars generated from hashed strings (names) to background colors often result in poor contrast when using a fixed text color (e.g., white text on yellow background). This makes initials unreadable.
+**Action:** Implemented a `getContrastColor` helper to calculate relative luminance of the generated background and dynamically switch text color between black and white for optimal readability.

@@ -60,4 +60,27 @@ test.describe('Palette UX Enhancements', () => {
     await expect(hint).toHaveText('/');
     await expect(hint).toHaveAttribute('aria-hidden', 'true');
   });
+
+  test('Avatar text contrast should adjust based on background', async ({ page }) => {
+    // Navigate to PulseLink panel to access Profile settings
+    await page.locator('.nav-item[title="PulseLink"]').click();
+
+    // The Avatar component is used in the profile preview
+    // Note: The App uses className="profile-avatar-img" for this specific instance, overriding the default "thread-avatar"
+    const avatar = page.locator('.profile-avatar-preview .profile-avatar-img');
+    const nameInput = page.locator('label:has-text("Display name") input');
+
+    // 1. Test Light Background -> Black Text
+    // "Alice" -> #C6A660 (Luminance ~167 > 128) -> Text should be Black
+    await nameInput.fill('Alice');
+    // Wait for react state update
+    await page.waitForTimeout(100);
+    await expect(avatar).toHaveCSS('color', 'rgb(0, 0, 0)');
+
+    // 2. Test Dark Background -> White Text
+    // "Mom" -> #012EEB (Luminance low) -> Text should be White
+    await nameInput.fill('Mom');
+    await page.waitForTimeout(100);
+    await expect(avatar).toHaveCSS('color', 'rgb(255, 255, 255)');
+  });
 });
