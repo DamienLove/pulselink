@@ -2062,3 +2062,152 @@ textarea:focus-visible,
   from { opacity: 0; transform: translateY(-20px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* -------------------------------------------------------------------------- */
+/*  PulseGuide - System Assistant                                             */
+/* -------------------------------------------------------------------------- */
+
+.pulse-guide-fab {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 0 20px var(--accent-glow);
+  z-index: 9000;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: none;
+}
+
+.pulse-guide-fab:hover {
+  transform: scale(1.1) rotate(15deg);
+  box-shadow: 0 0 30px var(--accent-glow), 0 0 50px var(--accent-glow);
+}
+
+.pulse-guide-fab svg {
+  width: 28px;
+  height: 28px;
+  animation: pulse-icon 3s infinite;
+}
+
+@keyframes pulse-icon {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.9); }
+}
+
+.pulse-guide-card {
+  position: fixed;
+  bottom: 100px;
+  right: 32px;
+  width: 320px;
+  background: rgba(10, 15, 25, 0.95);
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--accent);
+  border-radius: 20px;
+  padding: 0;
+  z-index: 9000;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(0, 255, 255, 0.2);
+  transform-origin: bottom right;
+  animation: guide-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  overflow: hidden;
+}
+
+@keyframes guide-pop {
+  from { opacity: 0; transform: scale(0.8) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.guide-header {
+  background: linear-gradient(90deg, rgba(0, 255, 255, 0.1), transparent);
+  padding: 16px;
+  border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.guide-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #000;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.guide-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 1.1em;
+}
+
+.guide-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.guide-tip {
+  font-size: 0.9em;
+  color: var(--muted);
+  line-height: 1.5;
+  background: rgba(255,255,255,0.03);
+  padding: 12px;
+  border-radius: 12px;
+  border-left: 3px solid var(--accent);
+}
+
+.guide-status-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85em;
+  color: var(--ink);
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.guide-status-val {
+  font-family: var(--font-mono);
+  color: var(--accent);
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Data Stream Animation                                                     */
+/* -------------------------------------------------------------------------- */
+
+.data-stream-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 255, 255, 0.03) 3px,
+    transparent 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.5;
+}
+
+.home-card:hover .data-stream-overlay {
+  opacity: 0.8;
+  animation: scan-vertical 2s linear infinite;
+}
+
+@keyframes scan-vertical {
+  from { background-position: 0 0; }
+  to { background-position: 0 100px; }
+}

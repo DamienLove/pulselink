@@ -2136,6 +2136,55 @@ const getToastClass = (msg) => {
   return 'toast';
 };
 
+const PulseGuide = memo(({ user, remoteSettings }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (!user) return null;
+
+  return (
+    <>
+      <button
+        className="pulse-guide-fab"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-label="PulseGuide Assistant"
+        title="PulseGuide Assistant"
+      >
+        <BoltIcon />
+      </button>
+      {isOpen && (
+        <div className="pulse-guide-card">
+          <div className="guide-header">
+            <div className="guide-avatar">P</div>
+            <div className="guide-title">PulseGuide</div>
+            <button onClick={() => setIsOpen(false)} style={{marginLeft:'auto', background:'none', border:'none', color:'var(--accent)', cursor:'pointer'}} aria-label="Close Guide">x</button>
+          </div>
+          <div className="guide-content">
+            <div className="guide-status-row">
+              <span>System Status</span>
+              <span className="guide-status-val">ONLINE</span>
+            </div>
+            <div className="guide-status-row">
+              <span>Web Access</span>
+              <span className="guide-status-val">{remoteSettings?.remoteWebAccessEnabled ? 'ACTIVE' : 'OFF'}</span>
+            </div>
+             <div className="guide-status-row">
+              <span>Extensions</span>
+              <span className="guide-status-val">{remoteSettings?.thirdPartyExtensionsEnabled ? 'ENABLED' : 'DISABLED'}</span>
+            </div>
+            <div className="guide-tip">
+              <strong>Tip:</strong> Press <span className="mono">/</span> to search messages instantly.
+            </div>
+            <div style={{fontSize: '0.8em', color: 'var(--muted)', textAlign: 'center', marginTop: 8}}>
+                PulseLink Suite v12.0
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+});
+PulseGuide.displayName = 'PulseGuide';
+
 function App() {
   const webHintStorageKey = 'pulselink.hideWebHint';
   const [user, setUser] = useState(null);
@@ -4089,6 +4138,7 @@ function App() {
               )}
               <div className="home-grid">
                 <button className="home-card holographic-card" onClick={() => setActivePanel('beacon')}>
+                  <div className="data-stream-overlay" />
                   <div className="home-icon beacon">
                     <img src={beaconLogo} alt="Beacon" />
                   </div>
@@ -4096,6 +4146,7 @@ function App() {
                   <p>View SMS synced from your phone.</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('pulselink')}>
+                  <div className="data-stream-overlay" />
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink" />
                   </div>
@@ -4103,6 +4154,7 @@ function App() {
                   <p>Update your profile and trusted contacts.</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('contacts')}>
+                  <div className="data-stream-overlay" />
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink contacts" />
                   </div>
@@ -4110,6 +4162,7 @@ function App() {
                   <p>Browse all device contacts synced from your phone.</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('ringersong')}>
+                  <div className="data-stream-overlay" />
                   <div className="home-icon ringersong">
                     <img src={ringersongLogo} alt="RingerSong" />
                   </div>
@@ -4117,6 +4170,7 @@ function App() {
                   <p>Manage ringtone progressions and streaming.</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('map')}>
+                  <div className="data-stream-overlay" />
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink map" />
                   </div>
@@ -4124,6 +4178,7 @@ function App() {
                   <p>Track shared locations from PulseLink alerts.</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('themes')}>
+                  <div className="data-stream-overlay" />
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink themes" />
                   </div>
@@ -4136,6 +4191,7 @@ function App() {
                   disabled={!remoteSettings.thirdPartyExtensionsEnabled}
                   title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage features" : "Enable features in Settings"}
                 >
+                  <div className="data-stream-overlay" />
                   <div className="home-icon pulselink">
                     <img src={logo} alt="Features" />
                   </div>
@@ -5316,6 +5372,7 @@ function App() {
           )}
         </div>
       </div>
+      <PulseGuide user={user} remoteSettings={remoteSettings} />
     </div>
   );
 }
