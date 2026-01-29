@@ -1785,7 +1785,8 @@ const Sidebar = memo(({
   setShowArchived,
   onPinThread,
   onArchiveThread,
-  contactLookup
+  contactLookup,
+  requestPhoneSync
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef(null);
@@ -2075,6 +2076,15 @@ const Sidebar = memo(({
                       <div className="badge badge-premium" style={{ display: 'inline-block', marginTop: '8px', padding: '2px 8px', borderRadius: '4px', background: 'var(--accent)', color: '#fff', fontSize: '0.8em' }}>
                         Premium Required
                       </div>
+                    )}
+                    {isPremium && (
+                      <button
+                        className="secondary-btn"
+                        style={{ marginTop: '12px', width: '100%', fontSize: '0.85em' }}
+                        onClick={requestPhoneSync}
+                      >
+                        Request Phone Sync
+                      </button>
                     )}
                   </div>
                 )}
@@ -4050,6 +4060,7 @@ function App() {
           onPinThread={handlePinThread}
           onArchiveThread={handleArchiveThread}
           contactLookup={contactLookup}
+          requestPhoneSync={requestPhoneSync}
         />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
@@ -5253,7 +5264,23 @@ function App() {
           </div>
         </div>
       )}
-                {selectedThread ? (
+                {lines.length === 0 ? (
+                  <div className="empty-state">
+                    <img src={beaconLogo} alt="Beacon" className="empty-logo" />
+                    <h3 style={{ marginBottom: '8px' }}>Welcome to Beacon Inbox</h3>
+                    <p style={{ maxWidth: '400px', textAlign: 'center', color: 'var(--muted)', marginBottom: '24px' }}>
+                      Your messages will appear here once your phone syncs.
+                      Open PulseLink on your Android device to start the sync.
+                    </p>
+                    <button
+                      className="primary-btn"
+                      onClick={requestPhoneSync}
+                    >
+                      Request Sync from Phone
+                    </button>
+                    {syncRequestStatus && <div className={getToastClass(syncRequestStatus)} style={{marginTop: 16}} role="status" aria-live="polite">{syncRequestStatus}</div>}
+                  </div>
+                ) : selectedThread ? (
                   <>
                     <div className="chat-header">
                       <div>
