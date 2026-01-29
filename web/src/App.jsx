@@ -26,6 +26,7 @@ import {
   writeBatch
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
+import BeaconPanel from './BeaconPanel';
 import './App.css';
 import logo from './assets/pulselink-pro-logo.png';
 import beaconLogo from './assets/beacon-logo.png';
@@ -243,33 +244,6 @@ const ThreadSkeleton = () => (
   </div>
 );
 
-const areMessagesEqual = (prev, next) => {
-  return prev.showPreviews === next.showPreviews &&
-         prev.msg.id === next.msg.id &&
-         prev.msg.body === next.msg.body &&
-         prev.msg.date === next.msg.date &&
-         prev.msg.type === next.msg.type;
-};
-
-// Bolt: Optimized MessageItem with memo to prevent re-rendering all messages when typing
-// or when new messages arrive (which creates new object references).
-const MessageItem = memo(({ msg, showPreviews }) => (
-  <div className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
-    <div className="message-bubble">
-      {msg.imageUrl && (
-        <div className="message-image-container">
-          <img src={msg.imageUrl} alt="Attachment" className="message-image" loading="lazy" />
-        </div>
-      )}
-      {showPreviews ? msg.body : '••••••'}
-    </div>
-    <div className="message-time">
-      {timeFormatter.format(new Date(msg.date))}
-    </div>
-  </div>
-), areMessagesEqual);
-
-MessageItem.displayName = 'MessageItem';
 
 // Bolt: Custom comparator for DeviceContactItem to handle object reference changes
 const areDeviceContactsEqual = (prev, next) => {
@@ -712,175 +686,6 @@ const SpotifyResultItem = memo(({ track, onAdd, isAdding }) => (
 ), areSpotifyResultsEqual);
 SpotifyResultItem.displayName = 'SpotifyResultItem';
 
-// Bolt: MessageComposer extracted to prevent App re-renders on typing
-const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn }) => {
-  const [address, setAddress] = useState('');
-  const [body, setBody] = useState('');
-  const [lineId, setLineId] = useState('');
-  const [status, setStatus] = useState('');
-  const [isSending, setIsSending] = useState(false);
-  const textareaRef = useRef(null);
-
-  useLayoutEffect(() => {
-    const el = textareaRef.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight + 2}px`;
-  }, [body]);
-
-  useEffect(() => {
-    if (selectedThread) {
-      setAddress(selectedThread.address || '');
-      setLineId(selectedThread.lineId || '');
-    } else {
-      setAddress('');
-      // When clearing (New message), reset lineId to empty to allow user selection or fallback
-      setLineId('');
-    }
-    setBody('');
-    setStatus('');
-  }, [selectedThread]);
-
-  const handleSendMessage = async () => {
-    if (!user) return;
-    const cleanAddress = address.trim();
-    const cleanBody = body.trim();
-    const effectiveLineId = lineInboxMode === 'PER_LINE' ? (lineId || activeLineId || lines[0]?.id || null) : null;
-
-    if (!cleanAddress || !cleanBody) {
-      setStatus("Add a phone number and message.");
-      return;
-    }
-    setIsSending(true);
-    setStatus('');
-    try {
-      const docRef = await addDoc(collection(db, "users", user.uid, "outbox"), {
-        address: cleanAddress,
-        body: cleanBody,
-        createdAt: serverTimestamp(),
-        source: "web",
-        lineId: effectiveLineId,
-        status: "pending"
-      });
-      setBody('');
-      setStatus("Queued for sending...");
-
-      // Monitor status
-      let unsubscribe;
-      unsubscribe = onSnapshot(docRef, (docSnap) => {
-        if (!docSnap.exists()) {
-          setStatus("Sent");
-          setTimeout(() => setStatus(''), 3000);
-          if (unsubscribe) unsubscribe();
-        } else {
-          const data = docSnap.data();
-          if (data.status === 'failed') {
-            setStatus(`Send failed: ${data.error || 'Unknown error'}`);
-            if (unsubscribe) unsubscribe();
-          }
-        }
-      });
-    } catch (error) {
-      console.error("Send failed", error);
-      setStatus("Send failed. Try again.");
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  return (
-    <div className="composer">
-      <div className="composer-row">
-        <label className="composer-label" htmlFor="compose-address">To<RequiredIndicator /></label>
-        <input
-          id="compose-address"
-          className="composer-input"
-          type="tel"
-          placeholder="Phone number"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          required
-        />
-      </div>
-      {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
-        <div className="composer-row">
-          <label className="composer-label" htmlFor="compose-line">Send from</label>
-          <select
-            id="compose-line"
-            className="composer-input"
-            value={lineId}
-            onChange={(e) => setLineId(e.target.value)}
-          >
-            <option value="">Primary device</option>
-            {lines.map(line => (
-              <option key={line.id} value={line.id}>
-                {(line.label || line.phoneNumber || line.id.slice(0, 6))}
-                {line.primaryDeviceId ? ' • primary' : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-      <div className="composer-row composer-actions">
-        <div style={{ flex: 1, position: 'relative' }}>
-          <textarea
-            ref={textareaRef}
-            className="composer-textarea"
-            style={{ width: '100%', paddingBottom: '24px', maxHeight: '200px', overflowY: 'auto' }}
-            placeholder="Type a message... (Ctrl+Enter to send)"
-            aria-label="Message body"
-            aria-describedby="message-char-count"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            required
-            onKeyDown={(e) => {
-              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                e.preventDefault();
-                handleSendMessage();
-              }
-            }}
-          />
-          {body.length > 0 && (
-            <div
-              id="message-char-count"
-              style={{
-                position: 'absolute',
-                bottom: '8px',
-                right: '12px',
-                fontSize: '0.75em',
-                color: 'var(--muted)',
-                pointerEvents: 'none',
-                fontWeight: 500
-              }}
-            >
-              {body.length}
-            </div>
-          )}
-        </div>
-        <button
-          onClick={handleSendMessage}
-          disabled={isSending || isLoggingIn}
-          className="primary-btn"
-          title="Send (Ctrl+Enter)"
-          aria-busy={isSending}
-        >
-          {isSending ? (
-            <>
-              <Spinner />
-              Sending...
-            </>
-          ) : "Send"}
-        </button>
-      </div>
-      {status && <div className="compose-status" role="status" aria-live="polite">{status}</div>}
-      <div className="compose-hint">
-        Messages are sent from your phone when it&apos;s online and signed in.
-      </div>
-    </div>
-  );
-});
-
-MessageComposer.displayName = 'MessageComposer';
 
 const defaultTheme = {
   primaryColor: "#00F3FF",
@@ -2149,7 +1954,6 @@ function App() {
   const [activeLineId, setActiveLineId] = useState(null);
   const [selectedThread, setSelectedThread] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
-  const [messages, setMessages] = useState([]);
 
   // Fix: Use setUser to clear lint error or remove mock override if switching to real auth
   useEffect(() => {
@@ -2302,7 +2106,6 @@ function App() {
   const settingsSearchRef = useRef(null);
   const contactSearchRef = useRef(null);
   const themeSearchRef = useRef(null);
-  const messagesEndRef = useRef(null);
   const [premiumClaimActive, setPremiumClaimActive] = useState(false);
   const [proClaimActive, setProClaimActive] = useState(false);
 
@@ -2532,13 +2335,6 @@ function App() {
     trustedContacts.forEach(add);
     return map;
   }, [deviceContacts, trustedContacts]);
-
-  // Bolt: Memoize list elements to avoid re-creating them on every render
-  const messageListElements = useMemo(() => (
-    messages.map(msg => (
-      <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} />
-    ))
-  ), [messages, showPreviews]);
 
   // Bolt: Pagination for contact list to improve performance
   const contactListElements = useMemo(() => (
@@ -2896,39 +2692,6 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (user && selectedThread) {
-      // Listen to messages for the selected thread
-      const basePath = selectedThread.lineId
-        ? ["users", user.uid, "lines", selectedThread.lineId, "threads", selectedThread.id, "messages"]
-        : ["users", user.uid, "synced_threads", selectedThread.id, "messages"];  
-      const messagesRef = collection(db, ...basePath);
-      // Bolt: Standard chat order (Oldest -> Newest)
-      const q = query(messagesRef, orderBy("date", "asc"));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const messagesData = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            date: toMillis(data.date)
-          };
-        });
-        setMessages(messagesData);
-      });
-      return () => unsubscribe();
-    } else {
-      setMessages([]);
-    }
-  }, [user, selectedThread]);
-
-
-  // Bolt: Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (autoScroll && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, autoScroll, selectedThread]);
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('mock_user') === 'true') return;
@@ -3843,7 +3606,7 @@ function App() {
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      return (b.date ?? 0) - (a.date ?? 0);
+      return (b.date || 0) - (a.date || 0);
     });
   }, [legacyThreads, lineThreads, lineInboxMode, showArchived]);
 
@@ -3858,7 +3621,7 @@ function App() {
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      return (b.date ?? 0) - (a.date ?? 0);
+      return (b.date || 0) - (a.date || 0);
     });
   }, [lineInboxMode, activeLineId, lines, lineThreads, combinedThreads, showArchived]);
 
@@ -3880,7 +3643,6 @@ function App() {
       window.debugSetUser = setUser;
       window.debugSetUserData = setUserData;
       window.debugSetRemoteSettings = setRemoteSettings;
-      window.debugSetMessages = setMessages;
       window.debugSetDeviceContacts = setDeviceContacts;
       window.debugSetTrustedContacts = setTrustedContacts;
       window.debugSetAlertLocations = setAlertLocations;
@@ -5227,72 +4989,17 @@ function App() {
 
           {activePanel === 'beacon' && (
             hasBeaconData ? (
-              <div className="beacon-layout">
-      {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
-        <div className="line-tabs line-tabs--main">
-          <div className="line-tabs-header">
-            <h4>Inbox lines</h4>
-            <div className="chip-row">
-              <button
-                className={`chip ${!activeLineId ? 'active' : ''}`}
-                onClick={() => setActiveLineId(null)}
-              >
-                All
-              </button>
-              {lines.map((line) => (
-                <button
-                  key={line.id}
-                  className={`chip ${activeLineId === line.id ? 'active' : ''}`}
-                  onClick={() => setActiveLineId(line.id)}
-                  title={line.phoneNumber || 'Line'}
-                >
-                  {line.label || line.phoneNumber || line.id.slice(0, 6)}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-                {selectedThread ? (
-                  <>
-                    <div className="chat-header">
-                      <div>
-                        <h3>{selectedThread.address}</h3>
-                        {lineInboxMode === 'PER_LINE' && selectedThread.lineId && (
-                          <div className="chat-subtitle">From line {lines.find(l => l.id === selectedThread.lineId)?.label || selectedThread.lineId.slice(0,6)}</div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="messages-list">
-                      {messageListElements}
-                      <div ref={messagesEndRef} style={{ height: 1 }} />
-                    </div>
-                    <MessageComposer
-                      user={user}
-                      db={db}
-                      selectedThread={selectedThread}
-                      lineInboxMode={lineInboxMode}
-                      activeLineId={activeLineId}
-                      lines={lines}
-                      isLoggingIn={isLoggingIn}
-                    />
-                  </>
-                ) : (
-                  <div className="empty-state">
-                    <img src={beaconLogo} alt="Beacon" className="empty-logo" />
-                    <div>Select a thread or start a new message</div>
-                    <MessageComposer
-                        user={user}
-                        db={db}
-                        selectedThread={selectedThread}
-                        lineInboxMode={lineInboxMode}
-                        activeLineId={activeLineId}
-                        lines={lines}
-                        isLoggingIn={isLoggingIn}
-                    />
-                  </div>
-                )}
-              </div>
+              <BeaconPanel
+                user={user}
+                db={db}
+                selectedThread={selectedThread}
+                lines={lines}
+                activeLineId={activeLineId}
+                setActiveLineId={setActiveLineId}
+                lineInboxMode={lineInboxMode}
+                showPreviews={showPreviews}
+                setActivePanel={setActivePanel}
+              />
             ) : (
               <div className="empty-state">
                 <img src={beaconLogo} alt="Beacon" className="empty-logo" style={{ marginBottom: '24px', opacity: 1, filter: 'none' }} />

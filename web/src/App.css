@@ -1126,8 +1126,13 @@ textarea:focus-visible,
   display: flex;
   flex-direction: column;
   max-width: 65%;
-  /* Bolt: New messages appear at top, so slide down feels more natural */
-  animation: slideDownFade 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  margin: 4px 0;
+  animation: slideInUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Optimistic UI: Sending State */
+.message.sending {
+  opacity: 0.7;
 }
 
 .message.sent {
@@ -1141,12 +1146,12 @@ textarea:focus-visible,
 }
 
 .message-bubble {
-  padding: 16px 24px;
-  border-radius: 28px;
-  font-size: 1.05em;
-  line-height: 1.5;
+  padding: 12px 16px;
+  border-radius: 22px;
+  font-size: 1em;
+  line-height: 1.4;
   position: relative;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 .message.sent .message-bubble {
@@ -2061,4 +2066,9 @@ textarea:focus-visible,
 @keyframes slideDownFade {
   from { opacity: 0; transform: translateY(-20px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes slideInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
