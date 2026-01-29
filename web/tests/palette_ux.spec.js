@@ -60,4 +60,23 @@ test.describe('Palette UX Enhancements', () => {
     await expect(hint).toHaveText('/');
     await expect(hint).toHaveAttribute('aria-hidden', 'true');
   });
+
+  test('MessageComposer should auto-focus inputs on desktop', async ({ page }) => {
+    // Ensure desktop viewport
+    await page.setViewportSize({ width: 1280, height: 720 });
+
+    // Navigate to Beacon
+    await page.locator('.nav-item[title="Beacon"]').click();
+
+    // Expect "To" input to be focused immediately after navigation
+    await expect(page.locator('#compose-address')).toBeFocused({ timeout: 5000 });
+
+    // Select a thread (assuming mock data has threads)
+    const firstThread = page.locator('.thread-item').first();
+    await firstThread.waitFor();
+    await firstThread.click();
+
+    // Expect textarea to be focused
+    await expect(page.locator('.composer-textarea')).toBeFocused({ timeout: 5000 });
+  });
 });

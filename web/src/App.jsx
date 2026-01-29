@@ -720,6 +720,7 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
   const [status, setStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
   const textareaRef = useRef(null);
+  const addressInputRef = useRef(null);
 
   useLayoutEffect(() => {
     const el = textareaRef.current;
@@ -739,6 +740,18 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
     }
     setBody('');
     setStatus('');
+
+    // Palette: Auto-focus input on desktop to reduce friction
+    if (typeof window !== 'undefined' && window.innerWidth > 768) {
+      // Small timeout to allow for layout updates/transitions
+      setTimeout(() => {
+        if (selectedThread) {
+          textareaRef.current?.focus();
+        } else {
+          addressInputRef.current?.focus();
+        }
+      }, 100);
+    }
   }, [selectedThread]);
 
   const handleSendMessage = async () => {
@@ -794,6 +807,7 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
         <label className="composer-label" htmlFor="compose-address">To<RequiredIndicator /></label>
         <input
           id="compose-address"
+          ref={addressInputRef}
           className="composer-input"
           type="tel"
           placeholder="Phone number"
