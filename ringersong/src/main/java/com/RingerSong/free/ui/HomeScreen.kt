@@ -129,6 +129,7 @@ fun HomeScreen(
     onClearYouTubeSearch: () -> Unit,
     onAddYouTubeTrack: (SpotifyTrack) -> Unit,
     onConnectSpotify: ( (Boolean) -> Unit ) -> Unit,
+    onAddFromLink: (String) -> Unit,
     userCapabilities: String,
     snackbarHostState: SnackbarHostState
 ) {
@@ -287,7 +288,10 @@ fun HomeScreen(
                 visible = showContent.value,
                 enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 })
             ) {
-                AppleMusicPlaceholderSection(modifier = Modifier.fillMaxWidth())
+                UniversalLinkAddSection(
+                    onAdd = onAddFromLink,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -1181,31 +1185,45 @@ private fun SpotifyResultRow(
 }
 
 @Composable
-private fun AppleMusicPlaceholderSection(modifier: Modifier = Modifier) {
+private fun UniversalLinkAddSection(
+    onAdd: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var link by remember { mutableStateOf("") }
+
     SectionCard(modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Add from Apple Music",
+                    text = "Add from Link",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Apple Music integration is coming soon.",
+                    text = "Paste a link from Spotify, YouTube Music, Apple Music, or Tidal.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+
+            OutlinedTextField(
+                value = link,
+                onValueChange = { link = it },
+                label = { Text("Paste song link") },
+                placeholder = { Text("https://...") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
             Button(
-                onClick = { /* No-op or show info dialog */ },
-                enabled = false,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                onClick = {
+                    onAdd(link)
+                    link = ""
+                },
+                enabled = link.isNotBlank(),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Coming Soon")
+                Text("Add Track")
             }
         }
     }

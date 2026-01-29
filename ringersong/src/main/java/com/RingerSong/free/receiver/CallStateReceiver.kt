@@ -31,6 +31,16 @@ class CallStateReceiver : BroadcastReceiver() {
         Log.d(TAG, "onReceive: action=${intent.action}")
         if (intent.action != TelephonyManager.ACTION_PHONE_STATE_CHANGED) return
 
+        // If we hold the Call Screening role, the RingerCallScreeningService will handle everything.
+        // We should skip execution here to avoid double-handling (silencing fights, double playback start).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val roleManager = context.getSystemService(Context.ROLE_SERVICE) as? android.app.role.RoleManager
+            if (roleManager != null && roleManager.isRoleHeld(android.app.role.RoleManager.ROLE_CALL_SCREENING)) {
+                Log.d(TAG, "Skipping Receiver: ROLE_CALL_SCREENING is held, Service will handle.")
+                return
+            }
+        }
+
         val phoneState = intent.getStringExtra(TelephonyManager.EXTRA_STATE) ?: return
         Log.d(TAG, "Phone state: $phoneState (last: $lastState)")
 

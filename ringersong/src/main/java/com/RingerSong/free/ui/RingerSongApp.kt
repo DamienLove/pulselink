@@ -146,6 +146,14 @@ private fun AppNavHost(
                          onResult(success)
                      }
                 },
+                onAddFromLink = { link ->
+                    viewModel.addFromLink(link) { message ->
+                        coroutineScope.launch { snackbarHostState.showSnackbar(message) }
+                        if (!message.startsWith("Error") && !message.startsWith("Invalid")) {
+                             activity?.let { AdServices.showInterstitial(it) }
+                        }
+                    }
+                },
                 snackbarHostState = snackbarHostState
             )
         }

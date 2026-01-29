@@ -740,4 +740,87 @@ class RingerViewModel @Inject constructor(
             onComplete(info)
         }
     }
+
+    fun addFromLink(url: String, onResult: (String) -> Unit) {
+        val trimmed = url.trim()
+        if (trimmed.isEmpty()) {
+            onResult("Invalid link")
+            return
+        }
+
+        viewModelScope.launch {
+            val songId = UUID.randomUUID().toString()
+            var title = "Linked Track"
+            var uri = trimmed
+            var source = SongSource.LOCAL
+            var durationMs: Long? = null
+
+            // Detect Source
+            if (trimmed.contains("spotify.com") || trimmed.startsWith("spotify:")) {
+                 source = SongSource.SPOTIFY
+                 title = "Spotify Track"
+            } else if (trimmed.contains("music.youtube.com") || trimmed.contains("youtube.com") || trimmed.startsWith("youtube:")) {
+                 source = SongSource.YOUTUBE_MUSIC
+                 title = "YouTube Music Track"
+                 val videoId = if (trimmed.startsWith("youtube:video:")) {
+                     trimmed.removePrefix("youtube:video:")
+                 } else {
+                     Uri.parse(trimmed).getQueryParameter("v") ?: trimmed.substringAfterLast("/")
+                 }
+                 uri = "youtube:video:$videoId"
+            } else if (trimmed.contains("music.apple.com")) {
+                 source = SongSource.APPLE_MUSIC
+                 title = "Apple Music Track"
+            } else if (trimmed.contains("tidal.com") || trimmed.startsWith("tidal:")) {
+                 source = SongSource.TIDAL
+                 title = "Tidal Track"
+            } else {
+                 onResult("Unsupported link type. Please use Spotify, YouTube Music, Apple Music, or Tidal.")
+                 return@launch
+            }
+
+            // Add to local state
+            val songEntry = SongEntry(
+                id = songId,
+                title = title,
+                uri = uri,
+                source = source,
+                durationMs = durationMs,
+                addedAt = System.currentTimeMillis()
+            )
+
+            withContext(Dispatchers.IO) {
+                store.update { current ->
+                    val updatedSongs = current.songs + songEntry
+                    val updatedOrder = current.songOrder + songEntry.id
+                    current.copy(songs = updatedSongs, songOrder = updatedOrder)
+                }
+            }
+
+            // Sync to Firestore
+            val uid = auth?.currentUser?.uid
+            if (uid != null && db != null) {
+                val trackData = mapOf(
+                    "uri" to uri,
+                    "source" to source.name,
+                    "title" to title,
+                    "artist" to "Unknown Artist",
+                    "durationMs" to (durationMs ?: 0L),
+                    "addedAt" to com.google.firebase.Timestamp.now(),
+                    "downloaded" to false
+                )
+
+                db!!.collection("users").document(uid).collection("ringer_playlist")
+                    .add(trackData)
+                    .addOnSuccessListener {
+                        onResult("Added $title")
+                    }
+                    .addOnFailureListener {
+                         onResult("Added locally (Sync failed)")
+                    }
+            } else {
+                onResult("Added locally")
+            }
+        }
+    }
 }
