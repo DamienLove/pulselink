@@ -21,6 +21,7 @@ class PulseLinkFirebaseMessagingService : FirebaseMessagingService() {
 
     @Inject lateinit var linkChannelService: LinkChannelService
     @Inject lateinit var smsRelayService: SmsRelayService
+    @Inject lateinit var smsSyncTrigger: com.pulselink.data.sms.SmsSyncTrigger
     @Inject lateinit var settingsRepository: SettingsRepository
     @Inject lateinit var firestore: FirebaseFirestore
     @Inject lateinit var auth: FirebaseAuth
@@ -44,6 +45,11 @@ class PulseLinkFirebaseMessagingService : FirebaseMessagingService() {
             // If the app was dead, PulseLinkApp.onCreate() calls this too, but
             // explicit call here guarantees it for all entry points.
             smsRelayService.start()
+
+            if (message.data["reason"] == "SYNC_REQUEST") {
+                Log.d(TAG, "Triggering immediate sync due to SYNC_REQUEST")
+                smsSyncTrigger.triggerSync()
+            }
             return
         }
 
