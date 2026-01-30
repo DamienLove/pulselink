@@ -2062,3 +2062,49 @@ textarea:focus-visible,
   from { opacity: 0; transform: translateY(-20px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* Palette UX Improvements */
+
+.command-palette-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid var(--border);
+  font-size: 0.8em;
+  color: var(--muted);
+}
+
+.cp-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.command-key {
+  font-family: var(--font-mono);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  min-width: 20px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--ink);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.5);
+}
+
+.item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  width: 24px;
+  height: 24px;
+}
+
+.command-palette-item.selected .item-icon {
+  color: var(--accent);
+}
