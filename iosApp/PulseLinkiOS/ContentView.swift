@@ -489,6 +489,7 @@ private struct Card<Content: View>: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(RelayColors.primary.opacity(0.3), lineWidth: 1)
         )
+        .shadow(color: RelayColors.primary.opacity(0.15), radius: 20, x: 0, y: 0)
     }
 }
 
@@ -601,7 +602,7 @@ private struct CancelEmergencySheet: View {
 // MARK: - Theme
 
 enum RelayColors {
-    // Future Deep v11 (Absolute Zero)
+    // Future Deep v12 (Absolute Zero)
     // Primary: #00F3FF -> Laser Blue
     static let primary = Color(red: 0.0, green: 0.953, blue: 1.0)
     // Secondary: #E000FF -> Neon Purple
@@ -611,7 +612,7 @@ enum RelayColors {
 
     // Complementary shades
     static let accent  = Color(red: 0.0, green: 0.953, blue: 1.0).opacity(0.8)
-    static let surface = Color(red: 0.05, green: 0.05, blue: 0.05) // Dark gray for surface
+    static let surface = Color(red: 0.02, green: 0.03, blue: 0.05) // #05080E
 
     // Using surface with slight opacity for glass effect
     static let cardBackground = surface.opacity(0.8)

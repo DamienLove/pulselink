@@ -6,6 +6,8 @@
     <color name="pulse_error">#FF2E4D</color>
     <color name="pulse_background">#000000</color>
     <color name="pulse_surface">#05080E</color>
+    <color name="pulse_surface_alt">#0A0F1C</color>
+    <color name="pulse_glass_border">#2600F3FF</color>
     <color name="pulse_on_surface">#E0F7FA</color>
     <color name="splash_background">#000000</color>
     <color name="widget_emergency_red">#D32F2F</color>

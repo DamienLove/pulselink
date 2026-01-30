@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, memo, useCallback, useLayoutEffec
 import { auth, db, functions } from './firebase';
 import DevTools from './DevTools';
 import CommandPalette from './CommandPalette';
+import PulseGuide from './PulseGuide';
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -4022,6 +4023,8 @@ function App() {
           logout: handleLogout,
           newThread: handleNewThread
         }}
+        deviceContacts={deviceContacts}
+        trustedContacts={trustedContacts}
       />
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <div className="app-container">
@@ -5316,6 +5319,7 @@ function App() {
           )}
         </div>
       </div>
+      <PulseGuide activePanel={activePanel} setActivePanel={setActivePanel} />
     </div>
   );
 }

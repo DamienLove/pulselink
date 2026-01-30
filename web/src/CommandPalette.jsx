@@ -14,7 +14,7 @@ const ACTIONS = [
   { id: 'act-new-msg', label: 'New Message', icon: '✏️', action: (setActivePanel, actions) => actions.newThread() },
 ];
 
-export default function CommandPalette({ isOpen, onClose, setActivePanel, actions }) {
+export default function CommandPalette({ isOpen, onClose, setActivePanel, actions, deviceContacts = [], trustedContacts = [] }) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
@@ -24,7 +24,6 @@ export default function CommandPalette({ isOpen, onClose, setActivePanel, action
     if (isOpen) {
       setQuery('');
       setSelectedIndex(0);
-      // Small timeout to allow render before focus
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [isOpen]);
@@ -32,10 +31,61 @@ export default function CommandPalette({ isOpen, onClose, setActivePanel, action
   const filteredItems = useMemo(() => {
     if (!query) return ACTIONS;
     const lower = query.toLowerCase();
-    return ACTIONS.filter(item =>
+
+    // Filter static actions
+    const matches = ACTIONS.filter(item =>
       item.label.toLowerCase().includes(lower)
     );
-  }, [query]);
+
+    // Filter contacts if query is long enough
+    if (lower.length > 1) {
+      const contactMatches = [];
+      const seen = new Set();
+
+      const addContact = (c, type) => {
+        const name = c.displayName || c.name || 'Unknown';
+        const phone = c.phoneNumber || c.phone || '';
+        const key = `${name}-${phone}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+
+        if (name.toLowerCase().includes(lower) || phone.includes(lower)) {
+          contactMatches.push({
+            id: `contact-${c.id || phone}`,
+            label: `Message ${name}`,
+            icon: '💬',
+            desc: phone,
+            action: (setActivePanel, acts) => {
+              // Switch to beacon
+              setActivePanel('beacon');
+              // Trigger new thread flow (in a real app, we'd pre-fill)
+              if (acts.newThread) acts.newThread();
+              // For now, we rely on the user to type the name again or finding it
+              // A better way would be passing a "selectedContact" to App.jsx state
+            }
+          });
+          contactMatches.push({
+            id: `call-${c.id || phone}`,
+            label: `View ${name}`,
+            icon: '👤',
+            desc: 'Open in Contacts',
+            action: (setActivePanel) => {
+              setActivePanel('contacts');
+              // We can hack search param into DOM or state if accessible
+              // For now just open contacts
+            }
+          });
+        }
+      };
+
+      trustedContacts.forEach(c => addContact(c, 'trusted'));
+      deviceContacts.forEach(c => addContact(c, 'device'));
+
+      return [...matches, ...contactMatches].slice(0, 15); // Limit results
+    }
+
+    return matches;
+  }, [query, deviceContacts, trustedContacts]);
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -64,7 +114,6 @@ export default function CommandPalette({ isOpen, onClose, setActivePanel, action
     onClose();
   };
 
-  // Auto-scroll to selected item
   useEffect(() => {
     if (listRef.current && listRef.current.children[selectedIndex]) {
       listRef.current.children[selectedIndex].scrollIntoView({
@@ -92,7 +141,7 @@ export default function CommandPalette({ isOpen, onClose, setActivePanel, action
           <input
             ref={inputRef}
             className="command-palette-input"
-            placeholder="Type a command or search..."
+            placeholder="Type a command or search contacts..."
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -103,7 +152,7 @@ export default function CommandPalette({ isOpen, onClose, setActivePanel, action
             aria-activedescendant={filteredItems[selectedIndex]?.id}
             aria-label="Command input"
           />
-          <div className="command-palette-hint">Esc to close</div>
+          <div className="command-palette-hint">Esc</div>
         </div>
         <div
           className="command-palette-list"
@@ -122,13 +171,21 @@ export default function CommandPalette({ isOpen, onClose, setActivePanel, action
               aria-selected={index === selectedIndex}
             >
               <span className="item-icon">{item.icon}</span>
-              <span className="item-label">{item.label}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <span className="item-label">{item.label}</span>
+                {item.desc && <span className="item-desc" style={{ fontSize: '0.75em', opacity: 0.6 }}>{item.desc}</span>}
+              </div>
               {index === selectedIndex && <span className="item-enter">↵</span>}
             </div>
           ))}
           {filteredItems.length === 0 && (
             <div className="command-palette-empty">No results found.</div>
           )}
+        </div>
+        <div className="command-palette-footer">
+            <span><strong>↑↓</strong> navigate</span>
+            <span><strong>↵</strong> select</span>
+            <span><strong>esc</strong> close</span>
         </div>
       </div>
     </div>
