@@ -32,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
@@ -161,20 +162,22 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         refreshThreads(initial = true)
 
         viewModelScope.launch {
-            repo.changes().collectLatest {
-                // Use suspend functions to ensure cancellation if new updates arrive
-                // This prevents stacking parallel DB queries during rapid updates
-                isRefreshing = true
-                val newThreads = fetchThreadsSuspend()
-                rawThreads = newThreads
-                mergeThreads()
-                isRefreshing = false
+            repo.changes()
+                .debounce(200) // Debounce rapid updates (e.g. sync bursts)
+                .collectLatest {
+                    // Use suspend functions to ensure cancellation if new updates arrive
+                    // This prevents stacking parallel DB queries during rapid updates
+                    isRefreshing = true
+                    val newThreads = fetchThreadsSuspend()
+                    rawThreads = newThreads
+                    mergeThreads()
+                    isRefreshing = false
 
-                val threadId = currentThreadId
-                if (threadId != null) {
-                    refreshThreadSuspend(threadId, refreshRead = false)
+                    val threadId = currentThreadId
+                    if (threadId != null) {
+                        refreshThreadSuspend(threadId, refreshRead = false)
+                    }
                 }
-            }
         }
 
         viewModelScope.launch {
@@ -228,6 +231,19 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             contacts = repo.getContacts()
             updateFilteredList()
+        }
+    }
+
+    private fun updateThreadLocally(threadId: Long, transform: (SmsThreadItem) -> SmsThreadItem) {
+        val index = rawThreads.indexOfFirst { it.threadId == threadId }
+        if (index != -1) {
+            val old = rawThreads[index]
+            val new = transform(old)
+            // Create new list safely
+            val mutable = rawThreads.toMutableList()
+            mutable[index] = new
+            rawThreads = mutable
+            mergeThreads() // Refresh UI immediately
         }
     }
 
@@ -410,6 +426,8 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun markAsUnread(threadId: Long) {
+        // Optimistic update
+        updateThreadLocally(threadId) { it.copy(unread = true) }
         viewModelScope.launch {
             repo.markThreadUnread(threadId)
         }
@@ -687,16 +705,29 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
         // Optimistic UI
         val tempId = System.currentTimeMillis()
+        val now = System.currentTimeMillis()
         val pending = SmsMessageItem(
             id = tempId,
             threadId = currentThreadId ?: 0L,
             address = addr,
             body = body,
-            timestamp = System.currentTimeMillis(),
+            timestamp = now,
             outgoing = true,
             status = MessageStatus.SENDING
         )
         pendingOutgoingMessages.add(0, pending)
+
+        // Optimistic Thread List Update
+        val tid = currentThreadId ?: 0L
+        if (tid != 0L) {
+            updateThreadLocally(tid) {
+                it.copy(
+                    snippet = body,
+                    timestamp = now,
+                    unread = false
+                )
+            }
+        }
 
         // Immediate UI Update
         currentThreadId?.let {
