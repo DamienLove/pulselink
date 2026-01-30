@@ -121,4 +121,32 @@ test.describe('Comprehensive Feature Verification', () => {
     await expect(page.getByText('Alice')).toBeHidden();
     await expect(page.getByText('No contacts match that search')).toBeVisible();
   });
+
+  test('should verify PulseLink Trusted Contacts', async ({ page }) => {
+    await page.locator('.nav-item[title="PulseLink"]').click();
+    await expect(page.getByRole('heading', { name: 'PulseLink' })).toBeVisible();
+
+    // Verify "Trusted contacts" section is visible
+    await expect(page.getByRole('heading', { name: 'Trusted contacts' })).toBeVisible();
+
+    // Verify mock trusted contact "Mom" is visible
+    await expect(page.getByText('Mom')).toBeVisible();
+  });
+
+  test('should verify Emergency Map visibility', async ({ page }) => {
+    await page.locator('.nav-item[title="Map"]').click();
+    await expect(page.getByRole('heading', { name: 'Emergency map' })).toBeVisible();
+    await expect(page.locator('.map-canvas')).toBeVisible();
+  });
+
+  test('should verify Request Phone Sync button', async ({ page }) => {
+    await page.locator('.nav-item[title="Settings"]').click();
+    await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+
+    const searchInput = page.locator('.settings-search-input');
+    await searchInput.fill('sync');
+
+    // Verify "Request phone sync" button is visible
+    await expect(page.getByRole('button', { name: 'Request phone sync' })).toBeVisible();
+  });
 });
