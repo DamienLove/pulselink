@@ -1521,6 +1521,7 @@ class MainViewModel @Inject constructor(
         // Direct to GitHub issue form so users land on the correct bug report page.
         return Uri.parse(BUG_REPORT_PAGE_URL)
             .buildUpon()
+            .appendQueryParameter("template", "bug_report.md")
             .appendQueryParameter("title", subjectSuffix)
             .appendQueryParameter("body", formattedBody)
             .build()

@@ -59,11 +59,15 @@ Explore our [Wiki](wiki/) for detailed guides:
 ### Contributing
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 *   **Report Bugs:** Use the in-app "Report a Bug" feature or [visit our report page](https://damiennichols.com/report-bug/).
-*   **iOS Roadmap:** [View Status](docs/ios-roadmap.md)
+---
+
+## 🗺️ Roadmap
+
+**iOS Version:** We are actively working on the iOS port to bring the full PulseLink experience to iPhone users. You can track the progress and feature parity status in our [iOS Roadmap](docs/ios-roadmap.md).
 
 ---
 
-## 💖 Support the Project
+## 💖 Donations & Support
 
 PulseLink is built on the belief that personal safety is a right, not a privilege. Your support funds our server infrastructure (Firebase, SMS gateways) and continued development.
 

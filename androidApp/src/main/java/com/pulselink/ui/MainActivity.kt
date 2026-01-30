@@ -2266,7 +2266,8 @@ class MainActivity : AppCompatActivity() {
                     composable("settings_help") {
                         SettingsHelpScreen(
                             onBack = { navController.popBackStack() },
-                            onOpenFaq = { navController.navigate("faq") }
+                            onOpenFaq = { navController.navigate("faq") },
+                            onReportBug = { navController.navigate("bug_report") }
                         )
                     }
                     composable("faq") {

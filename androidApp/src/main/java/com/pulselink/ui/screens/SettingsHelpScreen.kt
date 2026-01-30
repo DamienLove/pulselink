@@ -51,7 +51,8 @@ import com.pulselink.R
 @Composable
 fun SettingsHelpScreen(
     onBack: () -> Unit,
-    onOpenFaq: () -> Unit = {}
+    onOpenFaq: () -> Unit = {},
+    onReportBug: () -> Unit = {}
 ) {
     Scaffold(
         topBar = {
@@ -124,6 +125,12 @@ fun SettingsHelpScreen(
             HelpSection(
                 title = "Using Google Assistant",
                 body = "You can trigger PulseLink emergency features using voice commands with Google Assistant. Try saying 'Hey Google, emergency alert with PulseLink' or 'Hey Google, check in with PulseLink'."
+            )
+
+            SectionHeader(
+                title = "Troubleshooting",
+                actionLabel = "Report Bug",
+                onActionClick = onReportBug
             )
 
             // Visual separator before FAQ section
