@@ -2551,13 +2551,18 @@ function App() {
     // Bolt: Mock user support for Playwright testing
     const params = new URLSearchParams(window.location.search);
     if (params.get('mock_user') === 'true') {
+      // Allow overriding status via params (e.g. ?mock_user=true&premium=false)
+      // Default to true to maintain existing test behavior if unspecified
+      const isPremium = params.get('premium') !== 'false';
+      const isPro = params.get('pro') !== 'false';
+
       const mockUser = {
         uid: 'mock_user_123',
         email: 'test@example.com',
         displayName: 'Test User',
         phoneNumber: '+15550101010',
         getIdTokenResult: async () => ({
-          claims: { premium: true, pro: true }
+          claims: { premium: isPremium, pro: isPro }
         })
       };
 
@@ -2567,11 +2572,11 @@ function App() {
 
       // Inject mock data to ensure UI elements render without Firestore
       setUserData({
-        subscriptionStatus: 'premium',
-        premiumSubscriptionStatus: 'SUBSCRIPTION_STATE_ACTIVE',
-        remoteWebAccessEnabled: true,
-        premiumUnlocked: true,
-        proUnlocked: true
+        subscriptionStatus: isPremium ? 'premium' : (isPro ? 'pro' : 'free'),
+        premiumSubscriptionStatus: isPremium ? 'SUBSCRIPTION_STATE_ACTIVE' : 'SUBSCRIPTION_STATE_EXPIRED',
+        remoteWebAccessEnabled: isPremium || isPro,
+        premiumUnlocked: isPremium,
+        proUnlocked: isPro
       });
 
       setRemoteSettings({
@@ -3865,7 +3870,9 @@ function App() {
 
   const isPremium = isPremiumUser;
   const tierLabel = isPremiumUser ? 'Premium' : (isProUser ? 'Pro' : 'Free');
-  const hasBeaconData = isPremiumUser || lines.length > 0 || legacyThreads.length > 0;
+  // Sentinel: Strictly gate Beacon Inbox to premium users only.
+  // Previously allowed access if data existed, but this bypasses the paywall for churned users.
+  const hasBeaconData = isPremiumUser;
 
   const navLogo = useMemo(() => {
      if (remoteSettings.mergedExperienceEnabled) {

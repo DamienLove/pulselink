@@ -9,9 +9,6 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(userId)).data.remoteWebAccessEnabled == true;
     }
 
-    function canUseSmsWebSync(userId) {
-      return request.auth != null && request.auth.uid == userId && hasPremiumClaim() && remoteWebAccessEnabled(userId);
-    }
     function isDeviceOwner(deviceId) {
       return get(/databases/$(database)/documents/devices/$(deviceId)).data.uid == request.auth.uid;
     }
@@ -43,15 +40,15 @@ service cloud.firestore {
       }
 
       match /synced_threads/{threadId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if request.auth != null && request.auth.uid == userId && hasPremiumClaim();
 
         match /messages/{messageId} {
-          allow read, write: if request.auth != null && request.auth.uid == userId;
+          allow read, write: if request.auth != null && request.auth.uid == userId && hasPremiumClaim();
         }
       }
 
       match /outbox/{messageId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if request.auth != null && request.auth.uid == userId && hasPremiumClaim();
       }
 
       match /trustedContacts/{contactId} {
@@ -72,13 +69,13 @@ service cloud.firestore {
 
       // Allow syncing lines data which contains thread backups as well (Supports both legacy and new sync architectures)
       match /lines/{lineId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if request.auth != null && request.auth.uid == userId && hasPremiumClaim();
 
         match /threads/{threadId} {
-           allow read, write: if request.auth != null && request.auth.uid == userId;
+           allow read, write: if request.auth != null && request.auth.uid == userId && hasPremiumClaim();
 
            match /messages/{messageId} {
-             allow read, write: if request.auth != null && request.auth.uid == userId;
+             allow read, write: if request.auth != null && request.auth.uid == userId && hasPremiumClaim();
            }
         }
       }
