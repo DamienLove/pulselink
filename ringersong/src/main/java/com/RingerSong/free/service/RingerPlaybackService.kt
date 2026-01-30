@@ -32,7 +32,6 @@ class RingerPlaybackService : Service() {
 
     @Inject lateinit var appStateStore: AppStateStore
     @Inject lateinit var spotifyPlayer: SpotifyPlayerManager
-    @Inject lateinit var appleMusicPlayer: AppleMusicPlayerManager
     @Inject lateinit var youtubeMusicPlayer: YouTubeMusicPlayerManager
 
     private val scope = CoroutineScope(Dispatchers.Main + Job())
@@ -98,17 +97,16 @@ class RingerPlaybackService : Service() {
         audioManager?.let { am ->
             // Only capture if we haven't already (to prevent capturing 0)
             if (originalRingerVolume == -1) {
-                if (passedVolume != -1) {
-                    originalRingerVolume = passedVolume
-                    Log.d(TAG, "Using passed original ringer volume: $originalRingerVolume")
-                } else {
-                    originalRingerVolume = am.getStreamVolume(AudioManager.STREAM_RING)
-                    originalNotificationVolume = am.getStreamVolume(AudioManager.STREAM_NOTIFICATION)
-                    Log.d(TAG, "Captured original ringer volume: $originalRingerVolume, notification: $originalNotificationVolume")
-                }
+                val currentRingerVol = if (passedVolume != -1) passedVolume else am.getStreamVolume(AudioManager.STREAM_RING)
+                originalRingerVolume = currentRingerVol
+                originalNotificationVolume = am.getStreamVolume(AudioManager.STREAM_NOTIFICATION)
+                Log.d(TAG, "Captured original ringer volume: $originalRingerVolume, notification: $originalNotificationVolume")
+
+                // If ringer is silent/vibrate (vol 0), default to 50% volume so they hear our song.
+                val targetVol = if (currentRingerVol > 0) currentRingerVol else (am.getStreamMaxVolume(AudioManager.STREAM_RING) / 2)
 
                 // Sync Music Volume to Ringer Volume (so user can hear the music even if media is muted)
-                syncMusicVolumeToRingerLevel(am, originalRingerVolume)
+                syncMusicVolumeToRingerLevel(am, targetVol)
             } else {
                 Log.d(TAG, "Already captured ringer volume: $originalRingerVolume")
             }
@@ -276,9 +274,9 @@ class RingerPlaybackService : Service() {
 
             when (song.source) {
                 SongSource.SPOTIFY -> playSpotifySong(song, segmentPlay.startMs, segmentPlay.durationMs)
-                SongSource.LOCAL -> playLocalSong(song, segmentPlay.startMs, segmentPlay.durationMs)
+                SongSource.LOCAL -> playMediaSource(song.uri, segmentPlay.startMs, segmentPlay.durationMs)
                 SongSource.YOUTUBE_MUSIC -> playYouTubeSong(song, segmentPlay.startMs, segmentPlay.durationMs)
-                SongSource.APPLE_MUSIC -> playAppleMusicSong(song, segmentPlay.startMs, segmentPlay.durationMs)
+                // Apple Music placeholder removed/disabled
                 else -> {
                     Log.w(TAG, "Unsupported song source: ${song.source}")
                     stopSelf()
@@ -315,14 +313,29 @@ class RingerPlaybackService : Service() {
         }
     }
 
-    private fun playLocalSong(song: SongEntry, startMs: Long, durationMs: Long) {
-        if (song.uri.isEmpty()) {
-            Log.e(TAG, "Local song URI is empty")
+    private suspend fun playYouTubeSong(song: SongEntry, startMs: Long, durationMs: Long) {
+        Log.d(TAG, "Attempting to stream YouTube track: ${song.title}")
+        // Fetch streamable URL
+        val streamUrl = youtubeMusicPlayer.getStreamUrl(song)
+
+        if (streamUrl != null) {
+            Log.d(TAG, "Got stream URL, starting playback")
+            playMediaSource(streamUrl, startMs, durationMs)
+        } else {
+            Log.e(TAG, "Failed to get stream URL for YouTube track")
+            stopSelf()
+        }
+    }
+
+    private fun playMediaSource(uri: String, startMs: Long, durationMs: Long) {
+        if (uri.isEmpty()) {
+            Log.e(TAG, "Media URI is empty")
+            stopSelf()
             return
         }
         try {
             mediaPlayer = MediaPlayer().apply {
-                setDataSource(song.uri)
+                setDataSource(uri)
                 // Use USAGE_MEDIA to play on STREAM_MUSIC, bypassing the silenced STREAM_RING.
                 setAudioAttributes(
                     AudioAttributes.Builder()
@@ -356,57 +369,17 @@ class RingerPlaybackService : Service() {
                     stopForeground(true)
                     stopSelf()
                 }
+                setOnErrorListener { _, what, extra ->
+                     Log.e(TAG, "MediaPlayer error: $what, $extra")
+                     stopPlayback()
+                     restoreSystemRinger()
+                     stopForeground(true)
+                     stopSelf()
+                     true
+                }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error playing local song", e)
-        }
-    }
-
-    private suspend fun playYouTubeSong(song: SongEntry, startMs: Long, durationMs: Long) {
-        Log.d(TAG, "Attempting to play YouTube Music track via App: ${song.title}")
-
-        // Use the new PlayerManager to launch the app instead of "importing" the stream via RapidAPI
-        val success = youtubeMusicPlayer.playTrack(song)
-
-        if (success) {
-            isPlaying = true
-            playbackJob = scope.launch {
-                delay(durationMs)
-                Log.d(TAG, "YouTube Music segment duration passed")
-                stopPlayback()
-                restoreSystemRinger()
-                stopForeground(true)
-                stopSelf()
-            }
-        } else {
-            Log.e(TAG, "Failed to launch YouTube Music")
-            // Fallback to old method? Or just stop?
-            // User requested to fix "importing" issues by using apps, so we stick to this.
-            // If app fails, we could try RapidAPI as last resort, but if keys are dead it won't work anyway.
-            stopSelf()
-        }
-    }
-
-    private suspend fun playAppleMusicSong(song: SongEntry, startMs: Long, durationMs: Long) {
-        Log.d(TAG, "Attempting to play Apple Music song: ${song.title}")
-        val success = appleMusicPlayer.playTrack(song)
-        if (success) {
-            // Since we just launched the app, we can't easily control duration/stop.
-            // But we can schedule a stopSelf to cleanup the service.
-            // The Apple Music app will continue playing.
-            // This is "best effort".
-            isPlaying = true
-            playbackJob = scope.launch {
-                delay(durationMs)
-                Log.d(TAG, "Apple Music segment duration passed")
-                // We cannot stop Apple Music, but we stop our service and restore ringer
-                stopPlayback()
-                restoreSystemRinger()
-                stopForeground(true)
-                stopSelf()
-            }
-        } else {
-            Log.e(TAG, "Failed to launch Apple Music")
+            Log.e(TAG, "Error playing media source", e)
             stopSelf()
         }
     }

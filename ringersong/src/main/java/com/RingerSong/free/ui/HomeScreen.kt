@@ -282,14 +282,6 @@ fun HomeScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
-            AnimatedVisibility(
-                visible = showContent.value,
-                enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 })
-            ) {
-                AppleMusicPlaceholderSection(modifier = Modifier.fillMaxWidth())
-            }
-
             Spacer(modifier = Modifier.height(12.dp))
             AdsSection()
             Spacer(modifier = Modifier.height(18.dp))
@@ -1060,12 +1052,12 @@ private fun YouTubeMusicSection(
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Add from YouTube Music",
+                    text = "Add from Web Stream",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Search for tracks on YouTube Music and add them to your progression.",
+                    text = "Search for tracks to stream directly as a ringer. Requires internet.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1180,36 +1172,6 @@ private fun SpotifyResultRow(
     }
 }
 
-@Composable
-private fun AppleMusicPlaceholderSection(modifier: Modifier = Modifier) {
-    SectionCard(modifier = modifier) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = "Add from Apple Music",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = "Apple Music integration is coming soon.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Button(
-                onClick = { /* No-op or show info dialog */ },
-                enabled = false,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            ) {
-                Text("Coming Soon")
-            }
-        }
-    }
-}
 
 @Composable
 private fun EmptyTracksHint(onAddSongs: () -> Unit) {

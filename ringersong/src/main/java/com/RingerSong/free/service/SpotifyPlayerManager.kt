@@ -45,6 +45,7 @@ class SpotifyPlayerManager @Inject constructor(
 
         // Use a timeout logic if possible, but SpotifyAppRemote doesn't expose it directly.
         // We rely on the callback.
+        Log.d(TAG, "Connecting to Spotify with showAuthView=$showAuthView")
         SpotifyAppRemote.connect(context, connectionParams, object : Connector.ConnectionListener {
             override fun onConnected(appRemote: SpotifyAppRemote) {
                 spotifyAppRemote = appRemote
@@ -65,8 +66,10 @@ class SpotifyPlayerManager @Inject constructor(
 
     suspend fun playUri(uri: String, startMs: Long = 0): Boolean {
         try {
+            Log.d(TAG, "Request to play URI: $uri, startMs: $startMs")
             if (spotifyAppRemote?.isConnected != true) {
                 // Attempt silent connection first with a timeout check implicitly handled by connect
+                Log.d(TAG, "Spotify not connected, attempting to connect...")
                 if (!connect(showAuthView = false)) {
                      Log.w(TAG, "Could not connect to Spotify for playback.")
                      return false
@@ -118,8 +121,11 @@ class SpotifyPlayerManager @Inject constructor(
     }
 
     fun disconnect() {
-        SpotifyAppRemote.disconnect(spotifyAppRemote)
-        spotifyAppRemote = null
+        if (spotifyAppRemote != null) {
+            Log.d(TAG, "Disconnecting from Spotify")
+            SpotifyAppRemote.disconnect(spotifyAppRemote)
+            spotifyAppRemote = null
+        }
     }
 
     suspend fun getUserCapabilities(): String = suspendCancellableCoroutine { continuation ->
