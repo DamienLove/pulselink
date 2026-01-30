@@ -77,7 +77,7 @@ private struct BeaconTab: View {
     @State private var isUnlocked = false
     @State private var showPinSheet = false
     @AppStorage("privateSafePin") private var storedPin: String = ""
-    @AppStorage("themeColor") private var themeColor: ThemeColor = .cyan
+    @AppStorage("themeColor") private var themeColor: ThemeColor = .laser
     @AppStorage("bubbleStyle") private var bubbleStyle: BubbleStyle = .rounded
 
     var isPro: Bool {
@@ -300,7 +300,7 @@ private struct ConversationView: View {
     var onDisappear: (() -> Void)? = nil
 
     @State private var draft = ""
-    @AppStorage("themeColor") private var themeColor: ThemeColor = .cyan
+    @AppStorage("themeColor") private var themeColor: ThemeColor = .laser
     @AppStorage("bubbleStyle") private var bubbleStyle: BubbleStyle = .rounded
 
     var body: some View {
@@ -360,7 +360,7 @@ private struct SettingsTab: View {
     let isPro: Bool
     @State private var showDeleteConfirmation = false
     @State private var isDeleting = false
-    @AppStorage("themeColor") private var themeColor: ThemeColor = .cyan
+    @AppStorage("themeColor") private var themeColor: ThemeColor = .laser
     @AppStorage("bubbleStyle") private var bubbleStyle: BubbleStyle = .rounded
 
     var body: some View {
@@ -439,10 +439,11 @@ private struct SettingsTab: View {
 }
 
 enum ThemeColor: String, CaseIterable {
-    case cyan, indigo, blue, purple, orange, green, pink
+    case laser, cyan, indigo, blue, purple, orange, green, pink
 
     var color: Color {
         switch self {
+        case .laser: return RelayColors.primary
         case .cyan: return .cyan
         case .indigo: return .indigo
         case .blue: return .blue
@@ -467,7 +468,7 @@ enum BubbleStyle: String, CaseIterable {
 }
 
 enum RelayColors {
-    // Future Deep v11 (Absolute Zero)
+    // Future Deep v12 (Absolute Zero)
     // Primary: #00F3FF -> Laser Blue
     static let primary = Color(red: 0.0, green: 0.953, blue: 1.0)
     // Secondary: #E000FF -> Neon Purple

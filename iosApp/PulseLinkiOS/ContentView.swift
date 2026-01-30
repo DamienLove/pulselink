@@ -601,7 +601,7 @@ private struct CancelEmergencySheet: View {
 // MARK: - Theme
 
 enum RelayColors {
-    // Future Deep v11 (Absolute Zero)
+    // Future Deep v12 (Absolute Zero)
     // Primary: #00F3FF -> Laser Blue
     static let primary = Color(red: 0.0, green: 0.953, blue: 1.0)
     // Secondary: #E000FF -> Neon Purple
