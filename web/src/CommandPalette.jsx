@@ -19,13 +19,20 @@ export default function CommandPalette({ isOpen, onClose, setActivePanel, action
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
   const listRef = useRef(null);
+  const previousFocusRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
+      previousFocusRef.current = document.activeElement;
       setQuery('');
       setSelectedIndex(0);
       // Small timeout to allow render before focus
       setTimeout(() => inputRef.current?.focus(), 50);
+    } else {
+      if (previousFocusRef.current) {
+        previousFocusRef.current.focus();
+        previousFocusRef.current = null;
+      }
     }
   }, [isOpen]);
 
