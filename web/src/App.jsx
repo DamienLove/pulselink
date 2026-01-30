@@ -167,13 +167,48 @@ const Avatar = memo(({ name, url, size = 40, style, className = "thread-avatar" 
 });
 Avatar.displayName = 'Avatar';
 
+// Bolt: Deep equality check for contacts to avoid unnecessary re-renders
+const isContactEqual = (p, n) => {
+  if (p === n) return true;
+  if (!p || !n) return false;
+
+  if (p.id !== n.id) return false;
+  if (p.displayName !== n.displayName) return false;
+  if (p.phoneNumber !== n.phoneNumber) return false;
+  if (p.email !== n.email) return false;
+
+  const pPhones = p.additionalPhones;
+  const nPhones = n.additionalPhones;
+  const pPhonesLen = pPhones ? pPhones.length : 0;
+  const nPhonesLen = nPhones ? nPhones.length : 0;
+  if (pPhonesLen !== nPhonesLen) return false;
+  if (pPhonesLen > 0) {
+    for (let i = 0; i < pPhonesLen; i++) {
+      if (pPhones[i] !== nPhones[i]) return false;
+    }
+  }
+
+  const pEmails = p.additionalEmails;
+  const nEmails = n.additionalEmails;
+  const pEmailsLen = pEmails ? pEmails.length : 0;
+  const nEmailsLen = nEmails ? nEmails.length : 0;
+  if (pEmailsLen !== nEmailsLen) return false;
+  if (pEmailsLen > 0) {
+    for (let i = 0; i < pEmailsLen; i++) {
+      if (pEmails[i] !== nEmails[i]) return false;
+    }
+  }
+
+  return true;
+};
+
 const areThreadsEqual = (prev, next) => {
   return prev.isActive === next.isActive &&
          prev.showPreviews === next.showPreviews &&
          prev.onSelect === next.onSelect &&
          prev.onPin === next.onPin &&
          prev.onArchive === next.onArchive &&
-         prev.contactLookup === next.contactLookup &&
+         isContactEqual(prev.contact, next.contact) &&
          prev.thread.id === next.thread.id &&
          prev.thread.address === next.thread.address &&
          prev.thread.snippet === next.thread.snippet &&
@@ -184,9 +219,7 @@ const areThreadsEqual = (prev, next) => {
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
 // when only the selection state changes or when unrelated threads update.
-const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onArchive, contactLookup }) => {
-  const cleanPhone = (thread.address || '').replace(/\D/g, '');
-  const contact = contactLookup?.[cleanPhone];
+const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onArchive, contact }) => {
   const name = contact?.displayName || thread.display_name || thread.address;
 
   return (
@@ -272,44 +305,7 @@ const MessageItem = memo(({ msg, showPreviews }) => (
 MessageItem.displayName = 'MessageItem';
 
 // Bolt: Custom comparator for DeviceContactItem to handle object reference changes
-const areDeviceContactsEqual = (prev, next) => {
-  const p = prev.contact;
-  const n = next.contact;
-  if (p === n) return true; // Reference equality
-  if (!p || !n) return false; // Null/undefined safety
-
-  // Shallow checks for simple props
-  if (p.id !== n.id) return false;
-  if (p.displayName !== n.displayName) return false;
-  if (p.phoneNumber !== n.phoneNumber) return false;
-  if (p.email !== n.email) return false;
-
-  // Deep check for array props (assuming arrays of strings)
-  // Bolt: Optimized to avoid creating empty arrays for length checks
-  const pPhones = p.additionalPhones;
-  const nPhones = n.additionalPhones;
-  const pPhonesLen = pPhones ? pPhones.length : 0;
-  const nPhonesLen = nPhones ? nPhones.length : 0;
-  if (pPhonesLen !== nPhonesLen) return false;
-  if (pPhonesLen > 0) {
-    for (let i = 0; i < pPhonesLen; i++) {
-      if (pPhones[i] !== nPhones[i]) return false;
-    }
-  }
-
-  const pEmails = p.additionalEmails;
-  const nEmails = n.additionalEmails;
-  const pEmailsLen = pEmails ? pEmails.length : 0;
-  const nEmailsLen = nEmails ? nEmails.length : 0;
-  if (pEmailsLen !== nEmailsLen) return false;
-  if (pEmailsLen > 0) {
-    for (let i = 0; i < pEmailsLen; i++) {
-      if (pEmails[i] !== nEmails[i]) return false;
-    }
-  }
-
-  return true;
-};
+const areDeviceContactsEqual = (prev, next) => isContactEqual(prev.contact, next.contact);
 
 // Bolt: Optimized DeviceContactItem to prevent re-renders of the large contact list
 const DeviceContactItem = memo(({ contact }) => {
@@ -2080,18 +2076,22 @@ const Sidebar = memo(({
                 )}
               </div>
             ) : (
-              filteredThreads.map(thread => (
-                <ThreadItem
-                  key={`${thread.lineId || 'legacy'}_${thread.id}`}
-                  thread={thread}
-                  isActive={selectedThreadId === thread.id}
-                  onSelect={onSelect}
-                  showPreviews={showPreviews}
-                  onPin={onPinThread}
-                  onArchive={onArchiveThread}
-                  contactLookup={contactLookup}
-                />
-              ))
+              filteredThreads.map(thread => {
+                const cleanPhone = (thread.address || '').replace(/\D/g, '');
+                const contact = contactLookup?.[cleanPhone];
+                return (
+                  <ThreadItem
+                    key={`${thread.lineId || 'legacy'}_${thread.id}`}
+                    thread={thread}
+                    isActive={selectedThreadId === thread.id}
+                    onSelect={onSelect}
+                    showPreviews={showPreviews}
+                    onPin={onPinThread}
+                    onArchive={onArchiveThread}
+                    contact={contact}
+                  />
+                );
+              })
             )}
           </div>
         </>
