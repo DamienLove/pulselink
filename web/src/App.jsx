@@ -168,18 +168,29 @@ const Avatar = memo(({ name, url, size = 40, style, className = "thread-avatar" 
 Avatar.displayName = 'Avatar';
 
 const areThreadsEqual = (prev, next) => {
-  return prev.isActive === next.isActive &&
-         prev.showPreviews === next.showPreviews &&
-         prev.onSelect === next.onSelect &&
-         prev.onPin === next.onPin &&
-         prev.onArchive === next.onArchive &&
-         prev.contactLookup === next.contactLookup &&
-         prev.thread.id === next.thread.id &&
-         prev.thread.address === next.thread.address &&
-         prev.thread.snippet === next.thread.snippet &&
-         prev.thread.display_name === next.thread.display_name &&
-         prev.thread.pinned === next.thread.pinned &&
-         prev.thread.archived === next.thread.archived;
+  const p = prev.thread;
+  const n = next.thread;
+
+  if (prev.isActive !== next.isActive ||
+      prev.showPreviews !== next.showPreviews ||
+      prev.onSelect !== next.onSelect ||
+      prev.onPin !== next.onPin ||
+      prev.onArchive !== next.onArchive ||
+      p.id !== n.id ||
+      p.address !== n.address ||
+      p.snippet !== n.snippet ||
+      p.display_name !== n.display_name ||
+      p.pinned !== n.pinned ||
+      p.archived !== n.archived) {
+    return false;
+  }
+
+  // Bolt: Optimized to check if the specific contact for this thread changed,
+  // rather than re-rendering on every contact update.
+  if (prev.contactLookup === next.contactLookup) return true;
+
+  const cleanAddr = (p.address || '').replace(/\D/g, '');
+  return prev.contactLookup?.[cleanAddr] === next.contactLookup?.[cleanAddr];
 };
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
@@ -2802,13 +2813,29 @@ function App() {
       return;
     }
     const deviceRef = collection(db, "users", user.uid, "deviceContacts");
+
+    // Bolt: Cache contacts by ID to preserve object references and prevent unnecessary re-renders
+    let contactCache = new Map();
+
     const unsubscribe = onSnapshot(deviceRef, (snapshot) => {
-      const items = snapshot.docs.map(docSnap => ({
-        id: docSnap.id,
-        ...docSnap.data()
-      }));
-      items.sort((a, b) => (a.displayName ?? '').localeCompare(b.displayName ?? ''));
-      setDeviceContacts(items);
+      let changed = false;
+
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added" || change.type === "modified") {
+          contactCache.set(change.doc.id, { id: change.doc.id, ...change.doc.data() });
+          changed = true;
+        }
+        if (change.type === "removed") {
+          contactCache.delete(change.doc.id);
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        const items = Array.from(contactCache.values());
+        items.sort((a, b) => (a.displayName ?? '').localeCompare(b.displayName ?? ''));
+        setDeviceContacts(items);
+      }
     });
     return () => unsubscribe();
   }, [user]);
