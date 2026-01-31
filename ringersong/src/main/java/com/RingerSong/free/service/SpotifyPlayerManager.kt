@@ -1,13 +1,17 @@
 package com.RingerSong.free.service
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import com.RingerSong.free.BuildConfig
 import com.spotify.android.appremote.api.ConnectionParams
 import com.spotify.android.appremote.api.Connector
 import com.spotify.android.appremote.api.SpotifyAppRemote
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -68,14 +72,20 @@ class SpotifyPlayerManager @Inject constructor(
             if (spotifyAppRemote?.isConnected != true) {
                 // Attempt silent connection first with a timeout check implicitly handled by connect
                 if (!connect(showAuthView = false)) {
-                     Log.w(TAG, "Could not connect to Spotify for playback.")
-                     return false
+                     Log.w(TAG, "Could not connect to Spotify AppRemote. Falling back to Intent.")
+                     return playTrackIntent(uri)
                 }
             }
 
             return suspendCancellableCoroutine { continuation ->
                 val playerApi = spotifyAppRemote?.playerApi
                 if (playerApi == null) {
+                    // Fallback if player API is null despite connection
+                    Log.w(TAG, "Player API null. Falling back to Intent.")
+                    // Can't easily switch to suspend fun from here without launching coroutine or restructuring.
+                    // But we can just resume(false) and let the outer catch block handle it? No.
+                    // For simplicity, we just fail AppRemote here, but we can't call suspend function from callback.
+                    // So we must structure this better.
                     if (continuation.isActive) continuation.resume(false)
                     return@suspendCancellableCoroutine
                 }
@@ -95,13 +105,35 @@ class SpotifyPlayerManager @Inject constructor(
                         if (continuation.isActive) continuation.resume(true)
                     }
                 }.setErrorCallback { e ->
-                    Log.e(TAG, "Error playing URI", e)
+                    Log.e(TAG, "Error playing URI via AppRemote", e)
                     if (continuation.isActive) continuation.resume(false)
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Exception during playUri", e)
-            return false
+            Log.e(TAG, "Exception during playUri, falling back to Intent", e)
+            return playTrackIntent(uri)
+        }
+    }
+
+    private suspend fun playTrackIntent(uri: String): Boolean = withContext(Dispatchers.Main) {
+        try {
+            Log.d(TAG, "Attempting Intent fallback for: $uri")
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri)).apply {
+                setPackage("com.spotify.music")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M &&
+                !android.provider.Settings.canDrawOverlays(context)) {
+                Log.w(TAG, "Missing overlay permission for Intent fallback")
+            }
+
+            context.startActivity(intent)
+            Log.d(TAG, "Launched Spotify via Intent")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Intent fallback failed", e)
+            false
         }
     }
 

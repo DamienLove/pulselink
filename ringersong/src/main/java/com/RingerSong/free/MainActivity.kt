@@ -45,6 +45,7 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val sharedUriState = mutableStateOf<Uri?>(null)
+    private val sharedTextState = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,6 +53,7 @@ class MainActivity : ComponentActivity() {
         updateSharedIntent(intent)
         setContent {
             val sharedUri = remember { sharedUriState }
+            val sharedText = remember { sharedTextState }
             // Use hiltViewModel() instead of manually creating via factory
             val viewModel: RingerViewModel = hiltViewModel()
 
@@ -59,7 +61,11 @@ class MainActivity : ComponentActivity() {
                 RingerSongApp(
                     viewModel = viewModel,
                     sharedUri = sharedUri.value,
-                    onSharedConsumed = { sharedUri.value = null }
+                    sharedText = sharedText.value,
+                    onSharedConsumed = {
+                        sharedUri.value = null
+                        sharedText.value = null
+                    }
                 )
             }
         }
@@ -81,10 +87,17 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun updateSharedIntent(intent: Intent?) {
-        if (intent?.action == Intent.ACTION_SEND && intent.type?.startsWith("audio/") == true) {
-            val uri = intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
-            if (uri != null) {
-                sharedUriState.value = uri
+        if (intent?.action == Intent.ACTION_SEND) {
+            if (intent.type?.startsWith("audio/") == true) {
+                val uri = intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                if (uri != null) {
+                    sharedUriState.value = uri
+                }
+            } else if (intent.type?.startsWith("text/") == true) {
+                val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+                if (!text.isNullOrBlank()) {
+                    sharedTextState.value = text
+                }
             }
         }
     }

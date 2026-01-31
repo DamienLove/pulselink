@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 fun RingerSongApp(
     viewModel: RingerViewModel,
     sharedUri: Uri?,
+    sharedText: String?,
     onSharedConsumed: () -> Unit
 ) {
     val navController = rememberNavController()
@@ -40,6 +41,18 @@ fun RingerSongApp(
             viewModel.addSongs(listOf(sharedUri)) { result ->
                 coroutineScope.launch { snackbarHostState.showResult(result) }
                 if (result.addedCount > 0) {
+                    activity?.let { AdServices.showInterstitial(it) }
+                }
+            }
+            onSharedConsumed()
+        }
+    }
+
+    LaunchedEffect(sharedText) {
+        if (sharedText != null) {
+            viewModel.addSharedUrl(sharedText) { message ->
+                coroutineScope.launch { snackbarHostState.showSnackbar(message) }
+                if (!message.startsWith("Error") && !message.startsWith("Invalid") && !message.startsWith("Unsupported")) {
                     activity?.let { AdServices.showInterstitial(it) }
                 }
             }

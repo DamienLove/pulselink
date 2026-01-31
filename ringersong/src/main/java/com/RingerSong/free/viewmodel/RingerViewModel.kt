@@ -348,6 +348,117 @@ class RingerViewModel @Inject constructor(
         }
     }
 
+    fun addSharedUrl(url: String, onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            val trimmed = url.trim()
+            if (trimmed.contains("spotify.com") && trimmed.contains("track/")) {
+                val id = trimmed.substringAfter("track/").substringBefore("?")
+                if (id.isNotEmpty()) {
+                    val track = SpotifyTrack(id, "Shared Spotify Track", "spotify:track:$id", emptyList(), 0)
+                    addSpotifyTrack(track, onResult)
+                } else {
+                    onResult("Invalid Spotify Link")
+                }
+            } else if (trimmed.contains("music.youtube.com") || trimmed.contains("youtube.com")) {
+                val id = if (trimmed.contains("v=")) trimmed.substringAfter("v=").substringBefore("&") else trimmed.substringAfterLast("/")
+                if (id.isNotEmpty()) {
+                    // Create a dummy track for YouTube
+                    val track = SpotifyTrack(id, "Shared YouTube Track", "youtube:video:$id", emptyList(), 0)
+                    addSpotifyTrack(track, onResult)
+                } else {
+                    onResult("Invalid YouTube Link")
+                }
+            } else if (trimmed.contains("tidal.com") && trimmed.contains("track/")) {
+                val id = trimmed.substringAfter("track/").substringBefore("/")
+                if (id.isNotEmpty()) {
+                    addTidalTrack(id, onResult)
+                } else {
+                    onResult("Invalid Tidal Link")
+                }
+            } else {
+                onResult("Unsupported Link. Try Spotify, YouTube Music, or Tidal.")
+            }
+        }
+    }
+
+    private fun addTidalTrack(id: String, onResult: (String) -> Unit) {
+        val uid = auth?.currentUser?.uid ?: run {
+            onResult("Error: Please sign in to add songs")
+            return
+        }
+        val safeDb = db ?: run {
+            onResult("Error: Database unavailable")
+            return
+        }
+
+        viewModelScope.launch {
+            val current = state.value
+            if (current.songs.size >= current.settings.maxSongs) {
+                onResult("Playlist is full")
+                return@launch
+            }
+
+            val uri = "tidal:track:$id"
+            if (current.songs.any { it.uri == uri }) {
+                onResult("Song already in playlist")
+                return@launch
+            }
+
+            onResult("Adding Tidal Track...")
+
+            // Use a default duration (e.g. 30s) so playback service doesn't stop immediately
+            // Since we can't fetch metadata from Tidal easily via deep link only.
+            val defaultDuration = 30_000L
+
+            val songId = UUID.randomUUID().toString()
+            val songEntry = SongEntry(
+                id = songId,
+                title = "Shared Tidal Track",
+                uri = uri,
+                source = SongSource.TIDAL,
+                durationMs = defaultDuration,
+                addedAt = System.currentTimeMillis()
+            )
+
+            withContext(Dispatchers.IO) {
+                store.update { current ->
+                    val updatedSongs = current.songs + songEntry
+                    val updatedOrder = current.songOrder + songEntry.id
+                    current.copy(songs = updatedSongs, songOrder = updatedOrder)
+                }
+            }
+
+            val trackData = mapOf(
+                "tidalId" to id,
+                "uri" to uri,
+                "source" to SongSource.TIDAL.name,
+                "title" to "Shared Tidal Track",
+                "artist" to "Unknown Artist",
+                "durationMs" to defaultDuration,
+                "addedAt" to com.google.firebase.Timestamp.now(),
+                "downloaded" to false
+            )
+
+            safeDb.collection("users").document(uid).collection("ringer_playlist")
+                .add(trackData)
+                .addOnSuccessListener {
+                    onResult("Added Tidal Track")
+                }
+                .addOnFailureListener { e ->
+                     viewModelScope.launch {
+                        withContext(Dispatchers.IO) {
+                            store.update { current ->
+                                val updatedSongs = current.songs.filter { it.id != songEntry.id }
+                                val updatedOrder = current.songOrder.filter { it != songEntry.id }
+                                current.copy(songs = updatedSongs, songOrder = updatedOrder)
+                            }
+                        }
+                    }
+                    onResult("Failed to sync: ${e.message}")
+                }
+        }
+    }
+
     fun checkSpotifyCapabilities() {
         viewModelScope.launch {
             _userCapabilities.value = spotifyPlayerManager.getUserCapabilities()
