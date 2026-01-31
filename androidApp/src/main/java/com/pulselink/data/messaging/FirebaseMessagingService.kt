@@ -8,6 +8,7 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.pulselink.data.link.LinkChannelService
 import com.pulselink.data.sms.SmsRelayService
+import com.pulselink.data.sms.SmsSyncTrigger
 import com.pulselink.domain.repository.SettingsRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -21,6 +22,7 @@ class PulseLinkFirebaseMessagingService : FirebaseMessagingService() {
 
     @Inject lateinit var linkChannelService: LinkChannelService
     @Inject lateinit var smsRelayService: SmsRelayService
+    @Inject lateinit var smsSyncTrigger: SmsSyncTrigger
     @Inject lateinit var settingsRepository: SettingsRepository
     @Inject lateinit var firestore: FirebaseFirestore
     @Inject lateinit var auth: FirebaseAuth
@@ -38,6 +40,12 @@ class PulseLinkFirebaseMessagingService : FirebaseMessagingService() {
         Log.d(TAG, "Message received from: ${message.from}")
 
         val type = message.data["type"]
+        if (type == "SYNC_REQUEST") {
+            Log.d(TAG, "Received SYNC_REQUEST trigger")
+            smsSyncTrigger.triggerSync()
+            return
+        }
+
         if (type == "SMS_RELAY") {
             Log.d(TAG, "Received SMS_RELAY trigger")
             // Ensure the relay service is listening. This is idempotent.
