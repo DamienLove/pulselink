@@ -58,6 +58,7 @@ fun UnifiedHomeScreen(
     onSendCheckIn: () -> Unit,
     onSettingsClick: () -> Unit,
     onFaqClick: () -> Unit,
+    onReportBugClick: () -> Unit = {},
     onOpenContacts: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenThemes: () -> Unit,
@@ -164,6 +165,7 @@ fun UnifiedHomeScreen(
         onSendCheckIn = onSendCheckIn,
         onSettingsClick = onSettingsClick,
         onFaqClick = onFaqClick,
+        onReportBugClick = onReportBugClick,
         onBeaconClick = onViewAllMessages, // Redirect Beacon header click to full inbox
         onOpenContacts = onOpenContacts,
         onOpenNotifications = onOpenNotifications,

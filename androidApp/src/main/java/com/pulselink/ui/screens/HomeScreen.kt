@@ -41,6 +41,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
@@ -139,6 +140,7 @@ fun HomeScreen(
     onDismissAssistantShortcuts: () -> Unit,
     onTriggerEmergency: () -> Unit,
     onSendCheckIn: () -> Unit,
+    onReportBugClick: () -> Unit = {},
     onAddContact: (Contact) -> Unit,
     onContactSelected: (Long) -> Unit,
     onContactSettings: (Long) -> Unit,
@@ -266,6 +268,7 @@ fun HomeScreen(
                 onFaqClick = onFaqClick,
                 onBeaconClick = onBeaconClick,
                 onUpgradeClick = onUpgradeClick,
+                onReportBugClick = onReportBugClick,
                 showBeacon = showBeaconIcon || isUnifiedMode,
                 isUnifiedMode = isUnifiedMode,
                 theme = themePrefs,
@@ -417,6 +420,7 @@ private fun HeaderSection(
     onFaqClick: () -> Unit,
     onBeaconClick: () -> Unit,
     onUpgradeClick: () -> Unit,
+    onReportBugClick: () -> Unit,
     showBeacon: Boolean,
     isUnifiedMode: Boolean,
     theme: ThemePreferences,
@@ -484,6 +488,7 @@ private fun HeaderSection(
                     onNotificationsClick = onOpenNotifications,
                     onThemesClick = onOpenThemes,
                     onUpgradeClick = onUpgradeClick,
+                    onReportBugClick = onReportBugClick,
                     isProUser = state.isProUser,
                     showBeacon = showBeacon,
                     unreadAlertCount = state.unreadAlertCount,
@@ -742,6 +747,7 @@ private fun NavigationRow(
     onNotificationsClick: () -> Unit,
     onThemesClick: () -> Unit,
     onUpgradeClick: () -> Unit,
+    onReportBugClick: () -> Unit,
     isProUser: Boolean,
     showBeacon: Boolean,
     unreadAlertCount: Int,
@@ -767,6 +773,7 @@ private fun NavigationRow(
             NavButton(icon = Icons.Outlined.WifiTethering, label = stringResource(id = R.string.home_beacon_label), onClick = onBeaconClick, compact = compact)
         }
         NavButton(icon = Icons.Filled.Settings, label = "Settings", onClick = onSettingsClick, compact = compact)
+        NavButton(icon = Icons.Filled.BugReport, label = "Report", onClick = onReportBugClick, compact = compact)
         if (!isProUser) {
             NavButton(icon = Icons.Filled.Star, label = "Pro", onClick = onUpgradeClick, compact = compact)
         }

@@ -1485,9 +1485,16 @@ class MainViewModel @Inject constructor(
         val osVersion = Build.VERSION.RELEASE ?: "unknown"
         val apiLevel = Build.VERSION.SDK_INT
 
+        val settings = _uiState.value.settings
+        val effectiveTier = when {
+            settings.premiumUnlocked || BuildConfig.PREMIUM_FEATURES -> "Premium"
+            settings.proUnlocked || BuildConfig.PRO_FEATURES -> "Pro"
+            else -> "Free"
+        }
+
         return buildString {
             appendLine("App Version: $versionName ($versionCode)")
-            appendLine("Build Flavor: ${if (BuildConfig.PREMIUM_FEATURES) "Premium" else if (BuildConfig.PRO_FEATURES) "Pro" else "Free"}")
+            appendLine("Build Flavor: $effectiveTier")
             appendLine("Device: $manufacturer $model")
             appendLine("OS: Android $osVersion (API $apiLevel)")
         }
