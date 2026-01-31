@@ -26,3 +26,8 @@
 **Vulnerability:** The frontend attempted to write "safe" content directly to a public, read-only collection (`themes_public`) to bypass moderation, which failed due to correct Firestore rules but highlighted a flaw in the design where client-side logic determined security posture.
 **Learning:** Never rely on client-side logic ("it has no images") to bypass security queues. If the destination is protected, all writes must go through a privileged backend (Cloud Function) or a submission queue (`themes_submissions`).
 **Prevention:** Implement the "Submission Queue" pattern: Clients always write to a pending collection. A Cloud Function trigger validates the content server-side and promotes it to the public collection if safe, or flags it for review.
+
+## 2024-06-01 - [Inactive CSP Configuration]
+**Vulnerability:** The Content Security Policy was configured as `Content-Security-Policy-Report-Only`, which provides no active protection against XSS or injection attacks, effectively leaving the application unprotected.
+**Learning:** `Report-Only` headers are often left over from debugging/implementation phases and must be explicitly switched to enforcing mode (`Content-Security-Policy`) for production security.
+**Prevention:** Audit `firebase.json` headers to ensure `Content-Security-Policy` is used without the `-Report-Only` suffix unless actively debugging.
