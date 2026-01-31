@@ -8,12 +8,15 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.pulselink.data.link.LinkChannelService
 import com.pulselink.data.sms.SmsRelayService
+import com.pulselink.data.sms.SmsSyncTrigger
 import com.pulselink.domain.repository.SettingsRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -21,6 +24,7 @@ class PulseLinkFirebaseMessagingService : FirebaseMessagingService() {
 
     @Inject lateinit var linkChannelService: LinkChannelService
     @Inject lateinit var smsRelayService: SmsRelayService
+    @Inject lateinit var smsSyncTrigger: SmsSyncTrigger
     @Inject lateinit var settingsRepository: SettingsRepository
     @Inject lateinit var firestore: FirebaseFirestore
     @Inject lateinit var auth: FirebaseAuth
@@ -44,6 +48,35 @@ class PulseLinkFirebaseMessagingService : FirebaseMessagingService() {
             // If the app was dead, PulseLinkApp.onCreate() calls this too, but
             // explicit call here guarantees it for all entry points.
             smsRelayService.start()
+            return
+        }
+
+        if (type == "SYNC_REQUEST") {
+            Log.d(TAG, "Received SYNC_REQUEST trigger")
+            val uid = auth.currentUser?.uid
+            if (uid != null) {
+                // Use runBlocking to ensure the wake lock held by FCM is respected
+                // and the process doesn't die before we fetch settings.
+                runBlocking {
+                    try {
+                        val snapshot = firestore.collection("users").document(uid).get().await()
+                        if (snapshot.exists()) {
+                            val status = snapshot.getString("premiumSubscriptionStatus")
+                            val isPremium = status == "SUBSCRIPTION_STATE_ACTIVE" ||
+                                          status == "SUBSCRIPTION_STATE_IN_GRACE_PERIOD"
+                            val remoteWebAccess = snapshot.getBoolean("remoteWebAccessEnabled") ?: false
+
+                            settingsRepository.setPremiumUnlocked(isPremium)
+                            settingsRepository.setRemoteWebAccessEnabled(remoteWebAccess)
+
+                            Log.i(TAG, "Refreshed settings from cloud via FCM. Premium=$isPremium, Web=$remoteWebAccess")
+                            smsSyncTrigger.triggerSync()
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to sync settings from FCM request", e)
+                    }
+                }
+            }
             return
         }
 
