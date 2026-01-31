@@ -884,10 +884,10 @@ MessageComposer.displayName = 'MessageComposer';
 
 const defaultTheme = {
   primaryColor: "#00F3FF",
-  secondaryColor: "#E000FF",
+  secondaryColor: "#FF0099",
   bubbleOutgoing: "#00F3FF",
   bubbleIncoming: "#0A0F1C",
-  backgroundColor: "#000000",
+  backgroundColor: "#020205",
   iconSizeFactor: 1.0,
   fontStyle: "Default",
   bubbleCornerRadius: 22,
@@ -895,7 +895,7 @@ const defaultTheme = {
   onBubbleOutgoing: "#000000",
   onBubbleIncoming: "#EEF2FB",
   onBackground: "#E0F7FA",
-  topBarColor: "#030508",
+  topBarColor: "#05080E",
   onTopBarColor: "#E0F7FA",
   bubbleCornerRadiusTopStart: null,
   bubbleCornerRadiusTopEnd: null,
@@ -915,21 +915,21 @@ const defaultTheme = {
 
 const themePresets = [
   {
-    name: "Future Deep V11",
+    name: "Future Deep V13",
     theme: {
       fontStyle: "Default",
       bubbleCornerRadius: 24,
-      appBackgroundGradientStart: "#000000",
-      appBackgroundGradientEnd: "#05080E",
+      appBackgroundGradientStart: "#020205",
+      appBackgroundGradientEnd: "#0A0F1C",
       onBackground: "#E0F7FA",
-      topBarColor: "#000000",
+      topBarColor: "#020205",
       onTopBarColor: "#00F3FF",
       bubbleOutgoing: "#00F3FF",
       onBubbleOutgoing: "#000000",
       bubbleIncoming: "#0A0F1C",
       onBubbleIncoming: "#E0F7FA",
       primaryColor: "#00F3FF",
-      secondaryColor: "#E000FF",
+      secondaryColor: "#FF0099",
       dividerColor: "#1E293B",
       inboxIconVariant: "neon_noir",
       useGlassEffect: true,
