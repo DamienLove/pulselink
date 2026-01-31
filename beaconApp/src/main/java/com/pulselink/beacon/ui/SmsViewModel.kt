@@ -31,7 +31,9 @@ import com.pulselink.beacon.data.BeaconContact
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
@@ -105,6 +107,9 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     // Pending messages (Optimistic UI)
     private val pendingOutgoingMessages = mutableListOf<SmsMessageItem>()
 
+    // Pending thread updates (Optimistic Inbox UI)
+    private val pendingThreadUpdates = mutableMapOf<Long, SmsThreadItem>()
+
     var currentThreadId by mutableStateOf<Long?>(null)
         private set
     var currentAddress by mutableStateOf("")
@@ -161,12 +166,17 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         refreshThreads(initial = true)
 
         viewModelScope.launch {
-            repo.changes().collectLatest {
+            @OptIn(FlowPreview::class)
+            repo.changes().debounce(200).collectLatest {
                 // Use suspend functions to ensure cancellation if new updates arrive
                 // This prevents stacking parallel DB queries during rapid updates
                 isRefreshing = true
                 val newThreads = fetchThreadsSuspend()
                 rawThreads = newThreads
+
+                // Cleanup pending updates that are now reflected in DB
+                cleanupPendingThreadUpdates(newThreads)
+
                 mergeThreads()
                 isRefreshing = false
 
@@ -251,6 +261,17 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         return runCatching { repo.listThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
     }
 
+    private fun cleanupPendingThreadUpdates(newThreads: List<SmsThreadItem>) {
+        val iterator = pendingThreadUpdates.iterator()
+        while (iterator.hasNext()) {
+            val (id, pending) = iterator.next()
+            val dbThread = newThreads.find { it.threadId == id }
+            if (dbThread != null && dbThread.timestamp >= pending.timestamp) {
+                iterator.remove()
+            }
+        }
+    }
+
     private fun mergeThreads() {
         viewModelScope.launch(Dispatchers.Default) {
             // Optimized sorting and filtering blocked
@@ -260,25 +281,33 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                     val isPinned = inboxState.pinnedThreadIds.contains(thread.threadId)
                     val isArchived = inboxState.archivedThreadIds.contains(thread.threadId)
                     val draft = draftsMap[thread.threadId]
+                    val pendingUpdate = pendingThreadUpdates[thread.threadId]
 
-                    // Calculate effective timestamp (max of thread or draft)
-                    // If we have a draft that is newer than the thread timestamp, use it.
-                    val effectiveTimestamp = if (draft != null && draft.timestamp > thread.timestamp) {
-                        draft.timestamp
-                    } else {
-                        thread.timestamp
+                    // Calculate effective timestamp (max of thread, draft, or pending update)
+                    var effectiveTimestamp = thread.timestamp
+                    var effectiveSnippet = thread.snippet
+
+                    if (draft != null && draft.timestamp > effectiveTimestamp) {
+                        effectiveTimestamp = draft.timestamp
                     }
 
-                    // Always create copy if draft exists or other state changed
+                    if (pendingUpdate != null && pendingUpdate.timestamp > effectiveTimestamp) {
+                        effectiveTimestamp = pendingUpdate.timestamp
+                        effectiveSnippet = pendingUpdate.snippet
+                    }
+
+                    // Always create copy if state changed
                     if (isPinned != thread.isPinned ||
                         isArchived != thread.isArchived ||
                         draft?.body != thread.draftSnippet ||
-                        effectiveTimestamp != thread.timestamp
+                        effectiveTimestamp != thread.timestamp ||
+                        effectiveSnippet != thread.snippet
                     ) {
                         thread.copy(
                             isPinned = isPinned,
                             isArchived = isArchived,
                             draftSnippet = draft?.body,
+                            snippet = effectiveSnippet,
                             timestamp = effectiveTimestamp
                         )
                     } else {
@@ -698,10 +727,23 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         )
         pendingOutgoingMessages.add(0, pending)
 
-        // Immediate UI Update
-        currentThreadId?.let {
-            deleteDraft(it)
-            refreshThread(it, refreshRead = false) // Don't mark read triggered by self-send
+        // Immediate UI Update (Thread Screen)
+        currentThreadId?.let { tid ->
+            deleteDraft(tid)
+            refreshThread(tid, refreshRead = false) // Don't mark read triggered by self-send
+
+            // Optimistic UI Update (Inbox Screen)
+            val now = System.currentTimeMillis()
+            val pendingUpdate = SmsThreadItem(
+                threadId = tid,
+                address = addr, // Not strictly used for lookup here but good for completeness
+                snippet = "You: $body",
+                timestamp = now,
+                unread = false,
+                category = com.pulselink.beacon.data.ThreadCategory.PERSONAL
+            )
+            pendingThreadUpdates[tid] = pendingUpdate
+            mergeThreads()
         }
 
         viewModelScope.launch(Dispatchers.IO) {
