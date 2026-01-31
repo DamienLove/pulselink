@@ -58,7 +58,7 @@ test.describe('Comprehensive Feature Verification', () => {
     const btn = page.locator('.nav-item[title="Features"]');
     await btn.click();
 
-    await expect(page.getByRole('heading', { name: 'Features', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Features Store', exact: true })).toBeVisible();
 
     // Check for "Crash Detection" card presence
     const crashCard = page.locator('.home-card h3', { hasText: 'Crash Detection' });

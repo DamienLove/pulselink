@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, memo, useCallback, useLayoutEffect } from 'react';
+import ExtensionsStore from './ExtensionsStore';
 import { auth, db, functions } from './firebase';
 import DevTools from './DevTools';
 import CommandPalette from './CommandPalette';
@@ -1872,16 +1873,18 @@ const Sidebar = memo(({
           <img src={logo} alt="PulseLink" />
           <span>PulseLink</span>
         </button>
-        <button
-          className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
-          onClick={() => setActivePanel('beacon')}
-          title="Beacon"
-          aria-label="Beacon"
-          aria-current={activePanel === 'beacon' ? 'page' : undefined}
-        >
-          <img src={beaconLogo} alt="Beacon" />
-          <span>Beacon</span>
-        </button>
+        {remoteSettings.beaconLauncherEnabled && (
+          <button
+            className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
+            onClick={() => setActivePanel('beacon')}
+            title="Beacon"
+            aria-label="Beacon"
+            aria-current={activePanel === 'beacon' ? 'page' : undefined}
+          >
+            <img src={beaconLogo} alt="Beacon" />
+            <span>Beacon</span>
+          </button>
+        )}
         {remoteSettings.ringerSongEnabled && (
           <button
             className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
@@ -3597,59 +3600,6 @@ function App() {
     }
   };
 
-  const handleQuickSetup = async (mode) => {
-    if (!user) return;
-    const isEssentials = mode === 'essentials';
-    const isPower = mode === 'power';
-
-    // Logic mirroring Android
-    const newSettings = { ...remoteSettings };
-
-    if (isEssentials) {
-      newSettings.beaconLauncherEnabled = true;
-      newSettings.firebaseMessagingEnabled = true;
-      newSettings.emailFallbackEnabled = true;
-      newSettings.otpCleanupEnabled = true;
-      newSettings.aiSummariesEnabled = false;
-      newSettings.remoteWebAccessEnabled = false;
-      newSettings.crashDetectionEnabled = false;
-      newSettings.mergedExperienceEnabled = false;
-      newSettings.privateSafeEnabled = false;
-      newSettings.smartRepliesEnabled = true;
-      newSettings.ringerSongEnabled = false;
-      newSettings.mapEnabled = true; // Safety core
-      newSettings.contactsEnabled = true;
-      newSettings.themesEnabled = false;
-    } else if (isPower) {
-      newSettings.beaconLauncherEnabled = true;
-      newSettings.firebaseMessagingEnabled = true;
-      newSettings.emailFallbackEnabled = true;
-      newSettings.otpCleanupEnabled = true;
-      newSettings.aiSummariesEnabled = isPremiumUser; // Check premium
-      newSettings.remoteWebAccessEnabled = isPremiumUser;
-      newSettings.crashDetectionEnabled = isPremiumUser;
-      newSettings.mergedExperienceEnabled = true;
-      newSettings.thirdPartyExtensionsEnabled = true;
-      newSettings.privateSafeEnabled = true;
-      newSettings.smartRepliesEnabled = true;
-      newSettings.truecallerEnabled = true;
-      newSettings.ringerSongEnabled = true;
-      newSettings.mapEnabled = true;
-      newSettings.contactsEnabled = true;
-      newSettings.themesEnabled = true;
-    }
-
-    setRemoteSettings(newSettings);
-    // Auto-save
-    try {
-      await setDoc(doc(db, "users", user.uid), {
-        ...newSettings,
-        settingsUpdatedAt: serverTimestamp()
-      }, { merge: true });
-    } catch (e) {
-      console.error("Quick setup failed", e);
-    }
-  };
 
   const handleAddExtension = (e) => {
     e?.preventDefault();
@@ -4088,13 +4038,15 @@ function App() {
                 </div>
               )}
               <div className="home-grid">
-                <button className="home-card holographic-card" onClick={() => setActivePanel('beacon')}>
-                  <div className="home-icon beacon">
-                    <img src={beaconLogo} alt="Beacon" />
-                  </div>
-                  <h3>Beacon Inbox</h3>
-                  <p>View SMS synced from your phone.</p>
-                </button>
+                {remoteSettings.beaconLauncherEnabled && (
+                  <button className="home-card holographic-card" onClick={() => setActivePanel('beacon')}>
+                    <div className="home-icon beacon">
+                      <img src={beaconLogo} alt="Beacon" />
+                    </div>
+                    <h3>Beacon Inbox</h3>
+                    <p>View SMS synced from your phone.</p>
+                  </button>
+                )}
                 <button className="home-card holographic-card" onClick={() => setActivePanel('pulselink')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink" />
@@ -4102,34 +4054,42 @@ function App() {
                   <h3>PulseLink</h3>
                   <p>Update your profile and trusted contacts.</p>
                 </button>
-                <button className="home-card holographic-card" onClick={() => setActivePanel('contacts')}>
-                  <div className="home-icon pulselink">
-                    <img src={logo} alt="PulseLink contacts" />
-                  </div>
-                  <h3>Contacts</h3>
-                  <p>Browse all device contacts synced from your phone.</p>
-                </button>
-                <button className="home-card holographic-card" onClick={() => setActivePanel('ringersong')}>
-                  <div className="home-icon ringersong">
-                    <img src={ringersongLogo} alt="RingerSong" />
-                  </div>
-                  <h3>RingerSong</h3>
-                  <p>Manage ringtone progressions and streaming.</p>
-                </button>
-                <button className="home-card holographic-card" onClick={() => setActivePanel('map')}>
-                  <div className="home-icon pulselink">
-                    <img src={logo} alt="PulseLink map" />
-                  </div>
-                  <h3>Emergency Map</h3>
-                  <p>Track shared locations from PulseLink alerts.</p>
-                </button>
-                <button className="home-card holographic-card" onClick={() => setActivePanel('themes')}>
-                  <div className="home-icon pulselink">
-                    <img src={logo} alt="PulseLink themes" />
-                  </div>
-                  <h3>Theme Gallery</h3>
-                  <p>Browse, import, and publish custom themes.</p>
-                </button>
+                {remoteSettings.contactsEnabled && (
+                  <button className="home-card holographic-card" onClick={() => setActivePanel('contacts')}>
+                    <div className="home-icon pulselink">
+                      <img src={logo} alt="PulseLink contacts" />
+                    </div>
+                    <h3>Contacts</h3>
+                    <p>Browse all device contacts synced from your phone.</p>
+                  </button>
+                )}
+                {remoteSettings.ringerSongEnabled && (
+                  <button className="home-card holographic-card" onClick={() => setActivePanel('ringersong')}>
+                    <div className="home-icon ringersong">
+                      <img src={ringersongLogo} alt="RingerSong" />
+                    </div>
+                    <h3>RingerSong</h3>
+                    <p>Manage ringtone progressions and streaming.</p>
+                  </button>
+                )}
+                {remoteSettings.mapEnabled && (
+                  <button className="home-card holographic-card" onClick={() => setActivePanel('map')}>
+                    <div className="home-icon pulselink">
+                      <img src={logo} alt="PulseLink map" />
+                    </div>
+                    <h3>Emergency Map</h3>
+                    <p>Track shared locations from PulseLink alerts.</p>
+                  </button>
+                )}
+                {remoteSettings.themesEnabled && (
+                  <button className="home-card holographic-card" onClick={() => setActivePanel('themes')}>
+                    <div className="home-icon pulselink">
+                      <img src={logo} alt="PulseLink themes" />
+                    </div>
+                    <h3>Theme Gallery</h3>
+                    <p>Browse, import, and publish custom themes.</p>
+                  </button>
+                )}
                 <button
                   className="home-card holographic-card"
                   onClick={() => setActivePanel('extensions')}
@@ -4834,169 +4794,21 @@ function App() {
           )}
 
           {activePanel === 'extensions' && (
-            <div className="pulselink-panel">
-              <div className="panel-header">
-                <h3>Features</h3>
-                <p>Enhance your PulseLink experience with powerful add-ons.</p>
-              </div>
-
-              <div className="settings-card" style={{marginBottom: 20}}>
-                <h4>Quick Setup</h4>
-                <div className="settings-row" style={{alignItems: 'stretch', gap: 16}}>
-                  <button className="home-card" style={{margin: 0, flex: 1, textAlign: 'left', alignItems: 'flex-start'}} onClick={() => handleQuickSetup('essentials')}>
-                    <div className="home-icon" style={{width: 40, height: 40, background: 'rgba(34, 211, 238, 0.1)', color: 'var(--accent)'}}>
-                      <BoltIcon />
-                    </div>
-                    <h4 style={{marginTop: 8}}>Essentials</h4>
-                    <p style={{fontSize: '0.9em', color: 'var(--muted)', margin: 0}}>Just the basics: Beacon, Relay, Email Backup, and OTP Cleanup.</p>
-                  </button>
-                  <button className="home-card" style={{margin: 0, flex: 1, textAlign: 'left', alignItems: 'flex-start'}} onClick={() => handleQuickSetup('power')}>
-                    <div className="home-icon" style={{width: 40, height: 40, background: 'rgba(34, 211, 238, 0.1)', color: 'var(--accent)'}}>
-                      <StarIcon />
-                    </div>
-                    <h4 style={{marginTop: 8}}>Power User</h4>
-                    <p style={{fontSize: '0.9em', color: 'var(--muted)', margin: 0}}>Everything enabled: AI, Crash Detection, Web Access, and more.</p>
-                  </button>
-                </div>
-              </div>
-
-              {[
-                {
-                  title: "Core",
-                  items: [
-                    { id: 'beaconLauncherEnabled', name: 'Beacon Inbox', desc: 'Separate launcher icon for quick access to your SMS inbox.', icon: beaconLogo, isImg: true },
-                    { id: 'firebaseMessagingEnabled', name: 'Firebase Relay', desc: 'Faster messaging between PulseLink users.', icon: <CloudSyncIcon /> }
-                  ]
-                },
-                {
-                  title: "PulseLink Apps",
-                  items: [
-                    { id: 'ringerSongEnabled', name: 'RingerSong', desc: 'Progressive ringtone streaming & playlist manager.', icon: ringersongLogo, isImg: true },
-                    { id: 'mapEnabled', name: 'Emergency Map', desc: 'Track shared locations from PulseLink alerts.', icon: <MapIcon /> },
-                    { id: 'contactsEnabled', name: 'Contacts Manager', desc: 'Browse and manage synced device contacts.', icon: <ContactIcon /> },
-                    { id: 'themesEnabled', name: 'Theme Gallery', desc: 'Browse, import, and publish custom themes.', icon: <ThemeIcon /> }
-                  ]
-                },
-                {
-                  title: "Safety & Security",
-                  items: [
-                    { id: 'emailFallbackEnabled', name: 'Email Backup', desc: 'Forward urgent alerts to email if SMS fails.', icon: <EmailIcon /> },
-                    { id: 'crashDetectionEnabled', name: 'Crash Detection', desc: 'Detects car crashes and notifies emergency contacts.', icon: <CarCrashIcon />, premium: true },
-                    { id: 'privateSafeEnabled', name: 'Private Safe', desc: 'Lock and hide sensitive conversations.', icon: <LockIcon /> }
-                  ]
-                },
-                {
-                  title: "Smart Features",
-                  items: [
-                    { id: 'smartRepliesEnabled', name: 'Smart Replies', desc: 'One-tap suggestion chips for incoming messages.', icon: <MessageSquareIcon /> },
-                    { id: 'otpCleanupEnabled', name: 'Smart OTP Cleanup', desc: 'Automatically deletes one-time passwords after 24 hours.', icon: <DeleteSweepIcon /> },
-                    { id: 'aiSummariesEnabled', name: 'PulseLink AI', desc: 'Smart summaries and urgency detection for your chats.', icon: <SmartToyIcon />, premium: true }
-                  ]
-                },
-                {
-                  title: "Integrations",
-                  items: [
-                    { id: 'remoteWebAccessEnabled', name: 'Remote Web Access', desc: 'Sync messages and contacts to this web portal.', icon: logo, isImg: true, premium: true },
-                    { id: 'mergedExperienceEnabled', name: 'Unified Home', desc: 'Merge PulseLink and Beacon navigation into a single simplified experience.', icon: <HomeIcon />, premium: true },
-                    { id: 'thirdPartyExtensionsEnabled', name: '3rd Party Extensions', desc: 'Allow community-built plugins (Beta).', icon: <ExtensionIcon />, premium: true },
-                    { id: 'truecallerEnabled', name: 'Truecaller Caller ID', desc: 'Identify unknown callers and block spam using Truecaller directory.', icon: <SearchIcon /> }
-                  ]
-                }
-              ].map((category) => (
-                <div key={category.title} className="extension-category" style={{marginBottom: 32}}>
-                  <h4 style={{marginBottom: 16, color: 'var(--ink)'}}>{category.title}</h4>
-                  <div className="home-grid">
-                    {category.items.map(ext => {
-                      const isEnabled = remoteSettings[ext.id];
-                      const isLocked = ext.premium && !isPremiumUser;
-
-                      return (
-                        <div className="home-card" key={ext.id} style={{ opacity: isLocked ? 0.6 : 1, position: 'relative' }}>
-                          <div className="home-icon" style={{
-                             background: ext.isImg ? 'transparent' : 'rgba(255, 255, 255, 0.05)',
-                             display: 'grid',
-                             placeItems: 'center'
-                          }}>
-                            {ext.isImg ? <img src={ext.icon} alt={ext.name} /> : ext.icon}
-                          </div>
-                          <h3 style={{marginTop: 12, marginBottom: 4}}>{ext.name}</h3>
-                          <p style={{marginBottom: 16, minHeight: 40}}>{ext.desc}</p>
-
-                          {isLocked ? (
-                            <div className="badge badge-premium" style={{background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)'}}>
-                              Premium Required
-                            </div>
-                          ) : (
-                            <button
-                              className={isEnabled ? "secondary-btn" : "primary-btn"}
-                              style={{width: '100%'}}
-                              aria-label={`${isEnabled ? "Remove" : "Install"} ${ext.name}`}
-                              title={`${isEnabled ? "Remove" : "Install"} ${ext.name}`}
-                              onClick={() => {
-                                setRemoteSettings(prev => ({ ...prev, [ext.id]: !prev[ext.id] }));
-                                const next = { ...remoteSettings, [ext.id]: !isEnabled };
-                                setDoc(doc(db, "users", user.uid), {
-                                  ...next,
-                                  settingsUpdatedAt: serverTimestamp()
-                                }, { merge: true });
-                              }}
-                            >
-                              {isEnabled ? "Remove" : "Install"}
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-
-              <div className="settings-card">
-                <h4>Developer sandbox</h4>
-                <p className="settings-note">Add webhook-style extensions that run against your own account. Stored locally so you can iterate safely.</p>
-                {!remoteSettings.thirdPartyExtensionsEnabled && (
-                  <div className="settings-warning">Extensions stay dormant until you enable 3rd-party access in Settings.</div>
-                )}
-                <div className="extensions-list" style={{display: 'grid', gap: 12}}>
-                  {devExtensions.map((ext) => (
-                    <div key={ext.id} className="home-card" style={{margin: 0}}>
-                      <h4>{ext.name}</h4>
-                      <p className="settings-note">{ext.description || ext.endpoint || 'No description provided.'}</p>
-                      {ext.endpoint && <code className="mono" style={{fontSize: 12}}>{ext.endpoint}</code>}
-                      <div className="settings-row" style={{justifyContent: 'flex-start', gap: 8, marginTop: 8}}>
-                        <button className="secondary-btn" type="button" onClick={() => handleTestExtension(ext)}>Test</button>
-                        <button className="ghost-btn" type="button" onClick={() => setDevExtensions((prev) => prev.filter((d) => d.id !== ext.id))}>Remove</button>
-                      </div>
-                    </div>
-                  ))}
-                  {devExtensions.length === 0 && <p className="settings-note">No custom extensions yet.</p>}
-                </div>
-                <form className="login-form" style={{marginTop: 12}} onSubmit={handleAddExtension}>
-                  <label className="login-field">
-                    Name<RequiredIndicator />
-                    <input className="login-input" value={extensionForm.name} onChange={(e) => setExtensionForm((prev) => ({ ...prev, name: e.target.value }))} required />
-                  </label>
-                  <label className="login-field">
-                    Webhook URL (https://…)
-                    <input className="login-input" value={extensionForm.endpoint} onChange={(e) => setExtensionForm((prev) => ({ ...prev, endpoint: e.target.value }))} />
-                  </label>
-                  <label className="login-field">
-                    Description
-                    <textarea className="login-input" rows={2} value={extensionForm.description} onChange={(e) => setExtensionForm((prev) => ({ ...prev, description: e.target.value }))} />
-                  </label>
-                  <button type="submit" className="primary-btn">Save extension</button>
-                </form>
-                {extensionStatus && <div className={getToastClass(extensionStatus)} role="status">{extensionStatus}</div>}
-              </div>
-              <div className="settings-card">
-                <h4>Submit to gallery</h4>
-                <p className="settings-note">Share your extension with other testers.</p>
-                <div className="settings-row" style={{gap: 8, flexWrap: 'wrap'}}>
-                  <a className="secondary-btn" href="https://github.com/DamienLove/pulselink/blob/Suite-Beta/docs/extensions-dev.md" target="_blank" rel="noreferrer">Read dev guide</a>
-                  <a className="ghost-btn" href="mailto:extensions@pulselink.app?subject=PulseLink%20Extension%20Submission">Email us your zip</a>
-                </div>
-              </div>
-            </div>
+            <ExtensionsStore
+              remoteSettings={remoteSettings}
+              setRemoteSettings={setRemoteSettings}
+              isPremiumUser={isPremiumUser}
+              user={user}
+              db={db}
+              devExtensions={devExtensions}
+              setDevExtensions={setDevExtensions}
+              extensionForm={extensionForm}
+              setExtensionForm={setExtensionForm}
+              extensionStatus={extensionStatus}
+              setExtensionStatus={setExtensionStatus}
+              handleAddExtension={handleAddExtension}
+              handleTestExtension={handleTestExtension}
+            />
           )}
 
           {activePanel === 'settings' && (

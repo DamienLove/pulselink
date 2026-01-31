@@ -84,7 +84,7 @@ test.describe('Full Feature Verification', () => {
     }
 
     await btn.click();
-    await expect(page.getByRole('heading', { name: 'Features', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Features Store', exact: true })).toBeVisible();
     await expect(page.getByText('Beacon Inbox')).toBeVisible();
     await expect(page.getByText('Firebase Relay')).toBeVisible();
   });
