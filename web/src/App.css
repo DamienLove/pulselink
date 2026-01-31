@@ -1,5 +1,5 @@
-/* PulseLink Suite - Future Deep v8 UI System */
-/* V8 Upgrade: "Neon Noir" - Sharper, Faster, More Holographic */
+/* PulseLink Suite - Future Deep v12 UI System */
+/* V12 Upgrade: "Absolute Zero" - Deepest Black, Sharpest Neon */
 
 /* -------------------------------------------------------------------------- */
 /*  Core Layout & Utilities                                                   */
@@ -157,31 +157,31 @@
   filter: drop-shadow(0 0 10px var(--accent-glow));
 }
 
-/* "Lit LED" Active State v8 - More Glow */
+/* "Lit LED" Active State v12 - Sharp & Bright */
 .nav-item.active {
-  background: linear-gradient(90deg, rgba(0, 255, 255, 0.15), transparent);
+  background: linear-gradient(90deg, rgba(0, 243, 255, 0.1), transparent);
   color: var(--accent);
-  border: 1px solid rgba(0, 255, 255, 0.2);
-  box-shadow: inset 0 0 25px rgba(0, 255, 255, 0.1), 0 0 15px rgba(0, 255, 255, 0.05);
-  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  box-shadow: inset 0 0 30px rgba(0, 243, 255, 0.05), 0 0 10px rgba(0, 243, 255, 0.1);
+  text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
 }
 
 .nav-item.active::before {
   content: "";
   position: absolute;
   left: 0;
-  top: 10%;
-  bottom: 10%;
+  top: 15%;
+  bottom: 15%;
   width: 3px;
   background: var(--accent);
   border-radius: 0 4px 4px 0;
-  box-shadow: 0 0 15px var(--accent), 0 0 8px #fff;
+  box-shadow: 0 0 10px var(--accent), 0 0 5px #fff;
 }
 
 .nav-item.active svg, .nav-item.active img {
   opacity: 1;
   color: var(--accent);
-  filter: drop-shadow(0 0 15px var(--accent));
+  filter: drop-shadow(0 0 10px var(--accent));
   transform: scale(1.05);
 }
 
@@ -224,7 +224,7 @@
   overflow-y: auto;
   position: relative;
   /* Cinematic inner shadow */
-  box-shadow: inset 0 0 150px rgba(0,0,0,0.7);
+  box-shadow: inset 0 0 150px rgba(0,0,0,0.8);
   scroll-behavior: smooth;
 }
 
@@ -301,7 +301,7 @@
 }
 
 .home-card {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(10, 15, 25, 0.4);
   border: 1px solid var(--glass-border);
   border-radius: 20px;
   padding: 18px;
@@ -313,39 +313,33 @@
   gap: 12px;
   position: relative;
   overflow: hidden;
-  backdrop-filter: blur(16px);
-  /* Subtle gradient overlay */
-  background-image: linear-gradient(135deg, rgba(255,255,255,0.01), transparent, rgba(0,255,255,0.02));
-  background-size: 200% 200%;
+  backdrop-filter: blur(24px);
 }
 
-/* Holographic Shine v8 */
-.home-card::after {
+/* "Spotlight" Hover Effect */
+.home-card::before {
   content: "";
   position: absolute;
-  top: 0; left: -150%; width: 150%; height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.05),
-    rgba(0, 255, 255, 0.15),
-    transparent
+  inset: -1px;
+  z-index: -1;
+  background: radial-gradient(
+    circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(0, 243, 255, 0.15) 0%,
+    transparent 60%
   );
-  transform: skewX(-20deg);
+  opacity: 0;
+  transition: opacity 0.3s;
   pointer-events: none;
-  transition: left 0.6s ease-in-out;
+}
+
+.home-card:hover::before {
+  opacity: 1;
 }
 
 .home-card:hover {
-  transform: translateY(-8px) scale(1.02);
-  border-color: var(--accent);
-  background: rgba(0, 255, 255, 0.06);
-  background-position: 100% 100%;
-  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.8), 0 0 30px var(--accent-glow), inset 0 0 20px rgba(0, 255, 255, 0.05);
-}
-
-.home-card:hover::after {
-  left: 200%;
+  transform: translateY(-4px); /* Reduced lift for tighter feel */
+  border-color: rgba(0, 243, 255, 0.4);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.8), 0 0 20px var(--accent-dim);
 }
 
 .home-icon {
@@ -354,18 +348,18 @@
   border-radius: 14px;
   display: grid;
   place-items: center;
-  background: rgba(0, 255, 255, 0.05);
+  background: rgba(0, 243, 255, 0.05);
   color: var(--accent);
   margin-bottom: 2px;
-  border: 1px solid rgba(0, 255, 255, 0.15);
+  border: 1px solid rgba(0, 243, 255, 0.15);
   transition: all 0.3s ease;
 }
 
 .home-card:hover .home-icon {
-  background: rgba(0, 255, 255, 0.2);
+  background: rgba(0, 243, 255, 0.2);
   border-color: var(--accent);
   box-shadow: 0 0 25px var(--accent-glow);
-  transform: rotate(-5deg) scale(1.1);
+  transform: scale(1.1) rotate(-3deg);
 }
 
 .home-icon img, .home-icon svg {
@@ -400,7 +394,7 @@
 }
 
 .settings-card {
-  background: rgba(11, 16, 27, 0.6);
+  background: rgba(11, 16, 27, 0.5);
   backdrop-filter: blur(32px);
   -webkit-backdrop-filter: blur(32px);
   border: 1px solid var(--glass-border);
@@ -415,31 +409,10 @@
   overflow: hidden;
 }
 
-/* Holographic Shine for Settings Cards */
-.settings-card::after {
-  content: "";
-  position: absolute;
-  top: 0; left: -150%; width: 150%; height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.03),
-    rgba(0, 255, 255, 0.1),
-    transparent
-  );
-  transform: skewX(-20deg);
-  pointer-events: none;
-  transition: left 0.6s ease-in-out;
-}
-
 .settings-card:hover {
-  border-color: rgba(0, 255, 255, 0.3);
-  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5), inset 0 0 20px rgba(0, 255, 255, 0.02);
+  border-color: rgba(0, 243, 255, 0.3);
+  box-shadow: 0 20px 50px -10px rgba(0,0,0,0.7);
   transform: translateY(-2px);
-}
-
-.settings-card:hover::after {
-  left: 200%;
 }
 
 .settings-card:focus-within {
@@ -470,39 +443,39 @@
   letter-spacing: 0.05em;
 }
 
-/* Futuristic Input Fields v8 */
+/* Futuristic Input Fields v12 */
 .login-input,
 .composer-input,
 .composer-textarea {
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.6);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 12px;
   padding: 16px 20px;
   color: var(--ink);
   font-family: var(--font-body);
   font-size: 1em;
-  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
-  box-shadow: inset 0 2px 6px rgba(0,0,0,0.4);
+  transition: all 0.2s ease-out;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.6);
 }
 
 .login-input:hover,
 .composer-input:hover {
-  border-color: rgba(255, 255, 255, 0.25);
-  background: rgba(0, 0, 0, 0.5);
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.7);
 }
 
-/* Laser Focus Effect */
+/* Sharp Laser Focus Effect */
 .login-input:focus,
 .composer-input:focus,
 .composer-textarea:focus {
   outline: none;
   border-color: var(--accent);
-  background: rgba(0, 255, 255, 0.08);
+  background: rgba(0, 5, 10, 0.8);
   box-shadow:
     0 0 0 1px var(--accent),
-    0 0 30px rgba(0, 255, 255, 0.25),
-    inset 0 2px 4px rgba(0,0,0,0.3);
-  transform: scale(1.01);
+    0 0 20px rgba(0, 243, 255, 0.15),
+    inset 0 1px 2px rgba(0,0,0,0.5);
+  transform: translateY(-1px);
 }
 
 .login-input::placeholder {
@@ -562,13 +535,13 @@
 .settings-search-container {
   display: flex;
   gap: 12px;
-  background: rgba(0,0,0,0.3);
+  background: rgba(0,0,0,0.4);
   padding: 12px 16px;
   border-radius: 16px;
   border: 1px solid var(--border);
   margin-bottom: 24px;
   align-items: center;
-  box-shadow: inset 0 2px 10px rgba(0,0,0,0.4);
+  box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
 }
 
 .settings-search-input {
@@ -596,12 +569,13 @@ textarea:focus-visible,
 [role="button"]:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 4px;
-  box-shadow: 0 0 0 4px rgba(0, 255, 255, 0.2);
+  box-shadow: 0 0 0 4px rgba(0, 243, 255, 0.2);
   z-index: 10;
 }
 
+/* V12 "Metallic Neon" Button */
 .primary-btn {
-  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  background: linear-gradient(135deg, #00C2CC 0%, var(--accent) 50%, var(--accent-strong) 100%);
   color: #000;
   border: none;
   border-radius: 14px;
@@ -611,7 +585,10 @@ textarea:focus-visible,
   font-size: 0.95em;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  box-shadow: 0 4px 15px -4px rgba(0, 255, 255, 0.4), inset 0 1px 0 rgba(255,255,255,0.4);
+  box-shadow:
+    0 4px 15px -4px rgba(0, 243, 255, 0.4),
+    inset 0 1px 0 rgba(255,255,255,0.5),
+    inset 0 -2px 0 rgba(0,0,0,0.1);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -619,18 +596,23 @@ textarea:focus-visible,
   letter-spacing: 0.02em;
   position: relative;
   overflow: hidden;
-  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .primary-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 30px -8px rgba(0, 255, 255, 0.6), inset 0 1px 0 rgba(255,255,255,0.6), 0 0 30px var(--accent-glow);
+  box-shadow:
+    0 12px 30px -8px rgba(0, 243, 255, 0.6),
+    inset 0 1px 0 rgba(255,255,255,0.7),
+    0 0 30px var(--accent-glow);
   filter: brightness(1.1);
 }
 
 .primary-btn:active {
   transform: scale(0.98);
-  box-shadow: 0 2px 10px -4px rgba(0, 255, 255, 0.4);
+  box-shadow:
+    0 2px 10px -4px rgba(0, 243, 255, 0.4),
+    inset 0 3px 5px rgba(0,0,0,0.2); /* Inner depression */
 }
 
 .primary-btn:disabled {
@@ -886,7 +868,7 @@ textarea:focus-visible,
 }
 
 .sidebar-search-wrapper:focus-within {
-  background: rgba(0, 255, 255, 0.05);
+  background: rgba(0, 243, 255, 0.05);
   border-color: var(--accent-dim);
   box-shadow: 0 0 0 1px var(--accent-dim);
 }
@@ -934,6 +916,7 @@ textarea:focus-visible,
   border-radius: 16px;
   background: transparent;
   border: 1px solid transparent;
+  border-left: 3px solid transparent; /* Prepare for accent border */
   color: var(--ink);
   text-align: left;
   cursor: pointer;
@@ -943,17 +926,18 @@ textarea:focus-visible,
 }
 
 .thread-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.03);
+  border-left-color: rgba(255, 255, 255, 0.2);
 }
 
 .thread-item:focus-visible {
-  background: rgba(0, 255, 255, 0.05);
+  background: rgba(0, 243, 255, 0.05);
   border-color: var(--accent-dim);
 }
 
 .thread-item.active {
-  background: rgba(0, 255, 255, 0.1);
-  border-color: rgba(0, 255, 255, 0.2);
+  background: linear-gradient(90deg, rgba(0, 243, 255, 0.08), transparent);
+  border-left-color: var(--accent);
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
@@ -1082,7 +1066,6 @@ textarea:focus-visible,
   background: rgba(3, 5, 10, 0.85);
   backdrop-filter: blur(24px);
   border-bottom: 1px solid var(--glass-border);
-  /* Bolt: Not sticky anymore, part of the flow above composer */
   position: relative;
   z-index: 10;
   display: flex;
@@ -1126,7 +1109,6 @@ textarea:focus-visible,
   display: flex;
   flex-direction: column;
   max-width: 65%;
-  /* Bolt: New messages appear at top, so slide down feels more natural */
   animation: slideDownFade 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -1174,27 +1156,25 @@ textarea:focus-visible,
 
 .composer {
   padding: 24px 32px;
-  /* Bolt: More translucent background for better glass effect */
-  background: rgba(2, 2, 2, 0.75);
-  /* Bolt: Border top since it's now at the bottom */
+  background: rgba(2, 5, 10, 0.6); /* More transparent */
   border-top: 1px solid var(--glass-border);
   border-bottom: none;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  backdrop-filter: blur(32px);
-  -webkit-backdrop-filter: blur(32px);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
   position: relative;
   z-index: 20;
   margin: 0;
-  box-shadow: 0 -10px 30px -10px rgba(0,0,0,0.5);
+  box-shadow: 0 -10px 40px -10px rgba(0,0,0,0.6); /* Deeper shadow for lift */
   transition: all 0.3s ease;
 }
 
 .composer:focus-within {
-  background: rgba(2, 2, 2, 0.9);
+  background: rgba(2, 5, 10, 0.8);
   border-top-color: var(--accent);
-  box-shadow: 0 -10px 40px -5px rgba(0, 0, 0, 0.6), 0 -1px 0 var(--accent-glow);
+  box-shadow: 0 -10px 50px -5px rgba(0, 0, 0, 0.8), 0 -1px 0 var(--accent-glow);
 }
 
 .composer-row {
@@ -1327,8 +1307,8 @@ textarea:focus-visible,
 }
 
 .theme-card:hover .theme-preview {
-  border-color: rgba(0, 255, 255, 0.2);
-  box-shadow: inset 0 0 20px rgba(0, 255, 255, 0.1);
+  border-color: rgba(0, 243, 255, 0.2);
+  box-shadow: inset 0 0 20px rgba(0, 243, 255, 0.1);
 }
 
 .theme-preview-chat {
@@ -1429,8 +1409,8 @@ textarea:focus-visible,
 
 .map-item.active {
   border-color: var(--accent);
-  background: rgba(0, 255, 255, 0.05);
-  box-shadow: 0 0 30px rgba(0, 255, 255, 0.1);
+  background: rgba(0, 243, 255, 0.05);
+  box-shadow: 0 0 30px rgba(0, 243, 255, 0.1);
 }
 
 .map-badge {
@@ -1631,8 +1611,8 @@ textarea:focus-visible,
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  background: linear-gradient(90deg, rgba(0, 255, 255, 0.1), transparent);
-  border: 1px solid rgba(0, 255, 255, 0.2);
+  background: linear-gradient(90deg, rgba(0, 243, 255, 0.1), transparent);
+  border: 1px solid rgba(0, 243, 255, 0.2);
   padding: 20px;
   border-radius: 20px;
   margin-bottom: 24px;
@@ -1663,8 +1643,8 @@ textarea:focus-visible,
 }
 
 .web-app-hint .hint-dismiss:hover {
-  background: rgba(0, 255, 255, 0.12);
-  border-color: rgba(0, 255, 255, 0.4);
+  background: rgba(0, 243, 255, 0.12);
+  border-color: rgba(0, 243, 255, 0.4);
 }
 
 .web-app-hint::before {
@@ -1860,7 +1840,7 @@ textarea:focus-visible,
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Future Deep v8 Enhancements: Holographic Reality                          */
+/*  Future Deep v12 Enhancements: Holographic Reality                          */
 /* -------------------------------------------------------------------------- */
 
 .glass-panel {
@@ -1874,8 +1854,8 @@ textarea:focus-visible,
 .holographic-card {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(0, 255, 255, 0.4);
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.2), inset 0 0 30px rgba(0, 255, 255, 0.05);
+  border: 1px solid rgba(0, 243, 255, 0.4);
+  box-shadow: 0 0 20px rgba(0, 243, 255, 0.2), inset 0 0 30px rgba(0, 243, 255, 0.05);
 }
 
 .holographic-card::before {
@@ -1888,7 +1868,7 @@ textarea:focus-visible,
   background: linear-gradient(
     45deg,
     transparent 45%,
-    rgba(0, 255, 255, 0.15) 50%,
+    rgba(0, 243, 255, 0.15) 50%,
     transparent 55%
   );
   animation: hologram-shine 6s infinite linear;
@@ -2026,7 +2006,7 @@ textarea:focus-visible,
 
 .command-palette-item.selected,
 .command-palette-item:hover {
-  background: rgba(0, 255, 255, 0.1);
+  background: rgba(0, 243, 255, 0.1);
   color: var(--ink);
 }
 
