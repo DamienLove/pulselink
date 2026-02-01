@@ -61,6 +61,35 @@ const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
   timeStyle: 'short'
 });
 
+const formatThreadDate = (timestamp) => {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  const now = new Date();
+
+  // Check if today
+  if (date.getDate() === now.getDate() &&
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear()) {
+    return timeFormatter.format(date);
+  }
+
+  // Check if yesterday
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.getDate() === yesterday.getDate() &&
+      date.getMonth() === yesterday.getMonth() &&
+      date.getFullYear() === yesterday.getFullYear()) {
+    return 'Yesterday';
+  }
+
+  // Check if this year
+  if (date.getFullYear() === now.getFullYear()) {
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
 // Icons
 const HomeIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
 const MapIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>;
@@ -179,7 +208,8 @@ const areThreadsEqual = (prev, next) => {
          prev.thread.snippet === next.thread.snippet &&
          prev.thread.display_name === next.thread.display_name &&
          prev.thread.pinned === next.thread.pinned &&
-         prev.thread.archived === next.thread.archived;
+         prev.thread.archived === next.thread.archived &&
+         prev.thread.date === next.thread.date;
 };
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
@@ -188,6 +218,7 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onAr
   const cleanPhone = (thread.address || '').replace(/\D/g, '');
   const contact = contactLookup?.[cleanPhone];
   const name = contact?.displayName || thread.display_name || thread.address;
+  const dateStr = formatThreadDate(thread.date);
 
   return (
     <div
@@ -196,7 +227,7 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onAr
       role="button"
       tabIndex={0}
       aria-current={isActive ? 'true' : undefined}
-      aria-label={`Select conversation with ${name}${showPreviews && thread.snippet ? `, ${thread.snippet}` : ''}`}
+      aria-label={`Select conversation with ${name}${dateStr ? `, ${dateStr}` : ''}${showPreviews && thread.snippet ? `, ${thread.snippet}` : ''}`}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -209,6 +240,7 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onAr
         <div className="thread-header">
           {thread.pinned && <PinIcon className="pin-icon" style={{width: 14, height: 14}} />}
           <div className="thread-name">{name}</div>
+          {dateStr && <div className="thread-date">{dateStr}</div>}
         </div>
         <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
       </div>

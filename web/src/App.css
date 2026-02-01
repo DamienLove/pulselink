@@ -993,6 +993,16 @@ textarea:focus-visible,
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+}
+
+.thread-date {
+  font-size: 0.75em;
+  color: var(--muted);
+  white-space: nowrap;
+  margin-left: 4px;
+  font-weight: 500;
+  opacity: 0.8;
 }
 
 .pin-icon {
