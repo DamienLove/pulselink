@@ -150,6 +150,24 @@ export const onThemeSubmitted = onDocumentWritten(
         }
       }
 
+      // Sentinel: Scan all theme values for CSS injection (url(), etc.)
+      // Any usage of url() in color fields constitutes an image/external
+      // resource and must be flagged for review to prevent privacy leaks
+      // or CSS injection.
+      for (const [key, value] of Object.entries(theme)) {
+        if (typeof value === "string") {
+          // Check for CSS url() syntax: url(...)
+          // This captures both url('...') and url("...") and url(...)
+          // Case-insensitive to catch URL(...) etc.
+          if (/url\s*\(/i.test(value)) {
+            logger.warn(
+                `Theme ${themeId} flagged: CSS url() detected in field ${key}.`,
+            );
+            hasImages = true;
+          }
+        }
+      }
+
       if (hasImages) {
         logger.info(`Theme ${themeId} requires review (contains images).`);
         return;

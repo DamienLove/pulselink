@@ -26,3 +26,8 @@
 **Vulnerability:** The frontend attempted to write "safe" content directly to a public, read-only collection (`themes_public`) to bypass moderation, which failed due to correct Firestore rules but highlighted a flaw in the design where client-side logic determined security posture.
 **Learning:** Never rely on client-side logic ("it has no images") to bypass security queues. If the destination is protected, all writes must go through a privileged backend (Cloud Function) or a submission queue (`themes_submissions`).
 **Prevention:** Implement the "Submission Queue" pattern: Clients always write to a pending collection. A Cloud Function trigger validates the content server-side and promotes it to the public collection if safe, or flags it for review.
+
+## 2024-05-27 - CSS Injection via Auto-Approval Bypass
+**Vulnerability:** The theme auto-approval logic (`onThemeSubmitted`) checked for explicit image fields (`backgroundImageUrl`) but failed to validate color fields (e.g., `primaryColor`). Attackers could inject CSS `url()` values into color fields to load external images, bypassing the "no images" check and enabling tracking/privacy leaks.
+**Learning:** "Safe" content (like colors) can still be vectors for external resource loading if not validated against strict patterns (e.g., regex for hex/rgb). Validating *structure* is as important as validating *content*.
+**Prevention:** Scan ALL fields for potentially dangerous patterns (like `url(`) when performing auto-approval, or strictly enforce data types (e.g., regex for colors) before trusting input.
