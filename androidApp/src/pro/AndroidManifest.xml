@@ -6,28 +6,6 @@
         <provider
             android:name="com.google.android.gms.ads.MobileAdsInitProvider"
             tools:node="remove" />
-
-        <!-- Home screen widget (available in all flavors, incl. Pro) -->
-        <receiver
-            android:name="com.pulselink.widget.PulseLinkWidgetProvider"
-            android:exported="true"
-            android:icon="@drawable/widget_logo"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_info" />
-        </receiver>
-        <receiver
-            android:name=".widget.PulseLinkWidgetActionReceiver"
-            android:exported="false" />
-
-        <service
-            android:name=".widget.PulseLinkWidgetService"
-            android:permission="android.permission.BIND_REMOTEVIEWS"
-            android:exported="true" />
     </application>
 
 </manifest>

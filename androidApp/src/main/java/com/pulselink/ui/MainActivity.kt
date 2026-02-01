@@ -956,6 +956,7 @@ class MainActivity : AppCompatActivity() {
                             onViewEmergencyMap = { navController.navigate("emergency_map") },
                             isCancelingEmergency = isCancelingEmergency,
                             onAlertsClick = { navController.navigate("alerts_history") { launchSingleTop = true } },
+                            onReportBug = { navController.navigate("bug_report") { launchSingleTop = true } },
                             showAddLoginPrompt = isSmsOnlyUser,
                             onAddLoginClick = {
                                 navController.navigate("login") {
@@ -1302,6 +1303,7 @@ class MainActivity : AppCompatActivity() {
                             onSendCheckIn = viewModel::sendCheckIn,
                             onSettingsClick = { navController.navigate("settings") { launchSingleTop = true } },
                             onFaqClick = { navController.navigate("faq") { launchSingleTop = true } },
+                            onReportBug = { navController.navigate("bug_report") { launchSingleTop = true } },
                             onBeaconClick = launchBeaconInbox,
                             onOpenContacts = {
                                 navController.navigate("sms/inbox?filter=contacts") {

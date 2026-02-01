@@ -42,6 +42,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -152,6 +153,7 @@ fun HomeScreen(
     onAlertsClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onFaqClick: () -> Unit = {},
+    onReportBug: () -> Unit = {},
     onBeaconClick: () -> Unit = {},
     onOpenContacts: () -> Unit = {},
     onOpenNotifications: () -> Unit = {},
@@ -264,6 +266,7 @@ fun HomeScreen(
                 onAlertsClick = onAlertsClick,
                 onSettingsClick = onSettingsClick,
                 onFaqClick = onFaqClick,
+                onReportBug = onReportBug,
                 onBeaconClick = onBeaconClick,
                 onUpgradeClick = onUpgradeClick,
                 showBeacon = showBeaconIcon || isUnifiedMode,
@@ -415,6 +418,7 @@ private fun HeaderSection(
     onAlertsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onFaqClick: () -> Unit,
+    onReportBug: () -> Unit,
     onBeaconClick: () -> Unit,
     onUpgradeClick: () -> Unit,
     showBeacon: Boolean,
@@ -480,6 +484,7 @@ private fun HeaderSection(
                     onAlertsClick = onAlertsClick,
                     onSettingsClick = onSettingsClick,
                     onFaqClick = onFaqClick,
+                    onReportBug = onReportBug,
                     onBeaconClick = onBeaconClick,
                     onNotificationsClick = onOpenNotifications,
                     onThemesClick = onOpenThemes,
@@ -738,6 +743,7 @@ private fun NavigationRow(
     onAlertsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onFaqClick: () -> Unit,
+    onReportBug: () -> Unit,
     onBeaconClick: () -> Unit,
     onNotificationsClick: () -> Unit,
     onThemesClick: () -> Unit,
@@ -761,6 +767,7 @@ private fun NavigationRow(
             compact = compact
         )
         NavButton(icon = Icons.Filled.Help, label = stringResource(id = R.string.faq_title), onClick = onFaqClick, compact = compact)
+        NavButton(icon = Icons.Filled.BugReport, label = stringResource(id = R.string.action_report_bug), onClick = onReportBug, compact = compact)
         NavButton(icon = Icons.Filled.NotificationsActive, label = "Tones", onClick = onNotificationsClick, compact = compact)
         NavButton(icon = Icons.Filled.Palette, label = "Themes", onClick = onThemesClick, compact = compact)
         if (showBeacon) {

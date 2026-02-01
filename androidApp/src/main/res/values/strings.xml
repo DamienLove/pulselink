@@ -20,6 +20,7 @@
     <string name="action_save">Save</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_back">Back</string>
+    <string name="action_report_bug">Report</string>
     <string name="notification_title_alert">PulseLink alert active</string>
     <string name="notification_body_alert">Alert dispatched to your circle.</string>
     <string name="notification_title_alert_sent">Emergency alert sent</string>

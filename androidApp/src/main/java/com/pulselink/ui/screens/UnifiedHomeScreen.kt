@@ -72,6 +72,7 @@ fun UnifiedHomeScreen(
     onViewEmergencyMap: () -> Unit,
     isCancelingEmergency: Boolean,
     onAlertsClick: () -> Unit,
+    onReportBug: () -> Unit,
     showAddLoginPrompt: Boolean,
     onAddLoginClick: () -> Unit,
     showWebAccessHint: Boolean,
@@ -164,6 +165,7 @@ fun UnifiedHomeScreen(
         onSendCheckIn = onSendCheckIn,
         onSettingsClick = onSettingsClick,
         onFaqClick = onFaqClick,
+        onReportBug = onReportBug,
         onBeaconClick = onViewAllMessages, // Redirect Beacon header click to full inbox
         onOpenContacts = onOpenContacts,
         onOpenNotifications = onOpenNotifications,
