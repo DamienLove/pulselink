@@ -26,6 +26,7 @@ import {
   writeBatch
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
+import { getSmartReplies } from './smartReplies';
 import './App.css';
 import logo from './assets/pulselink-pro-logo.png';
 import beaconLogo from './assets/beacon-logo.png';
@@ -713,13 +714,18 @@ const SpotifyResultItem = memo(({ track, onAdd, isAdding }) => (
 SpotifyResultItem.displayName = 'SpotifyResultItem';
 
 // Bolt: MessageComposer extracted to prevent App re-renders on typing
-const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn }) => {
+const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn, lastMessage }) => {
   const [address, setAddress] = useState('');
   const [body, setBody] = useState('');
   const [lineId, setLineId] = useState('');
   const [status, setStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
   const textareaRef = useRef(null);
+
+  const suggestions = useMemo(() => {
+     if (!lastMessage || lastMessage.type !== 1) return []; // Only suggest for received messages (type 1)
+     return getSmartReplies(lastMessage.body);
+  }, [lastMessage]);
 
   useLayoutEffect(() => {
     const el = textareaRef.current;
@@ -819,6 +825,15 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
               </option>
             ))}
           </select>
+        </div>
+      )}
+      {suggestions.length > 0 && (
+        <div className="smart-reply-container">
+          {suggestions.map((s, i) => (
+            <button key={i} className="smart-reply-chip" onClick={() => setBody(s)}>
+              {s}
+            </button>
+          ))}
         </div>
       )}
       <div className="composer-row composer-actions">
@@ -1788,6 +1803,7 @@ const Sidebar = memo(({
   contactLookup
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [category, setCategory] = useState('all');
   const searchInputRef = useRef(null);
 
   useEffect(() => {
@@ -1810,12 +1826,32 @@ const Sidebar = memo(({
   const getSearchIndex = useLazySearchIndex(threads, threadMapper);
 
   const filteredThreads = useMemo(() => {
+    let result = threads;
     const term = searchQuery.trim().toLowerCase();
-    if (!term) return threads;
-    return getSearchIndex()
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ thread }) => thread);
-  }, [getSearchIndex, searchQuery, threads]);
+
+    if (term) {
+      result = getSearchIndex()
+        .filter(({ searchString }) => searchString.includes(term))
+        .map(({ thread }) => thread);
+    }
+
+    if (category === 'personal') {
+      result = result.filter(t => {
+        const addr = (t.address || '').replace(/\D/g, '');
+        // Personal: longer than 6 digits (likely a phone number)
+        return addr.length > 6;
+      });
+    } else if (category === 'business') {
+      result = result.filter(t => {
+        const addr = (t.address || '').replace(/\D/g, '');
+        // Business: Short code (<=6) or alphanumeric (which cleanPhone might strip, so check raw address)
+        const raw = t.address || '';
+        return addr.length <= 6 || /[a-zA-Z]/.test(raw);
+      });
+    }
+
+    return result;
+  }, [getSearchIndex, searchQuery, threads, category]);
 
   const [collapsed, setCollapsed] = useState(false);
 
@@ -2012,6 +2048,11 @@ const Sidebar = memo(({
             >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3-3 3 3 0 0 0-3-3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path></svg>
             </button>
+          </div>
+          <div className="category-tabs">
+             <button className={`category-tab ${category === 'all' ? 'active' : ''}`} onClick={() => setCategory('all')}>All</button>
+             <button className={`category-tab ${category === 'personal' ? 'active' : ''}`} onClick={() => setCategory('personal')}>Personal</button>
+             <button className={`category-tab ${category === 'business' ? 'active' : ''}`} onClick={() => setCategory('business')}>Business</button>
           </div>
           <div className="thread-list">
             {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
@@ -5275,6 +5316,7 @@ function App() {
                       activeLineId={activeLineId}
                       lines={lines}
                       isLoggingIn={isLoggingIn}
+                      lastMessage={messages[messages.length - 1]}
                     />
                   </>
                 ) : (
@@ -5289,6 +5331,7 @@ function App() {
                         activeLineId={activeLineId}
                         lines={lines}
                         isLoggingIn={isLoggingIn}
+                        lastMessage={null}
                     />
                   </div>
                 )}
