@@ -2128,6 +2128,47 @@ const Sidebar = memo(({
 
 Sidebar.displayName = 'Sidebar';
 
+const SystemStatus = ({ profile }) => {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const greeting = (() => {
+    const h = time.getHours();
+    return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  })();
+
+  return (
+    <div className="home-hero system-status-widget">
+      <div>
+        <div className="system-status-indicator">
+          <span className="system-status-dot"></span>
+          <div className="system-status-label">
+            System Online
+          </div>
+        </div>
+        <h2 className="system-status-title">
+          {greeting}{profile.ownerName ? `, ${profile.ownerName.split(' ')[0]}` : ''}
+        </h2>
+        <p className="system-status-subtitle">
+          PulseLink Web • Future Deep v13
+        </p>
+      </div>
+      <div className="system-status-clock">
+        <div className="system-status-time">
+          {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </div>
+        <div className="system-status-date">
+          {time.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const getToastClass = (msg) => {
   if (!msg) return 'toast';
   const lower = msg.toLowerCase();
@@ -4054,22 +4095,13 @@ function App() {
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
             <div className="home-panel">
-              <div className="home-hero">
-                <h2>
-                  {(() => {
-                    const h = new Date().getHours();
-                    return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-                  })()}
-                  {profile.ownerName ? `, ${profile.ownerName.split(' ')[0]}` : ''}
-                </h2>
-                <p>Choose what you want to manage on PulseLink Web.</p>
-              </div>
+              <SystemStatus profile={profile} />
               {/* Web app info tooltip - fixes #236: Users need to know about web app availability */}
               {/* QA TEST: Visit web app home screen after login */}
               {/* EXPECTED: Blue info banner should be visible explaining web access */}
               {/* EXPECTED: Banner should display icon, bold heading, and feature description */}
               {showWebHint && (
-                <div className="web-app-hint">
+                <div className="web-app-hint holographic-card">
                   <button
                     className="hint-dismiss"
                     type="button"

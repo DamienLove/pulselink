@@ -52,27 +52,27 @@
 }
 
 :root {
-  /* Core Palette: "Future Deep v11" - Absolute Zero */
-  --bg: #000000; /* Pitch Black */
-  --bg-accent: #020408;
-  --surface: #05080E;
-  --surface-alt: #0A0F1C;
-  --surface-hover: #0F1521;
+  /* Core Palette: "Future Deep v13" - Void & Plasma */
+  --bg: #020205; /* True Void */
+  --bg-accent: #050510;
+  --surface: #0a0a14;
+  --surface-alt: #101020;
+  --surface-hover: #16162e;
 
   /* Text & Ink */
   --ink: #e0f7fa;
   --ink-dim: #b2ebf2;
   --muted: #64748b;
-  --ink-muted: #64748b;
+  --ink-muted: #94a3b8;
 
-  /* Accents - v11 Laser Blue & Neon Purple */
+  /* Accents - v13 Cyan & Plasma Pink */
   --accent: #00F3FF;        /* Laser Blue */
   --accent-glow: rgba(0, 243, 255, 0.6);
   --accent-strong: #00B8D4;
   --accent-dim: rgba(0, 243, 255, 0.15);
 
-  --secondary: #E000FF;     /* Neon Purple */
-  --secondary-glow: rgba(224, 0, 255, 0.5);
+  --secondary: #FF0099;     /* Plasma Pink */
+  --secondary-glow: rgba(255, 0, 153, 0.5);
 
   --tertiary: #a855f7;      /* Vivid Purple */
   --tertiary-glow: rgba(168, 85, 247, 0.5);
@@ -84,13 +84,13 @@
   --border: rgba(255, 255, 255, 0.1);
   --border-light: rgba(255, 255, 255, 0.18);
   --border-neon: rgba(0, 243, 255, 0.4);
-  --bg-radial-start: #0a0f1c;
+  --bg-radial-start: #050510;
 
-  /* Glassmorphism Refined v11 */
-  --glass-bg: rgba(0, 0, 0, 0.85);
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --glass-highlight: rgba(255, 255, 255, 0.15);
-  --glass-blur: 60px; /* Increased blur */
+  /* Glassmorphism Refined v13 */
+  --glass-bg: rgba(2, 2, 5, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-highlight: rgba(255, 255, 255, 0.12);
+  --glass-blur: 40px;
 
   /* Shadows */
   --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.6);
@@ -145,21 +145,21 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /*
-   "Alive" Background v11:
-   - Pitch Black abyss
-   - Subtle movement
+   "Alive" Background v13:
+   - True Void abyss
+   - Ethereal nebula movements
 */
 body {
   background-color: var(--bg);
   background-image:
       radial-gradient(circle at 50% 0%, var(--bg-radial-start) 0%, transparent 70%),
-      radial-gradient(circle at 90% 90%, rgba(224, 0, 255, 0.04) 0%, transparent 50%),
-      radial-gradient(circle at 10% 80%, rgba(0, 243, 255, 0.04) 0%, transparent 40%),
-      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 100% 100%, 100px 100px, 100px 100px;
+      radial-gradient(circle at 85% 90%, rgba(255, 0, 153, 0.08) 0%, transparent 50%),
+      radial-gradient(circle at 15% 85%, rgba(0, 243, 255, 0.06) 0%, transparent 45%),
+      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 60px 60px, 60px 60px;
   background-attachment: fixed;
-  animation: breathe-v11 60s ease-in-out infinite alternate;
+  animation: breathe-v13 40s ease-in-out infinite alternate;
 }
 
 /* Subtle Vignette Overlay */
@@ -167,12 +167,12 @@ body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.85) 100%);
+  background: radial-gradient(circle at center, transparent 40%, rgba(2, 2, 5, 0.9) 100%);
   pointer-events: none;
   z-index: 0;
 }
 
-/* Scanline Overlay v11 */
+/* Scanline Overlay v13 */
 .scanline-overlay {
   position: fixed;
   inset: 0;
@@ -184,13 +184,13 @@ body::after {
     to bottom,
     rgba(255, 255, 255, 0),
     rgba(255, 255, 255, 0) 2px,
-    rgba(0, 0, 0, 0.1) 2px,
-    rgba(0, 0, 0, 0.1) 4px
+    rgba(0, 0, 0, 0.05) 2px,
+    rgba(0, 0, 0, 0.05) 4px
   );
-  opacity: 0.1;
+  opacity: 0.15;
 }
 
-/* Film Grain / Noise Overlay - Reduced opacity for crystal clarity */
+/* Film Grain / Noise Overlay - Ultra subtle */
 .noise-overlay {
   position: fixed;
   inset: 0;
@@ -198,16 +198,16 @@ body::after {
   height: 100%;
   pointer-events: none;
   z-index: 9999;
-  opacity: 0.02;
+  opacity: 0.03;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
 }
 
-@keyframes breathe-v11 {
+@keyframes breathe-v13 {
   0% {
-    background-position: 50% 0%, 90% 90%, 10% 80%, 0 0, 0 0;
+    background-position: 50% 0%, 85% 90%, 15% 85%, 0 0, 0 0;
   }
   100% {
-    background-position: 50% 10%, 85% 95%, 15% 85%, 20px 20px, 20px 20px;
+    background-position: 50% 15%, 80% 95%, 20% 80%, 10px 10px, 10px 10px;
   }
 }
 
@@ -231,17 +231,17 @@ select {
   outline: none;
 }
 
-/* V11 Neon Scrollbar */
+/* V13 Neon Scrollbar */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 243, 255, 0.3);
-  border-radius: 2px;
+  background: rgba(0, 243, 255, 0.2);
+  border-radius: 3px;
   transition: all 0.3s ease;
   border: none;
 }
@@ -285,6 +285,15 @@ select {
   100% { background-position: 200% 0; }
 }
 
+@keyframes glitch-skew {
+  0% { transform: skew(0deg); }
+  20% { transform: skew(-2deg); }
+  40% { transform: skew(2deg); }
+  60% { transform: skew(-1deg); }
+  80% { transform: skew(1deg); }
+  100% { transform: skew(0deg); }
+}
+
 /* Utility Classes */
 .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
 .animate-slide-up { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -306,7 +315,7 @@ select {
 }
 
 .text-gradient {
-    background: linear-gradient(135deg, var(--accent) 0%, var(--ink) 100%);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--secondary) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -318,7 +327,7 @@ select {
     content: '';
     position: absolute;
     inset: -1px;
-    background: linear-gradient(45deg, var(--accent), transparent, var(--tertiary));
+    background: linear-gradient(45deg, var(--accent), transparent, var(--secondary));
     z-index: -1;
     border-radius: inherit;
     opacity: 0.6;
@@ -332,7 +341,7 @@ select {
     opacity: 1;
 }
 
-/* V11 Holographic Border */
+/* V13 Holographic Border */
 .holographic-border {
   position: relative;
   overflow: hidden;
@@ -351,12 +360,9 @@ select {
 .holographic-border:hover::after {
   left: 100%;
 }
-.holographic-card {
-  border: 1px solid rgba(0, 243, 255, 0.1);
-  box-shadow: 0 0 10px rgba(0, 243, 255, 0.05);
-  transition: all 0.3s ease;
-}
-.holographic-card:hover {
-  border-color: var(--accent);
-  box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+
+.text-glitch:hover {
+  animation: glitch-skew 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite;
+  color: var(--accent);
+  text-shadow: 2px 0 var(--secondary), -2px 0 var(--danger);
 }
