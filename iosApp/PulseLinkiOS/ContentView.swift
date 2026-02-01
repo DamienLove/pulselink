@@ -601,19 +601,17 @@ private struct CancelEmergencySheet: View {
 // MARK: - Theme
 
 enum RelayColors {
-    // Future Deep v11 (Absolute Zero)
-    // Primary: #00F3FF -> Laser Blue
-    static let primary = Color(red: 0.0, green: 0.953, blue: 1.0)
-    // Secondary: #E000FF -> Neon Purple
-    static let tertiary = Color(red: 0.878, green: 0.0, blue: 1.0)
-    // Background: #000000 -> Pitch Black
-    static let deep    = Color.black
+    // Future Deep v13
+    // Void: #020205
+    static let deep = Color(red: 2.0/255.0, green: 2.0/255.0, blue: 5.0/255.0)
+    // Plasma Pink: #FF0099
+    static let accent = Color(red: 1.0, green: 0.0, blue: 153.0/255.0)
 
-    // Complementary shades
-    static let accent  = Color(red: 0.0, green: 0.953, blue: 1.0).opacity(0.8)
-    static let surface = Color(red: 0.05, green: 0.05, blue: 0.05) // Dark gray for surface
+    // Derived/Legacy mappings
+    static let primary = accent
+    static let tertiary = Color(red: 0.0, green: 0.953, blue: 1.0) // Laser Blue
 
-    // Using surface with slight opacity for glass effect
+    static let surface = Color(red: 10.0/255.0, green: 10.0/255.0, blue: 15.0/255.0) // Slightly lighter void
     static let cardBackground = surface.opacity(0.8)
 }
 
