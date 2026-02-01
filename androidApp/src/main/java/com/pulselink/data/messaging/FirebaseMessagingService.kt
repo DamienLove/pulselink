@@ -21,6 +21,7 @@ class PulseLinkFirebaseMessagingService : FirebaseMessagingService() {
 
     @Inject lateinit var linkChannelService: LinkChannelService
     @Inject lateinit var smsRelayService: SmsRelayService
+    @Inject lateinit var smsSyncTrigger: com.pulselink.data.sms.SmsSyncTrigger
     @Inject lateinit var settingsRepository: SettingsRepository
     @Inject lateinit var firestore: FirebaseFirestore
     @Inject lateinit var auth: FirebaseAuth
@@ -45,6 +46,12 @@ class PulseLinkFirebaseMessagingService : FirebaseMessagingService() {
             // explicit call here guarantees it for all entry points.
             smsRelayService.start()
             return
+        }
+
+        if (type == "SYNC_REQUEST") {
+            Log.d(TAG, "Received SYNC_REQUEST trigger")
+            smsSyncTrigger.triggerSync()
+            // Continue to start other services if needed
         }
 
         // Ensure LinkChannelService is running to process the message via Firestore listeners
