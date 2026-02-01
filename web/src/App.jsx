@@ -168,18 +168,29 @@ const Avatar = memo(({ name, url, size = 40, style, className = "thread-avatar" 
 Avatar.displayName = 'Avatar';
 
 const areThreadsEqual = (prev, next) => {
-  return prev.isActive === next.isActive &&
+  const basicMatch = prev.isActive === next.isActive &&
          prev.showPreviews === next.showPreviews &&
          prev.onSelect === next.onSelect &&
          prev.onPin === next.onPin &&
          prev.onArchive === next.onArchive &&
-         prev.contactLookup === next.contactLookup &&
          prev.thread.id === next.thread.id &&
          prev.thread.address === next.thread.address &&
          prev.thread.snippet === next.thread.snippet &&
          prev.thread.display_name === next.thread.display_name &&
          prev.thread.pinned === next.thread.pinned &&
          prev.thread.archived === next.thread.archived;
+
+  if (!basicMatch) return false;
+
+  // Bolt: Optimized to prevent re-render if contactLookup changed
+  // but the resolved contact for this thread is the same (reference equal).
+  if (prev.contactLookup === next.contactLookup) return true;
+
+  const cleanPhone = (prev.thread.address || '').replace(/\D/g, '');
+  const prevContact = prev.contactLookup?.[cleanPhone];
+  const nextContact = next.contactLookup?.[cleanPhone];
+
+  return prevContact === nextContact;
 };
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
@@ -2802,13 +2813,26 @@ function App() {
       return;
     }
     const deviceRef = collection(db, "users", user.uid, "deviceContacts");
+    // Bolt: Use local cache to maintain stable object references for unchanged contacts
+    const localCache = new Map();
     const unsubscribe = onSnapshot(deviceRef, (snapshot) => {
-      const items = snapshot.docs.map(docSnap => ({
-        id: docSnap.id,
-        ...docSnap.data()
-      }));
-      items.sort((a, b) => (a.displayName ?? '').localeCompare(b.displayName ?? ''));
-      setDeviceContacts(items);
+      let changed = false;
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added' || change.type === 'modified') {
+          localCache.set(change.doc.id, { id: change.doc.id, ...change.doc.data() });
+          changed = true;
+        }
+        if (change.type === 'removed') {
+          localCache.delete(change.doc.id);
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        const items = Array.from(localCache.values());
+        items.sort((a, b) => (a.displayName ?? '').localeCompare(b.displayName ?? ''));
+        setDeviceContacts(items);
+      }
     });
     return () => unsubscribe();
   }, [user]);
