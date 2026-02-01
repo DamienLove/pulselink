@@ -20,7 +20,7 @@ targets:
           - "**/*.xcworkspace"
           - "**/*.xcuserstate"
     settings:
-      PRODUCT_BUNDLE_IDENTIFIER: com.pulselink.ios.free
+      PRODUCT_BUNDLE_IDENTIFIER: com.pulselink.ios
       INFOPLIST_FILE: PulseLinkiOS/Info.plist
       INFOPLIST_KEY_CFBundleDisplayName: PulseLink
 

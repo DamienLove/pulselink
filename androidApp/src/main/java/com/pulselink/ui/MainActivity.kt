@@ -1644,13 +1644,14 @@ class MainActivity : AppCompatActivity() {
                         } else {
                             "Custom audio"
                         }
-                        val messageVibrationLabel = VibrationPatterns
-                            .messageOption(state.settings.messageNotificationVibrationPattern)
-                            .label
                         val customVibration = VibrationPatterns.customOption(
                             state.settings.customVibrationPatternName,
                             state.settings.customVibrationPattern
                         )
+                        val messageVibrationLabel = (
+                            customVibration.takeIf { state.settings.messageNotificationVibrationPattern == VibrationPatterns.CUSTOM_KEY }
+                                ?: VibrationPatterns.messageOption(state.settings.messageNotificationVibrationPattern)
+                            ).label
                         val emergencyVibrationLabel = (
                             customVibration.takeIf { state.settings.emergencyProfile.vibrationPatternKey == VibrationPatterns.CUSTOM_KEY }
                                 ?: VibrationPatterns.alertOption(state.settings.emergencyProfile.vibrationPatternKey)
