@@ -713,13 +713,14 @@ const SpotifyResultItem = memo(({ track, onAdd, isAdding }) => (
 SpotifyResultItem.displayName = 'SpotifyResultItem';
 
 // Bolt: MessageComposer extracted to prevent App re-renders on typing
-const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn }) => {
+const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn, onSendOptimistic, focusTrigger }) => {
   const [address, setAddress] = useState('');
   const [body, setBody] = useState('');
   const [lineId, setLineId] = useState('');
   const [status, setStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
   const textareaRef = useRef(null);
+  const addressInputRef = useRef(null);
 
   useLayoutEffect(() => {
     const el = textareaRef.current;
@@ -728,18 +729,26 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
     el.style.height = `${el.scrollHeight + 2}px`;
   }, [body]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (selectedThread) {
       setAddress(selectedThread.address || '');
       setLineId(selectedThread.lineId || '');
+      // Focus textarea when thread selected
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
     } else {
       setAddress('');
       // When clearing (New message), reset lineId to empty to allow user selection or fallback
       setLineId('');
+      // Focus address input when new message
+      if (addressInputRef.current) {
+        addressInputRef.current.focus();
+      }
     }
     setBody('');
     setStatus('');
-  }, [selectedThread]);
+  }, [selectedThread, focusTrigger]);
 
   const handleSendMessage = async () => {
     if (!user) return;
@@ -753,6 +762,19 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
     }
     setIsSending(true);
     setStatus('');
+
+    // Optimistic UI Update
+    setBody(''); // Clear immediately for best flow
+    if (onSendOptimistic) {
+      onSendOptimistic({
+        id: `temp-${Date.now()}`,
+        body: cleanBody,
+        date: Date.now(),
+        type: 2, // Sent
+        status: 'sending'
+      });
+    }
+
     try {
       const docRef = await addDoc(collection(db, "users", user.uid, "outbox"), {
         address: cleanAddress,
@@ -762,7 +784,7 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
         lineId: effectiveLineId,
         status: "pending"
       });
-      setBody('');
+      // Body already cleared
       setStatus("Queued for sending...");
 
       // Monitor status
@@ -794,6 +816,7 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
         <label className="composer-label" htmlFor="compose-address">To<RequiredIndicator /></label>
         <input
           id="compose-address"
+          ref={addressInputRef}
           className="composer-input"
           type="tel"
           placeholder="Phone number"
@@ -2150,6 +2173,16 @@ function App() {
   const [selectedThread, setSelectedThread] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
   const [messages, setMessages] = useState([]);
+  const [pendingMessages, setPendingMessages] = useState([]);
+  const [composerFocusTrigger, setComposerFocusTrigger] = useState(0);
+
+  const handleSendOptimistic = useCallback((msg) => {
+    setPendingMessages(prev => [...prev, msg]);
+    // Auto-clear after 3 seconds to prevent long-term duplicates
+    setTimeout(() => {
+      setPendingMessages(prev => prev.filter(p => p.id !== msg.id));
+    }, 3000);
+  }, []);
 
   // Fix: Use setUser to clear lint error or remove mock override if switching to real auth
   useEffect(() => {
@@ -2534,11 +2567,22 @@ function App() {
   }, [deviceContacts, trustedContacts]);
 
   // Bolt: Memoize list elements to avoid re-creating them on every render
-  const messageListElements = useMemo(() => (
-    messages.map(msg => (
+  const messageListElements = useMemo(() => {
+    // Filter pending messages that are already present in the synced 'messages' list
+    // to prevent visual duplicates during the optimistic window.
+    const uniquePending = pendingMessages.filter(pending => {
+      const recentSynced = messages.slice(-10); // Check last 10 messages
+      return !recentSynced.some(synced =>
+        synced.body === pending.body &&
+        synced.type === pending.type
+      );
+    });
+
+    const allMessages = [...messages, ...uniquePending].sort((a, b) => (a.date ?? 0) - (b.date ?? 0));
+    return allMessages.map(msg => (
       <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} />
-    ))
-  ), [messages, showPreviews]);
+    ));
+  }, [messages, pendingMessages, showPreviews]);
 
   // Bolt: Pagination for contact list to improve performance
   const contactListElements = useMemo(() => (
@@ -2924,11 +2968,11 @@ function App() {
 
 
   // Bolt: Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (autoScroll && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, autoScroll, selectedThread]);
+  }, [messages, pendingMessages, autoScroll, selectedThread]);
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('mock_user') === 'true') return;
@@ -3773,6 +3817,7 @@ function App() {
   const handleNewThread = useCallback(() => {
     setActivePanel('beacon');
     setSelectedThread(null);
+    setComposerFocusTrigger(prev => prev + 1);
   }, []);
 
   // Bolt: Stable handler to prevent ghost content when switching threads
@@ -5275,6 +5320,8 @@ function App() {
                       activeLineId={activeLineId}
                       lines={lines}
                       isLoggingIn={isLoggingIn}
+                      onSendOptimistic={handleSendOptimistic}
+                      focusTrigger={composerFocusTrigger}
                     />
                   </>
                 ) : (
@@ -5289,6 +5336,8 @@ function App() {
                         activeLineId={activeLineId}
                         lines={lines}
                         isLoggingIn={isLoggingIn}
+                        onSendOptimistic={handleSendOptimistic}
+                        focusTrigger={composerFocusTrigger}
                     />
                   </div>
                 )}
