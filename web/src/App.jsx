@@ -4053,7 +4053,7 @@ function App() {
         />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
-            <div className="home-panel">
+            <div className="home-panel" key="home">
               <div className="home-hero">
                 <h2>
                   {(() => {
@@ -4147,7 +4147,7 @@ function App() {
           )}
 
           {activePanel === 'pulselink' && (
-            <div className="pulselink-panel">
+            <div className="pulselink-panel" key="pulselink">
               <div className="panel-header">
                 <h3>PulseLink</h3>
                 <p>Manage trusted contacts and your public profile.</p>
@@ -4371,7 +4371,7 @@ function App() {
           )}
 
           {activePanel === 'contacts' && (
-            <div className="contacts-panel">
+            <div className="contacts-panel" key="contacts">
               <div className="panel-header">
                 <h3>Contacts</h3>
                 <p>Browse all device contacts synced from your phone.</p>
@@ -4442,7 +4442,7 @@ function App() {
           )}
 
           {activePanel === 'map' && (
-            <div className="map-panel">
+            <div className="map-panel" key="map">
               <div className="panel-header">
                 <h3>Emergency map</h3>
                 <p>Locations parsed from PulseLink alert messages synced to this account.</p>
@@ -4534,7 +4534,7 @@ function App() {
           )}
 
           {activePanel === 'ringersong' && (
-            <div className="pulselink-panel">
+            <div className="pulselink-panel" key="ringersong">
               <div className="ringersong-header">
                 <div
                   className="ringersong-logo-container"
@@ -4616,7 +4616,7 @@ function App() {
           )}
 
           {activePanel === 'themes' && (
-            <div className="themes-panel">
+            <div className="themes-panel" key="themes">
               <div className="panel-header">
                 <h3>Theme Gallery</h3>
                 <p>Browse community themes or publish your own. Image-based themes require approval.</p>
@@ -4834,7 +4834,7 @@ function App() {
           )}
 
           {activePanel === 'extensions' && (
-            <div className="pulselink-panel">
+            <div className="pulselink-panel" key="extensions">
               <div className="panel-header">
                 <h3>Features</h3>
                 <p>Enhance your PulseLink experience with powerful add-ons.</p>
@@ -5000,7 +5000,7 @@ function App() {
           )}
 
           {activePanel === 'settings' && (
-            <div className="settings-panel">
+            <div className="settings-panel" key="settings">
               <div className="settings-header">
                 <h3>Settings</h3>
                 <p>Manage account details and shared preferences.</p>
@@ -5227,7 +5227,7 @@ function App() {
 
           {activePanel === 'beacon' && (
             hasBeaconData ? (
-              <div className="beacon-layout">
+              <div className="beacon-layout" key="beacon-data">
       {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
         <div className="line-tabs line-tabs--main">
           <div className="line-tabs-header">
@@ -5294,7 +5294,7 @@ function App() {
                 )}
               </div>
             ) : (
-              <div className="empty-state">
+              <div className="empty-state" key="beacon-empty">
                 <img src={beaconLogo} alt="Beacon" className="empty-logo" style={{ marginBottom: '24px', opacity: 1, filter: 'none' }} />
                 <h2 style={{ marginBottom: '16px' }}>Beacon Inbox</h2>
                 <div className="badge badge-premium" style={{ background: 'var(--accent)', color: '#fff', marginBottom: '24px' }}>

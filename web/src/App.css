@@ -157,13 +157,13 @@
   filter: drop-shadow(0 0 10px var(--accent-glow));
 }
 
-/* "Lit LED" Active State v8 - More Glow */
+/* "Lit LED" Active State v13 - More Glow */
 .nav-item.active {
-  background: linear-gradient(90deg, rgba(0, 255, 255, 0.15), transparent);
+  background: linear-gradient(90deg, rgba(0, 243, 255, 0.15), transparent);
   color: var(--accent);
-  border: 1px solid rgba(0, 255, 255, 0.2);
-  box-shadow: inset 0 0 25px rgba(0, 255, 255, 0.1), 0 0 15px rgba(0, 255, 255, 0.05);
-  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  box-shadow: inset 0 0 30px rgba(0, 243, 255, 0.1), 0 0 20px rgba(0, 243, 255, 0.1);
+  text-shadow: 0 0 10px rgba(0, 243, 255, 0.6);
 }
 
 .nav-item.active::before {
@@ -319,7 +319,7 @@
   background-size: 200% 200%;
 }
 
-/* Holographic Shine v8 */
+/* Holographic Shine v13 */
 .home-card::after {
   content: "";
   position: absolute;
@@ -337,11 +337,14 @@
 }
 
 .home-card:hover {
-  transform: translateY(-8px) scale(1.02);
+  transform: translateY(-6px) scale(1.02);
   border-color: var(--accent);
-  background: rgba(0, 255, 255, 0.06);
+  background: rgba(0, 255, 255, 0.04);
   background-position: 100% 100%;
-  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.8), 0 0 30px var(--accent-glow), inset 0 0 20px rgba(0, 255, 255, 0.05);
+  box-shadow:
+    0 20px 50px -12px rgba(0, 0, 0, 0.9),
+    0 0 20px var(--accent-glow),
+    inset 0 0 20px rgba(0, 255, 255, 0.05);
 }
 
 .home-card:hover::after {
@@ -497,12 +500,12 @@
 .composer-textarea:focus {
   outline: none;
   border-color: var(--accent);
-  background: rgba(0, 255, 255, 0.08);
+  background: rgba(0, 243, 255, 0.05);
   box-shadow:
     0 0 0 1px var(--accent),
-    0 0 30px rgba(0, 255, 255, 0.25),
+    0 0 30px rgba(0, 243, 255, 0.2),
     inset 0 2px 4px rgba(0,0,0,0.3);
-  transform: scale(1.01);
+  transform: scale(1.005);
 }
 
 .login-input::placeholder {
@@ -610,8 +613,8 @@ textarea:focus-visible,
   font-family: var(--font-body);
   font-size: 0.95em;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  box-shadow: 0 4px 15px -4px rgba(0, 255, 255, 0.4), inset 0 1px 0 rgba(255,255,255,0.4);
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 4px 20px -4px rgba(0, 243, 255, 0.4), inset 0 1px 0 rgba(255,255,255,0.4);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -624,13 +627,13 @@ textarea:focus-visible,
 
 .primary-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 30px -8px rgba(0, 255, 255, 0.6), inset 0 1px 0 rgba(255,255,255,0.6), 0 0 30px var(--accent-glow);
+  box-shadow: 0 12px 30px -8px rgba(0, 243, 255, 0.6), inset 0 1px 0 rgba(255,255,255,0.6), 0 0 30px var(--accent-glow);
   filter: brightness(1.1);
 }
 
 .primary-btn:active {
-  transform: scale(0.98);
-  box-shadow: 0 2px 10px -4px rgba(0, 255, 255, 0.4);
+  transform: scale(0.96);
+  box-shadow: 0 2px 10px -4px rgba(0, 243, 255, 0.4);
 }
 
 .primary-btn:disabled {
@@ -1910,21 +1913,6 @@ textarea:focus-visible,
     0 0 80px var(--accent);
 }
 
-/* Enhanced Scrollbar for Chrome/Edge/Safari */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
 /* Shortcut Hint Badge */
 .shortcut-hint {
   font-family: var(--font-mono);
