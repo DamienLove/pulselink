@@ -264,7 +264,7 @@ const MessageItem = memo(({ msg, showPreviews }) => (
       {showPreviews ? msg.body : '••••••'}
     </div>
     <div className="message-time">
-      {timeFormatter.format(new Date(msg.date))}
+      {timeFormatter.format(msg.date)}
     </div>
   </div>
 ), areMessagesEqual);
@@ -2802,13 +2802,29 @@ function App() {
       return;
     }
     const deviceRef = collection(db, "users", user.uid, "deviceContacts");
+
+    // Bolt: Cache to preserve object identity for unchanged contacts
+    const cache = new Map();
+
     const unsubscribe = onSnapshot(deviceRef, (snapshot) => {
-      const items = snapshot.docs.map(docSnap => ({
-        id: docSnap.id,
-        ...docSnap.data()
-      }));
-      items.sort((a, b) => (a.displayName ?? '').localeCompare(b.displayName ?? ''));
-      setDeviceContacts(items);
+      let hasChanges = false;
+      snapshot.docChanges().forEach((change) => {
+        const id = change.doc.id;
+        if (change.type === 'removed') {
+          cache.delete(id);
+          hasChanges = true;
+        } else {
+          // added or modified
+          cache.set(id, { id, ...change.doc.data() });
+          hasChanges = true;
+        }
+      });
+
+      if (hasChanges) {
+        const items = Array.from(cache.values());
+        items.sort((a, b) => (a.displayName ?? '').localeCompare(b.displayName ?? ''));
+        setDeviceContacts(items);
+      }
     });
     return () => unsubscribe();
   }, [user]);

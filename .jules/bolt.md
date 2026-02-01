@@ -9,3 +9,7 @@
 ## 2024-05-27 - Array Allocation in Render Loops
 **Learning:** `[...a, ...b].filter(Boolean).join(' • ')` is a common pattern for joining strings with separators, but it creates multiple intermediate arrays (spread, filter result) on every render.
 **Action:** For simple string joining in hot paths (like list items), use imperative string concatenation or template literals to avoid unnecessary object allocation.
+
+## 2024-05-28 - Firestore Snapshot Object References
+**Learning:** Firestore's `snapshot.docs.map` creates new object references for every document on every update, even if the document data hasn't changed. This breaks `React.memo` (which relies on shallow comparison) and forces expensive deep comparison or re-rendering of large lists (like contacts).
+**Action:** For large collections, use `snapshot.docChanges()` with a local cache (Map) to preserve object identity for unchanged documents, allowing `React.memo` to work effectively.
