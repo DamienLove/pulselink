@@ -1523,6 +1523,7 @@ class MainViewModel @Inject constructor(
             .buildUpon()
             .appendQueryParameter("title", subjectSuffix)
             .appendQueryParameter("body", formattedBody)
+            .appendQueryParameter("labels", "bug")
             .build()
     }
 
