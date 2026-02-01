@@ -26,7 +26,8 @@ enum class SongSource {
     SPOTIFY,
     YOUTUBE_MUSIC,
     LOCAL,
-    APPLE_MUSIC // Added for future support
+    APPLE_MUSIC, // Added for future support
+    TIDAL
 }
 
 @Serializable

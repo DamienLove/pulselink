@@ -56,7 +56,8 @@ data class AuthState(
 @HiltViewModel
 class RingerViewModel @Inject constructor(
     application: Application,
-    private val spotifyPlayerManager: SpotifyPlayerManager
+    private val spotifyPlayerManager: SpotifyPlayerManager,
+    private val tidalPlayerManager: com.RingerSong.free.service.TidalPlayerManager
 ) : AndroidViewModel(application) {
     private val store = AppStateStore(application)
     private val resolver: ContentResolver = application.contentResolver
@@ -355,14 +356,8 @@ class RingerViewModel @Inject constructor(
     }
 
     fun addSpotifyTrack(track: SpotifyTrack, onResult: (String) -> Unit) {
-        val uid = auth?.currentUser?.uid ?: run {
-            onResult("Error: Please sign in to add songs")
-            return
-        }
-        val safeDb = db ?: run {
-            onResult("Error: Database unavailable")
-            return
-        }
+        val uid = auth?.currentUser?.uid
+        val safeDb = db
 
         viewModelScope.launch {
             if (track.uri.isNullOrBlank()) {
@@ -378,6 +373,64 @@ class RingerViewModel @Inject constructor(
 
             if (current.songs.any { it.uri == track.uri }) {
                 onResult("Song already in playlist")
+                return@launch
+            }
+
+            // Check if it's a Tidal track
+            if (track.uri!!.startsWith("tidal:") || track.uri.contains("tidal.com")) {
+                onResult("Adding ${track.name} from Tidal...")
+
+                val songId = UUID.randomUUID().toString()
+                // Normalize URI
+                val tidalUri = if (track.uri.contains("tidal.com")) {
+                     val id = track.uri.substringAfterLast("/")
+                     "tidal:track:$id"
+                } else {
+                     track.uri
+                }
+
+                val songEntry = SongEntry(
+                    id = songId,
+                    title = "${track.name ?: "Unknown Track"} - ${track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"}",
+                    uri = tidalUri,
+                    source = SongSource.TIDAL,
+                    durationMs = track.duration_ms,
+                    addedAt = System.currentTimeMillis()
+                )
+
+                // Update local state
+                withContext(Dispatchers.IO) {
+                    store.update { current ->
+                        val updatedSongs = current.songs + songEntry
+                        val updatedOrder = current.songOrder + songEntry.id
+                        current.copy(songs = updatedSongs, songOrder = updatedOrder)
+                    }
+                }
+
+                // Sync to Firestore (if available)
+                if (uid != null && safeDb != null) {
+                    val trackData = mapOf(
+                        "tidalId" to (tidalUri.removePrefix("tidal:track:")),
+                        "uri" to tidalUri,
+                        "source" to SongSource.TIDAL.name,
+                        "title" to (track.name ?: "Unknown Track"),
+                        "artist" to (track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"),
+                        "durationMs" to (track.duration_ms ?: 0L),
+                        "addedAt" to com.google.firebase.Timestamp.now(),
+                        "downloaded" to false
+                    )
+
+                    safeDb.collection("users").document(uid).collection("ringer_playlist")
+                        .add(trackData)
+                        .addOnSuccessListener {
+                            onResult("Added ${track.name} (Tidal)")
+                        }
+                        .addOnFailureListener { e ->
+                             onResult("Added locally (Sync failed: ${e.message})")
+                        }
+                } else {
+                    onResult("Added locally (No Sync)")
+                }
                 return@launch
             }
 
@@ -407,35 +460,29 @@ class RingerViewModel @Inject constructor(
                 }
 
                 // Sync YouTube track to Firestore
-                val trackData = mapOf(
-                    "youtubeId" to track.id,
-                    "uri" to track.uri,
-                    "source" to SongSource.YOUTUBE_MUSIC.name,
-                    "title" to (track.name ?: "Unknown Track"),
-                    "artist" to (track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"),
-                    "durationMs" to (track.duration_ms ?: 0L),
-                    "addedAt" to com.google.firebase.Timestamp.now(),
-                    "downloaded" to false
-                )
+                if (uid != null && safeDb != null) {
+                    val trackData = mapOf(
+                        "youtubeId" to track.id,
+                        "uri" to track.uri,
+                        "source" to SongSource.YOUTUBE_MUSIC.name,
+                        "title" to (track.name ?: "Unknown Track"),
+                        "artist" to (track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"),
+                        "durationMs" to (track.duration_ms ?: 0L),
+                        "addedAt" to com.google.firebase.Timestamp.now(),
+                        "downloaded" to false
+                    )
 
-                safeDb.collection("users").document(uid).collection("ringer_playlist")
-                    .add(trackData)
-                    .addOnSuccessListener {
-                        onResult("Added ${track.name} (Streaming)")
-                    }
-                    .addOnFailureListener { e ->
-                         // Revert local state if sync fails
-                        viewModelScope.launch {
-                            withContext(Dispatchers.IO) {
-                                store.update { current ->
-                                    val updatedSongs = current.songs.filter { it.id != songEntry.id }
-                                    val updatedOrder = current.songOrder.filter { it != songEntry.id }
-                                    current.copy(songs = updatedSongs, songOrder = updatedOrder)
-                                }
-                            }
+                    safeDb.collection("users").document(uid).collection("ringer_playlist")
+                        .add(trackData)
+                        .addOnSuccessListener {
+                            onResult("Added ${track.name} (Streaming)")
                         }
-                        onResult("Failed to sync YouTube track: ${e.message}")
-                    }
+                        .addOnFailureListener { e ->
+                            onResult("Added locally (Sync failed: ${e.message})")
+                        }
+                } else {
+                    onResult("Added locally (No Sync)")
+                }
                 return@launch
             }
 
@@ -474,37 +521,31 @@ class RingerViewModel @Inject constructor(
             }
 
             // Sync to Firestore
-            val trackData = mapOf(
-                "spotifyId" to track.id,
-                "uri" to track.uri,
-                "spotifyUri" to track.uri,
-                "source" to SongSource.SPOTIFY.name,
-                "title" to (track.name ?: "Unknown Track"),
-                "artist" to (track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"),
-                "durationMs" to (track.duration_ms ?: 0L),
-                "addedAt" to com.google.firebase.Timestamp.now(),
-                "localPath" to localPath,
-                "downloaded" to false
-            )
+            if (uid != null && safeDb != null) {
+                val trackData = mapOf(
+                    "spotifyId" to track.id,
+                    "uri" to track.uri,
+                    "spotifyUri" to track.uri,
+                    "source" to SongSource.SPOTIFY.name,
+                    "title" to (track.name ?: "Unknown Track"),
+                    "artist" to (track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"),
+                    "durationMs" to (track.duration_ms ?: 0L),
+                    "addedAt" to com.google.firebase.Timestamp.now(),
+                    "localPath" to localPath,
+                    "downloaded" to false
+                )
 
-            safeDb.collection("users").document(uid).collection("ringer_playlist")
-                .add(trackData)
-                .addOnSuccessListener {
-                    onResult("Added ${track.name} (Streaming)")
-                }
-                .addOnFailureListener { e ->
-                    // Revert local state if sync fails
-                    viewModelScope.launch {
-                        withContext(Dispatchers.IO) {
-                            store.update { current ->
-                                val updatedSongs = current.songs.filter { it.id != songEntry.id }
-                                val updatedOrder = current.songOrder.filter { it != songEntry.id }
-                                current.copy(songs = updatedSongs, songOrder = updatedOrder)
-                            }
-                        }
+                safeDb.collection("users").document(uid).collection("ringer_playlist")
+                    .add(trackData)
+                    .addOnSuccessListener {
+                        onResult("Added ${track.name} (Streaming)")
                     }
-                    onResult("Failed to sync: ${e.message}")
-                }
+                    .addOnFailureListener { e ->
+                         onResult("Added locally (Sync failed: ${e.message})")
+                    }
+            } else {
+                onResult("Added locally (No Sync)")
+            }
         }
     }
 

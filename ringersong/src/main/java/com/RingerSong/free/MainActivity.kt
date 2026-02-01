@@ -1,6 +1,7 @@
 package com.RingerSong.free
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -120,9 +121,10 @@ fun PermissionWrapper(content: @Composable () -> Unit) {
 
 data class PermissionsState(
     val runtimeGranted: Boolean,
-    val overlayGranted: Boolean
+    val overlayGranted: Boolean,
+    val callScreeningGranted: Boolean
 ) {
-    val allGranted: Boolean get() = runtimeGranted && overlayGranted
+    val allGranted: Boolean get() = runtimeGranted && overlayGranted && callScreeningGranted
 }
 
 fun checkPermissionsState(context: android.content.Context): PermissionsState {
@@ -143,7 +145,14 @@ fun checkPermissionsState(context: android.content.Context): PermissionsState {
         true
     }
 
-    return PermissionsState(runtimeGranted, overlayGranted)
+    val callScreeningGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val roleManager = context.getSystemService(Context.ROLE_SERVICE) as android.app.role.RoleManager
+        roleManager.isRoleHeld(android.app.role.RoleManager.ROLE_CALL_SCREENING)
+    } else {
+        true // Not required/applicable below Android 10 for this specific API, handled via legacy receiver
+    }
+
+    return PermissionsState(runtimeGranted, overlayGranted, callScreeningGranted)
 }
 
 @Composable
@@ -155,6 +164,12 @@ fun PermissionRequestScreen(
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { _ ->
+        onUpdateCheck()
+    }
+
+    val roleLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
         onUpdateCheck()
     }
 
@@ -180,6 +195,7 @@ fun PermissionRequestScreen(
                         "• Detect Incoming Calls (Phone State)\n" +
                         "• Read Contacts (for custom ringtones)\n" +
                         "• Display over other apps (to play while locked)\n" +
+                        "• Caller ID / Screening (to silence system ringer)\n" +
                         "• Notifications (for playback controls)",
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Start
@@ -200,6 +216,18 @@ fun PermissionRequestScreen(
                     }
                 ) {
                     Text("Grant Runtime Permissions")
+                }
+            } else if (!state.callScreeningGranted) {
+                 Button(
+                    onClick = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            val roleManager = context.getSystemService(Context.ROLE_SERVICE) as android.app.role.RoleManager
+                            val intent = roleManager.createRequestRoleIntent(android.app.role.RoleManager.ROLE_CALL_SCREENING)
+                            roleLauncher.launch(intent)
+                        }
+                    }
+                ) {
+                    Text("Set as Caller ID App")
                 }
             } else if (!state.overlayGranted) {
                 Button(
