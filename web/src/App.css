@@ -323,7 +323,7 @@
 .home-card::after {
   content: "";
   position: absolute;
-  top: 0; left: -150%; width: 150%; height: 100%;
+  top: 0; left: 0; width: 150%; height: 100%;
   background: linear-gradient(
     90deg,
     transparent,
@@ -331,9 +331,9 @@
     rgba(0, 255, 255, 0.15),
     transparent
   );
-  transform: skewX(-20deg);
+  transform: translateX(-150%) skewX(-20deg);
   pointer-events: none;
-  transition: left 0.6s ease-in-out;
+  transition: transform 0.6s ease-in-out;
 }
 
 .home-card:hover {
@@ -345,7 +345,7 @@
 }
 
 .home-card:hover::after {
-  left: 200%;
+  transform: translateX(200%) skewX(-20deg);
 }
 
 .home-icon {
@@ -419,7 +419,7 @@
 .settings-card::after {
   content: "";
   position: absolute;
-  top: 0; left: -150%; width: 150%; height: 100%;
+  top: 0; left: 0; width: 150%; height: 100%;
   background: linear-gradient(
     90deg,
     transparent,
@@ -427,9 +427,9 @@
     rgba(0, 255, 255, 0.1),
     transparent
   );
-  transform: skewX(-20deg);
+  transform: translateX(-150%) skewX(-20deg);
   pointer-events: none;
-  transition: left 0.6s ease-in-out;
+  transition: transform 0.6s ease-in-out;
 }
 
 .settings-card:hover {
@@ -439,7 +439,7 @@
 }
 
 .settings-card:hover::after {
-  left: 200%;
+  transform: translateX(200%) skewX(-20deg);
 }
 
 .settings-card:focus-within {
@@ -1910,21 +1910,6 @@ textarea:focus-visible,
     0 0 80px var(--accent);
 }
 
-/* Enhanced Scrollbar for Chrome/Edge/Safari */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
 /* Shortcut Hint Badge */
 .shortcut-hint {
   font-family: var(--font-mono);

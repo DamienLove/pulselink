@@ -233,15 +233,15 @@ select {
 
 /* V11 Neon Scrollbar */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: rgba(0, 243, 255, 0.3);
-  border-radius: 2px;
+  border-radius: 3px;
   transition: all 0.3s ease;
   border: none;
 }
