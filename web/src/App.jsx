@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, memo, useCallback, useLayoutEffec
 import { auth, db, functions } from './firebase';
 import DevTools from './DevTools';
 import CommandPalette from './CommandPalette';
+import SettingsPanel from './SettingsPanel';
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -2290,6 +2291,8 @@ function App() {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [showScanlines, setShowScanlines] = useState(true);
+  const [showNoise, setShowNoise] = useState(true);
   const [spotifyToken, setSpotifyToken] = useState(null);
   const [spotifySearch, setSpotifySearch] = useState('');
   const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
@@ -3896,8 +3899,8 @@ function App() {
   if (!user) {
     return (
       <div className={`app-shell ${themePrefs.useGlassEffect ? 'glass-mode' : ''} ${themePrefs.useHolographicGlow ? 'holographic-mode' : ''}`} style={themeVars}>
-        <div className="noise-overlay" />
-        <div className="scanline-overlay" />
+        {showNoise && <div className="noise-overlay" />}
+        {showScanlines && <div className="scanline-overlay" />}
         {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
         <a href="#main-content" className="skip-link">Skip to main content</a>
         <div className="container login-container" id="main-content">
@@ -4011,8 +4014,8 @@ function App() {
 
   return (
     <div className={`app-shell ${themePrefs.useGlassEffect ? 'glass-mode' : ''} ${themePrefs.useHolographicGlow ? 'holographic-mode' : ''}`} style={themeVars}>
-      <div className="noise-overlay" />
-      <div className="scanline-overlay" />
+      {showNoise && <div className="noise-overlay" />}
+      {showScanlines && <div className="scanline-overlay" />}
       {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
       <CommandPalette
         isOpen={showCommandPalette}
@@ -5000,229 +5003,39 @@ function App() {
           )}
 
           {activePanel === 'settings' && (
-            <div className="settings-panel">
-              <div className="settings-header">
-                <h3>Settings</h3>
-                <p>Manage account details and shared preferences.</p>
-              </div>
-
-              <div className="settings-search-container">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{opacity: 0.5}}>
-                  <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-                <input
-                  ref={settingsSearchRef}
-                  className="settings-search-input"
-                  placeholder="Search settings"
-                  aria-label="Search settings (/)"
-                  value={settingsSearch}
-                  onChange={(e) => setSettingsSearch(e.target.value)}
-                />
-                {!settingsSearch && <span className="shortcut-hint" aria-hidden="true">/</span>}
-                {settingsSearch && (
-                  <button
-                    className="ghost-btn icon-only"
-                    onClick={() => {
-                      setSettingsSearch('');
-                      settingsSearchRef.current?.focus();
-                    }}
-                    aria-label="Clear search"
-                    title="Clear search"
-                    style={{ width: '28px', height: '28px' }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18"></line>
-                      <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                  </button>
-                )}
-              </div>
-
-              <div className="settings-grid">
-                {(() => {
-                  const term = settingsSearch.toLowerCase().trim();
-                  const show = (keywords) => {
-                    if (!term) return true;
-                    return keywords.some(k => k.includes(term));
-                  };
-
-                  return (
-                    <>
-                      {show(['account', 'email', 'user id', 'password', 'reset', 'sign out', 'logout', 'profile']) && (
-                        <div className="settings-card">
-                          <h4>Account</h4>
-                          <div className="settings-row">
-                            <span className="settings-label">Signed in as</span>
-                            <span className="settings-value">{user.email || 'Unknown'}</span>
-                          </div>
-                          <div className="settings-row">
-                            <span className="settings-label">User ID</span>
-                            <span className="settings-value mono">
-                              {user.uid}
-                              <CopyButton text={user.uid} label="Copy User ID" />
-                            </span>
-                          </div>
-                          <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
-                            Send password reset email
-                          </button>
-                          {settingsStatus && <div className={getToastClass(settingsStatus)} role="status" aria-live="polite">{settingsStatus}</div>}
-                        </div>
-                      )}
-
-                      {show(['web', 'previews', 'scroll', 'auto-scroll', 'message previews', 'browser']) && (
-                        <div className="settings-card">
-                          <h4>Web preferences</h4>
-                          <label className="settings-toggle">
-                            <input
-                              type="checkbox"
-                              checked={showPreviews}
-                              onChange={(e) => setShowPreviews(e.target.checked)}
-                            />
-                            Show message previews
-                          </label>
-                          <label className="settings-toggle">
-                            <input
-                              type="checkbox"
-                              checked={autoScroll}
-                              onChange={(e) => setAutoScroll(e.target.checked)}
-                            />
-                            Auto-scroll to latest message
-                          </label>
-                          <p className="settings-note">
-                            Preferences apply to this browser only.
-                          </p>
-                        </div>
-                      )}
-
-                      {show(['pulselink', 'remote', 'web access', 'contact info', 'extensions', '3rd party', 'time format', 'sync']) && (
-                        <div className="settings-card">
-                          <h4>PulseLink settings</h4>
-                          <label className="settings-toggle">
-                            <input
-                              type="checkbox"
-                              checked={remoteSettings.remoteWebAccessEnabled}
-                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, remoteWebAccessEnabled: e.target.checked }))}
-                            />
-                            Enable remote web access
-                          </label>
-                          <label className="settings-toggle">
-                            <input
-                              type="checkbox"
-                              checked={remoteSettings.autoUpdateContactInfo}
-                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, autoUpdateContactInfo: e.target.checked }))}
-                            />
-                            Auto-update contact info
-                          </label>
-                          <label className="settings-toggle">
-                            <input
-                              type="checkbox"
-                              checked={remoteSettings.thirdPartyExtensionsEnabled}
-                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, thirdPartyExtensionsEnabled: e.target.checked }))}
-                            />
-                            Enable 3rd-party extensions (beta)
-                          </label>
-                          <label className="login-field">
-                            Time format
-                            <select
-                              className="login-input"
-                              value={remoteSettings.timeFormat}
-                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, timeFormat: e.target.value }))}
-                            >
-                              <option value="AUTO">Auto</option>
-                              <option value="TWELVE_HOUR">12-hour</option>
-                              <option value="TWENTY_FOUR_HOUR">24-hour</option>
-                            </select>
-                          </label>
-                          <button
-                            className="secondary-btn"
-                            type="button"
-                            onClick={handleRemoteSettingsSave}
-                            disabled={isSavingSettings}
-                            aria-busy={isSavingSettings}
-                          >
-                            {isSavingSettings ? (
-                              <>
-                                <Spinner />
-                                Saving...
-                              </>
-                          ) : 'Save PulseLink settings'}
-                          </button>
-                          <div className="settings-row">
-                            <span className="settings-label">Web sync</span>
-                            <span className="settings-value">
-                              {syncDiagnostics
-                                ? `${dateTimeFormatter.format(new Date(toMillis(syncDiagnostics.timestamp)))} • ${syncDiagnostics.status}`
-                                : 'No sync data yet'}
-                            </span>
-                          </div>
-                          {syncDiagnostics && (
-                            <p className="settings-note">
-                              Threads: {syncDiagnostics.threadCount ?? 0} · Messages: {syncDiagnostics.messageCount ?? 0} · READ_SMS: {syncDiagnostics.hasReadSms ? 'yes' : 'no'} · App: {syncDiagnostics.appVersion ?? 'unknown'}
-                            </p>
-                          )}
-                          <div className="settings-row">
-                            <span className="settings-label">Relay status</span>
-                            <span className="settings-value">
-                              {relayDiagnostics
-                                ? `${dateTimeFormatter.format(new Date(toMillis(relayDiagnostics.timestamp)))} • ${relayDiagnostics.status}`
-                                : 'No relay data yet'}
-                            </span>
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button
-                              className="secondary-btn"
-                              type="button"
-                              onClick={requestPhoneSync}
-                              style={{ flex: 1 }}
-                            >
-                              Request phone sync
-                            </button>
-                            <button
-                              className="secondary-btn"
-                              type="button"
-                              onClick={handleTestRelay}
-                              style={{ flex: 1 }}
-                            >
-                              Test relay
-                            </button>
-                          </div>
-                          {remoteSettingsStatus && <div className={getToastClass(remoteSettingsStatus)} role="status" aria-live="polite">{remoteSettingsStatus}</div>}
-                          {syncRequestStatus && <div className={getToastClass(syncRequestStatus)} role="status" aria-live="polite">{syncRequestStatus}</div>}
-                        </div>
-                      )}
-
-                      {show(['data', 'delete', 'clear', 'cloud', 'account data', 'remove', 'privacy']) && (
-                        <div className="settings-card">
-                          <h4>Account data</h4>
-                          <p className="settings-note">
-                            Delete account removes your login and all cloud data. Clear data keeps your login but deletes synced content.
-                          </p>
-                          <div className="contact-actions">
-                            <button
-                              className="secondary-btn"
-                              type="button"
-                              onClick={handleDeleteAccountData}
-                              disabled={!!deleteAction}
-                            >
-                              {deleteAction === 'data' ? "Clearing..." : "Clear cloud data"}
-                            </button>
-                            <button
-                              className="primary-btn"
-                              type="button"
-                              onClick={handleDeleteAccount}
-                              disabled={!!deleteAction}
-                            >
-                              {deleteAction === 'account' ? "Deleting..." : "Delete account"}
-                            </button>
-                          </div>
-                          {deleteStatus && <div className={getToastClass(deleteStatus)} role="status" aria-live="polite">{deleteStatus}</div>}
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
-            </div>
+            <SettingsPanel
+              user={user}
+              settingsSearch={settingsSearch}
+              setSettingsSearch={setSettingsSearch}
+              showPreviews={showPreviews}
+              setShowPreviews={setShowPreviews}
+              autoScroll={autoScroll}
+              setAutoScroll={setAutoScroll}
+              showScanlines={showScanlines}
+              setShowScanlines={setShowScanlines}
+              showNoise={showNoise}
+              setShowNoise={setShowNoise}
+              remoteSettings={remoteSettings}
+              setRemoteSettings={setRemoteSettings}
+              syncDiagnostics={syncDiagnostics}
+              relayDiagnostics={relayDiagnostics}
+              requestPhoneSync={requestPhoneSync}
+              handleTestRelay={handleTestRelay}
+              remoteSettingsStatus={remoteSettingsStatus}
+              isSavingSettings={isSavingSettings}
+              handleRemoteSettingsSave={handleRemoteSettingsSave}
+              syncRequestStatus={syncRequestStatus}
+              deleteAction={deleteAction}
+              setDeleteAction={setDeleteAction}
+              deleteStatus={deleteStatus}
+              handleDeleteAccountData={handleDeleteAccountData}
+              handleDeleteAccount={handleDeleteAccount}
+              handlePasswordResetForUser={handlePasswordResetForUser}
+              settingsStatus={settingsStatus}
+              getToastClass={getToastClass}
+              dateTimeFormatter={dateTimeFormatter}
+              toMillis={toMillis}
+            />
           )}
 
           {activePanel === 'beacon' && (

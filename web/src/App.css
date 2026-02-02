@@ -1864,11 +1864,17 @@ textarea:focus-visible,
 /* -------------------------------------------------------------------------- */
 
 .glass-panel {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--accent-dim);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+}
+
+.magnetic-card {
+  transition: transform 0.1s cubic-bezier(0.02, 0.6, 0.01, 0.91);
+  transform-style: preserve-3d;
+  will-change: transform;
 }
 
 .holographic-card {
