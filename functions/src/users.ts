@@ -7,6 +7,35 @@ if (admin.apps.length === 0) {
 
 const db = admin.firestore();
 
+// Sentinel: Rate limit to prevent user enumeration
+async function checkFindUserRateLimit(uid: string): Promise<void> {
+  const ONE_HOUR_MS = 60 * 60 * 1000;
+  const timestamp = admin.firestore.Timestamp.fromMillis(
+      Date.now() - ONE_HOUR_MS,
+  );
+
+  const snapshot = await db.collection("rate_limits")
+      .where("uid", "==", uid)
+      .where("action", "==", "findUser")
+      .where("timestamp", ">", timestamp)
+      .count()
+      .get();
+
+  if (snapshot.data().count >= 30) {
+    throw new functions.https.HttpsError(
+        "resource-exhausted",
+        "Too many user lookups. Try again later.",
+    );
+  }
+
+  // Log this attempt
+  await db.collection("rate_limits").add({
+    uid: uid,
+    action: "findUser",
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
 export const findUser = functions.https.onCall(async (data, context) => {
   // Auth check
   if (!context.auth) {
@@ -15,6 +44,9 @@ export const findUser = functions.https.onCall(async (data, context) => {
         "User must be logged in.",
     );
   }
+
+  // Sentinel: Enforce rate limit
+  await checkFindUserRateLimit(context.auth.uid);
 
   const {phoneNumber, email} = data;
   if (!phoneNumber && !email) {
