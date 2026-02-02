@@ -264,7 +264,7 @@ const MessageItem = memo(({ msg, showPreviews }) => (
       {showPreviews ? msg.body : '••••••'}
     </div>
     <div className="message-time">
-      {timeFormatter.format(new Date(msg.date))}
+      {timeFormatter.format(msg.date)}
     </div>
   </div>
 ), areMessagesEqual);
@@ -460,7 +460,7 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
           {alertBadgeCopy[alert.severity] ?? 'Alert'}
         </span>
       </div>
-      <div className="map-item-meta">{dateTimeFormatter.format(new Date(alert.date))}</div>
+      <div className="map-item-meta">{dateTimeFormatter.format(alert.date)}</div>
       <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
       <div className="map-item-actions">
         <button
@@ -3119,7 +3119,7 @@ function App() {
         // Sentinel: Escape user input to prevent XSS in InfoWindow
         const safeType = escapeHtml(alertBadgeCopy[alert.severity] ?? 'Alert');
         const safeAddress = escapeHtml(alert.address);
-        const safeDate = escapeHtml(dateTimeFormatter.format(new Date(alert.date)));
+        const safeDate = escapeHtml(dateTimeFormatter.format(alert.date));
 
         mapInfoRef.current.setContent(
           `<div style="font-family: sans-serif; max-width: 220px;">
@@ -3170,7 +3170,7 @@ function App() {
       // Sentinel: Escape user input to prevent XSS in InfoWindow
       const safeType = escapeHtml(alertBadgeCopy[alert.severity] ?? 'Alert');
       const safeAddress = escapeHtml(alert.address);
-      const safeDate = escapeHtml(dateTimeFormatter.format(new Date(alert.date)));
+      const safeDate = escapeHtml(dateTimeFormatter.format(alert.date));
 
       mapInfoRef.current.setContent(
         `<div style="font-family: sans-serif; max-width: 220px;">
@@ -5151,7 +5151,7 @@ function App() {
                             <span className="settings-label">Web sync</span>
                             <span className="settings-value">
                               {syncDiagnostics
-                                ? `${dateTimeFormatter.format(new Date(toMillis(syncDiagnostics.timestamp)))} • ${syncDiagnostics.status}`
+                                ? `${dateTimeFormatter.format(toMillis(syncDiagnostics.timestamp))} • ${syncDiagnostics.status}`
                                 : 'No sync data yet'}
                             </span>
                           </div>
@@ -5164,7 +5164,7 @@ function App() {
                             <span className="settings-label">Relay status</span>
                             <span className="settings-value">
                               {relayDiagnostics
-                                ? `${dateTimeFormatter.format(new Date(toMillis(relayDiagnostics.timestamp)))} • ${relayDiagnostics.status}`
+                                ? `${dateTimeFormatter.format(toMillis(relayDiagnostics.timestamp))} • ${relayDiagnostics.status}`
                                 : 'No relay data yet'}
                             </span>
                           </div>
