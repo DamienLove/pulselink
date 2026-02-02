@@ -27,7 +27,9 @@ test('Full Verification Suite', async ({ page }) => {
         mapEnabled: true,
         contactsEnabled: true,
         themesEnabled: true,
-        ringerSongEnabled: true
+        ringerSongEnabled: true,
+        beaconEnabled: true,
+        trustedContactsEnabled: true
       };
 
       // Inject Mock User Data (Settings)
