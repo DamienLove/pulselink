@@ -273,6 +273,7 @@ MessageItem.displayName = 'MessageItem';
 
 // Bolt: Custom comparator for DeviceContactItem to handle object reference changes
 const areDeviceContactsEqual = (prev, next) => {
+  if (prev.onSelect !== next.onSelect) return false;
   const p = prev.contact;
   const n = next.contact;
   if (p === n) return true; // Reference equality
@@ -312,7 +313,7 @@ const areDeviceContactsEqual = (prev, next) => {
 };
 
 // Bolt: Optimized DeviceContactItem to prevent re-renders of the large contact list
-const DeviceContactItem = memo(({ contact }) => {
+const DeviceContactItem = memo(({ contact, onSelect }) => {
   // Bolt: Optimized to avoid array allocation during render
   let extras = '';
   if (Array.isArray(contact.additionalPhones)) {
@@ -333,7 +334,19 @@ const DeviceContactItem = memo(({ contact }) => {
   }
 
   return (
-    <div className="contact-row contact-row--stacked">
+    <div
+      className="contact-row contact-row--stacked"
+      onClick={() => onSelect && onSelect(contact)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (onSelect) onSelect(contact);
+        }
+      }}
+      aria-label={`Message ${contact.displayName || 'contact'}`}
+    >
       <div className="contact-main">
         <div className="contact-name">{contact.displayName || 'Unnamed contact'}</div>
         <div className="contact-meta">
@@ -2540,12 +2553,23 @@ function App() {
     ))
   ), [messages, showPreviews]);
 
+  // Bolt: Stable handler for starting a thread from contact list
+  const handleContactSelect = useCallback((contact) => {
+    setActivePanel('beacon');
+    setSelectedThread({
+      id: `new_${contact.id}`,
+      address: contact.phoneNumber,
+      display_name: contact.displayName,
+      isTemp: true
+    });
+  }, []);
+
   // Bolt: Pagination for contact list to improve performance
   const contactListElements = useMemo(() => (
     filteredDeviceContacts.slice(0, contactListLimit).map((contact) => (
-      <DeviceContactItem key={contact.id} contact={contact} />
+      <DeviceContactItem key={contact.id} contact={contact} onSelect={handleContactSelect} />
     ))
-  ), [filteredDeviceContacts, contactListLimit]);
+  ), [filteredDeviceContacts, contactListLimit, handleContactSelect]);
 
   useEffect(() => {
     // Bolt: Mock user support for Playwright testing
