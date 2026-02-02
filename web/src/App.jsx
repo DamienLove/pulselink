@@ -713,7 +713,7 @@ const SpotifyResultItem = memo(({ track, onAdd, isAdding }) => (
 SpotifyResultItem.displayName = 'SpotifyResultItem';
 
 // Bolt: MessageComposer extracted to prevent App re-renders on typing
-const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn }) => {
+const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn, onMessageSent }) => {
   const [address, setAddress] = useState('');
   const [body, setBody] = useState('');
   const [lineId, setLineId] = useState('');
@@ -754,6 +754,19 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
     setIsSending(true);
     setStatus('');
     try {
+      // Optimistic update via parent callback
+      const tempId = `temp_${Date.now()}`;
+      if (onMessageSent) {
+        onMessageSent({
+          id: tempId,
+          body: cleanBody,
+          address: cleanAddress,
+          date: Date.now(),
+          type: 2, // Sent
+          lineId: effectiveLineId
+        });
+      }
+
       const docRef = await addDoc(collection(db, "users", user.uid, "outbox"), {
         address: cleanAddress,
         body: cleanBody,
@@ -2903,8 +2916,8 @@ function App() {
         ? ["users", user.uid, "lines", selectedThread.lineId, "threads", selectedThread.id, "messages"]
         : ["users", user.uid, "synced_threads", selectedThread.id, "messages"];  
       const messagesRef = collection(db, ...basePath);
-      // Bolt: Standard chat order (Oldest -> Newest)
-      const q = query(messagesRef, orderBy("date", "asc"));
+      // Bolt: Reverse chat order (Newest -> Oldest)
+      const q = query(messagesRef, orderBy("date", "desc"));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const messagesData = snapshot.docs.map(doc => {
           const data = doc.data();
@@ -2923,12 +2936,8 @@ function App() {
   }, [user, selectedThread]);
 
 
-  // Bolt: Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (autoScroll && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, autoScroll, selectedThread]);
+  // Bolt: Auto-scroll removed for reverse chronological order (Newest First)
+  // New messages appear at the top, so user is already at the correct position.
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('mock_user') === 'true') return;
@@ -3783,6 +3792,30 @@ function App() {
       setActiveLineId((prev) => prev ?? thread.lineId);
     }
   }, []);
+
+  const handleMessageSent = useCallback((msg) => {
+    // 1. Add to messages list (at top)
+    setMessages(prev => [msg, ...prev]);
+
+    // 2. Update thread snippet/date in sidebar optimistically
+    const updateThread = (t) => {
+      if (t.address === msg.address || t.id === selectedThread?.id) {
+        return { ...t, snippet: msg.body, date: msg.date };
+      }
+      return t;
+    };
+
+    if (msg.lineId) {
+        setLineThreads(prev => {
+            const lineList = prev[msg.lineId] || [];
+            // If thread exists, update it. If not, we might need to create it locally (complex),
+            // but for existing thread it's simple.
+            return { ...prev, [msg.lineId]: lineList.map(updateThread) };
+        });
+    } else {
+        setLegacyThreads(prev => prev.map(updateThread));
+    }
+  }, [selectedThread]);
 
   const handlePinThread = useCallback(async (thread) => {
     if (!user) return;
@@ -5265,7 +5298,6 @@ function App() {
                     </div>
                     <div className="messages-list">
                       {messageListElements}
-                      <div ref={messagesEndRef} style={{ height: 1 }} />
                     </div>
                     <MessageComposer
                       user={user}
@@ -5275,6 +5307,7 @@ function App() {
                       activeLineId={activeLineId}
                       lines={lines}
                       isLoggingIn={isLoggingIn}
+                      onMessageSent={handleMessageSent}
                     />
                   </>
                 ) : (
@@ -5289,6 +5322,7 @@ function App() {
                         activeLineId={activeLineId}
                         lines={lines}
                         isLoggingIn={isLoggingIn}
+                        onMessageSent={handleMessageSent}
                     />
                   </div>
                 )}
