@@ -14,6 +14,7 @@ targets:
   PulseLinkFree:
     type: application
     platform: iOS
+    entitlements: PulseLinkiOS/PulseLink.entitlements
     sources:
       - path: PulseLinkiOS
         excludes:
@@ -27,6 +28,7 @@ targets:
   PulseLinkPro:
     type: application
     platform: iOS
+    entitlements: PulseLinkiOS/PulseLink.entitlements
     sources:
       - path: PulseLinkiOS
         excludes:
@@ -41,6 +43,7 @@ targets:
   BeaconFree:
     type: application
     platform: iOS
+    entitlements: BeaconiOS/Beacon.entitlements
     sources:
       - path: BeaconiOS
     settings:
@@ -51,6 +54,7 @@ targets:
   BeaconPro:
     type: application
     platform: iOS
+    entitlements: BeaconiOS/Beacon.entitlements
     sources:
       - path: BeaconiOS
     settings:
