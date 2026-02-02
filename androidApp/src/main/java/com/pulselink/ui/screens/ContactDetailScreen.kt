@@ -279,7 +279,8 @@ private fun LinkStatusSection(
                                     // Use ACTION_SENDTO with encoded mailto URI to ensure subject/body are populated in all clients
                                     // Also put extras directly for clients that ignore URI params (e.g. Gmail)
                                     val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
-                                        data = Uri.parse("mailto:${contact.email ?: ""}")
+                                        val mailtoUri = EmailUtils.createMailtoUriString(contact.email, rawSubject, rawBody)
+                                        data = Uri.parse(mailtoUri)
                                         putExtra(Intent.EXTRA_SUBJECT, rawSubject)
                                         putExtra(Intent.EXTRA_TEXT, rawBody)
                                     }
