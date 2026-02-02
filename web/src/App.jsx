@@ -174,6 +174,7 @@ const areThreadsEqual = (prev, next) => {
          prev.onPin === next.onPin &&
          prev.onArchive === next.onArchive &&
          prev.contactLookup === next.contactLookup &&
+         prev.draft === next.draft &&
          prev.thread.id === next.thread.id &&
          prev.thread.address === next.thread.address &&
          prev.thread.snippet === next.thread.snippet &&
@@ -184,7 +185,7 @@ const areThreadsEqual = (prev, next) => {
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
 // when only the selection state changes or when unrelated threads update.
-const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onArchive, contactLookup }) => {
+const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onArchive, contactLookup, draft }) => {
   const cleanPhone = (thread.address || '').replace(/\D/g, '');
   const contact = contactLookup?.[cleanPhone];
   const name = contact?.displayName || thread.display_name || thread.address;
@@ -210,7 +211,10 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onAr
           {thread.pinned && <PinIcon className="pin-icon" style={{width: 14, height: 14}} />}
           <div className="thread-name">{name}</div>
         </div>
-        <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
+        <div className="thread-snippet">
+          {draft && <span className="draft-indicator">Draft:</span>}
+          {draft ? draft : (showPreviews ? thread.snippet : '••••••')}
+        </div>
       </div>
       <div className="thread-actions">
         <button
@@ -713,13 +717,14 @@ const SpotifyResultItem = memo(({ track, onAdd, isAdding }) => (
 SpotifyResultItem.displayName = 'SpotifyResultItem';
 
 // Bolt: MessageComposer extracted to prevent App re-renders on typing
-const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn }) => {
+const MessageComposer = memo(({ user, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn, initialDraft, onSaveDraft, onClearDraft, onSend }) => {
   const [address, setAddress] = useState('');
   const [body, setBody] = useState('');
   const [lineId, setLineId] = useState('');
   const [status, setStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
   const textareaRef = useRef(null);
+  const saveDraftTimeoutRef = useRef(null);
 
   useLayoutEffect(() => {
     const el = textareaRef.current;
@@ -732,14 +737,26 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
     if (selectedThread) {
       setAddress(selectedThread.address || '');
       setLineId(selectedThread.lineId || '');
+      setBody(initialDraft || '');
     } else {
       setAddress('');
       // When clearing (New message), reset lineId to empty to allow user selection or fallback
       setLineId('');
+      setBody('');
     }
-    setBody('');
     setStatus('');
-  }, [selectedThread]);
+  }, [selectedThread, initialDraft]);
+
+  useEffect(() => {
+    if (!selectedThread) return;
+    if (saveDraftTimeoutRef.current) clearTimeout(saveDraftTimeoutRef.current);
+
+    saveDraftTimeoutRef.current = setTimeout(() => {
+      if (onSaveDraft) onSaveDraft(selectedThread.id, body);
+    }, 500);
+
+    return () => clearTimeout(saveDraftTimeoutRef.current);
+  }, [body, selectedThread, onSaveDraft]);
 
   const handleSendMessage = async () => {
     if (!user) return;
@@ -754,32 +771,39 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
     setIsSending(true);
     setStatus('');
     try {
-      const docRef = await addDoc(collection(db, "users", user.uid, "outbox"), {
+      const result = await onSend({
         address: cleanAddress,
         body: cleanBody,
-        createdAt: serverTimestamp(),
-        source: "web",
-        lineId: effectiveLineId,
-        status: "pending"
+        lineId: effectiveLineId
       });
+
       setBody('');
+      if (selectedThread && onClearDraft) {
+        onClearDraft(selectedThread.id);
+      }
       setStatus("Queued for sending...");
 
-      // Monitor status
-      let unsubscribe;
-      unsubscribe = onSnapshot(docRef, (docSnap) => {
-        if (!docSnap.exists()) {
+      // Monitor status if result provides a ref
+      if (result && result.onSnapshot) {
+          let unsubscribe;
+          unsubscribe = result.onSnapshot((docSnap) => {
+            if (!docSnap.exists()) {
+              setStatus("Sent");
+              setTimeout(() => setStatus(''), 3000);
+              if (unsubscribe) unsubscribe();
+            } else {
+              const data = docSnap.data();
+              if (data.status === 'failed') {
+                setStatus(`Send failed: ${data.error || 'Unknown error'}`);
+                if (unsubscribe) unsubscribe();
+              }
+            }
+          });
+      } else {
+          // Mock or fire-and-forget
           setStatus("Sent");
           setTimeout(() => setStatus(''), 3000);
-          if (unsubscribe) unsubscribe();
-        } else {
-          const data = docSnap.data();
-          if (data.status === 'failed') {
-            setStatus(`Send failed: ${data.error || 'Unknown error'}`);
-            if (unsubscribe) unsubscribe();
-          }
-        }
-      });
+      }
     } catch (error) {
       console.error("Send failed", error);
       setStatus("Send failed. Try again.");
@@ -1680,6 +1704,16 @@ const threadMapper = (t) => {
   return { thread: t, searchString: `${display} ${snippet}` };
 };
 
+const isBusiness = (thread) => {
+  const addr = thread.address || '';
+  // Alphanumeric sender (e.g. "BANK")
+  if (/[a-zA-Z]/.test(addr)) return true;
+  // Short code (digits only, length <= 6)
+  const clean = addr.replace(/\D/g, '');
+  if (clean.length > 0 && clean.length <= 6) return true;
+  return false;
+};
+
 // Bolt: Optimized contactMapper to use imperative string concatenation
 // avoiding array allocations (filter/map/join) for better performance.
 const contactMapper = (contact) => {
@@ -1785,7 +1819,10 @@ const Sidebar = memo(({
   setShowArchived,
   onPinThread,
   onArchiveThread,
-  contactLookup
+  contactLookup,
+  activeCategory,
+  setActiveCategory,
+  drafts
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef(null);
@@ -1810,12 +1847,27 @@ const Sidebar = memo(({
   const getSearchIndex = useLazySearchIndex(threads, threadMapper);
 
   const filteredThreads = useMemo(() => {
+    let result = threads;
+
+    // Category filter
+    if (activeCategory === 'personal') {
+      result = result.filter(t => !isBusiness(t));
+    } else if (activeCategory === 'business') {
+      result = result.filter(t => isBusiness(t));
+    }
+
     const term = searchQuery.trim().toLowerCase();
-    if (!term) return threads;
-    return getSearchIndex()
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ thread }) => thread);
-  }, [getSearchIndex, searchQuery, threads]);
+    if (!term) return result;
+
+    // Bolt: Use search index for filtering
+    // Since we can't easily intersect with lazy index without re-running,
+    // and N is small, we just filter the result based on search index logic inline.
+    return result.filter(t => {
+      const display = (t.display_name || t.address || '').toLowerCase();
+      const snippet = (t.snippet || '').toLowerCase();
+      return display.includes(term) || snippet.includes(term);
+    });
+  }, [searchQuery, threads, activeCategory]);
 
   const [collapsed, setCollapsed] = useState(false);
 
@@ -2014,13 +2066,14 @@ const Sidebar = memo(({
             </button>
           </div>
           <div className="thread-list">
+            <div className="line-tabs">
             {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
-              <div className="line-tabs" aria-label="Device lines">
+              <div className="chip-row" aria-label="Device lines">
                 <button
                   className={`chip ${!activeLineId ? 'active' : ''}`}
                   onClick={() => setActiveLineId(null)}
                 >
-                  All
+                  All Lines
                 </button>
                 {lines.map((line) => (
                   <button
@@ -2034,6 +2087,28 @@ const Sidebar = memo(({
                 ))}
               </div>
             )}
+            <div className="chip-row" aria-label="Inbox categories">
+              <button
+                className={`chip ${activeCategory === 'all' ? 'active' : ''}`}
+                onClick={() => setActiveCategory('all')}
+              >
+                All
+              </button>
+              <button
+                className={`chip ${activeCategory === 'personal' ? 'active' : ''}`}
+                onClick={() => setActiveCategory('personal')}
+              >
+                Personal
+              </button>
+              <button
+                className={`chip ${activeCategory === 'business' ? 'active' : ''}`}
+                onClick={() => setActiveCategory('business')}
+              >
+                Business
+              </button>
+            </div>
+            </div>
+
             {lines.length > 0 && (
                  <div className="sidebar-sync-status" style={{ fontSize: '0.7em', color: 'var(--muted)', padding: '0 12px 8px', textAlign: 'right' }}>
                     {(() => {
@@ -2090,6 +2165,7 @@ const Sidebar = memo(({
                   onPin={onPinThread}
                   onArchive={onArchiveThread}
                   contactLookup={contactLookup}
+                  draft={drafts[thread.id]}
                 />
               ))
             )}
@@ -2123,7 +2199,9 @@ const Sidebar = memo(({
          prev.onArchiveThread === next.onArchiveThread &&
          prev.navLogo === next.navLogo &&
          prev.brandTitle === next.brandTitle &&
-         prev.contactLookup === next.contactLookup;
+         prev.contactLookup === next.contactLookup &&
+         prev.activeCategory === next.activeCategory &&
+         prev.drafts === next.drafts;
 });
 
 Sidebar.displayName = 'Sidebar';
@@ -2150,6 +2228,8 @@ function App() {
   const [selectedThread, setSelectedThread] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
   const [messages, setMessages] = useState([]);
+  const [drafts, setDrafts] = useState({});
+  const [activeCategory, setActiveCategory] = useState('all');
 
   // Fix: Use setUser to clear lint error or remove mock override if switching to real auth
   useEffect(() => {
@@ -3784,6 +3864,41 @@ function App() {
     }
   }, []);
 
+  const handleSaveDraft = useCallback((threadId, text) => {
+    setDrafts(prev => {
+      if (!text) {
+        const next = { ...prev };
+        delete next[threadId];
+        return next;
+      }
+      return { ...prev, [threadId]: text };
+    });
+  }, []);
+
+  const handleClearDraft = useCallback((threadId) => {
+    setDrafts(prev => {
+      const next = { ...prev };
+      delete next[threadId];
+      return next;
+    });
+  }, []);
+
+  const handleSendMessage = useCallback(async ({ address, body, lineId }) => {
+    if (new URLSearchParams(window.location.search).get('mock_user') === 'true') {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return { onSnapshot: (cb) => { cb({ exists: () => false }); return () => {}; } };
+    }
+
+    return addDoc(collection(db, "users", user.uid, "outbox"), {
+      address,
+      body,
+      createdAt: serverTimestamp(),
+      source: "web",
+      lineId,
+      status: "pending"
+    });
+  }, [user]);
+
   const handlePinThread = useCallback(async (thread) => {
     if (!user) return;
     try {
@@ -3890,6 +4005,7 @@ function App() {
       window.debugSetLines = setLines;
       window.debugSetLegacyThreads = setLegacyThreads;
       window.debugSetIsLoadingThreads = setIsLoadingThreads;
+      window.debugSetActiveCategory = setActiveCategory;
     }
   }, []);
 
@@ -4050,6 +4166,9 @@ function App() {
           onPinThread={handlePinThread}
           onArchiveThread={handleArchiveThread}
           contactLookup={contactLookup}
+          activeCategory={activeCategory}
+          setActiveCategory={setActiveCategory}
+          drafts={drafts}
         />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
@@ -5269,12 +5388,15 @@ function App() {
                     </div>
                     <MessageComposer
                       user={user}
-                      db={db}
                       selectedThread={selectedThread}
                       lineInboxMode={lineInboxMode}
                       activeLineId={activeLineId}
                       lines={lines}
                       isLoggingIn={isLoggingIn}
+                      initialDraft={selectedThread ? drafts[selectedThread.id] : ''}
+                      onSaveDraft={handleSaveDraft}
+                      onClearDraft={handleClearDraft}
+                      onSend={handleSendMessage}
                     />
                   </>
                 ) : (
@@ -5283,12 +5405,15 @@ function App() {
                     <div>Select a thread or start a new message</div>
                     <MessageComposer
                         user={user}
-                        db={db}
                         selectedThread={selectedThread}
                         lineInboxMode={lineInboxMode}
                         activeLineId={activeLineId}
                         lines={lines}
                         isLoggingIn={isLoggingIn}
+                        initialDraft=""
+                        onSaveDraft={handleSaveDraft}
+                        onClearDraft={handleClearDraft}
+                        onSend={handleSendMessage}
                     />
                   </div>
                 )}
