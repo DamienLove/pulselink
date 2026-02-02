@@ -121,4 +121,40 @@ test.describe('Comprehensive Feature Verification', () => {
     await expect(page.getByText('Alice')).toBeHidden();
     await expect(page.getByText('No contacts match that search')).toBeVisible();
   });
+
+  test('should verify PulseLink Emergency Features', async ({ page }) => {
+    // Navigate to Map
+    await page.locator('.nav-item[title="Map"]').click();
+    await expect(page.getByRole('heading', { name: 'Emergency map' })).toBeVisible();
+
+    // Inject a mock emergency alert
+    await page.evaluate(() => {
+        if (window.debugSetAlertLocations) {
+            window.debugSetAlertLocations([
+                {
+                    id: 'alert_1',
+                    lat: 39.5,
+                    lng: -98.35,
+                    severity: 'emergency',
+                    incoming: true,
+                    address: '123 Emergency St',
+                    body: 'Help me!',
+                    date: Date.now(),
+                    clearedAt: null
+                }
+            ]);
+        }
+    });
+
+    // Verify the alert appears in the list
+    const alertItem = page.locator('.map-item').filter({ hasText: '123 Emergency St' });
+    await expect(alertItem).toBeVisible();
+
+    // Verify badge
+    await expect(alertItem.locator('.map-badge')).toHaveText('Emergency');
+
+    // Verify Clear button exists
+    const clearBtn = alertItem.locator('button', { hasText: 'Clear' });
+    await expect(clearBtn).toBeVisible();
+  });
 });
