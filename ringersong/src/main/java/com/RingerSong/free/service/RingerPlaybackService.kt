@@ -34,6 +34,7 @@ class RingerPlaybackService : Service() {
     @Inject lateinit var spotifyPlayer: SpotifyPlayerManager
     @Inject lateinit var appleMusicPlayer: AppleMusicPlayerManager
     @Inject lateinit var youtubeMusicPlayer: YouTubeMusicPlayerManager
+    @Inject lateinit var tidalPlayer: TidalPlayerManager
 
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var mediaPlayer: MediaPlayer? = null
@@ -279,6 +280,7 @@ class RingerPlaybackService : Service() {
                 SongSource.LOCAL -> playLocalSong(song, segmentPlay.startMs, segmentPlay.durationMs)
                 SongSource.YOUTUBE_MUSIC -> playYouTubeSong(song, segmentPlay.startMs, segmentPlay.durationMs)
                 SongSource.APPLE_MUSIC -> playAppleMusicSong(song, segmentPlay.startMs, segmentPlay.durationMs)
+                SongSource.TIDAL -> playTidalSong(song, segmentPlay.startMs, segmentPlay.durationMs)
                 else -> {
                     Log.w(TAG, "Unsupported song source: ${song.source}")
                     stopSelf()
@@ -311,6 +313,25 @@ class RingerPlaybackService : Service() {
             stopPlayback()
             restoreSystemRinger()
             stopForeground(true)
+            stopSelf()
+        }
+    }
+
+    private suspend fun playTidalSong(song: SongEntry, startMs: Long, durationMs: Long) {
+        Log.d(TAG, "Attempting to play Tidal song: ${song.title}")
+        val success = tidalPlayer.playTrack(song)
+        if (success) {
+            isPlaying = true
+            playbackJob = scope.launch {
+                delay(durationMs)
+                Log.d(TAG, "Tidal segment duration passed")
+                stopPlayback()
+                restoreSystemRinger()
+                stopForeground(true)
+                stopSelf()
+            }
+        } else {
+            Log.e(TAG, "Failed to launch Tidal")
             stopSelf()
         }
     }

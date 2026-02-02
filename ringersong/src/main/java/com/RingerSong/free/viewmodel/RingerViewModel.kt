@@ -740,4 +740,133 @@ class RingerViewModel @Inject constructor(
             onComplete(info)
         }
     }
+
+    fun addSharedUrl(url: String, onResult: (String) -> Unit) {
+        val cleanUrl = url.trim()
+
+        // Spotify
+        if (cleanUrl.contains("spotify.com") || cleanUrl.startsWith("spotify:")) {
+            val id = if (cleanUrl.startsWith("spotify:track:")) {
+                cleanUrl.substringAfter("spotify:track:")
+            } else {
+                cleanUrl.substringAfter("track/").substringBefore("?")
+            }
+
+            if (id.isNotEmpty()) {
+                viewModelScope.launch {
+                    // Try to fetch metadata by searching for the URI/ID
+                    runCatching { spotifyRepository.searchTracks("track:$id") }
+                        .onSuccess { results ->
+                            val track = results.firstOrNull()
+                            if (track != null) {
+                                addSpotifyTrack(track, onResult)
+                            } else {
+                            val dummyTrack = SpotifyTrack(id, "Shared Spotify Track", "spotify:track:$id", emptyList(), 30000L) // Default to 30s
+                                addSpotifyTrack(dummyTrack, onResult)
+                            }
+                        }
+                        .onFailure {
+                            val dummyTrack = SpotifyTrack(id, "Shared Spotify Track", "spotify:track:$id", emptyList(), 30000L) // Default to 30s
+                            addSpotifyTrack(dummyTrack, onResult)
+                        }
+                }
+                return
+            }
+        }
+
+        // YouTube
+        if (cleanUrl.contains("youtube.com") || cleanUrl.contains("youtu.be")) {
+            val id = if (cleanUrl.contains("v=")) {
+                cleanUrl.substringAfter("v=").substringBefore("&")
+            } else {
+                cleanUrl.substringAfterLast("/")
+            }
+
+            if (id.isNotEmpty()) {
+                viewModelScope.launch {
+                    val details = youtubeMusicRepo.getSongDetails(id)
+                    if (details != null) {
+                        val track = SpotifyTrack(
+                            id = details.videoId,
+                            name = details.title,
+                            uri = "youtube:video:${details.videoId}",
+                            artists = listOf(SpotifyArtist(details.artist)),
+                            duration_ms = parseDurationToMs(details.duration)
+                        )
+                        addSpotifyTrack(track, onResult)
+                    } else {
+                        val track = SpotifyTrack(
+                            id = id,
+                            name = "Shared YouTube Video",
+                            uri = "youtube:video:$id",
+                            artists = emptyList(),
+                            duration_ms = 30000L // Default to 30s
+                        )
+                        addSpotifyTrack(track, onResult)
+                    }
+                }
+                return
+            }
+        }
+
+        // Tidal
+        if (cleanUrl.contains("tidal.com")) {
+            val id = cleanUrl.substringAfter("track/").substringBefore("?")
+            if (id.isNotEmpty()) {
+                addGenericTrack(id, "Shared Tidal Track", id, SongSource.TIDAL, onResult)
+                return
+            }
+        }
+
+        // Apple Music
+        if (cleanUrl.contains("music.apple.com")) {
+            addGenericTrack(cleanUrl, "Shared Apple Music Track", cleanUrl, SongSource.APPLE_MUSIC, onResult)
+            return
+        }
+
+        onResult("Unsupported link format")
+    }
+
+    private fun addGenericTrack(id: String, title: String, uri: String, source: SongSource, onResult: (String) -> Unit) {
+        val uid = auth?.currentUser?.uid ?: run {
+            onResult("Error: Please sign in")
+            return
+        }
+        val safeDb = db ?: return
+
+        viewModelScope.launch {
+            val songEntry = SongEntry(
+                id = UUID.randomUUID().toString(),
+                title = title,
+                uri = uri,
+                source = source,
+                durationMs = 30000L, // Default to 30s
+                addedAt = System.currentTimeMillis()
+            )
+
+            // Update local
+            withContext(Dispatchers.IO) {
+                store.update { current ->
+                    val updatedSongs = current.songs + songEntry
+                    val updatedOrder = current.songOrder + songEntry.id
+                    current.copy(songs = updatedSongs, songOrder = updatedOrder)
+                }
+            }
+
+            // Sync
+            val trackData = hashMapOf(
+                "uri" to uri,
+                "source" to source.name,
+                "title" to title,
+                "addedAt" to com.google.firebase.Timestamp.now()
+            )
+            safeDb.collection("users").document(uid).collection("ringer_playlist").add(trackData)
+                .addOnSuccessListener {
+                    onResult("Added $title")
+                }
+                .addOnFailureListener {
+                    onResult("Failed to sync: ${it.message}")
+                }
+        }
+    }
 }

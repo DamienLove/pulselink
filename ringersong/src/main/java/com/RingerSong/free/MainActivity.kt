@@ -1,6 +1,8 @@
 package com.RingerSong.free
 
 import android.Manifest
+import android.app.role.RoleManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -45,6 +47,7 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val sharedUriState = mutableStateOf<Uri?>(null)
+    private val sharedTextState = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,6 +55,7 @@ class MainActivity : ComponentActivity() {
         updateSharedIntent(intent)
         setContent {
             val sharedUri = remember { sharedUriState }
+            val sharedText = remember { sharedTextState }
             // Use hiltViewModel() instead of manually creating via factory
             val viewModel: RingerViewModel = hiltViewModel()
 
@@ -59,7 +63,11 @@ class MainActivity : ComponentActivity() {
                 RingerSongApp(
                     viewModel = viewModel,
                     sharedUri = sharedUri.value,
-                    onSharedConsumed = { sharedUri.value = null }
+                    sharedText = sharedText.value,
+                    onSharedConsumed = {
+                        sharedUri.value = null
+                        sharedText.value = null
+                    }
                 )
             }
         }
@@ -81,10 +89,17 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun updateSharedIntent(intent: Intent?) {
-        if (intent?.action == Intent.ACTION_SEND && intent.type?.startsWith("audio/") == true) {
-            val uri = intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
-            if (uri != null) {
-                sharedUriState.value = uri
+        if (intent?.action == Intent.ACTION_SEND) {
+            if (intent.type?.startsWith("audio/") == true) {
+                val uri = intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                if (uri != null) {
+                    sharedUriState.value = uri
+                }
+            } else if (intent.type == "text/plain") {
+                val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+                if (!text.isNullOrBlank()) {
+                    sharedTextState.value = text
+                }
             }
         }
     }
@@ -120,9 +135,10 @@ fun PermissionWrapper(content: @Composable () -> Unit) {
 
 data class PermissionsState(
     val runtimeGranted: Boolean,
-    val overlayGranted: Boolean
+    val overlayGranted: Boolean,
+    val roleGranted: Boolean
 ) {
-    val allGranted: Boolean get() = runtimeGranted && overlayGranted
+    val allGranted: Boolean get() = runtimeGranted && overlayGranted && roleGranted
 }
 
 fun checkPermissionsState(context: android.content.Context): PermissionsState {
@@ -143,7 +159,14 @@ fun checkPermissionsState(context: android.content.Context): PermissionsState {
         true
     }
 
-    return PermissionsState(runtimeGranted, overlayGranted)
+    val roleGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val roleManager = context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
+        roleManager?.isRoleHeld(RoleManager.ROLE_CALL_SCREENING) == true
+    } else {
+        true // Implicitly granted or manual setup required on older versions
+    }
+
+    return PermissionsState(runtimeGranted, overlayGranted, roleGranted)
 }
 
 @Composable
@@ -155,6 +178,12 @@ fun PermissionRequestScreen(
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { _ ->
+        onUpdateCheck()
+    }
+
+    val roleLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
         onUpdateCheck()
     }
 
@@ -180,7 +209,8 @@ fun PermissionRequestScreen(
                         "• Detect Incoming Calls (Phone State)\n" +
                         "• Read Contacts (for custom ringtones)\n" +
                         "• Display over other apps (to play while locked)\n" +
-                        "• Notifications (for playback controls)",
+                        "• Notifications (for playback controls)\n" +
+                        "• Call Screening (to silence default ringer)",
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Start
             )
@@ -200,6 +230,18 @@ fun PermissionRequestScreen(
                     }
                 ) {
                     Text("Grant Runtime Permissions")
+                }
+            } else if (!state.roleGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                Button(
+                    onClick = {
+                        val roleManager = context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
+                        val intent = roleManager?.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
+                        if (intent != null) {
+                            roleLauncher.launch(intent)
+                        }
+                    }
+                ) {
+                    Text("Set as Call Screening App")
                 }
             } else if (!state.overlayGranted) {
                 Button(
