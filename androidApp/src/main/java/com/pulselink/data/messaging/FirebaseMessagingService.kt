@@ -8,6 +8,7 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.pulselink.data.link.LinkChannelService
 import com.pulselink.data.sms.SmsRelayService
+import com.pulselink.data.sms.SmsSyncTrigger
 import com.pulselink.domain.repository.SettingsRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -21,6 +22,7 @@ class PulseLinkFirebaseMessagingService : FirebaseMessagingService() {
 
     @Inject lateinit var linkChannelService: LinkChannelService
     @Inject lateinit var smsRelayService: SmsRelayService
+    @Inject lateinit var smsSyncTrigger: SmsSyncTrigger
     @Inject lateinit var settingsRepository: SettingsRepository
     @Inject lateinit var firestore: FirebaseFirestore
     @Inject lateinit var auth: FirebaseAuth
@@ -44,6 +46,19 @@ class PulseLinkFirebaseMessagingService : FirebaseMessagingService() {
             // If the app was dead, PulseLinkApp.onCreate() calls this too, but
             // explicit call here guarantees it for all entry points.
             smsRelayService.start()
+            return
+        }
+
+        if (type == "SYNC_REQUEST") {
+            Log.d(TAG, "Received SYNC_REQUEST trigger")
+            val isPremium = message.data["premium"]?.toBoolean() ?: false
+            scope.launch {
+                if (isPremium) {
+                    settingsRepository.setPremiumUnlocked(true)
+                    settingsRepository.setRemoteWebAccessEnabled(true)
+                }
+                smsSyncTrigger.triggerSync()
+            }
             return
         }
 

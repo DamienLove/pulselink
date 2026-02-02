@@ -167,3 +167,55 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
     );
   }
 });
+
+export const onUserUpdated = functions.firestore
+    .document("users/{userId}")
+    .onUpdate(async (change, context) => {
+      const before = change.before.data();
+      const after = change.after.data();
+
+      // Helper to check for active premium status
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const isPremium = (data: any) => {
+        const s = data?.premiumSubscriptionStatus;
+        return s === "SUBSCRIPTION_STATE_ACTIVE" ||
+               s === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD";
+      };
+
+      const wasPremium = isPremium(before);
+      const nowPremium = isPremium(after);
+
+      // Check for remote access change
+      const accessWasEnabled = before?.remoteWebAccessEnabled === true;
+      const accessIsEnabled = after?.remoteWebAccessEnabled === true;
+
+      // Trigger sync if status improved
+      if ((!wasPremium && nowPremium) || (!accessWasEnabled && accessIsEnabled)) {
+        console.log(`Triggering sync for user ${context.params.userId}`);
+        const devices = await db.collection("devices")
+            .where("uid", "==", context.params.userId)
+            .get();
+
+        const tokens: string[] = [];
+        devices.forEach((doc) => {
+          const d = doc.data();
+          if (d.fcmToken) tokens.push(d.fcmToken);
+        });
+
+        if (tokens.length > 0) {
+          const payload = {
+            data: {
+              type: "SYNC_REQUEST",
+              premium: nowPremium ? "true" : "false",
+            },
+            tokens: tokens,
+          };
+          try {
+            await admin.messaging().sendMulticast(payload);
+            console.log(`Sent SYNC_REQUEST to ${tokens.length} devices.`);
+          } catch (e) {
+            console.error("Failed to send SYNC_REQUEST", e);
+          }
+        }
+      }
+    });

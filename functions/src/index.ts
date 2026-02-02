@@ -25,7 +25,7 @@ export {summarizeSmsThread, composeSmsAssist, classifySmsUrgency} from "./ai";
 export {alertRelay, alertRelayHttp} from "./alertRelay";
 export {onMessageCreated, onOutboxCreated} from "./messaging";
 export {sendEmailNotification} from "./email";
-export {findUser, deleteAccount} from "./users";
+export {findUser, deleteAccount, onUserUpdated} from "./users";
 export {approveTheme, onThemeSubmitted} from "./themes";
 export {
   verifySubscription,
