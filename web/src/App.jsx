@@ -720,6 +720,7 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
   const [status, setStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
   const textareaRef = useRef(null);
+  const addressInputRef = useRef(null);
 
   useLayoutEffect(() => {
     const el = textareaRef.current;
@@ -732,10 +733,14 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
     if (selectedThread) {
       setAddress(selectedThread.address || '');
       setLineId(selectedThread.lineId || '');
+      // Smart Focus: Reply mode -> Focus body
+      textareaRef.current?.focus();
     } else {
       setAddress('');
       // When clearing (New message), reset lineId to empty to allow user selection or fallback
       setLineId('');
+      // Smart Focus: New message mode -> Focus address
+      addressInputRef.current?.focus();
     }
     setBody('');
     setStatus('');
@@ -793,6 +798,7 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
       <div className="composer-row">
         <label className="composer-label" htmlFor="compose-address">To<RequiredIndicator /></label>
         <input
+          ref={addressInputRef}
           id="compose-address"
           className="composer-input"
           type="tel"
@@ -834,6 +840,10 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
             onChange={(e) => setBody(e.target.value)}
             required
             onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                e.currentTarget.blur();
+              }
               if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
                 handleSendMessage();

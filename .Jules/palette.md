@@ -22,3 +22,7 @@
 ## 2024-05-28 - Image Load Error Fallbacks
 **Learning:** User-provided URLs for avatars often break (404s), resulting in ugly browser-default broken image icons that degrade perceived app quality. Relying solely on "if URL exists" logic is insufficient.
 **Action:** Implemented a `useState` + `onError` handler pattern in the `Avatar` component to detect load failures and automatically revert to the deterministic initial fallback, maintaining UI elegance even with bad data.
+
+## 2024-05-29 - Smart Focus Context Switching
+**Learning:** Users switching between "New Message" and existing threads expect different input focus targets (Recipient vs Body). Static focus management forces extra clicks.
+**Action:** Implemented a `useEffect` driven focus manager in `MessageComposer` that intelligently focuses the "To" field for new messages and the textarea for replies.
