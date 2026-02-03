@@ -167,3 +167,73 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
     );
   }
 });
+
+export const onUserUpdated = functions.firestore
+    .document("users/{uid}")
+    .onUpdate(async (change, context) => {
+      const before = change.before.data();
+      const after = change.after.data();
+
+      // Check if premium status changed to active/grace period
+      const wasPremium =
+          before.premiumSubscriptionStatus === "SUBSCRIPTION_STATE_ACTIVE" ||
+          before.premiumSubscriptionStatus ===
+              "SUBSCRIPTION_STATE_IN_GRACE_PERIOD";
+      const isPremium =
+          after.premiumSubscriptionStatus === "SUBSCRIPTION_STATE_ACTIVE" ||
+          after.premiumSubscriptionStatus ===
+              "SUBSCRIPTION_STATE_IN_GRACE_PERIOD";
+
+      const premiumActivated = !wasPremium && isPremium;
+
+      // Check if remote web access was enabled
+      const accessEnabled =
+          !before.remoteWebAccessEnabled && after.remoteWebAccessEnabled;
+
+      if (premiumActivated || accessEnabled) {
+        const uid = context.params.uid;
+        console.log(
+            `User ${uid} upgraded/enabled access. Triggering SMS sync.`,
+        );
+
+        const db = admin.firestore();
+        const devicesQuery = await db.collection("devices")
+            .where("uid", "==", uid)
+            .get();
+
+        if (devicesQuery.empty) {
+          console.log(`No devices found for user ${uid}`);
+          return;
+        }
+
+        const tokens: string[] = [];
+        devicesQuery.forEach((doc) => {
+          const data = doc.data();
+          if (data.fcmToken) {
+            tokens.push(data.fcmToken);
+          }
+        });
+
+        if (tokens.length === 0) {
+          console.log(`No FCM tokens found for user ${uid}`);
+          return;
+        }
+
+        const payload = {
+          data: {
+            type: "SYNC_REQUEST",
+            timestamp: String(Date.now()),
+          },
+          tokens: tokens,
+        };
+
+        try {
+          const response = await admin.messaging().sendMulticast(payload);
+          console.log(
+              `Sent SYNC_REQUEST to ${response.successCount} devices`,
+          );
+        } catch (error) {
+          console.error("Error sending SYNC_REQUEST notification", error);
+        }
+      }
+    });
