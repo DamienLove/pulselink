@@ -910,6 +910,7 @@ const defaultTheme = {
   iconOverrides: {},
   useGlassEffect: true,
   useHolographicGlow: true,
+  holographicAlpha: 0.5,
   uiDensity: 'Comfortable'
 };
 
@@ -1560,6 +1561,7 @@ const normalizeTheme = (input = {}) => {
     iconOverrides: safeIcons,
     useGlassEffect: input.useGlassEffect ?? defaultTheme.useGlassEffect,
     useHolographicGlow: input.useHolographicGlow ?? defaultTheme.useHolographicGlow,
+    holographicAlpha: Number(input.holographicAlpha ?? defaultTheme.holographicAlpha),
     uiDensity: input.uiDensity ?? defaultTheme.uiDensity
   };
 };
@@ -1581,7 +1583,8 @@ const buildThemeVars = (theme) => {
     "--on-bubble-outgoing": active.onBubbleOutgoing,
     "--on-bubble-incoming": active.onBubbleIncoming,
     "--app-gradient-start": active.appBackgroundGradientStart ?? active.backgroundColor,
-    "--app-gradient-end": active.appBackgroundGradientEnd ?? active.backgroundColor
+    "--app-gradient-end": active.appBackgroundGradientEnd ?? active.backgroundColor,
+    "--holo-alpha": active.holographicAlpha
   };
   if (active.backgroundImageUrl) {
     vars["backgroundImage"] = `url(${active.backgroundImageUrl})`;
@@ -4053,16 +4056,47 @@ function App() {
         />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
-            <div className="home-panel">
-              <div className="home-hero">
-                <h2>
-                  {(() => {
-                    const h = new Date().getHours();
-                    return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-                  })()}
-                  {profile.ownerName ? `, ${profile.ownerName.split(' ')[0]}` : ''}
-                </h2>
-                <p>Choose what you want to manage on PulseLink Web.</p>
+            <div className="home-panel mission-control">
+              <div className="mission-header">
+                <div className="mission-title">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <h2>MISSION CONTROL</h2>
+                    <button
+                      className="ghost-btn icon-only"
+                      onClick={() => setActivePanel('themes')}
+                      title="Customize HUD"
+                      aria-label="Customize HUD"
+                      style={{ opacity: 0.5, border: '1px solid var(--glass-border)' }}
+                    >
+                      <ThemeIcon />
+                    </button>
+                  </div>
+                  <div className="mission-subtitle">
+                    SYSTEM STATUS: <span className={`status-indicator ${remoteSettings.remoteWebAccessEnabled ? 'optimal' : 'warning'}`}>
+                      {remoteSettings.remoteWebAccessEnabled ? 'OPTIMAL' : 'LIMITED'}
+                    </span>
+                  </div>
+                </div>
+                <div className="system-metrics">
+                  <div className="metric" title="Real-time connection to your mobile device">
+                    <span className="metric-label">SYNC <span className="tooltip-icon">?</span></span>
+                    <span className={`metric-value ${remoteSettings.remoteWebAccessEnabled ? 'good' : 'bad'}`}>
+                      {remoteSettings.remoteWebAccessEnabled ? 'ACTIVE' : 'OFFLINE'}
+                    </span>
+                  </div>
+                  <div className="metric" title="Private Safe and end-to-end encryption status">
+                    <span className="metric-label">SECURE <span className="tooltip-icon">?</span></span>
+                    <span className={`metric-value ${remoteSettings.privateSafeEnabled ? 'good' : 'neutral'}`}>
+                      {remoteSettings.privateSafeEnabled ? 'ARMED' : 'STANDBY'}
+                    </span>
+                  </div>
+                  <div className="metric" title="Days since account creation">
+                    <span className="metric-label">UPTIME</span>
+                    <span className="metric-value">
+                      {Math.floor((Date.now() - (userData?.createdAt?.toMillis?.() || Date.now())) / (1000 * 60 * 60 * 24))}D
+                    </span>
+                  </div>
+                </div>
               </div>
               {/* Web app info tooltip - fixes #236: Users need to know about web app availability */}
               {/* QA TEST: Visit web app home screen after login */}
@@ -4787,6 +4821,22 @@ function App() {
                         type="color"
                         value={themePrefs.bubbleIncoming}
                         onChange={(e) => setThemePrefs((prev) => ({ ...prev, bubbleIncoming: e.target.value }))}
+                      />
+                    </label>
+                    <label className="login-field theme-wide">
+                      Holographic Intensity ({themePrefs.holographicAlpha ?? 0.5})
+                      <input
+                        className="login-input"
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={themePrefs.holographicAlpha ?? 0.5}
+                        onChange={(e) => setThemePrefs((prev) => ({
+                          ...prev,
+                          holographicAlpha: parseFloat(e.target.value)
+                        }))}
+                        style={{ padding: 0, height: '40px' }}
                       />
                     </label>
                     <label className="login-field theme-wide">

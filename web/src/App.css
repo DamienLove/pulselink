@@ -1874,8 +1874,8 @@ textarea:focus-visible,
 .holographic-card {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(0, 255, 255, 0.4);
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.2), inset 0 0 30px rgba(0, 255, 255, 0.05);
+  border: 1px solid rgba(0, 255, 255, var(--holo-alpha, 0.4));
+  box-shadow: 0 0 20px rgba(0, 255, 255, calc(var(--holo-alpha, 0.4) * 0.5)), inset 0 0 30px rgba(0, 255, 255, 0.05);
 }
 
 .holographic-card::before {
@@ -1888,16 +1888,130 @@ textarea:focus-visible,
   background: linear-gradient(
     45deg,
     transparent 45%,
-    rgba(0, 255, 255, 0.15) 50%,
+    rgba(0, 255, 255, calc(var(--holo-alpha, 0.4) * 0.4)) 50%,
     transparent 55%
   );
   animation: hologram-shine 6s infinite linear;
   pointer-events: none;
 }
 
+.neon-border {
+  position: relative;
+}
+
+.neon-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(45deg, var(--accent), transparent, var(--tertiary));
+  z-index: -1;
+  border-radius: inherit;
+  opacity: var(--holo-alpha, 0.6);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  pointer-events: none;
+}
+
 @keyframes hologram-shine {
   0% { transform: rotate(0deg) translateY(0); }
   100% { transform: rotate(360deg) translateY(0); }
+}
+
+/* Mission Control HUD */
+.mission-control .mission-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 24px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.mission-title h2 {
+  font-size: 2.5em;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: linear-gradient(90deg, #fff, var(--muted));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.mission-subtitle {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  color: var(--muted);
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-indicator {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.9em;
+}
+
+.status-indicator.optimal {
+  background: rgba(0, 255, 157, 0.1);
+  color: var(--success);
+  border: 1px solid var(--success);
+  box-shadow: 0 0 10px rgba(0, 255, 157, 0.2);
+}
+
+.status-indicator.warning {
+  background: rgba(255, 184, 0, 0.1);
+  color: var(--warning);
+  border: 1px solid var(--warning);
+}
+
+.system-metrics {
+  display: flex;
+  gap: 32px;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  font-family: var(--font-mono);
+}
+
+.metric-label {
+  font-size: 0.75em;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+}
+
+.metric-value {
+  font-size: 1.4em;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.metric-value.good { color: var(--accent); text-shadow: 0 0 10px var(--accent-glow); }
+.metric-value.bad { color: var(--danger); text-shadow: 0 0 10px rgba(255, 46, 77, 0.4); }
+
+.tooltip-icon {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--muted);
+  color: var(--muted);
+  font-size: 10px;
+  margin-left: 6px;
+  cursor: help;
+  font-family: var(--font-mono);
 }
 
 .neon-text {
