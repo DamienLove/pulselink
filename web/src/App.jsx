@@ -204,7 +204,7 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onAr
         }
       }}
     >
-      <Avatar name={name} />
+      <Avatar name={name} size={48} />
       <div className="thread-main">
         <div className="thread-header">
           {thread.pinned && <PinIcon className="pin-icon" style={{width: 14, height: 14}} />}
@@ -2150,6 +2150,7 @@ function App() {
   const [selectedThread, setSelectedThread] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
   const [messages, setMessages] = useState([]);
+  const [messageLimit, setMessageLimit] = useState(50);
 
   // Fix: Use setUser to clear lint error or remove mock override if switching to real auth
   useEffect(() => {
@@ -2903,8 +2904,8 @@ function App() {
         ? ["users", user.uid, "lines", selectedThread.lineId, "threads", selectedThread.id, "messages"]
         : ["users", user.uid, "synced_threads", selectedThread.id, "messages"];  
       const messagesRef = collection(db, ...basePath);
-      // Bolt: Standard chat order (Oldest -> Newest)
-      const q = query(messagesRef, orderBy("date", "asc"));
+      // Bolt: Standard chat order (Oldest -> Newest), limited to last 50
+      const q = query(messagesRef, orderBy("date", "desc"), limit(messageLimit));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const messagesData = snapshot.docs.map(doc => {
           const data = doc.data();
@@ -2913,20 +2914,35 @@ function App() {
             ...data,
             date: toMillis(data.date)
           };
-        });
+        }).reverse();
         setMessages(messagesData);
       });
       return () => unsubscribe();
     } else {
       setMessages([]);
     }
-  }, [user, selectedThread]);
+  }, [user, selectedThread, messageLimit]);
 
 
-  // Bolt: Auto-scroll to bottom when new messages arrive
+  // Bolt: Auto-scroll to bottom only when new messages arrive (not when loading history)
+  const prevLastMessageIdRef = useRef(null);
   useEffect(() => {
-    if (autoScroll && messagesEndRef.current) {
+    if (!autoScroll || !messagesEndRef.current) return;
+
+    // If messages cleared (switching threads), reset
+    if (messages.length === 0) {
+      prevLastMessageIdRef.current = null;
+      return;
+    }
+
+    const lastMessage = messages[messages.length - 1];
+    const lastMessageId = lastMessage?.id;
+
+    // Only scroll if the most recent message has changed (new message sent/received)
+    // or if this is the first load of a thread
+    if (lastMessageId !== prevLastMessageIdRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      prevLastMessageIdRef.current = lastMessageId;
     }
   }, [messages, autoScroll, selectedThread]);
 
@@ -3778,6 +3794,7 @@ function App() {
   // Bolt: Stable handler to prevent ghost content when switching threads
   const handleThreadSelect = useCallback((thread) => {
     setMessages([]); // Clear previous messages immediately
+    setMessageLimit(50);
     setSelectedThread(thread);
     if (thread?.lineId) {
       setActiveLineId((prev) => prev ?? thread.lineId);
@@ -5264,6 +5281,15 @@ function App() {
                       </div>
                     </div>
                     <div className="messages-list">
+                      {messages.length >= messageLimit && (
+                        <button
+                          className="ghost-btn"
+                          style={{ width: '100%', padding: '12px', fontSize: '0.9em' }}
+                          onClick={() => setMessageLimit(prev => prev + 50)}
+                        >
+                          Load older messages
+                        </button>
+                      )}
                       {messageListElements}
                       <div ref={messagesEndRef} style={{ height: 1 }} />
                     </div>
