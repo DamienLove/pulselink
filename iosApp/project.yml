@@ -23,6 +23,7 @@ targets:
       PRODUCT_BUNDLE_IDENTIFIER: com.pulselink.ios.free
       INFOPLIST_FILE: PulseLinkiOS/Info.plist
       INFOPLIST_KEY_CFBundleDisplayName: PulseLink
+      CODE_SIGN_ENTITLEMENTS: PulseLinkiOS/PulseLink.entitlements
 
   PulseLinkPro:
     type: application
@@ -37,6 +38,7 @@ targets:
       INFOPLIST_FILE: PulseLinkiOS/Info.plist
       SWIFT_ACTIVE_COMPILATION_CONDITIONS: PRO
       INFOPLIST_KEY_CFBundleDisplayName: "PulseLink Pro"
+      CODE_SIGN_ENTITLEMENTS: PulseLinkiOS/PulseLink.entitlements
 
   BeaconFree:
     type: application
@@ -47,6 +49,7 @@ targets:
       PRODUCT_BUNDLE_IDENTIFIER: com.pulselink.beacon.ios.free
       INFOPLIST_FILE: BeaconiOS/Info.plist
       INFOPLIST_KEY_CFBundleDisplayName: Beacon
+      CODE_SIGN_ENTITLEMENTS: BeaconiOS/Beacon.entitlements
 
   BeaconPro:
     type: application
@@ -58,3 +61,4 @@ targets:
       INFOPLIST_FILE: BeaconiOS/Info.plist
       SWIFT_ACTIVE_COMPILATION_CONDITIONS: PRO
       INFOPLIST_KEY_CFBundleDisplayName: "Beacon Pro"
+      CODE_SIGN_ENTITLEMENTS: BeaconiOS/Beacon.entitlements

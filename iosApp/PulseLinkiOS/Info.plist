@@ -20,8 +20,14 @@
 	<string>1</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Authenticate to cancel emergency</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>PulseLink uses your location to share emergency alerts with trusted contacts.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string></string>
 	<key>UIRequiresFullScreen</key>
