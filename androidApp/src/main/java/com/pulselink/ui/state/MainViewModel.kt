@@ -1484,12 +1484,22 @@ class MainViewModel @Inject constructor(
         val model = Build.MODEL.orEmpty()
         val osVersion = Build.VERSION.RELEASE ?: "unknown"
         val apiLevel = Build.VERSION.SDK_INT
+        val density = context.resources.displayMetrics.densityDpi
+        val locale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            context.resources.configuration.locales.get(0).toString()
+        } else {
+            @Suppress("DEPRECATION")
+            context.resources.configuration.locale.toString()
+        }
 
         return buildString {
             appendLine("App Version: $versionName ($versionCode)")
             appendLine("Build Flavor: ${if (BuildConfig.PREMIUM_FEATURES) "Premium" else if (BuildConfig.PRO_FEATURES) "Pro" else "Free"}")
+            appendLine("Variant: ${BuildConfig.FLAVOR}${BuildConfig.BUILD_TYPE.replaceFirstChar { it.uppercase() }}")
             appendLine("Device: $manufacturer $model")
             appendLine("OS: Android $osVersion (API $apiLevel)")
+            appendLine("Density: ${density}dpi")
+            appendLine("Locale: $locale")
         }
     }
 
