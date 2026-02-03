@@ -173,6 +173,7 @@ const areThreadsEqual = (prev, next) => {
          prev.onSelect === next.onSelect &&
          prev.onPin === next.onPin &&
          prev.onArchive === next.onArchive &&
+         prev.onAvatarClick === next.onAvatarClick &&
          prev.contactLookup === next.contactLookup &&
          prev.thread.id === next.thread.id &&
          prev.thread.address === next.thread.address &&
@@ -184,7 +185,7 @@ const areThreadsEqual = (prev, next) => {
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
 // when only the selection state changes or when unrelated threads update.
-const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onArchive, contactLookup }) => {
+const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onArchive, contactLookup, onAvatarClick }) => {
   const cleanPhone = (thread.address || '').replace(/\D/g, '');
   const contact = contactLookup?.[cleanPhone];
   const name = contact?.displayName || thread.display_name || thread.address;
@@ -204,7 +205,25 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onAr
         }
       }}
     >
-      <Avatar name={name} />
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (onAvatarClick) onAvatarClick(thread);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.stopPropagation();
+            e.preventDefault();
+            if (onAvatarClick) onAvatarClick(thread);
+          }
+        }}
+        aria-label={`View contact info for ${name}`}
+        style={{ display: 'flex', cursor: 'pointer' }}
+      >
+        <Avatar name={name} />
+      </div>
       <div className="thread-main">
         <div className="thread-header">
           {thread.pinned && <PinIcon className="pin-icon" style={{width: 14, height: 14}} />}
@@ -1564,10 +1583,16 @@ const normalizeTheme = (input = {}) => {
   };
 };
 
+const hexToRgb = (hex) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '0, 243, 255';
+};
+
 const buildThemeVars = (theme) => {
   const active = normalizeTheme(theme);
   const vars = {
     "--accent": active.primaryColor,
+    "--accent-rgb": hexToRgb(active.primaryColor),
     "--accent-strong": active.secondaryColor,
     "--bg": active.appBackgroundGradientEnd ?? active.backgroundColor,
     "--bg-accent": active.appBackgroundGradientStart ?? active.backgroundColor,
@@ -1785,7 +1810,8 @@ const Sidebar = memo(({
   setShowArchived,
   onPinThread,
   onArchiveThread,
-  contactLookup
+  contactLookup,
+  onAvatarClick
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef(null);
@@ -2090,6 +2116,7 @@ const Sidebar = memo(({
                   onPin={onPinThread}
                   onArchive={onArchiveThread}
                   contactLookup={contactLookup}
+                  onAvatarClick={onAvatarClick}
                 />
               ))
             )}
@@ -2123,7 +2150,8 @@ const Sidebar = memo(({
          prev.onArchiveThread === next.onArchiveThread &&
          prev.navLogo === next.navLogo &&
          prev.brandTitle === next.brandTitle &&
-         prev.contactLookup === next.contactLookup;
+         prev.contactLookup === next.contactLookup &&
+         prev.onAvatarClick === next.onAvatarClick;
 });
 
 Sidebar.displayName = 'Sidebar';
@@ -3316,7 +3344,7 @@ function App() {
     }
   };
 
-  const resetContactForm = () => {
+  const resetContactForm = useCallback(() => {
     setContactForm({
       displayName: '',
       phoneNumber: '',
@@ -3331,7 +3359,7 @@ function App() {
     });
     setEditingContactId(null);
     setContactStatus('');
-  };
+  }, []);
 
   const handleEditContact = useCallback((contact) => {
     setContactForm({
@@ -3350,6 +3378,24 @@ function App() {
     setContactStatus('');
     setActivePanel('pulselink');
   }, []);
+
+  const handleAvatarClick = useCallback((thread) => {
+    const cleanPhone = (thread.address || '').replace(/\D/g, '');
+    const contact = contactLookup?.[cleanPhone];
+
+    if (contact) {
+      handleEditContact(contact);
+    } else {
+      resetContactForm();
+      setContactForm(prev => ({
+        ...prev,
+        phoneNumber: thread.address || '',
+        displayName: thread.display_name || ''
+      }));
+      setEditingContactId(null);
+      setActivePanel('pulselink');
+    }
+  }, [contactLookup, handleEditContact, resetContactForm]);
 
   const handleSaveContact = async () => {
     if (!user) return;
@@ -4050,6 +4096,7 @@ function App() {
           onPinThread={handlePinThread}
           onArchiveThread={handleArchiveThread}
           contactLookup={contactLookup}
+          onAvatarClick={handleAvatarClick}
         />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
