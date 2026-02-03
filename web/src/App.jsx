@@ -173,7 +173,7 @@ const areThreadsEqual = (prev, next) => {
          prev.onSelect === next.onSelect &&
          prev.onPin === next.onPin &&
          prev.onArchive === next.onArchive &&
-         prev.contactLookup === next.contactLookup &&
+         prev.contactName === next.contactName &&
          prev.thread.id === next.thread.id &&
          prev.thread.address === next.thread.address &&
          prev.thread.snippet === next.thread.snippet &&
@@ -184,10 +184,8 @@ const areThreadsEqual = (prev, next) => {
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
 // when only the selection state changes or when unrelated threads update.
-const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onArchive, contactLookup }) => {
-  const cleanPhone = (thread.address || '').replace(/\D/g, '');
-  const contact = contactLookup?.[cleanPhone];
-  const name = contact?.displayName || thread.display_name || thread.address;
+const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onArchive, contactName }) => {
+  const name = contactName || thread.display_name || thread.address;
 
   return (
     <div
@@ -2080,18 +2078,23 @@ const Sidebar = memo(({
                 )}
               </div>
             ) : (
-              filteredThreads.map(thread => (
-                <ThreadItem
-                  key={`${thread.lineId || 'legacy'}_${thread.id}`}
-                  thread={thread}
-                  isActive={selectedThreadId === thread.id}
-                  onSelect={onSelect}
-                  showPreviews={showPreviews}
-                  onPin={onPinThread}
-                  onArchive={onArchiveThread}
-                  contactLookup={contactLookup}
-                />
-              ))
+              filteredThreads.map(thread => {
+                const cleanPhone = (thread.address || '').replace(/\D/g, '');
+                const contactName = contactLookup?.[cleanPhone]?.displayName;
+
+                return (
+                  <ThreadItem
+                    key={`${thread.lineId || 'legacy'}_${thread.id}`}
+                    thread={thread}
+                    isActive={selectedThreadId === thread.id}
+                    onSelect={onSelect}
+                    showPreviews={showPreviews}
+                    onPin={onPinThread}
+                    onArchive={onArchiveThread}
+                    contactName={contactName}
+                  />
+                );
+              })
             )}
           </div>
         </>
