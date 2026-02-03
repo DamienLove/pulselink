@@ -1564,10 +1564,17 @@ const normalizeTheme = (input = {}) => {
   };
 };
 
+const hexToRgb = (hex) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : null;
+};
+
 const buildThemeVars = (theme) => {
   const active = normalizeTheme(theme);
+  const accentRgb = hexToRgb(active.primaryColor) || '0, 243, 255';
   const vars = {
     "--accent": active.primaryColor,
+    "--accent-rgb": accentRgb,
     "--accent-strong": active.secondaryColor,
     "--bg": active.appBackgroundGradientEnd ?? active.backgroundColor,
     "--bg-accent": active.appBackgroundGradientStart ?? active.backgroundColor,
@@ -4844,14 +4851,14 @@ function App() {
                 <h4>Quick Setup</h4>
                 <div className="settings-row" style={{alignItems: 'stretch', gap: 16}}>
                   <button className="home-card" style={{margin: 0, flex: 1, textAlign: 'left', alignItems: 'flex-start'}} onClick={() => handleQuickSetup('essentials')}>
-                    <div className="home-icon" style={{width: 40, height: 40, background: 'rgba(34, 211, 238, 0.1)', color: 'var(--accent)'}}>
+                    <div className="home-icon" style={{width: 40, height: 40, background: 'rgba(var(--accent-rgb), 0.1)', color: 'var(--accent)'}}>
                       <BoltIcon />
                     </div>
                     <h4 style={{marginTop: 8}}>Essentials</h4>
                     <p style={{fontSize: '0.9em', color: 'var(--muted)', margin: 0}}>Just the basics: Beacon, Relay, Email Backup, and OTP Cleanup.</p>
                   </button>
                   <button className="home-card" style={{margin: 0, flex: 1, textAlign: 'left', alignItems: 'flex-start'}} onClick={() => handleQuickSetup('power')}>
-                    <div className="home-icon" style={{width: 40, height: 40, background: 'rgba(34, 211, 238, 0.1)', color: 'var(--accent)'}}>
+                    <div className="home-icon" style={{width: 40, height: 40, background: 'rgba(var(--accent-rgb), 0.1)', color: 'var(--accent)'}}>
                       <StarIcon />
                     </div>
                     <h4 style={{marginTop: 8}}>Power User</h4>
