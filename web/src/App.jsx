@@ -263,7 +263,7 @@ const MessageItem = memo(({ msg, showPreviews }) => (
       )}
       {showPreviews ? msg.body : '••••••'}
     </div>
-    <div className="message-time">
+    <div className="message-time" title={new Date(msg.date).toLocaleString()}>
       {timeFormatter.format(new Date(msg.date))}
     </div>
   </div>
@@ -827,13 +827,15 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
             ref={textareaRef}
             className="composer-textarea"
             style={{ width: '100%', paddingBottom: '24px', maxHeight: '200px', overflowY: 'auto' }}
-            placeholder="Type a message... (Ctrl+Enter to send)"
+            placeholder={isSending ? "Sending..." : "Type a message... (Ctrl+Enter to send)"}
             aria-label="Message body"
             aria-describedby="message-char-count"
             value={body}
             onChange={(e) => setBody(e.target.value)}
             required
+            disabled={isSending}
             onKeyDown={(e) => {
+              if (isSending) return;
               if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
                 handleSendMessage();
