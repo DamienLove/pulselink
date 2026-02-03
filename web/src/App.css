@@ -1874,8 +1874,8 @@ textarea:focus-visible,
 .holographic-card {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(0, 255, 255, 0.4);
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.2), inset 0 0 30px rgba(0, 255, 255, 0.05);
+  border: 1px solid rgba(0, 243, 255, 0.4);
+  box-shadow: 0 0 20px rgba(0, 243, 255, 0.2), inset 0 0 30px rgba(0, 243, 255, 0.05);
 }
 
 .holographic-card::before {
@@ -1888,7 +1888,7 @@ textarea:focus-visible,
   background: linear-gradient(
     45deg,
     transparent 45%,
-    rgba(0, 255, 255, 0.15) 50%,
+    rgba(0, 243, 255, 0.15) 50%,
     transparent 55%
   );
   animation: hologram-shine 6s infinite linear;
@@ -2061,4 +2061,135 @@ textarea:focus-visible,
 @keyframes slideDownFade {
   from { opacity: 0; transform: translateY(-20px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Toast System (New)                                                        */
+/* -------------------------------------------------------------------------- */
+
+.toast-container {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-end;
+  pointer-events: none; /* Let clicks pass through container */
+}
+
+.toast-item {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: rgba(8, 11, 20, 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--accent);
+  border-radius: 50px;
+  color: #fff;
+  font-size: 0.95em;
+  font-weight: 600;
+  box-shadow:
+    0 10px 40px rgba(0,0,0,0.6),
+    0 0 20px rgba(0, 255, 255, 0.15);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  min-width: 260px;
+  max-width: 400px;
+}
+
+/* Toast Animations */
+.toast-enter {
+  animation: toastSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.toast-exit {
+  animation: toastSlideOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateX(40px) scale(0.9); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes toastSlideOut {
+  to { opacity: 0; transform: translateX(20px) scale(0.95); margin-bottom: -60px; }
+}
+
+/* Toast Icons */
+.toast-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.toast-info .toast-icon {
+  background: var(--accent);
+  color: #000;
+}
+
+.toast-success {
+  border-color: var(--success);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 20px rgba(0, 255, 157, 0.25);
+}
+
+.toast-success .toast-icon {
+  background: var(--success);
+  color: #000;
+}
+
+.toast-error {
+  border-color: var(--danger);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 20px rgba(255, 46, 77, 0.25);
+}
+
+.toast-error .toast-icon {
+  background: var(--danger);
+  color: #fff;
+}
+
+.toast-loading {
+  border-color: var(--accent);
+}
+
+.toast-loading .toast-icon {
+  background: transparent;
+  border: 2px solid var(--accent);
+  border-top-color: transparent;
+  color: transparent;
+}
+
+/* Spin animation for loading icon */
+.toast-spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+.toast-content {
+  flex: 1;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.toast-close {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+  margin-left: 4px;
+  transition: color 0.2s;
+}
+
+.toast-close:hover {
+  color: #fff;
 }

@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, useRef, memo, useCallback, useLayoutEffec
 import { auth, db, functions } from './firebase';
 import DevTools from './DevTools';
 import CommandPalette from './CommandPalette';
+import { ToastProvider, useToast } from './Toast';
+import PanelSkeleton from './PanelSkeleton';
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -2128,15 +2130,8 @@ const Sidebar = memo(({
 
 Sidebar.displayName = 'Sidebar';
 
-const getToastClass = (msg) => {
-  if (!msg) return 'toast';
-  const lower = msg.toLowerCase();
-  if (lower.includes('fail') || lower.includes('error') || lower.includes('missing')) return 'toast error';
-  if (lower.includes('success') || lower.includes('saved') || lower.includes('updated') || lower.includes('sent') || lower.includes('published') || lower.includes('imported') || lower.includes('cleared')) return 'toast success';
-  return 'toast';
-};
-
-function App() {
+function PulseLinkApp() {
+  const toast = useToast();
   const webHintStorageKey = 'pulselink.hideWebHint';
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
@@ -2193,13 +2188,9 @@ function App() {
     allowRemoteSoundChange: false
   });
   const [editingContactId, setEditingContactId] = useState(null);
-  const [contactStatus, setContactStatus] = useState('');
   const [isSavingContact, setIsSavingContact] = useState(false);
-  const [profileStatus, setProfileStatus] = useState('');
   const [themePrefs, setThemePrefs] = useState(defaultTheme);
-  const [themeStatus, setThemeStatus] = useState('');
   const [publicThemes, setPublicThemes] = useState([]);
-  const [themeGalleryStatus, setThemeGalleryStatus] = useState('');
   const [themeSearch, setThemeSearch] = useState('');
   const [themePublishForm, setThemePublishForm] = useState({
     name: '',
@@ -2208,7 +2199,6 @@ function App() {
     anonymous: false,
     backgroundImageUrl: ''
   });
-  const [themePublishStatus, setThemePublishStatus] = useState('');
   const [isPublishingTheme, setIsPublishingTheme] = useState(false);
   const [showWebHint, setShowWebHint] = useState(() => {
     if (typeof window === 'undefined') return true;
@@ -2255,7 +2245,7 @@ function App() {
     ];
   });
   const [extensionForm, setExtensionForm] = useState({ name: '', endpoint: '', description: '' });
-  const [extensionStatus, setExtensionStatus] = useState('');
+
   useEffect(() => {
     localStorage.setItem('pulselink.devExtensions', JSON.stringify(devExtensions));
   }, [devExtensions]);
@@ -2263,7 +2253,6 @@ function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [authError, setAuthError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [activePanel, setActivePanel] = useState('beacon');
 
@@ -2272,20 +2261,13 @@ function App() {
     setContactListLimit(50);
   }, [contactSearch, activePanel]);
   const [alertLocations, setAlertLocations] = useState([]);
-  const [alertStatus, setAlertStatus] = useState('');
   const [severityFilter, setSeverityFilter] = useState('emergency');
   const [incomingOnly, setIncomingOnly] = useState(true);
   const [selectedAlertId, setSelectedAlertId] = useState(null);
-  const [mapStatus, setMapStatus] = useState('');
-  const [geoStatus, setGeoStatus] = useState('');
   const [userLocation, setUserLocation] = useState(null);
-  const [settingsStatus, setSettingsStatus] = useState('');
-  const [remoteSettingsStatus, setRemoteSettingsStatus] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [syncDiagnostics, setSyncDiagnostics] = useState(null);
   const [relayDiagnostics, setRelayDiagnostics] = useState(null);
-  const [syncRequestStatus, setSyncRequestStatus] = useState('');
-  const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [showPreviews, setShowPreviews] = useState(true);
@@ -2299,6 +2281,8 @@ function App() {
   const [showDevTools, setShowDevTools] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [settingsSearch, setSettingsSearch] = useState('');
+  const [isLoadingContacts, setIsLoadingContacts] = useState(true);
+  const [isLoadingThemes, setIsLoadingThemes] = useState(true);
   const settingsSearchRef = useRef(null);
   const contactSearchRef = useRef(null);
   const themeSearchRef = useRef(null);
@@ -2409,7 +2393,7 @@ function App() {
   const handleSpotifySearch = async () => {
     if (!spotifySearch.trim()) return;
     setIsSearchingSpotify(true);
-    setSettingsStatus("Searching...");
+    toast.loading("Searching...", { id: 'spotify-search' });
     try {
         let token = spotifyToken;
         if (!token) {
@@ -2432,9 +2416,9 @@ function App() {
             const data = await response.json();
             setSpotifyResults(data.tracks?.items || []);
         }
-        setSettingsStatus("");
+        toast.dismiss('spotify-search');
     } catch (e) {
-        setSettingsStatus("Search failed: " + e.message);
+        toast.error("Search failed: " + e.message, { id: 'spotify-search' });
     } finally {
         setIsSearchingSpotify(false);
     }
@@ -2443,12 +2427,12 @@ function App() {
   const handlePushSpotifyTrack = useCallback(async (track) => {
       const target = user?.uid;
       if(!target) {
-          setSettingsStatus("Please sign in to push tracks.");
+          toast.error("Please sign in to push tracks.");
           return;
       }
       try {
           setAddingTrackId(track.id);
-          setSettingsStatus(`Adding "${track.name}"...`);
+          toast.loading(`Adding "${track.name}"...`, { id: 'add-track' });
           const trackData = {
               spotifyId: track.id,
               uri: track.uri,
@@ -2459,19 +2443,15 @@ function App() {
               addedAt: serverTimestamp()
           };
           
-          // Use addDoc to let Firestore generate the ID, or use track.id as doc ID to prevent duplicates
-          // The Android app uses add(), so we should probably mimic that or just use setDoc with track.id
-          // Using setDoc with track.id prevents duplicates better.
           await setDoc(doc(db, "users", target, "ringer_playlist", track.id), trackData);
           
-          setSettingsStatus("Added to playlist!");
-          // Clear search results after adding? Maybe not, user might want to add multiple.
+          toast.success("Added to playlist!", { id: 'add-track' });
       } catch(e) {
-          setSettingsStatus("Error adding: " + e.message);
+          toast.error("Error adding: " + e.message, { id: 'add-track' });
       } finally {
           setAddingTrackId(null);
       }
-  }, [user]);
+  }, [user, toast]);
 
   // const messagesEndRef = useRef(null);
   const mapRef = useRef(null);
@@ -2796,9 +2776,13 @@ function App() {
   }, [user]);
 
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('mock_user') === 'true') return;
+    if (new URLSearchParams(window.location.search).get('mock_user') === 'true') {
+        setIsLoadingContacts(false);
+        return;
+    }
     if (!user) {
       setDeviceContacts([]);
+      setIsLoadingContacts(false);
       return;
     }
     const deviceRef = collection(db, "users", user.uid, "deviceContacts");
@@ -2887,14 +2871,16 @@ function App() {
           ...docSnap.data()
         }));
         setPublicThemes(items);
+        setIsLoadingThemes(false);
       },
       (error) => {
         console.error("Failed to load theme gallery", error);
-        setThemeGalleryStatus(error?.message ?? "Unable to load theme gallery.");
+        setIsLoadingThemes(false);
+        toast.error("Unable to load theme gallery.");
       }
     );
     return () => unsubscribe();
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     if (user && selectedThread) {
@@ -2934,7 +2920,6 @@ function App() {
     if (new URLSearchParams(window.location.search).get('mock_user') === 'true') return;
     if (!user) {
       setAlertLocations([]);
-      setAlertStatus('');
       return;
     }
     const alertsRef = collection(db, "users", user.uid, "emergencyLocations");
@@ -2960,14 +2945,16 @@ function App() {
           };
         }).filter(Boolean).filter(item => !item.clearedAt);
         setAlertLocations(items);
-        setAlertStatus(items.length ? '' : 'No emergencies recently — that’s good news.');
+        if (items.length === 0) {
+            // Optional: toast.info('No active emergencies.', { id: 'alert-status', duration: 2000 });
+        }
       },
       (error) => {
         console.error('Failed to load emergency locations', error);
         if (error?.code === 'permission-denied') {
-          setAlertStatus('Missing permissions to read emergency locations. Sign out/in or check Firebase rules for your account.');
+          toast.error('Missing permissions to read emergency locations. Sign out/in or check Firebase rules.', { id: 'alert-error' });
         } else {
-          setAlertStatus(error?.message ?? 'Unable to load emergency locations.');
+          toast.error(error?.message ?? 'Unable to load emergency locations.', { id: 'alert-error' });
         }
       }
     );
@@ -2977,10 +2964,9 @@ function App() {
   useEffect(() => {
     if (activePanel !== 'map') return;
     if (!mapsApiKey) {
-      setMapStatus('Add VITE_GOOGLE_MAPS_API_KEY to load the map.');
+      toast.error('Add VITE_GOOGLE_MAPS_API_KEY to load the map.', { duration: 0, id: 'map-key' });
       return;
     }
-    setMapStatus('');
     let cancelled = false;
     loadGoogleMaps(mapsApiKey)
       .then(() => {
@@ -2997,34 +2983,34 @@ function App() {
       })
       .catch((error) => {
         if (cancelled) return;
-        setMapStatus(error?.message ?? 'Map failed to load.');
+        toast.error(error?.message ?? 'Map failed to load.', { id: 'map-load' });
       });
     return () => {
       cancelled = true;
     };
-  }, [activePanel, mapsApiKey, defaultMapCenter]);
+  }, [activePanel, mapsApiKey, defaultMapCenter, toast]);
 
   useEffect(() => {
     if (activePanel !== 'map') return;
     if (!navigator.geolocation) {
-      setGeoStatus('Location services are not available in this browser.');
+      toast.info('Location services are not available in this browser.', { id: 'geo-status' });
       return;
     }
     if (userLocation) return;
-    setGeoStatus('Locating your position…');
+    toast.loading('Locating your position…', { id: 'geo-locating' });
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const next = { lat: position.coords.latitude, lng: position.coords.longitude };
         setUserLocation(next);
-        setGeoStatus('Showing your current location.');
+        toast.success('Showing your current location.', { id: 'geo-locating' });
       },
       (error) => {
         const message = error?.message ?? 'Unable to access location.';
-        setGeoStatus(message);
+        toast.error(message, { id: 'geo-locating' });
       },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
     );
-  }, [activePanel, userLocation]);
+  }, [activePanel, userLocation, toast]);
 
   // Bolt: Optimized map marker reconciliation to prevent full re-render/flicker on every update
   useEffect(() => {
@@ -3187,41 +3173,37 @@ function App() {
   }, []);
 
   const handleClearAlert = useCallback(async (alertId) => {
-    if (!user) return; // user is in closure, but user.uid might change. Actually, user ref might change.
-    // To be safe, add user as dependency.
+    if (!user) return;
     try {
       await setDoc(
         doc(db, "users", user.uid, "emergencyLocations", alertId),
         { clearedAt: serverTimestamp() },
         { merge: true }
       );
+      toast.success("Alert cleared");
     } catch (error) {
       console.error('Failed to clear alert', error);
       const message = error?.message ?? 'Unable to clear alert.';
-      setAlertStatus(message);
+      toast.error(message);
       // Re-throw so child component can handle state
       throw new Error(message);
     }
-  }, [user]);
+  }, [user, toast]);
 
   const fetchAlertLocations = () => {
-    // Firestore onSnapshot handles real-time updates automatically.
-    // We just provide visual feedback that the system is connected.
-    setAlertStatus('Syncing...');
-    setTimeout(() => {
-      setAlertStatus(alertLocations.length ? '' : 'No emergency locations yet.');
-    }, 800);
+    toast.loading('Syncing alerts...', { duration: 800, id: 'sync-alerts' });
   };
 
   const handleLogin = async () => {
     setIsLoggingIn(true);
-    setAuthError('');
+    toast.loading("Signing in...", { id: 'auth' });
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
+      toast.dismiss('auth');
     } catch (error) {
       console.error("Login failed", error);
-      setAuthError(error?.message ?? "Google sign-in failed.");
+      toast.error(error?.message ?? "Google sign-in failed.", { id: 'auth' });
       setIsLoggingIn(false);
     }
   };
@@ -3229,20 +3211,21 @@ function App() {
   const handleEmailAuth = async (mode) => {
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) {
-      setAuthError("Enter email and password.");
+      toast.error("Enter email and password.");
       return;
     }
     setIsLoggingIn(true);
-    setAuthError('');
+    toast.loading("Signing in...", { id: 'auth' });
     try {
       if (mode === 'signup') {
         await createUserWithEmailAndPassword(auth, trimmedEmail, password);
       } else {
         await signInWithEmailAndPassword(auth, trimmedEmail, password);
       }
+      toast.dismiss('auth');
     } catch (error) {
       console.error("Email auth failed", error);
-      setAuthError(error?.message ?? "Email sign-in failed.");
+      toast.error(error?.message ?? "Email sign-in failed.", { id: 'auth' });
       setIsLoggingIn(false);
     }
   };
@@ -3250,17 +3233,17 @@ function App() {
   const handlePasswordReset = async () => {
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
-      setAuthError("Enter your email to reset your password.");
+      toast.error("Enter your email to reset your password.");
       return;
     }
     setIsLoggingIn(true);
-    setAuthError('');
+    toast.loading("Sending reset email...", { id: 'reset' });
     try {
       await sendPasswordResetEmail(auth, trimmedEmail);
-      setAuthError("Password reset email sent.");
+      toast.success("Password reset email sent.", { id: 'reset' });
     } catch (error) {
       console.error("Password reset failed", error);
-      setAuthError(error?.message ?? "Password reset failed.");
+      toast.error(error?.message ?? "Password reset failed.", { id: 'reset' });
     } finally {
       setIsLoggingIn(false);
     }
@@ -3268,23 +3251,23 @@ function App() {
 
   const handlePasswordResetForUser = async () => {
     if (!user?.email) {
-      setSettingsStatus("No email address on file.");
+      toast.error("No email address on file.");
       return;
     }
-    setSettingsStatus("Sending password reset email...");
+    toast.loading("Sending password reset email...", { id: 'reset-user' });
     try {
       await sendPasswordResetEmail(auth, user.email);
-      setSettingsStatus(`Password reset sent to ${user.email}.`);
+      toast.success(`Password reset sent to ${user.email}.`, { id: 'reset-user' });
     } catch (error) {
       console.error("Password reset failed", error);
-      setSettingsStatus(error?.message ?? "Password reset failed.");
+      toast.error(error?.message ?? "Password reset failed.", { id: 'reset-user' });
     }
   };
 
   const handleProfileSave = async () => {
     if (!user) return;
     setIsSavingProfile(true);
-    setProfileStatus("Saving profile...");
+    toast.loading("Saving profile...", { id: 'profile-save' });
     try {
       const payload = {
         ownerName: profile.ownerName || '',
@@ -3307,10 +3290,10 @@ function App() {
         updatedAt: serverTimestamp()
       }, { merge: true });
 
-      setProfileStatus("Profile updated.");
+      toast.success("Profile updated.", { id: 'profile-save' });
     } catch (error) {
       console.error("Profile update failed", error);
-      setProfileStatus(error?.message ?? "Profile update failed.");
+      toast.error(error?.message ?? "Profile update failed.", { id: 'profile-save' });
     } finally {
       setIsSavingProfile(false);
     }
@@ -3330,7 +3313,6 @@ function App() {
       allowRemoteSoundChange: false
     });
     setEditingContactId(null);
-    setContactStatus('');
   };
 
   const handleEditContact = useCallback((contact) => {
@@ -3347,18 +3329,17 @@ function App() {
       allowRemoteSoundChange: contact.allowRemoteSoundChange ?? false
     });
     setEditingContactId(contact.id);
-    setContactStatus('');
     setActivePanel('pulselink');
   }, []);
 
   const handleSaveContact = async () => {
     if (!user) return;
     if (!contactForm.displayName.trim()) {
-      setContactStatus("Display name is required.");
+      toast.error("Display name is required.");
       return;
     }
     setIsSavingContact(true);
-    setContactStatus("Saving contact...");
+    toast.loading("Saving contact...", { id: 'save-contact' });
     try {
       const payload = {
         displayName: contactForm.displayName.trim(),
@@ -3382,11 +3363,11 @@ function App() {
         await deleteDoc(doc(db, "users", user.uid, "trustedContacts", editingContactId));
       }
       await setDoc(doc(db, "users", user.uid, "trustedContacts", editingContactId || newDocId), payload, { merge: true });
-      setContactStatus("Contact saved.");
+      toast.success("Contact saved.", { id: 'save-contact' });
       resetContactForm();
     } catch (error) {
       console.error("Contact save failed", error);
-      setContactStatus(error?.message ?? "Contact save failed.");
+      toast.error(error?.message ?? "Contact save failed.", { id: 'save-contact' });
     } finally {
       setIsSavingContact(false);
     }
@@ -3394,13 +3375,13 @@ function App() {
 
   const handleDeleteContact = useCallback(async (contactId) => {
     if (!user) return;
-    setContactStatus("Removing contact...");
+    toast.loading("Removing contact...", { id: 'del-contact' });
     try {
       await deleteDoc(doc(db, "users", user.uid, "trustedContacts", contactId));
-      setContactStatus("Contact removed.");
+      toast.success("Contact removed.", { id: 'del-contact' });
     } catch (error) {
       console.error("Delete contact failed", error);
-      setContactStatus(error?.message ?? "Delete failed.");
+      toast.error(error?.message ?? "Delete failed.", { id: 'del-contact' });
     }
   }, [user]);
 
@@ -3417,7 +3398,7 @@ function App() {
   const handleApplyPreset = useCallback(async (presetTheme) => {
     if (!user) return;
     const normalized = normalizeTheme(presetTheme);
-    setThemeStatus("Updating theme...");
+    toast.loading("Updating theme...", { id: 'theme-update' });
     try {
       await setDoc(
         doc(db, "users", user.uid),
@@ -3432,12 +3413,12 @@ function App() {
       }, { merge: true });
 
       setThemePrefs(normalized);
-      setThemeStatus("Theme synced.");
+      toast.success("Theme synced.", { id: 'theme-update' });
     } catch (error) {
       console.error("Theme update failed", error);
-      setThemeStatus(error?.message ?? "Theme update failed.");
+      toast.error(error?.message ?? "Theme update failed.", { id: 'theme-update' });
     }
-  }, [user]);
+  }, [user, toast]);
 
   const handleImportPublicTheme = useCallback(async (themeDoc) => {
     if (!themeDoc?.theme) return;
@@ -3446,23 +3427,23 @@ function App() {
     setThemePrefs(normalized);
 
     await handleApplyPreset(themeDoc.theme);
-    setThemeGalleryStatus(`Imported "${themeDoc.name}".`);
-  }, [handleApplyPreset]);
+    toast.success(`Imported "${themeDoc.name}".`);
+  }, [handleApplyPreset, toast]);
 
   const handlePublishTheme = async () => {
     if (!user) return;
     const name = themePublishForm.name.trim();
     if (!name) {
-      setThemePublishStatus("Theme name is required.");
+      toast.error("Theme name is required.");
       return;
     }
     setIsPublishingTheme(true);
-    setThemePublishStatus("Publishing theme...");
+    toast.loading("Publishing theme...", { id: 'theme-publish' });
     const backgroundImageUrl = themePublishForm.backgroundImageUrl.trim();
 
     // Sentinel: Validate URL
     if (backgroundImageUrl && !isValidImageUrl(backgroundImageUrl)) {
-      setThemePublishStatus("Invalid background URL. Must be http/https or data URI.");
+      toast.error("Invalid background URL. Must be http/https or data URI.", { id: 'theme-publish' });
       setIsPublishingTheme(false);
       return;
     }
@@ -3499,9 +3480,7 @@ function App() {
       // The backend will auto-approve if no images are present.
       const targetCollection = "themes_submissions";
       await addDoc(collection(db, targetCollection), payload);
-      setThemePublishStatus(
-        "Theme submitted."
-      );
+      toast.success("Theme submitted.", { id: 'theme-publish' });
       setThemePublishForm((prev) => ({
         ...prev,
         name: '',
@@ -3511,7 +3490,7 @@ function App() {
       }));
     } catch (error) {
       console.error("Theme publish failed", error);
-      setThemePublishStatus(error?.message ?? "Theme publish failed.");
+      toast.error(error?.message ?? "Theme publish failed.", { id: 'theme-publish' });
     } finally {
       setIsPublishingTheme(false);
     }
@@ -3520,7 +3499,7 @@ function App() {
   const handleRemoteSettingsSave = async () => {
     if (!user) return;
     setIsSavingSettings(true);
-    setRemoteSettingsStatus("Saving settings...");
+    toast.loading("Saving settings...", { id: 'settings-save' });
     try {
       await setDoc(doc(db, "users", user.uid), {
         remoteWebAccessEnabled: remoteSettings.remoteWebAccessEnabled,
@@ -3543,10 +3522,10 @@ function App() {
         themesEnabled: remoteSettings.themesEnabled,
         settingsUpdatedAt: serverTimestamp()
       }, { merge: true });
-      setRemoteSettingsStatus("Settings updated.");
+      toast.success("Settings updated.", { id: 'settings-save' });
     } catch (error) {
       console.error("Settings update failed", error);
-      setRemoteSettingsStatus(error?.message ?? "Settings update failed.");
+      toast.error(error?.message ?? "Settings update failed.", { id: 'settings-save' });
     } finally {
       setIsSavingSettings(false);
     }
@@ -3554,11 +3533,11 @@ function App() {
 
   const handleTestRelay = async () => {
     if (!user) return;
-    setRemoteSettingsStatus("Queueing test message...");
+    toast.loading("Queueing test message...", { id: 'relay-test' });
     try {
       const phone = profile.phoneNumber || user.phoneNumber;
       if (!phone) {
-        setRemoteSettingsStatus("Add a phone number to your profile to test relay.");
+        toast.error("Add a phone number to your profile to test relay.", { id: 'relay-test' });
         return;
       }
 
@@ -3569,16 +3548,16 @@ function App() {
         source: "web_test",
         lineId: activeLineId || lines[0]?.id || null
       });
-      setRemoteSettingsStatus("Test message queued.");
+      toast.success("Test message queued.", { id: 'relay-test' });
     } catch (e) {
       console.error("Test relay failed", e);
-      setRemoteSettingsStatus("Test failed: " + e.message);
+      toast.error("Test failed: " + e.message, { id: 'relay-test' });
     }
   };
 
   const requestPhoneSync = async () => {
     if (!user) return;
-    setSyncRequestStatus("Requesting sync...");
+    toast.loading("Requesting sync...", { id: 'sync-req' });
     try {
       await setDoc(
         doc(db, "users", user.uid),
@@ -3590,10 +3569,10 @@ function App() {
         },
         { merge: true }
       );
-      setSyncRequestStatus("Sync requested. Open PulseLink on your phone and keep it online.");
+      toast.success("Sync requested. Open PulseLink on your phone and keep it online.", { id: 'sync-req', duration: 6000 });
     } catch (error) {
       console.error("Sync request failed", error);
-      setSyncRequestStatus(error?.message ?? "Unable to request sync.");
+      toast.error(error?.message ?? "Unable to request sync.", { id: 'sync-req' });
     }
   };
 
@@ -3654,7 +3633,7 @@ function App() {
   const handleAddExtension = (e) => {
     e?.preventDefault();
     if (!extensionForm.name.trim()) {
-      setExtensionStatus('Name is required.');
+      toast.error('Name is required.');
       return;
     }
     const id = `${Date.now()}`;
@@ -3669,17 +3648,17 @@ function App() {
       }
     ]);
     setExtensionForm({ name: '', endpoint: '', description: '' });
-    setExtensionStatus('Saved extension to your device.');
+    toast.success('Saved extension to your device.');
   };
 
   const handleTestExtension = async (ext) => {
     if (!remoteSettings.thirdPartyExtensionsEnabled) {
-      setExtensionStatus('Enable third-party extensions in Settings first.');
+      toast.error('Enable third-party extensions in Settings first.');
       return;
     }
-    setExtensionStatus(`Testing ${ext.name}...`);
+    toast.loading(`Testing ${ext.name}...`, { id: 'ext-test' });
     if (!ext.endpoint) {
-      setExtensionStatus(`${ext.name} is active locally (no endpoint needed).`);
+      toast.success(`${ext.name} is active locally (no endpoint needed).`, { id: 'ext-test' });
       return;
     }
     try {
@@ -3694,9 +3673,9 @@ function App() {
         })
       });
       const text = await resp.text();
-      setExtensionStatus(`Response from ${ext.name}: ${text.slice(0, 180)}`);
+      toast.success(`Response: ${text.slice(0, 50)}...`, { id: 'ext-test' });
     } catch (err) {
-      setExtensionStatus(`Couldn't reach ${ext.name}: ${err.message}`);
+      toast.error(`Couldn't reach ${ext.name}: ${err.message}`, { id: 'ext-test' });
     }
   };
 
@@ -3706,15 +3685,15 @@ function App() {
       return;
     }
     setDeleteAction('account');
-    setDeleteStatus("Requesting account deletion...");
+    toast.loading("Requesting account deletion...", { id: 'del-acc' });
     try {
       const callable = httpsCallable(functions, "deleteAccount");
       await callable();
-      setDeleteStatus("Account deletion requested.");
+      toast.success("Account deletion requested.", { id: 'del-acc' });
       await signOut(auth);
     } catch (error) {
       console.error("Delete account failed", error);
-      setDeleteStatus(error?.message ?? "Delete account failed.");
+      toast.error(error?.message ?? "Delete account failed.", { id: 'del-acc' });
     } finally {
       setDeleteAction(null);
     }
@@ -3726,7 +3705,7 @@ function App() {
       return;
     }
     setDeleteAction('data');
-    setDeleteStatus("Deleting account data...");
+    toast.loading("Deleting account data...", { id: 'del-data' });
     try {
       const batch = writeBatch(db);
       const trustedSnap = await getDocs(collection(db, "users", user.uid, "trustedContacts"));
@@ -3751,10 +3730,10 @@ function App() {
         await messageBatch.commit();
       }
 
-      setDeleteStatus("Cloud data cleared.");
+      toast.success("Cloud data cleared.", { id: 'del-data' });
     } catch (error) {
       console.error("Delete data failed", error);
-      setDeleteStatus(error?.message ?? "Delete data failed.");
+      toast.error(error?.message ?? "Delete data failed.", { id: 'del-data' });
     } finally {
       setDeleteAction(null);
     }
@@ -3955,7 +3934,8 @@ function App() {
                   </button>
                 </div>
               </div>
-              {authError && <div className="auth-error" role="alert">{authError}</div>}
+              {/* Error is now handled by toast, but keeping inline for accessibility/backup if needed, though we removed state */}
+              {/* <div className="auth-error" role="alert">{authError}</div> */}
               <div className="login-actions">
                 <button
                   type="submit"
@@ -4238,7 +4218,6 @@ function App() {
                       </>
                     ) : 'Save profile'}
                   </button>
-                    {profileStatus && <div className={getToastClass(profileStatus)} role="status" aria-live="polite">{profileStatus}</div>}
                 </div>
                 <div className="settings-card">
                   <h4>Trusted contacts</h4>
@@ -4258,7 +4237,6 @@ function App() {
                       <div className="settings-note">No trusted contacts yet.</div>
                     )}
                   </div>
-                  {contactStatus && <div className={getToastClass(contactStatus)} role="status" aria-live="polite">{contactStatus}</div>}
                 </div>
                 <div className="settings-card">
                   <h4>{editingContactId ? 'Edit trusted contact' : 'Add trusted contact'}</h4>
@@ -4364,7 +4342,6 @@ function App() {
                       Clear
                     </button>
                   </div>
-                  {contactStatus && <div className={getToastClass(contactStatus)} role="status" aria-live="polite">{contactStatus}</div>}
                 </div>
               </div>
             </div>
@@ -4376,68 +4353,74 @@ function App() {
                 <h3>Contacts</h3>
                 <p>Browse all device contacts synced from your phone.</p>
               </div>
-              <div className="contacts-toolbar">
-                <div className="contact-count" style={{ marginBottom: 12, fontSize: '0.9em', color: 'var(--muted)' }}>
-                  {filteredDeviceContacts.length} contact{filteredDeviceContacts.length === 1 ? '' : 's'}
-                </div>
-                <div className="settings-search-container" style={{ flex: 1, marginBottom: 0 }}>
-                  <div style={{ opacity: 0.5, display: 'flex' }}><SearchIcon /></div>
-                  <input
-                    ref={contactSearchRef}
-                    className="settings-search-input"
-                    placeholder="Search by name, phone, or email"
-                    aria-label="Search contacts (/)"
-                    value={contactSearch}
-                    onChange={(e) => setContactSearch(e.target.value)}
-                  />
-                  {!contactSearch && <span className="shortcut-hint" aria-hidden="true">/</span>}
-                  {contactSearch && (
-                    <button
-                      className="ghost-btn icon-only"
-                      onClick={() => {
-                        setContactSearch('');
-                        contactSearchRef.current?.focus();
-                      }}
-                      aria-label="Clear search"
-                      title="Clear search"
-                      style={{ width: '28px', height: '28px' }}
-                    >
-                      <CloseIcon />
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div className="contact-list contact-list--full">
-                {contactListElements}
-                {filteredDeviceContacts.length > contactListLimit && (
-                  <button
-                    className="secondary-btn"
-                    style={{ marginTop: '16px', width: '100%' }}
-                    onClick={() => setContactListLimit(prev => prev + 50)}
-                  >
-                    Show more contacts
-                  </button>
-                )}
-                {filteredDeviceContacts.length === 0 && (
-                  <div className="settings-note">
-                    {contactSearch.trim() ? (
-                      <>
-                        No contacts match that search.
+              {isLoadingContacts ? (
+                <PanelSkeleton />
+              ) : (
+                <>
+                  <div className="contacts-toolbar">
+                    <div className="contact-count" style={{ marginBottom: 12, fontSize: '0.9em', color: 'var(--muted)' }}>
+                      {filteredDeviceContacts.length} contact{filteredDeviceContacts.length === 1 ? '' : 's'}
+                    </div>
+                    <div className="settings-search-container" style={{ flex: 1, marginBottom: 0 }}>
+                      <div style={{ opacity: 0.5, display: 'flex' }}><SearchIcon /></div>
+                      <input
+                        ref={contactSearchRef}
+                        className="settings-search-input"
+                        placeholder="Search by name, phone, or email"
+                        aria-label="Search contacts (/)"
+                        value={contactSearch}
+                        onChange={(e) => setContactSearch(e.target.value)}
+                      />
+                      {!contactSearch && <span className="shortcut-hint" aria-hidden="true">/</span>}
+                      {contactSearch && (
                         <button
-                          className="link-button"
+                          className="ghost-btn icon-only"
                           onClick={() => {
                             setContactSearch('');
                             contactSearchRef.current?.focus();
                           }}
-                          style={{ marginLeft: 4, padding: 0, textDecoration: 'underline' }}
+                          aria-label="Clear search"
+                          title="Clear search"
+                          style={{ width: '28px', height: '28px' }}
                         >
-                          Clear search
+                          <CloseIcon />
                         </button>
-                      </>
-                    ) : 'No device contacts synced yet.'}
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
+                  <div className="contact-list contact-list--full">
+                    {contactListElements}
+                    {filteredDeviceContacts.length > contactListLimit && (
+                      <button
+                        className="secondary-btn"
+                        style={{ marginTop: '16px', width: '100%' }}
+                        onClick={() => setContactListLimit(prev => prev + 50)}
+                      >
+                        Show more contacts
+                      </button>
+                    )}
+                    {filteredDeviceContacts.length === 0 && (
+                      <div className="settings-note">
+                        {contactSearch.trim() ? (
+                          <>
+                            No contacts match that search.
+                            <button
+                              className="link-button"
+                              onClick={() => {
+                                setContactSearch('');
+                                contactSearchRef.current?.focus();
+                              }}
+                              style={{ marginLeft: 4, padding: 0, textDecoration: 'underline' }}
+                            >
+                              Clear search
+                            </button>
+                          </>
+                        ) : 'No device contacts synced yet.'}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -4490,12 +4473,6 @@ function App() {
                     <option value="all">All</option>
                   </select>
                 </label>
-                {(alertStatus || geoStatus) && (
-                  <div className="map-status-text">
-                    {alertStatus && <div>{alertStatus}</div>}
-                    {geoStatus && <div>{geoStatus}</div>}
-                  </div>
-                )}
               </div>
               <div className="map-grid">
                 <div className="map-card">
@@ -4506,7 +4483,6 @@ function App() {
                       <p>Set VITE_GOOGLE_MAPS_API_KEY in web/.env.local to load the map view.</p>
                     </div>
                   )}
-                  {mapStatus && <div className={getToastClass(mapStatus)} role="status" aria-live="polite">{mapStatus}</div>}
                 </div>
                 <div className="map-list">
                   {filteredAlerts.map((alert) => (
@@ -4609,7 +4585,6 @@ function App() {
                         </div>
                     )}
                     
-                    {settingsStatus && <div className={getToastClass(settingsStatus)} style={{marginTop: 12}} role="status" aria-live="polite">{settingsStatus}</div>}
                 </div>
               </div>
             </div>
@@ -4621,53 +4596,55 @@ function App() {
                 <h3>Theme Gallery</h3>
                 <p>Browse community themes or publish your own. Image-based themes require approval.</p>
               </div>
-              <div className="themes-grid">
-                <div className="settings-card themes-card">
-                  <div className="settings-search-container">
-                    <div style={{ opacity: 0.5, display: 'flex' }}><SearchIcon /></div>
-                    <input
-                      ref={themeSearchRef}
-                      className="settings-search-input"
-                      value={themeSearch}
-                      onChange={(e) => setThemeSearch(e.target.value)}
-                      placeholder="Search by name or creator"
-                      aria-label="Search themes (/)"
-                    />
-                    {!themeSearch && <span className="shortcut-hint" aria-hidden="true">/</span>}
-                    {themeSearch && (
-                      <button
-                        type="button"
-                        className="ghost-btn icon-only"
-                        onClick={() => {
-                          setThemeSearch('');
-                          themeSearchRef.current?.focus();
-                        }}
-                        aria-label="Clear search"
-                        title="Clear search"
-                        style={{ width: '28px', height: '28px' }}
-                      >
-                        <CloseIcon />
-                      </button>
-                    )}
-                  </div>
-                  <div className="theme-gallery-grid">
-                    {filteredThemes.map((themeDoc) => (
-                      <ThemeGalleryItem
-                        key={themeDoc.id}
-                        themeDoc={themeDoc}
-                        onImport={handleImportPublicTheme}
+              {isLoadingThemes ? (
+                <PanelSkeleton />
+              ) : (
+                <div className="themes-grid">
+                  <div className="settings-card themes-card">
+                    <div className="settings-search-container">
+                      <div style={{ opacity: 0.5, display: 'flex' }}><SearchIcon /></div>
+                      <input
+                        ref={themeSearchRef}
+                        className="settings-search-input"
+                        value={themeSearch}
+                        onChange={(e) => setThemeSearch(e.target.value)}
+                        placeholder="Search by name or creator"
+                        aria-label="Search themes (/)"
                       />
-                    ))}
-                    {filteredThemes.length === 0 && (
-                      <div className="theme-empty">
-                        No themes found.
-                      </div>
-                    )}
+                      {!themeSearch && <span className="shortcut-hint" aria-hidden="true">/</span>}
+                      {themeSearch && (
+                        <button
+                          type="button"
+                          className="ghost-btn icon-only"
+                          onClick={() => {
+                            setThemeSearch('');
+                            themeSearchRef.current?.focus();
+                          }}
+                          aria-label="Clear search"
+                          title="Clear search"
+                          style={{ width: '28px', height: '28px' }}
+                        >
+                          <CloseIcon />
+                        </button>
+                      )}
+                    </div>
+                    <div className="theme-gallery-grid">
+                      {filteredThemes.map((themeDoc) => (
+                        <ThemeGalleryItem
+                          key={themeDoc.id}
+                          themeDoc={themeDoc}
+                          onImport={handleImportPublicTheme}
+                        />
+                      ))}
+                      {filteredThemes.length === 0 && (
+                        <div className="theme-empty">
+                          No themes found.
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  {themeGalleryStatus && <div className={getToastClass(themeGalleryStatus)} role="status" aria-live="polite">{themeGalleryStatus}</div>}
-                </div>
-                <div className="settings-card themes-card">
-                  <h4>Publish your theme</h4>
+                  <div className="settings-card themes-card">
+                    <h4>Publish your theme</h4>
                   <label className="login-field">
                     Theme name<RequiredIndicator />
                     <input
@@ -4730,106 +4707,105 @@ function App() {
                       </>
                     ) : 'Publish theme'}
                   </button>
-                  {themePublishStatus && <div className={getToastClass(themePublishStatus)} role="status" aria-live="polite">{themePublishStatus}</div>}
-                </div>
-                <div className="settings-card themes-card">
-                  <h4>Quick presets</h4>
-                  <div className="theme-grid">
-                    {themePresets.map((preset) => (
-                      <ThemePresetItem
-                        key={preset.name}
-                        preset={preset}
-                        onApply={handleApplyPreset}
-                      />
-                    ))}
                   </div>
-                  <div className="theme-editor">
-                    <label className="login-field">
-                      Primary color
-                      <input
-                        className="login-input"
-                        type="color"
-                        value={themePrefs.primaryColor}
-                        onChange={(e) => setThemePrefs((prev) => ({ ...prev, primaryColor: e.target.value }))}
-                      />
-                    </label>
-                    <label className="login-field">
-                      Background
-                      <input
-                        className="login-input"
-                        type="color"
-                        value={themePrefs.backgroundColor}
-                        onChange={(e) => setThemePrefs((prev) => ({ ...prev, backgroundColor: e.target.value }))}
-                      />
-                    </label>
-                    <label className="login-field">
-                      Top bar
-                      <input
-                        className="login-input"
-                        type="color"
-                        value={themePrefs.topBarColor}
-                        onChange={(e) => setThemePrefs((prev) => ({ ...prev, topBarColor: e.target.value }))}
-                      />
-                    </label>
-                    <label className="login-field">
-                      Bubble outgoing
-                      <input
-                        className="login-input"
-                        type="color"
-                        value={themePrefs.bubbleOutgoing}
-                        onChange={(e) => setThemePrefs((prev) => ({ ...prev, bubbleOutgoing: e.target.value }))}
-                      />
-                    </label>
-                    <label className="login-field">
-                      Bubble incoming
-                      <input
-                        className="login-input"
-                        type="color"
-                        value={themePrefs.bubbleIncoming}
-                        onChange={(e) => setThemePrefs((prev) => ({ ...prev, bubbleIncoming: e.target.value }))}
-                      />
-                    </label>
-                    <label className="login-field theme-wide">
-                      Background image URL
-                      <input
-                        className="login-input"
-                        value={themePrefs.backgroundImageUrl ?? ''}
-                        onChange={(e) => setThemePrefs((prev) => ({
-                          ...prev,
-                          backgroundImageUrl: e.target.value
-                        }))}
-                      />
-                    </label>
-                  </div>
-                  <div className="theme-icon-grid">
-                    {iconOverrideKeys.map(({ key, label }) => (
-                      <label className="login-field" key={key}>
-                        {label} icon URL
+                  <div className="settings-card themes-card">
+                    <h4>Quick presets</h4>
+                    <div className="theme-grid">
+                      {themePresets.map((preset) => (
+                        <ThemePresetItem
+                          key={preset.name}
+                          preset={preset}
+                          onApply={handleApplyPreset}
+                        />
+                      ))}
+                    </div>
+                    <div className="theme-editor">
+                      <label className="login-field">
+                        Primary color
                         <input
                           className="login-input"
-                          value={themePrefs.iconOverrides?.[key] ?? ''}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setThemePrefs((prev) => {
-                              const next = { ...(prev.iconOverrides ?? {}) };
-                              if (!value.trim()) {
-                                delete next[key];
-                              } else {
-                                next[key] = value.trim();
-                              }
-                              return { ...prev, iconOverrides: next };
-                            });
-                          }}
+                          type="color"
+                          value={themePrefs.primaryColor}
+                          onChange={(e) => setThemePrefs((prev) => ({ ...prev, primaryColor: e.target.value }))}
                         />
                       </label>
-                    ))}
+                      <label className="login-field">
+                        Background
+                        <input
+                          className="login-input"
+                          type="color"
+                          value={themePrefs.backgroundColor}
+                          onChange={(e) => setThemePrefs((prev) => ({ ...prev, backgroundColor: e.target.value }))}
+                        />
+                      </label>
+                      <label className="login-field">
+                        Top bar
+                        <input
+                          className="login-input"
+                          type="color"
+                          value={themePrefs.topBarColor}
+                          onChange={(e) => setThemePrefs((prev) => ({ ...prev, topBarColor: e.target.value }))}
+                        />
+                      </label>
+                      <label className="login-field">
+                        Bubble outgoing
+                        <input
+                          className="login-input"
+                          type="color"
+                          value={themePrefs.bubbleOutgoing}
+                          onChange={(e) => setThemePrefs((prev) => ({ ...prev, bubbleOutgoing: e.target.value }))}
+                        />
+                      </label>
+                      <label className="login-field">
+                        Bubble incoming
+                        <input
+                          className="login-input"
+                          type="color"
+                          value={themePrefs.bubbleIncoming}
+                          onChange={(e) => setThemePrefs((prev) => ({ ...prev, bubbleIncoming: e.target.value }))}
+                        />
+                      </label>
+                      <label className="login-field theme-wide">
+                        Background image URL
+                        <input
+                          className="login-input"
+                          value={themePrefs.backgroundImageUrl ?? ''}
+                          onChange={(e) => setThemePrefs((prev) => ({
+                            ...prev,
+                            backgroundImageUrl: e.target.value
+                          }))}
+                        />
+                      </label>
+                    </div>
+                    <div className="theme-icon-grid">
+                      {iconOverrideKeys.map(({ key, label }) => (
+                        <label className="login-field" key={key}>
+                          {label} icon URL
+                          <input
+                            className="login-input"
+                            value={themePrefs.iconOverrides?.[key] ?? ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setThemePrefs((prev) => {
+                                const next = { ...(prev.iconOverrides ?? {}) };
+                                if (!value.trim()) {
+                                  delete next[key];
+                                } else {
+                                  next[key] = value.trim();
+                                }
+                                return { ...prev, iconOverrides: next };
+                              });
+                            }}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                    <button className="primary-btn" type="button" onClick={() => handleApplyPreset(themePrefs)}>
+                      Save theme
+                    </button>
                   </div>
-                  <button className="primary-btn" type="button" onClick={() => handleApplyPreset(themePrefs)}>
-                    Save theme
-                  </button>
-                  {themeStatus && <div className={getToastClass(themeStatus)} role="status" aria-live="polite">{themeStatus}</div>}
                 </div>
-              </div>
+              )}
             </div>
           )}
 
@@ -4986,7 +4962,6 @@ function App() {
                   </label>
                   <button type="submit" className="primary-btn">Save extension</button>
                 </form>
-                {extensionStatus && <div className={getToastClass(extensionStatus)} role="status">{extensionStatus}</div>}
               </div>
               <div className="settings-card">
                 <h4>Submit to gallery</h4>
@@ -5065,7 +5040,6 @@ function App() {
                           <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
                             Send password reset email
                           </button>
-                          {settingsStatus && <div className={getToastClass(settingsStatus)} role="status" aria-live="polite">{settingsStatus}</div>}
                         </div>
                       )}
 
@@ -5186,8 +5160,6 @@ function App() {
                               Test relay
                             </button>
                           </div>
-                          {remoteSettingsStatus && <div className={getToastClass(remoteSettingsStatus)} role="status" aria-live="polite">{remoteSettingsStatus}</div>}
-                          {syncRequestStatus && <div className={getToastClass(syncRequestStatus)} role="status" aria-live="polite">{syncRequestStatus}</div>}
                         </div>
                       )}
 
@@ -5215,7 +5187,6 @@ function App() {
                               {deleteAction === 'account' ? "Deleting..." : "Delete account"}
                             </button>
                           </div>
-                          {deleteStatus && <div className={getToastClass(deleteStatus)} role="status" aria-live="polite">{deleteStatus}</div>}
                         </div>
                       )}
                     </>
@@ -5319,6 +5290,12 @@ function App() {
     </div>
   );
 }
+
+const App = () => (
+  <ToastProvider>
+    <PulseLinkApp />
+  </ToastProvider>
+);
 
 export default App;
 
