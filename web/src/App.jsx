@@ -168,12 +168,24 @@ const Avatar = memo(({ name, url, size = 40, style, className = "thread-avatar" 
 Avatar.displayName = 'Avatar';
 
 const areThreadsEqual = (prev, next) => {
+  // Bolt: Optimized contact comparison
+  // If references differ, check if it's effectively the same contact (same name)
+  // to prevent re-renders when contact list refreshes but this contact is unchanged.
+  if (prev.contact !== next.contact) {
+    const p = prev.contact;
+    const n = next.contact;
+    // If one is null/undefined and other isn't, they changed.
+    // If both exist, check displayName which is the only thing used.
+    if (!p || !n || p.displayName !== n.displayName) {
+      return false;
+    }
+  }
+
   return prev.isActive === next.isActive &&
          prev.showPreviews === next.showPreviews &&
          prev.onSelect === next.onSelect &&
          prev.onPin === next.onPin &&
          prev.onArchive === next.onArchive &&
-         prev.contactLookup === next.contactLookup &&
          prev.thread.id === next.thread.id &&
          prev.thread.address === next.thread.address &&
          prev.thread.snippet === next.thread.snippet &&
@@ -184,9 +196,7 @@ const areThreadsEqual = (prev, next) => {
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
 // when only the selection state changes or when unrelated threads update.
-const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onArchive, contactLookup }) => {
-  const cleanPhone = (thread.address || '').replace(/\D/g, '');
-  const contact = contactLookup?.[cleanPhone];
+const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onArchive, contact }) => {
   const name = contact?.displayName || thread.display_name || thread.address;
 
   return (
@@ -2080,18 +2090,22 @@ const Sidebar = memo(({
                 )}
               </div>
             ) : (
-              filteredThreads.map(thread => (
-                <ThreadItem
-                  key={`${thread.lineId || 'legacy'}_${thread.id}`}
-                  thread={thread}
-                  isActive={selectedThreadId === thread.id}
-                  onSelect={onSelect}
-                  showPreviews={showPreviews}
-                  onPin={onPinThread}
-                  onArchive={onArchiveThread}
-                  contactLookup={contactLookup}
-                />
-              ))
+              filteredThreads.map(thread => {
+                const cleanPhone = (thread.address || '').replace(/\D/g, '');
+                const contact = contactLookup?.[cleanPhone];
+                return (
+                  <ThreadItem
+                    key={`${thread.lineId || 'legacy'}_${thread.id}`}
+                    thread={thread}
+                    isActive={selectedThreadId === thread.id}
+                    onSelect={onSelect}
+                    showPreviews={showPreviews}
+                    onPin={onPinThread}
+                    onArchive={onArchiveThread}
+                    contact={contact}
+                  />
+                );
+              })
             )}
           </div>
         </>
@@ -2521,12 +2535,21 @@ function App() {
   const contactLookup = useMemo(() => {
     const map = {};
     const add = (c) => {
-      const nums = [c.phoneNumber, ...(c.additionalPhones || [])];
-      nums.forEach(n => {
-        if (!n) return;
-        const clean = n.replace(/\D/g, '');
+      // Bolt: Optimized to avoid array allocations [c.phoneNumber, ...additionalPhones]
+      if (c.phoneNumber) {
+        const clean = c.phoneNumber.replace(/\D/g, '');
         if (clean) map[clean] = c;
-      });
+      }
+
+      const additional = c.additionalPhones;
+      if (Array.isArray(additional)) {
+        for (const phone of additional) {
+          if (phone) {
+            const clean = phone.replace(/\D/g, '');
+            if (clean) map[clean] = c;
+          }
+        }
+      }
     };
     deviceContacts.forEach(add);
     trustedContacts.forEach(add);
