@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, memo, useCallback, useLayoutEffec
 import { auth, db, functions } from './firebase';
 import DevTools from './DevTools';
 import CommandPalette from './CommandPalette';
+import { useToast } from './ToastContext';
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -713,11 +714,10 @@ const SpotifyResultItem = memo(({ track, onAdd, isAdding }) => (
 SpotifyResultItem.displayName = 'SpotifyResultItem';
 
 // Bolt: MessageComposer extracted to prevent App re-renders on typing
-const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn }) => {
+const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn, onToast }) => {
   const [address, setAddress] = useState('');
   const [body, setBody] = useState('');
   const [lineId, setLineId] = useState('');
-  const [status, setStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
   const textareaRef = useRef(null);
 
@@ -738,7 +738,6 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
       setLineId('');
     }
     setBody('');
-    setStatus('');
   }, [selectedThread]);
 
   const handleSendMessage = async () => {
@@ -748,11 +747,10 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
     const effectiveLineId = lineInboxMode === 'PER_LINE' ? (lineId || activeLineId || lines[0]?.id || null) : null;
 
     if (!cleanAddress || !cleanBody) {
-      setStatus("Add a phone number and message.");
+      onToast("Add a phone number and message.", "error");
       return;
     }
     setIsSending(true);
-    setStatus('');
     try {
       const docRef = await addDoc(collection(db, "users", user.uid, "outbox"), {
         address: cleanAddress,
@@ -763,26 +761,25 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
         status: "pending"
       });
       setBody('');
-      setStatus("Queued for sending...");
+      onToast("Queued for sending...", "info");
 
       // Monitor status
       let unsubscribe;
       unsubscribe = onSnapshot(docRef, (docSnap) => {
         if (!docSnap.exists()) {
-          setStatus("Sent");
-          setTimeout(() => setStatus(''), 3000);
+          onToast("Sent", "success");
           if (unsubscribe) unsubscribe();
         } else {
           const data = docSnap.data();
           if (data.status === 'failed') {
-            setStatus(`Send failed: ${data.error || 'Unknown error'}`);
+            onToast(`Send failed: ${data.error || 'Unknown error'}`, "error");
             if (unsubscribe) unsubscribe();
           }
         }
       });
     } catch (error) {
       console.error("Send failed", error);
-      setStatus("Send failed. Try again.");
+      onToast("Send failed. Try again.", "error");
     } finally {
       setIsSending(false);
     }
@@ -872,7 +869,6 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
           ) : "Send"}
         </button>
       </div>
-      {status && <div className="compose-status" role="status" aria-live="polite">{status}</div>}
       <div className="compose-hint">
         Messages are sent from your phone when it&apos;s online and signed in.
       </div>
@@ -2128,15 +2124,9 @@ const Sidebar = memo(({
 
 Sidebar.displayName = 'Sidebar';
 
-const getToastClass = (msg) => {
-  if (!msg) return 'toast';
-  const lower = msg.toLowerCase();
-  if (lower.includes('fail') || lower.includes('error') || lower.includes('missing')) return 'toast error';
-  if (lower.includes('success') || lower.includes('saved') || lower.includes('updated') || lower.includes('sent') || lower.includes('published') || lower.includes('imported') || lower.includes('cleared')) return 'toast success';
-  return 'toast';
-};
 
 function App() {
+  const { addToast } = useToast();
   const webHintStorageKey = 'pulselink.hideWebHint';
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
@@ -2193,13 +2183,9 @@ function App() {
     allowRemoteSoundChange: false
   });
   const [editingContactId, setEditingContactId] = useState(null);
-  const [contactStatus, setContactStatus] = useState('');
   const [isSavingContact, setIsSavingContact] = useState(false);
-  const [profileStatus, setProfileStatus] = useState('');
   const [themePrefs, setThemePrefs] = useState(defaultTheme);
-  const [themeStatus, setThemeStatus] = useState('');
   const [publicThemes, setPublicThemes] = useState([]);
-  const [themeGalleryStatus, setThemeGalleryStatus] = useState('');
   const [themeSearch, setThemeSearch] = useState('');
   const [themePublishForm, setThemePublishForm] = useState({
     name: '',
@@ -2208,7 +2194,6 @@ function App() {
     anonymous: false,
     backgroundImageUrl: ''
   });
-  const [themePublishStatus, setThemePublishStatus] = useState('');
   const [isPublishingTheme, setIsPublishingTheme] = useState(false);
   const [showWebHint, setShowWebHint] = useState(() => {
     if (typeof window === 'undefined') return true;
@@ -2255,7 +2240,6 @@ function App() {
     ];
   });
   const [extensionForm, setExtensionForm] = useState({ name: '', endpoint: '', description: '' });
-  const [extensionStatus, setExtensionStatus] = useState('');
   useEffect(() => {
     localStorage.setItem('pulselink.devExtensions', JSON.stringify(devExtensions));
   }, [devExtensions]);
@@ -2279,13 +2263,9 @@ function App() {
   const [mapStatus, setMapStatus] = useState('');
   const [geoStatus, setGeoStatus] = useState('');
   const [userLocation, setUserLocation] = useState(null);
-  const [settingsStatus, setSettingsStatus] = useState('');
-  const [remoteSettingsStatus, setRemoteSettingsStatus] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [syncDiagnostics, setSyncDiagnostics] = useState(null);
   const [relayDiagnostics, setRelayDiagnostics] = useState(null);
-  const [syncRequestStatus, setSyncRequestStatus] = useState('');
-  const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [showPreviews, setShowPreviews] = useState(true);
@@ -2409,7 +2389,6 @@ function App() {
   const handleSpotifySearch = async () => {
     if (!spotifySearch.trim()) return;
     setIsSearchingSpotify(true);
-    setSettingsStatus("Searching...");
     try {
         let token = spotifyToken;
         if (!token) {
@@ -2432,9 +2411,8 @@ function App() {
             const data = await response.json();
             setSpotifyResults(data.tracks?.items || []);
         }
-        setSettingsStatus("");
     } catch (e) {
-        setSettingsStatus("Search failed: " + e.message);
+        addToast("Search failed: " + e.message, "error");
     } finally {
         setIsSearchingSpotify(false);
     }
@@ -2443,12 +2421,11 @@ function App() {
   const handlePushSpotifyTrack = useCallback(async (track) => {
       const target = user?.uid;
       if(!target) {
-          setSettingsStatus("Please sign in to push tracks.");
+          addToast("Please sign in to push tracks.", "error");
           return;
       }
       try {
           setAddingTrackId(track.id);
-          setSettingsStatus(`Adding "${track.name}"...`);
           const trackData = {
               spotifyId: track.id,
               uri: track.uri,
@@ -2464,14 +2441,14 @@ function App() {
           // Using setDoc with track.id prevents duplicates better.
           await setDoc(doc(db, "users", target, "ringer_playlist", track.id), trackData);
           
-          setSettingsStatus("Added to playlist!");
+          addToast("Added to playlist!", "success");
           // Clear search results after adding? Maybe not, user might want to add multiple.
       } catch(e) {
-          setSettingsStatus("Error adding: " + e.message);
+          addToast("Error adding: " + e.message, "error");
       } finally {
           setAddingTrackId(null);
       }
-  }, [user]);
+  }, [user, addToast]);
 
   // const messagesEndRef = useRef(null);
   const mapRef = useRef(null);
@@ -2890,11 +2867,11 @@ function App() {
       },
       (error) => {
         console.error("Failed to load theme gallery", error);
-        setThemeGalleryStatus(error?.message ?? "Unable to load theme gallery.");
+        addToast(error?.message ?? "Unable to load theme gallery.", "error");
       }
     );
     return () => unsubscribe();
-  }, []);
+  }, [addToast]);
 
   useEffect(() => {
     if (user && selectedThread) {
@@ -3268,23 +3245,21 @@ function App() {
 
   const handlePasswordResetForUser = async () => {
     if (!user?.email) {
-      setSettingsStatus("No email address on file.");
+      addToast("No email address on file.", "error");
       return;
     }
-    setSettingsStatus("Sending password reset email...");
     try {
       await sendPasswordResetEmail(auth, user.email);
-      setSettingsStatus(`Password reset sent to ${user.email}.`);
+      addToast(`Password reset sent to ${user.email}.`, "success");
     } catch (error) {
       console.error("Password reset failed", error);
-      setSettingsStatus(error?.message ?? "Password reset failed.");
+      addToast(error?.message ?? "Password reset failed.", "error");
     }
   };
 
   const handleProfileSave = async () => {
     if (!user) return;
     setIsSavingProfile(true);
-    setProfileStatus("Saving profile...");
     try {
       const payload = {
         ownerName: profile.ownerName || '',
@@ -3307,10 +3282,10 @@ function App() {
         updatedAt: serverTimestamp()
       }, { merge: true });
 
-      setProfileStatus("Profile updated.");
+      addToast("Profile updated.", "success");
     } catch (error) {
       console.error("Profile update failed", error);
-      setProfileStatus(error?.message ?? "Profile update failed.");
+      addToast(error?.message ?? "Profile update failed.", "error");
     } finally {
       setIsSavingProfile(false);
     }
@@ -3330,7 +3305,6 @@ function App() {
       allowRemoteSoundChange: false
     });
     setEditingContactId(null);
-    setContactStatus('');
   };
 
   const handleEditContact = useCallback((contact) => {
@@ -3347,18 +3321,16 @@ function App() {
       allowRemoteSoundChange: contact.allowRemoteSoundChange ?? false
     });
     setEditingContactId(contact.id);
-    setContactStatus('');
     setActivePanel('pulselink');
   }, []);
 
   const handleSaveContact = async () => {
     if (!user) return;
     if (!contactForm.displayName.trim()) {
-      setContactStatus("Display name is required.");
+      addToast("Display name is required.", "error");
       return;
     }
     setIsSavingContact(true);
-    setContactStatus("Saving contact...");
     try {
       const payload = {
         displayName: contactForm.displayName.trim(),
@@ -3382,11 +3354,11 @@ function App() {
         await deleteDoc(doc(db, "users", user.uid, "trustedContacts", editingContactId));
       }
       await setDoc(doc(db, "users", user.uid, "trustedContacts", editingContactId || newDocId), payload, { merge: true });
-      setContactStatus("Contact saved.");
+      addToast("Contact saved.", "success");
       resetContactForm();
     } catch (error) {
       console.error("Contact save failed", error);
-      setContactStatus(error?.message ?? "Contact save failed.");
+      addToast(error?.message ?? "Contact save failed.", "error");
     } finally {
       setIsSavingContact(false);
     }
@@ -3394,15 +3366,14 @@ function App() {
 
   const handleDeleteContact = useCallback(async (contactId) => {
     if (!user) return;
-    setContactStatus("Removing contact...");
     try {
       await deleteDoc(doc(db, "users", user.uid, "trustedContacts", contactId));
-      setContactStatus("Contact removed.");
+      addToast("Contact removed.", "success");
     } catch (error) {
       console.error("Delete contact failed", error);
-      setContactStatus(error?.message ?? "Delete failed.");
+      addToast(error?.message ?? "Delete failed.", "error");
     }
-  }, [user]);
+  }, [user, addToast]);
 
   // Stable handlers for TrustedContactRow
   const handleDeleteConfirm = useCallback((id) => {
@@ -3417,7 +3388,6 @@ function App() {
   const handleApplyPreset = useCallback(async (presetTheme) => {
     if (!user) return;
     const normalized = normalizeTheme(presetTheme);
-    setThemeStatus("Updating theme...");
     try {
       await setDoc(
         doc(db, "users", user.uid),
@@ -3432,12 +3402,12 @@ function App() {
       }, { merge: true });
 
       setThemePrefs(normalized);
-      setThemeStatus("Theme synced.");
+      addToast("Theme synced.", "success");
     } catch (error) {
       console.error("Theme update failed", error);
-      setThemeStatus(error?.message ?? "Theme update failed.");
+      addToast(error?.message ?? "Theme update failed.", "error");
     }
-  }, [user]);
+  }, [user, addToast]);
 
   const handleImportPublicTheme = useCallback(async (themeDoc) => {
     if (!themeDoc?.theme) return;
@@ -3446,23 +3416,22 @@ function App() {
     setThemePrefs(normalized);
 
     await handleApplyPreset(themeDoc.theme);
-    setThemeGalleryStatus(`Imported "${themeDoc.name}".`);
-  }, [handleApplyPreset]);
+    addToast(`Imported "${themeDoc.name}".`, "success");
+  }, [handleApplyPreset, addToast]);
 
   const handlePublishTheme = async () => {
     if (!user) return;
     const name = themePublishForm.name.trim();
     if (!name) {
-      setThemePublishStatus("Theme name is required.");
+      addToast("Theme name is required.", "error");
       return;
     }
     setIsPublishingTheme(true);
-    setThemePublishStatus("Publishing theme...");
     const backgroundImageUrl = themePublishForm.backgroundImageUrl.trim();
 
     // Sentinel: Validate URL
     if (backgroundImageUrl && !isValidImageUrl(backgroundImageUrl)) {
-      setThemePublishStatus("Invalid background URL. Must be http/https or data URI.");
+      addToast("Invalid background URL. Must be http/https or data URI.", "error");
       setIsPublishingTheme(false);
       return;
     }
@@ -3499,9 +3468,7 @@ function App() {
       // The backend will auto-approve if no images are present.
       const targetCollection = "themes_submissions";
       await addDoc(collection(db, targetCollection), payload);
-      setThemePublishStatus(
-        "Theme submitted."
-      );
+      addToast("Theme submitted.", "success");
       setThemePublishForm((prev) => ({
         ...prev,
         name: '',
@@ -3511,7 +3478,7 @@ function App() {
       }));
     } catch (error) {
       console.error("Theme publish failed", error);
-      setThemePublishStatus(error?.message ?? "Theme publish failed.");
+      addToast(error?.message ?? "Theme publish failed.", "error");
     } finally {
       setIsPublishingTheme(false);
     }
@@ -3520,7 +3487,6 @@ function App() {
   const handleRemoteSettingsSave = async () => {
     if (!user) return;
     setIsSavingSettings(true);
-    setRemoteSettingsStatus("Saving settings...");
     try {
       await setDoc(doc(db, "users", user.uid), {
         remoteWebAccessEnabled: remoteSettings.remoteWebAccessEnabled,
@@ -3543,10 +3509,10 @@ function App() {
         themesEnabled: remoteSettings.themesEnabled,
         settingsUpdatedAt: serverTimestamp()
       }, { merge: true });
-      setRemoteSettingsStatus("Settings updated.");
+      addToast("Settings updated.", "success");
     } catch (error) {
       console.error("Settings update failed", error);
-      setRemoteSettingsStatus(error?.message ?? "Settings update failed.");
+      addToast(error?.message ?? "Settings update failed.", "error");
     } finally {
       setIsSavingSettings(false);
     }
@@ -3554,11 +3520,11 @@ function App() {
 
   const handleTestRelay = async () => {
     if (!user) return;
-    setRemoteSettingsStatus("Queueing test message...");
+    addToast("Queueing test message...", "info");
     try {
       const phone = profile.phoneNumber || user.phoneNumber;
       if (!phone) {
-        setRemoteSettingsStatus("Add a phone number to your profile to test relay.");
+        addToast("Add a phone number to your profile to test relay.", "error");
         return;
       }
 
@@ -3569,16 +3535,15 @@ function App() {
         source: "web_test",
         lineId: activeLineId || lines[0]?.id || null
       });
-      setRemoteSettingsStatus("Test message queued.");
+      addToast("Test message queued.", "success");
     } catch (e) {
       console.error("Test relay failed", e);
-      setRemoteSettingsStatus("Test failed: " + e.message);
+      addToast("Test failed: " + e.message, "error");
     }
   };
 
   const requestPhoneSync = async () => {
     if (!user) return;
-    setSyncRequestStatus("Requesting sync...");
     try {
       await setDoc(
         doc(db, "users", user.uid),
@@ -3590,10 +3555,10 @@ function App() {
         },
         { merge: true }
       );
-      setSyncRequestStatus("Sync requested. Open PulseLink on your phone and keep it online.");
+      addToast("Sync requested. Open PulseLink on your phone and keep it online.", "success");
     } catch (error) {
       console.error("Sync request failed", error);
-      setSyncRequestStatus(error?.message ?? "Unable to request sync.");
+      addToast(error?.message ?? "Unable to request sync.", "error");
     }
   };
 
@@ -3654,7 +3619,7 @@ function App() {
   const handleAddExtension = (e) => {
     e?.preventDefault();
     if (!extensionForm.name.trim()) {
-      setExtensionStatus('Name is required.');
+      addToast('Name is required.', "error");
       return;
     }
     const id = `${Date.now()}`;
@@ -3669,17 +3634,17 @@ function App() {
       }
     ]);
     setExtensionForm({ name: '', endpoint: '', description: '' });
-    setExtensionStatus('Saved extension to your device.');
+    addToast('Saved extension to your device.', "success");
   };
 
   const handleTestExtension = async (ext) => {
     if (!remoteSettings.thirdPartyExtensionsEnabled) {
-      setExtensionStatus('Enable third-party extensions in Settings first.');
+      addToast('Enable third-party extensions in Settings first.', "error");
       return;
     }
-    setExtensionStatus(`Testing ${ext.name}...`);
+    addToast(`Testing ${ext.name}...`, "info");
     if (!ext.endpoint) {
-      setExtensionStatus(`${ext.name} is active locally (no endpoint needed).`);
+      addToast(`${ext.name} is active locally (no endpoint needed).`, "success");
       return;
     }
     try {
@@ -3694,9 +3659,9 @@ function App() {
         })
       });
       const text = await resp.text();
-      setExtensionStatus(`Response from ${ext.name}: ${text.slice(0, 180)}`);
+      addToast(`Response from ${ext.name}: ${text.slice(0, 180)}`, "success");
     } catch (err) {
-      setExtensionStatus(`Couldn't reach ${ext.name}: ${err.message}`);
+      addToast(`Couldn't reach ${ext.name}: ${err.message}`, "error");
     }
   };
 
@@ -3706,15 +3671,14 @@ function App() {
       return;
     }
     setDeleteAction('account');
-    setDeleteStatus("Requesting account deletion...");
     try {
       const callable = httpsCallable(functions, "deleteAccount");
       await callable();
-      setDeleteStatus("Account deletion requested.");
+      addToast("Account deletion requested.", "info");
       await signOut(auth);
     } catch (error) {
       console.error("Delete account failed", error);
-      setDeleteStatus(error?.message ?? "Delete account failed.");
+      addToast(error?.message ?? "Delete account failed.", "error");
     } finally {
       setDeleteAction(null);
     }
@@ -3726,7 +3690,6 @@ function App() {
       return;
     }
     setDeleteAction('data');
-    setDeleteStatus("Deleting account data...");
     try {
       const batch = writeBatch(db);
       const trustedSnap = await getDocs(collection(db, "users", user.uid, "trustedContacts"));
@@ -3751,10 +3714,10 @@ function App() {
         await messageBatch.commit();
       }
 
-      setDeleteStatus("Cloud data cleared.");
+      addToast("Cloud data cleared.", "success");
     } catch (error) {
       console.error("Delete data failed", error);
-      setDeleteStatus(error?.message ?? "Delete data failed.");
+      addToast(error?.message ?? "Delete data failed.", "error");
     } finally {
       setDeleteAction(null);
     }
@@ -4053,7 +4016,7 @@ function App() {
         />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
-            <div className="home-panel">
+            <div className="home-panel panel-transition">
               <div className="home-hero">
                 <h2>
                   {(() => {
@@ -4147,7 +4110,7 @@ function App() {
           )}
 
           {activePanel === 'pulselink' && (
-            <div className="pulselink-panel">
+            <div className="pulselink-panel panel-transition">
               <div className="panel-header">
                 <h3>PulseLink</h3>
                 <p>Manage trusted contacts and your public profile.</p>
@@ -4238,7 +4201,6 @@ function App() {
                       </>
                     ) : 'Save profile'}
                   </button>
-                    {profileStatus && <div className={getToastClass(profileStatus)} role="status" aria-live="polite">{profileStatus}</div>}
                 </div>
                 <div className="settings-card">
                   <h4>Trusted contacts</h4>
@@ -4258,7 +4220,6 @@ function App() {
                       <div className="settings-note">No trusted contacts yet.</div>
                     )}
                   </div>
-                  {contactStatus && <div className={getToastClass(contactStatus)} role="status" aria-live="polite">{contactStatus}</div>}
                 </div>
                 <div className="settings-card">
                   <h4>{editingContactId ? 'Edit trusted contact' : 'Add trusted contact'}</h4>
@@ -4364,14 +4325,13 @@ function App() {
                       Clear
                     </button>
                   </div>
-                  {contactStatus && <div className={getToastClass(contactStatus)} role="status" aria-live="polite">{contactStatus}</div>}
                 </div>
               </div>
             </div>
           )}
 
           {activePanel === 'contacts' && (
-            <div className="contacts-panel">
+            <div className="contacts-panel panel-transition">
               <div className="panel-header">
                 <h3>Contacts</h3>
                 <p>Browse all device contacts synced from your phone.</p>
@@ -4442,7 +4402,7 @@ function App() {
           )}
 
           {activePanel === 'map' && (
-            <div className="map-panel">
+            <div className="map-panel panel-transition">
               <div className="panel-header">
                 <h3>Emergency map</h3>
                 <p>Locations parsed from PulseLink alert messages synced to this account.</p>
@@ -4506,7 +4466,7 @@ function App() {
                       <p>Set VITE_GOOGLE_MAPS_API_KEY in web/.env.local to load the map view.</p>
                     </div>
                   )}
-                  {mapStatus && <div className={getToastClass(mapStatus)} role="status" aria-live="polite">{mapStatus}</div>}
+                  {mapStatus && <div className="toast error" role="status" aria-live="polite">{mapStatus}</div>}
                 </div>
                 <div className="map-list">
                   {filteredAlerts.map((alert) => (
@@ -4534,7 +4494,7 @@ function App() {
           )}
 
           {activePanel === 'ringersong' && (
-            <div className="pulselink-panel">
+            <div className="pulselink-panel panel-transition">
               <div className="ringersong-header">
                 <div
                   className="ringersong-logo-container"
@@ -4609,14 +4569,13 @@ function App() {
                         </div>
                     )}
                     
-                    {settingsStatus && <div className={getToastClass(settingsStatus)} style={{marginTop: 12}} role="status" aria-live="polite">{settingsStatus}</div>}
                 </div>
               </div>
             </div>
           )}
 
           {activePanel === 'themes' && (
-            <div className="themes-panel">
+            <div className="themes-panel panel-transition">
               <div className="panel-header">
                 <h3>Theme Gallery</h3>
                 <p>Browse community themes or publish your own. Image-based themes require approval.</p>
@@ -4664,7 +4623,6 @@ function App() {
                       </div>
                     )}
                   </div>
-                  {themeGalleryStatus && <div className={getToastClass(themeGalleryStatus)} role="status" aria-live="polite">{themeGalleryStatus}</div>}
                 </div>
                 <div className="settings-card themes-card">
                   <h4>Publish your theme</h4>
@@ -4730,7 +4688,6 @@ function App() {
                       </>
                     ) : 'Publish theme'}
                   </button>
-                  {themePublishStatus && <div className={getToastClass(themePublishStatus)} role="status" aria-live="polite">{themePublishStatus}</div>}
                 </div>
                 <div className="settings-card themes-card">
                   <h4>Quick presets</h4>
@@ -4827,14 +4784,13 @@ function App() {
                   <button className="primary-btn" type="button" onClick={() => handleApplyPreset(themePrefs)}>
                     Save theme
                   </button>
-                  {themeStatus && <div className={getToastClass(themeStatus)} role="status" aria-live="polite">{themeStatus}</div>}
                 </div>
               </div>
             </div>
           )}
 
           {activePanel === 'extensions' && (
-            <div className="pulselink-panel">
+            <div className="pulselink-panel panel-transition">
               <div className="panel-header">
                 <h3>Features</h3>
                 <p>Enhance your PulseLink experience with powerful add-ons.</p>
@@ -4986,7 +4942,6 @@ function App() {
                   </label>
                   <button type="submit" className="primary-btn">Save extension</button>
                 </form>
-                {extensionStatus && <div className={getToastClass(extensionStatus)} role="status">{extensionStatus}</div>}
               </div>
               <div className="settings-card">
                 <h4>Submit to gallery</h4>
@@ -5000,7 +4955,7 @@ function App() {
           )}
 
           {activePanel === 'settings' && (
-            <div className="settings-panel">
+            <div className="settings-panel panel-transition">
               <div className="settings-header">
                 <h3>Settings</h3>
                 <p>Manage account details and shared preferences.</p>
@@ -5065,7 +5020,6 @@ function App() {
                           <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
                             Send password reset email
                           </button>
-                          {settingsStatus && <div className={getToastClass(settingsStatus)} role="status" aria-live="polite">{settingsStatus}</div>}
                         </div>
                       )}
 
@@ -5186,8 +5140,6 @@ function App() {
                               Test relay
                             </button>
                           </div>
-                          {remoteSettingsStatus && <div className={getToastClass(remoteSettingsStatus)} role="status" aria-live="polite">{remoteSettingsStatus}</div>}
-                          {syncRequestStatus && <div className={getToastClass(syncRequestStatus)} role="status" aria-live="polite">{syncRequestStatus}</div>}
                         </div>
                       )}
 
@@ -5215,7 +5167,6 @@ function App() {
                               {deleteAction === 'account' ? "Deleting..." : "Delete account"}
                             </button>
                           </div>
-                          {deleteStatus && <div className={getToastClass(deleteStatus)} role="status" aria-live="polite">{deleteStatus}</div>}
                         </div>
                       )}
                     </>
@@ -5227,7 +5178,7 @@ function App() {
 
           {activePanel === 'beacon' && (
             hasBeaconData ? (
-              <div className="beacon-layout">
+              <div className="beacon-layout panel-transition">
       {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
         <div className="line-tabs line-tabs--main">
           <div className="line-tabs-header">
@@ -5275,6 +5226,7 @@ function App() {
                       activeLineId={activeLineId}
                       lines={lines}
                       isLoggingIn={isLoggingIn}
+                      onToast={addToast}
                     />
                   </>
                 ) : (
@@ -5289,6 +5241,7 @@ function App() {
                         activeLineId={activeLineId}
                         lines={lines}
                         isLoggingIn={isLoggingIn}
+                        onToast={addToast}
                     />
                   </div>
                 )}

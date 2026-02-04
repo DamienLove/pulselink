@@ -1147,22 +1147,26 @@ textarea:focus-visible,
   line-height: 1.5;
   position: relative;
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  backdrop-filter: blur(10px);
 }
 
 .message.sent .message-bubble {
+  background: linear-gradient(135deg, rgba(0, 243, 255, 0.8), rgba(224, 0, 255, 0.8));
   background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   color: #000;
   border-bottom-right-radius: 4px;
-  font-weight: 500;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 6px 16px rgba(0,0,0,0.5);
-  text-shadow: 0 1px 1px rgba(255,255,255,0.2);
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 6px 20px rgba(0,0,0,0.6), 0 0 15px var(--accent-glow);
+  text-shadow: 0 1px 1px rgba(255,255,255,0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .message.received .message-bubble {
-  background: var(--surface-alt);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--ink);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-bottom-left-radius: 4px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 12px rgba(0,0,0,0.2);
 }
 
 .message-time {
@@ -1912,18 +1916,23 @@ textarea:focus-visible,
 
 /* Enhanced Scrollbar for Chrome/Edge/Safari */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  transition: background 0.3s;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 /* Shortcut Hint Badge */
 .shortcut-hint {
@@ -2061,4 +2070,129 @@ textarea:focus-visible,
 @keyframes slideDownFade {
   from { opacity: 0; transform: translateY(-20px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Toast Notifications                                                       */
+/* -------------------------------------------------------------------------- */
+
+.toast-container {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.toast-notification {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border-radius: 16px;
+  background: rgba(13, 17, 26, 0.9);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+  min-width: 300px;
+  max-width: 400px;
+  color: var(--ink);
+  font-size: 0.95em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: bottom right;
+}
+
+.toast-notification.enter {
+  animation: toastSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.toast-notification.exit {
+  animation: toastSlideOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.toast-notification:hover {
+  transform: scale(1.02) translateY(-2px);
+  box-shadow: 0 15px 40px rgba(0,0,0,0.6), 0 0 20px rgba(0,0,0,0.2);
+}
+
+.toast-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* Success */
+.toast-notification.success {
+  border-color: rgba(34, 197, 94, 0.3);
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.1), rgba(13, 17, 26, 0.95));
+}
+.toast-notification.success .toast-icon {
+  background: #22c55e;
+  color: #000;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+}
+
+/* Error */
+.toast-notification.error {
+  border-color: rgba(244, 63, 94, 0.3);
+  background: linear-gradient(90deg, rgba(244, 63, 94, 0.1), rgba(13, 17, 26, 0.95));
+}
+.toast-notification.error .toast-icon {
+  background: #f43f5e;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.5);
+}
+
+/* Info */
+.toast-notification.info {
+  border-color: var(--accent-dim);
+  background: linear-gradient(90deg, rgba(0, 243, 255, 0.1), rgba(13, 17, 26, 0.95));
+}
+.toast-notification.info .toast-icon {
+  background: var(--accent);
+  color: #000;
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateX(20px) scale(0.9); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes toastSlideOut {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to { opacity: 0; transform: translateX(20px) scale(0.9); }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Panel Transitions                                                         */
+/* -------------------------------------------------------------------------- */
+
+.panel-transition {
+  animation: panelFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes panelFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px) scale(0.98);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
 }
