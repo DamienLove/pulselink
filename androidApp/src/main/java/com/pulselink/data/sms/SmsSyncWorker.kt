@@ -70,7 +70,6 @@ class SmsSyncWorker @AssistedInject constructor(
 
             userRef.set(
                 mapOf(
-                    "subscriptionStatus" to subscriptionTier,
                     "remoteWebAccessEnabled" to settings.remoteWebAccessEnabled
                 ),
                 SetOptions.merge()
