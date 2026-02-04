@@ -788,6 +788,14 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
     }
   };
 
+  const getStatusClass = (msg) => {
+    if (!msg) return '';
+    const lower = msg.toLowerCase();
+    if (lower.includes('fail') || lower.includes('error') || lower.includes('add a')) return 'error';
+    if (lower.includes('sent')) return 'success';
+    return '';
+  };
+
   return (
     <div className="composer">
       <div className="composer-row">
@@ -872,7 +880,7 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
           ) : "Send"}
         </button>
       </div>
-      {status && <div className="compose-status" role="status" aria-live="polite">{status}</div>}
+      {status && <div className={`compose-status ${getStatusClass(status)}`} role="status" aria-live="polite">{status}</div>}
       <div className="compose-hint">
         Messages are sent from your phone when it&apos;s online and signed in.
       </div>

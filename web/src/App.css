@@ -2062,3 +2062,15 @@ textarea:focus-visible,
   from { opacity: 0; transform: translateY(-20px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+.compose-status.success {
+  background: rgba(0, 255, 157, 0.1);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.compose-status.error {
+  background: rgba(255, 46, 77, 0.1);
+  border-color: var(--danger);
+  color: var(--danger);
+}

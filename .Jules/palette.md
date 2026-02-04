@@ -22,3 +22,7 @@
 ## 2024-05-28 - Image Load Error Fallbacks
 **Learning:** User-provided URLs for avatars often break (404s), resulting in ugly browser-default broken image icons that degrade perceived app quality. Relying solely on "if URL exists" logic is insufficient.
 **Action:** Implemented a `useState` + `onError` handler pattern in the `Avatar` component to detect load failures and automatically revert to the deterministic initial fallback, maintaining UI elegance even with bad data.
+
+## 2024-05-29 - Semantic Feedback Colors
+**Learning:** Relying solely on text to communicate status (e.g., "Sent" vs "Failed") forces users to read carefully. Adding semantic color coding (Green/Red) reduces cognitive load by allowing instant status recognition.
+**Action:** Implemented dynamic CSS classes (`.success`, `.error`) for status messages, utilizing existing design system variables (`--success`, `--danger`) to provide immediate, accessible visual feedback alongside the text.
