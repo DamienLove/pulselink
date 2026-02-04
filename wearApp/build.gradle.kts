@@ -83,3 +83,7 @@ tasks.register("syncGoogleServices", Copy::class) {
 tasks.matching { it.name == "preBuild" }.configureEach {
     dependsOn("syncGoogleServices")
 }
+
+tasks.withType(com.google.gms.googleservices.GoogleServicesTask::class.java).configureEach {
+    dependsOn("syncGoogleServices")
+}

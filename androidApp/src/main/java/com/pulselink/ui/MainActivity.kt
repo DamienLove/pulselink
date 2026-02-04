@@ -958,7 +958,7 @@ class MainActivity : AppCompatActivity() {
                             onAlertsClick = { navController.navigate("alerts_history") { launchSingleTop = true } },
                             showAddLoginPrompt = isSmsOnlyUser,
                             onAddLoginClick = {
-                                navController.navigate("login") {
+                                navController.navigate("login?isUpgrade=true") {
                                     launchSingleTop = true
                                 }
                             },
@@ -1013,7 +1013,11 @@ class MainActivity : AppCompatActivity() {
                             }
                         )
                     }
-                    composable("login") {
+                    composable(
+                        route = "login?isUpgrade={isUpgrade}",
+                        arguments = listOf(navArgument("isUpgrade") { type = NavType.BoolType; defaultValue = false })
+                    ) { entry ->
+                        val isUpgrade = entry.arguments?.getBoolean("isUpgrade") ?: false
                         val loginViewModel: LoginViewModel = hiltViewModel()
                         val loginUiState by loginViewModel.uiState.collectAsStateWithLifecycle()
                         val context = LocalContext.current
@@ -1081,7 +1085,11 @@ class MainActivity : AppCompatActivity() {
                         LaunchedEffect(authState, state.onboardingComplete) {
                             val authenticated = authState as? AuthState.Authenticated
                             if (authenticated != null) {
-                                if (!authenticated.user.isAnonymous || !initialAnonymous) {
+                                // If upgrading (isUpgrade=true), we stay on Login screen even if anonymous, until we are no longer anonymous.
+                                // If fresh launch (isUpgrade=false), we only stay if we started anonymous and are still anonymous (rare edge case),
+                                // otherwise anonymous login should redirect to home (handled by !shouldStay).
+                                val shouldStay = isUpgrade || initialAnonymous
+                                if (!authenticated.user.isAnonymous || !shouldStay) {
                                     val destination = if (state.onboardingComplete) "home" else "onboarding_intro"
                                     navController.navigate(destination) {
                                         popUpTo(0) { inclusive = true }
@@ -1346,7 +1354,7 @@ class MainActivity : AppCompatActivity() {
                             onAlertsClick = { navController.navigate("alerts_history") { launchSingleTop = true } },
                             showAddLoginPrompt = isSmsOnlyUser,
                             onAddLoginClick = {
-                                navController.navigate("login") {
+                                navController.navigate("login?isUpgrade=true") {
                                     launchSingleTop = true
                                 }
                             },
@@ -2299,6 +2307,11 @@ class MainActivity : AppCompatActivity() {
                                     deviceInfo = viewModel.getDeviceInfo(context)
                                 )
                             )
+                        }
+                        LaunchedEffect(Unit) {
+                            if (bugData.deviceInfo.isBlank()) {
+                                bugData = bugData.copy(deviceInfo = viewModel.getDeviceInfo(context))
+                            }
                         }
                         BugReportScreen(
                             data = bugData,
