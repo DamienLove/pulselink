@@ -34,3 +34,5 @@ export {
 } from "./billing";
 export {getSpotifyAccessToken} from "./spotify";
 export {submitExtension, onExtensionSubmitted} from "./extensions";
+export {processScheduledMessages} from "./scheduledMessages";
+export {getLinkPreview} from "./linkPreview";

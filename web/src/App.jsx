@@ -26,6 +26,8 @@ import {
   writeBatch
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
+import SmartReplies from './SmartReplies';
+import LinkPreview from './LinkPreview';
 import './App.css';
 import logo from './assets/pulselink-pro-logo.png';
 import beaconLogo from './assets/beacon-logo.png';
@@ -86,6 +88,7 @@ const CloseIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="no
 const PinIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>;
 const ArchiveIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>;
 const InboxIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>;
+const ClockIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
 
 const RequiredIndicator = () => (
   <span
@@ -253,21 +256,33 @@ const areMessagesEqual = (prev, next) => {
 
 // Bolt: Optimized MessageItem with memo to prevent re-rendering all messages when typing
 // or when new messages arrive (which creates new object references).
-const MessageItem = memo(({ msg, showPreviews }) => (
-  <div className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
-    <div className="message-bubble">
-      {msg.imageUrl && (
-        <div className="message-image-container">
-          <img src={msg.imageUrl} alt="Attachment" className="message-image" loading="lazy" />
-        </div>
-      )}
-      {showPreviews ? msg.body : '••••••'}
+const urlRegex = /(https?:\/\/[^\s]+)/;
+
+const MessageItem = memo(({ msg, showPreviews }) => {
+  const urlMatch = msg.body && msg.body.match(urlRegex);
+  const firstUrl = urlMatch ? urlMatch[0] : null;
+
+  return (
+    <div className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
+      <div className="message-bubble">
+        {msg.imageUrl && (
+          <div className="message-image-container">
+            <img src={msg.imageUrl} alt="Attachment" className="message-image" loading="lazy" />
+          </div>
+        )}
+        <div style={{ whiteSpace: 'pre-wrap' }}>{showPreviews ? msg.body : '••••••'}</div>
+        {showPreviews && firstUrl && (
+          <div style={{ marginTop: 8 }}>
+            <LinkPreview url={firstUrl} />
+          </div>
+        )}
+      </div>
+      <div className="message-time">
+        {timeFormatter.format(new Date(msg.date))}
+      </div>
     </div>
-    <div className="message-time">
-      {timeFormatter.format(new Date(msg.date))}
-    </div>
-  </div>
-), areMessagesEqual);
+  );
+}, areMessagesEqual);
 
 MessageItem.displayName = 'MessageItem';
 
@@ -713,12 +728,14 @@ const SpotifyResultItem = memo(({ track, onAdd, isAdding }) => (
 SpotifyResultItem.displayName = 'SpotifyResultItem';
 
 // Bolt: MessageComposer extracted to prevent App re-renders on typing
-const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn }) => {
+const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn, messages, smartRepliesEnabled }) => {
   const [address, setAddress] = useState('');
   const [body, setBody] = useState('');
   const [lineId, setLineId] = useState('');
   const [status, setStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [showScheduler, setShowScheduler] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState('');
   const textareaRef = useRef(null);
 
   useLayoutEffect(() => {
@@ -739,7 +756,17 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
     }
     setBody('');
     setStatus('');
+    setShowScheduler(false);
+    setScheduledAt('');
   }, [selectedThread]);
+
+  const handleSmartReply = useCallback((text) => {
+    setBody(text);
+    // Optional: Auto-focus
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, []);
 
   const handleSendMessage = async () => {
     if (!user) return;
@@ -754,32 +781,55 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
     setIsSending(true);
     setStatus('');
     try {
-      const docRef = await addDoc(collection(db, "users", user.uid, "outbox"), {
-        address: cleanAddress,
-        body: cleanBody,
-        createdAt: serverTimestamp(),
-        source: "web",
-        lineId: effectiveLineId,
-        status: "pending"
-      });
-      setBody('');
-      setStatus("Queued for sending...");
-
-      // Monitor status
-      let unsubscribe;
-      unsubscribe = onSnapshot(docRef, (docSnap) => {
-        if (!docSnap.exists()) {
-          setStatus("Sent");
-          setTimeout(() => setStatus(''), 3000);
-          if (unsubscribe) unsubscribe();
-        } else {
-          const data = docSnap.data();
-          if (data.status === 'failed') {
-            setStatus(`Send failed: ${data.error || 'Unknown error'}`);
-            if (unsubscribe) unsubscribe();
-          }
+      if (scheduledAt) {
+        const scheduledDate = new Date(scheduledAt);
+        if (scheduledDate <= new Date()) {
+          setStatus("Scheduled time must be in the future.");
+          setIsSending(false);
+          return;
         }
-      });
+        await addDoc(collection(db, "users", user.uid, "scheduled_outbox"), {
+          address: cleanAddress,
+          body: cleanBody,
+          createdAt: serverTimestamp(),
+          scheduledAt: scheduledDate,
+          source: "web",
+          lineId: effectiveLineId,
+          status: "scheduled"
+        });
+        setBody('');
+        setScheduledAt('');
+        setShowScheduler(false);
+        setStatus("Message scheduled.");
+        setTimeout(() => setStatus(''), 3000);
+      } else {
+        const docRef = await addDoc(collection(db, "users", user.uid, "outbox"), {
+          address: cleanAddress,
+          body: cleanBody,
+          createdAt: serverTimestamp(),
+          source: "web",
+          lineId: effectiveLineId,
+          status: "pending"
+        });
+        setBody('');
+        setStatus("Queued for sending...");
+
+        // Monitor status
+        let unsubscribe;
+        unsubscribe = onSnapshot(docRef, (docSnap) => {
+          if (!docSnap.exists()) {
+            setStatus("Sent");
+            setTimeout(() => setStatus(''), 3000);
+            if (unsubscribe) unsubscribe();
+          } else {
+            const data = docSnap.data();
+            if (data.status === 'failed') {
+              setStatus(`Send failed: ${data.error || 'Unknown error'}`);
+              if (unsubscribe) unsubscribe();
+            }
+          }
+        });
+      }
     } catch (error) {
       console.error("Send failed", error);
       setStatus("Send failed. Try again.");
@@ -821,6 +871,34 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
           </select>
         </div>
       )}
+      {smartRepliesEnabled && messages && (
+        <SmartReplies messages={messages} onSelect={handleSmartReply} />
+      )}
+      {showScheduler && (
+        <div className="composer-row fade-in">
+          <label className="composer-label">Schedule for</label>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1 }}>
+            <input
+              type="datetime-local"
+              className="composer-input"
+              value={scheduledAt}
+              onChange={(e) => setScheduledAt(e.target.value)}
+              min={new Date().toISOString().slice(0, 16)}
+              style={{ flex: 1 }}
+            />
+            <button
+              className="ghost-btn icon-only"
+              onClick={() => {
+                setScheduledAt('');
+                setShowScheduler(false);
+              }}
+              title="Cancel schedule"
+            >
+              <CloseIcon />
+            </button>
+          </div>
+        </div>
+      )}
       <div className="composer-row composer-actions">
         <div style={{ flex: 1, position: 'relative' }}>
           <textarea
@@ -858,6 +936,15 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
           )}
         </div>
         <button
+          className={`ghost-btn icon-only ${showScheduler ? 'active' : ''}`}
+          onClick={() => setShowScheduler(!showScheduler)}
+          title="Schedule message"
+          aria-label="Schedule message"
+          style={{ marginRight: '8px' }}
+        >
+          <ClockIcon />
+        </button>
+        <button
           onClick={handleSendMessage}
           disabled={isSending || isLoggingIn}
           className="primary-btn"
@@ -867,12 +954,12 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
           {isSending ? (
             <>
               <Spinner />
-              Sending...
+              {scheduledAt ? 'Scheduling...' : 'Sending...'}
             </>
-          ) : "Send"}
+          ) : (scheduledAt ? 'Schedule' : 'Send')}
         </button>
       </div>
-      {status && <div className="compose-status" role="status" aria-live="polite">{status}</div>}
+      {status && <div className={getToastClass(status)} role="status" aria-live="polite">{status}</div>}
       <div className="compose-hint">
         Messages are sent from your phone when it&apos;s online and signed in.
       </div>
@@ -5275,6 +5362,8 @@ function App() {
                       activeLineId={activeLineId}
                       lines={lines}
                       isLoggingIn={isLoggingIn}
+                      messages={messages}
+                      smartRepliesEnabled={remoteSettings.smartRepliesEnabled}
                     />
                   </>
                 ) : (
@@ -5289,6 +5378,8 @@ function App() {
                         activeLineId={activeLineId}
                         lines={lines}
                         isLoggingIn={isLoggingIn}
+                        messages={messages}
+                        smartRepliesEnabled={remoteSettings.smartRepliesEnabled}
                     />
                   </div>
                 )}
