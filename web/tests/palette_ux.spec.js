@@ -60,4 +60,23 @@ test.describe('Palette UX Enhancements', () => {
     await expect(hint).toHaveText('/');
     await expect(hint).toHaveAttribute('aria-hidden', 'true');
   });
+
+  test('Theme editor should have hex code inputs', async ({ page }) => {
+    await page.locator('.nav-item[title="Themes"]').click();
+
+    // Verify Primary color input group
+    const primaryColorLabel = page.locator('label.login-field', { hasText: 'Primary color' });
+    const colorInput = primaryColorLabel.locator('input[type="color"]');
+    const textInput = primaryColorLabel.locator('input[type="text"]');
+
+    await expect(colorInput).toBeVisible();
+    await expect(textInput).toBeVisible();
+    await expect(textInput).toHaveAttribute('placeholder', '#000000');
+
+    // Check synchronization (assuming default theme is active initially or mocked)
+    const value = await textInput.inputValue();
+    expect(value).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    const colorValue = await colorInput.inputValue();
+    expect(colorValue.toLowerCase()).toBe(value.toLowerCase());
+  });
 });
