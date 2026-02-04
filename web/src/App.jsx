@@ -2136,6 +2136,32 @@ const getToastClass = (msg) => {
   return 'toast';
 };
 
+// Bolt: Optimized ColorInput to allow hex editing
+const ColorInput = memo(({ label, value, onChange }) => (
+  <label className="login-field">
+    {label}
+    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+      <input
+        type="color"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="login-input"
+        style={{ padding: '4px', width: '60px', height: '50px', cursor: 'pointer', minWidth: '60px' }}
+      />
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="login-input"
+        style={{ flex: 1, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+        maxLength={9}
+        placeholder="#RRGGBB"
+      />
+    </div>
+  </label>
+));
+ColorInput.displayName = 'ColorInput';
+
 function App() {
   const webHintStorageKey = 'pulselink.hideWebHint';
   const [user, setUser] = useState(null);
@@ -4744,51 +4770,31 @@ function App() {
                     ))}
                   </div>
                   <div className="theme-editor">
-                    <label className="login-field">
-                      Primary color
-                      <input
-                        className="login-input"
-                        type="color"
-                        value={themePrefs.primaryColor}
-                        onChange={(e) => setThemePrefs((prev) => ({ ...prev, primaryColor: e.target.value }))}
-                      />
-                    </label>
-                    <label className="login-field">
-                      Background
-                      <input
-                        className="login-input"
-                        type="color"
-                        value={themePrefs.backgroundColor}
-                        onChange={(e) => setThemePrefs((prev) => ({ ...prev, backgroundColor: e.target.value }))}
-                      />
-                    </label>
-                    <label className="login-field">
-                      Top bar
-                      <input
-                        className="login-input"
-                        type="color"
-                        value={themePrefs.topBarColor}
-                        onChange={(e) => setThemePrefs((prev) => ({ ...prev, topBarColor: e.target.value }))}
-                      />
-                    </label>
-                    <label className="login-field">
-                      Bubble outgoing
-                      <input
-                        className="login-input"
-                        type="color"
-                        value={themePrefs.bubbleOutgoing}
-                        onChange={(e) => setThemePrefs((prev) => ({ ...prev, bubbleOutgoing: e.target.value }))}
-                      />
-                    </label>
-                    <label className="login-field">
-                      Bubble incoming
-                      <input
-                        className="login-input"
-                        type="color"
-                        value={themePrefs.bubbleIncoming}
-                        onChange={(e) => setThemePrefs((prev) => ({ ...prev, bubbleIncoming: e.target.value }))}
-                      />
-                    </label>
+                    <ColorInput
+                      label="Primary color"
+                      value={themePrefs.primaryColor}
+                      onChange={(val) => setThemePrefs((prev) => ({ ...prev, primaryColor: val }))}
+                    />
+                    <ColorInput
+                      label="Background"
+                      value={themePrefs.backgroundColor}
+                      onChange={(val) => setThemePrefs((prev) => ({ ...prev, backgroundColor: val }))}
+                    />
+                    <ColorInput
+                      label="Top bar"
+                      value={themePrefs.topBarColor}
+                      onChange={(val) => setThemePrefs((prev) => ({ ...prev, topBarColor: val }))}
+                    />
+                    <ColorInput
+                      label="Bubble outgoing"
+                      value={themePrefs.bubbleOutgoing}
+                      onChange={(val) => setThemePrefs((prev) => ({ ...prev, bubbleOutgoing: val }))}
+                    />
+                    <ColorInput
+                      label="Bubble incoming"
+                      value={themePrefs.bubbleIncoming}
+                      onChange={(val) => setThemePrefs((prev) => ({ ...prev, bubbleIncoming: val }))}
+                    />
                     <label className="login-field theme-wide">
                       Background image URL
                       <input

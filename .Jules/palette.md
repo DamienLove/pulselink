@@ -22,3 +22,7 @@
 ## 2024-05-28 - Image Load Error Fallbacks
 **Learning:** User-provided URLs for avatars often break (404s), resulting in ugly browser-default broken image icons that degrade perceived app quality. Relying solely on "if URL exists" logic is insufficient.
 **Action:** Implemented a `useState` + `onError` handler pattern in the `Avatar` component to detect load failures and automatically revert to the deterministic initial fallback, maintaining UI elegance even with bad data.
+
+## 2024-05-29 - Hex Code Editing for Color Inputs
+**Learning:** Native HTML color pickers are mouse-dependent and often hide hex codes, frustrating designers who want to copy-paste specific brand colors.
+**Action:** Implemented a `ColorInput` component that syncs a visual picker with a text input, allowing both visual selection and precise hex entry.
