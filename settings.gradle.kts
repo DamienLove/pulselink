@@ -36,9 +36,8 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "PulseLink"
+rootProject.name = "SoText"
 include(":androidApp")
 include(":wearApp")
 include(":shared")
 include(":ringersong")
-include(":beaconApp")

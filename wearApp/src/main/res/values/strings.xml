@@ -1,7 +1,8 @@
 <resources>
-    <string name="app_name">PulseLink Wear</string>
+    <string name="app_name">SoText Wear</string>
     <string name="action_emergency">Emergency</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_check_in">Check-in</string>
     <string name="label_contact_online">Online contacts</string>
 </resources>
+

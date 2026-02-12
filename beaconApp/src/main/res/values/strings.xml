@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Beacon</string>
+    <string name="app_name">SoText</string>
     <string name="ad_unit_banner">ca-app-pub-5327057757821609/8371301189</string>
     <string name="ad_unit_interstitial">ca-app-pub-5327057757821609/6922488144</string>
     <string name="ad_unit_native">ca-app-pub-5327057757821609/7042919400</string>
@@ -36,3 +36,4 @@
     <string name="smart_reply_call_later">Call me later</string>
     <string name="smart_reply_on_way">On my way!</string>
 </resources>
+

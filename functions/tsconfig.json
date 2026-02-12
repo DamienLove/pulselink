@@ -1,9 +1,14 @@
 {
   "extends": "./tsconfig.dev.json",
   "compilerOptions": {
-    "outDir": "lib"
+    "outDir": "lib",
+    "types": ["node"]
   },
   "include": [
-    "src"
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts"
   ]
 }

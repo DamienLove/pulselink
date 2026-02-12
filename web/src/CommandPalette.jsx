@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef, useMemo, memo, useCallback } from 'react';
 import './App.css';
-import { LocationIcon } from './App'; // Assuming LocationIcon is exported from App.jsx or similarly accessible
 
 const ACTIONS = [
   { id: 'nav-home', label: 'Go to Home', icon: '🏠', action: (setActivePanel) => setActivePanel('home') },
-  { id: 'nav-beacon', label: 'Open SoText Inbox', icon: '📨', action: (setActivePanel) => setActivePanel('beacon') },
+  { id: 'nav-inbox', label: 'Open SoText Inbox', icon: '📨', action: (setActivePanel) => setActivePanel('inbox') },
   { id: 'nav-pulselink', label: 'Manage Profile', icon: '👤', action: (setActivePanel) => setActivePanel('pulselink') },
   { id: 'nav-contacts', label: 'View Contacts', icon: '👥', action: (setActivePanel) => setActivePanel('contacts') },
   { id: 'nav-map', label: 'Emergency Map', icon: '🗺️', action: (setActivePanel) => setActivePanel('map') },
@@ -14,6 +13,13 @@ const ACTIONS = [
   { id: 'act-logout', label: 'Log Out', icon: '🚪', action: (setActivePanel, actions) => actions.logout() },
   { id: 'act-new-msg', label: 'New Message', icon: '✏️', action: (setActivePanel, actions) => actions.newThread() },
 ];
+
+const LocationIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 21.7c-3.1-2.8-8-7.7-8-12.7C4 5.2 7.6 2 12 2s8 3.2 8 6.9c0 5-4.9 9.9-8 12.7z"/>
+    <circle cx="12" cy="8" r="3"/>
+  </svg>
+);
 
 const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
   const { isPremium, deviceContacts, trustedContacts, sendMessage, setStatus, activeLineId, lines, lineInboxMode } = actions;
@@ -104,7 +110,7 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
         if (success) {
           setStatus("Message sent!");
           setPendingCommand(null); // Clear any pending command
-          setActivePanel('beacon'); // Navigate to beacon to see message
+          setActivePanel('inbox'); // Navigate to inbox to see message
         } else {
           setStatus("Failed to send message.");
           setPendingCommand(null); // Clear pending as send failed
@@ -313,3 +319,4 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
 CommandPalette.displayName = 'CommandPalette';
 
 export default CommandPalette;
+

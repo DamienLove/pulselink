@@ -33,8 +33,9 @@ import {
 } from "firebase/storage";
 import { httpsCallable } from "firebase/functions";
 import './App.css';
-import logo from './assets/sotext-logo.png'; // Placeholder, to be replaced by actual SoText logo
-// import beaconLogo from './assets/beacon-logo.png'; // No longer a separate app
+import fallbackLogo from './assets/sotext-logo.png';
+import pulselinkLogo from './assets/pulselink-pro-logo.png';
+// Legacy app-specific logos are intentionally unused after the SoText.app rebrand.
 // import ringersongLogo from './assets/ringersong-logo.png'; // No longer a separate app
 import auroraBg from './assets/themes/aurora.svg';
 import midnightBg from './assets/themes/midnight_oled.svg';
@@ -55,6 +56,15 @@ import premiumAvatar from './assets/avatars/premium_crown.svg';
 import proAvatar from './assets/avatars/pro_spark.svg';
 import betaAvatar from './assets/avatars/beta_flask.svg';
 import loyalAvatar from './assets/avatars/loyal_star.svg';
+
+const randomizedLogoModules = import.meta.glob('../../sotextbranding/*.{png,jpg,jpeg,webp,svg}', {
+  eager: true,
+  import: 'default'
+});
+
+const randomizedLogos = Object.values(randomizedLogoModules).filter(Boolean);
+const logoPool = randomizedLogos.length > 0 ? randomizedLogos : [fallbackLogo];
+const logo = logoPool[Math.floor(Math.random() * logoPool.length)];
 
 // Bolt: Shared Intl formatters to avoid expensive instantiation in render loops
 const timeFormatter = new Intl.DateTimeFormat(undefined, {
@@ -276,7 +286,7 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onAr
 ThreadItem.displayName = 'ThreadItem';
 
 const ThreadSkeleton = () => (
-  <div className={`skeleton-thread ${activePanel === 'beacon' ? 'sidebar-only' : ''}`}>
+  <div className="skeleton-thread sidebar-only">
     <div className="skeleton-line" style={{ width: '40%' }}></div>
     <div className="skeleton-line short"></div>
   </div>
@@ -587,6 +597,9 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
   const [isImporting, setIsImporting] = useState(false);
   const previewTheme = normalizeTheme(themeDoc.theme || {});
   const previewStyle = buildThemePreviewStyle(previewTheme);
+  const uiStyleLabel = previewTheme.uiStyle || "Neon Glass";
+  const iconStyleLabel = previewTheme.iconStyle || "Outline";
+  const previewClassName = `theme-preview theme-showcase ui-${styleToken(uiStyleLabel)} icons-${styleToken(iconStyleLabel)}`;
   const authorLabel = themeDoc.anonymous
     ? 'Anonymous'
     : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
@@ -603,35 +616,70 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
   }, [onImport, themeDoc]);
 
   return (
-    <div className="theme-card">
-      <div className="theme-preview" style={previewStyle}>
-        <div className="theme-preview-chat">
+    <div className="theme-card theme-showcase-card">
+      <div className={previewClassName} style={previewStyle}>
+        <div className="showcase-shell">
           <div
-            className="theme-bubble incoming"
-            style={{
-              background: previewTheme.bubbleIncoming,
-              color: previewTheme.onBubbleIncoming
-            }}
+            className="showcase-topbar"
+            style={{ background: previewTheme.topBarColor, color: previewTheme.onTopBarColor }}
           >
-            Hey, you good?
+            <div className="showcase-controls">
+              <span />
+              <span />
+              <span />
+            </div>
+            <strong>SoText</strong>
+            <span className="showcase-label">Preview</span>
           </div>
-          <div
-            className="theme-bubble outgoing"
-            style={{
-              background: previewTheme.bubbleOutgoing,
-              color: previewTheme.onBubbleOutgoing
-            }}
-          >
-            Yep, on my way!
+          <div className="showcase-body">
+            <div className="showcase-sidebar">
+              <span className="showcase-icon"><HomeIcon /></span>
+              <span className="showcase-icon"><ContactIcon /></span>
+              <span className="showcase-icon"><MapIcon /></span>
+              <span className="showcase-icon"><ThemeIcon /></span>
+            </div>
+            <div className="showcase-main">
+              <div className="showcase-cards">
+                <div className="showcase-mini-card">Inbox</div>
+                <div className="showcase-mini-card">Contacts</div>
+                <div className="showcase-mini-card">Themes</div>
+              </div>
+              <div className="theme-preview-chat">
+                <div
+                  className="theme-bubble incoming"
+                  style={{
+                    background: previewTheme.bubbleIncoming,
+                    color: previewTheme.onBubbleIncoming
+                  }}
+                >
+                  Theme feels fresh.
+                </div>
+                <div
+                  className="theme-bubble outgoing"
+                  style={{
+                    background: previewTheme.bubbleOutgoing,
+                    color: previewTheme.onBubbleOutgoing
+                  }}
+                >
+                  Let&apos;s use this one.
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      <div className="theme-meta">
-        <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
-        <div className="theme-author">{authorLabel}</div>
+      <div className="theme-meta theme-meta-stack">
+        <div>
+          <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
+          <div className="theme-author">{authorLabel}</div>
+        </div>
+        <div className="theme-badges">
+          <span className="theme-pill">{uiStyleLabel}</span>
+          <span className="theme-pill">{iconStyleLabel} icons</span>
+        </div>
       </div>
       <button
-        className="primary-btn"
+        className="primary-btn theme-import-btn"
         type="button"
         onClick={handleImport}
         disabled={isImporting}
@@ -643,7 +691,7 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
             <Spinner />
             Importing...
           </>
-        ) : 'Import'}
+        ) : 'Use this look'}
       </button>
     </div>
   );
@@ -945,6 +993,50 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
 
 MessageComposer.displayName = 'MessageComposer';
 
+const uiStyleOptions = [
+  { value: "Neon Glass", description: "Cinematic glow + glass layers" },
+  { value: "Soft Layers", description: "Friendly rounded cards + depth" },
+  { value: "Retro Terminal", description: "Sharp edges + arcade energy" },
+  { value: "Playful Pop", description: "Bold cards + vibrant accents" },
+  { value: "Clean Minimal", description: "Quiet surfaces + crisp spacing" }
+];
+
+const iconStyleOptions = [
+  { value: "Outline", description: "Crisp line icons" },
+  { value: "Duotone", description: "Accent + secondary color icon treatment" },
+  { value: "Rounded", description: "Friendly rounded icon containers" },
+  { value: "Sharp", description: "Angular icon containers" }
+];
+
+const uiStyleSet = new Set(uiStyleOptions.map((item) => item.value));
+const iconStyleSet = new Set(iconStyleOptions.map((item) => item.value));
+
+const styleToken = (value = '') =>
+  String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+const resolveUiStyle = (input = {}) => {
+  const requested = input.uiStyle;
+  if (uiStyleSet.has(requested)) return requested;
+  if (input.fontStyle === 'Monospace' && Number(input.bubbleCornerRadius ?? 0) <= 8) return "Retro Terminal";
+  if (input.useHolographicGlow) return "Neon Glass";
+  if (input.useGlassEffect) return "Soft Layers";
+  const bg = (input.backgroundColor || '').toString().toUpperCase();
+  if (bg.startsWith('#F') || bg.startsWith('#E')) return "Playful Pop";
+  return "Clean Minimal";
+};
+
+const resolveIconStyle = (input = {}) => {
+  const requested = input.iconStyle;
+  if (iconStyleSet.has(requested)) return requested;
+  if (Number(input.iconSizeFactor ?? 1) >= 1.1) return "Rounded";
+  if (Number(input.bubbleCornerRadius ?? 0) <= 8) return "Sharp";
+  if ((input.secondaryColor || '').toLowerCase() !== (input.primaryColor || '').toLowerCase()) return "Duotone";
+  return "Outline";
+};
+
 const defaultTheme = {
   primaryColor: "#00F3FF",
   secondaryColor: "#E000FF",
@@ -973,7 +1065,9 @@ const defaultTheme = {
   iconOverrides: {},
   useGlassEffect: true,
   useHolographicGlow: true,
-  uiDensity: 'Comfortable'
+  uiDensity: 'Comfortable',
+  uiStyle: "Neon Glass",
+  iconStyle: "Duotone"
 };
 
 const themePresets = [
@@ -1491,7 +1585,7 @@ const specialThemePresets = [
       primaryColor: "#2aa198",
       secondaryColor: "#268bd2",
       dividerColor: "#586e75",
-      inboxIconVariant: "beacon",
+      inboxIconVariant: "sotext",
       backgroundImageUrl: blueprintBg
     }
   },
@@ -1558,7 +1652,7 @@ const specialThemePresets = [
       primaryColor: "#8A2BE2",
       secondaryColor: "#9370DB",
       dividerColor: "#191970",
-      inboxIconVariant: "beacon",
+      inboxIconVariant: "sotext",
       backgroundImageUrl: eternalBg
     }
   }
@@ -1605,6 +1699,9 @@ const normalizeTheme = (input = {}) => {
     });
   }
 
+  const uiStyle = resolveUiStyle(input);
+  const iconStyle = resolveIconStyle(input);
+
   return {
     ...defaultTheme,
     ...input,
@@ -1623,12 +1720,77 @@ const normalizeTheme = (input = {}) => {
     iconOverrides: safeIcons,
     useGlassEffect: input.useGlassEffect ?? defaultTheme.useGlassEffect,
     useHolographicGlow: input.useHolographicGlow ?? defaultTheme.useHolographicGlow,
-    uiDensity: input.uiDensity ?? defaultTheme.uiDensity
+    uiDensity: input.uiDensity ?? defaultTheme.uiDensity,
+    uiStyle,
+    iconStyle
   };
 };
 
 const buildThemeVars = (theme) => {
   const active = normalizeTheme(theme);
+  const uiProfiles = {
+    "Neon Glass": {
+      cardRadius: "22px",
+      panelRadius: "24px",
+      iconRadius: "14px",
+      hoverLift: "-8px",
+      glassBlur: "32px",
+      borderStyle: "solid",
+      borderWidth: "1px",
+      cardShadow: "0 24px 48px -12px rgba(0, 0, 0, 0.85)"
+    },
+    "Soft Layers": {
+      cardRadius: "28px",
+      panelRadius: "30px",
+      iconRadius: "18px",
+      hoverLift: "-6px",
+      glassBlur: "40px",
+      borderStyle: "solid",
+      borderWidth: "1px",
+      cardShadow: "0 20px 40px -16px rgba(0, 0, 0, 0.55)"
+    },
+    "Retro Terminal": {
+      cardRadius: "8px",
+      panelRadius: "10px",
+      iconRadius: "8px",
+      hoverLift: "-3px",
+      glassBlur: "0px",
+      borderStyle: "dashed",
+      borderWidth: "2px",
+      cardShadow: "0 0 0 1px rgba(0, 255, 140, 0.25)"
+    },
+    "Playful Pop": {
+      cardRadius: "30px",
+      panelRadius: "30px",
+      iconRadius: "20px",
+      hoverLift: "-10px",
+      glassBlur: "18px",
+      borderStyle: "solid",
+      borderWidth: "2px",
+      cardShadow: "0 22px 36px -18px rgba(0, 0, 0, 0.7)"
+    },
+    "Clean Minimal": {
+      cardRadius: "14px",
+      panelRadius: "16px",
+      iconRadius: "10px",
+      hoverLift: "-4px",
+      glassBlur: "0px",
+      borderStyle: "solid",
+      borderWidth: "1px",
+      cardShadow: "0 10px 24px -18px rgba(0, 0, 0, 0.8)"
+    }
+  };
+
+  const iconProfiles = {
+    "Outline": { stroke: "2", iconOpacity: "1" },
+    "Duotone": { stroke: "1.8", iconOpacity: "1" },
+    "Rounded": { stroke: "2.2", iconOpacity: "1" },
+    "Sharp": { stroke: "2.4", iconOpacity: "0.95" }
+  };
+
+  const uiProfile = uiProfiles[active.uiStyle] ?? uiProfiles["Neon Glass"];
+  const iconProfile = iconProfiles[active.iconStyle] ?? iconProfiles["Outline"];
+
   const vars = {
     "--accent": active.primaryColor,
     "--accent-strong": active.secondaryColor,
@@ -1644,7 +1806,17 @@ const buildThemeVars = (theme) => {
     "--on-bubble-outgoing": active.onBubbleOutgoing,
     "--on-bubble-incoming": active.onBubbleIncoming,
     "--app-gradient-start": active.appBackgroundGradientStart ?? active.backgroundColor,
-    "--app-gradient-end": active.appBackgroundGradientEnd ?? active.backgroundColor
+    "--app-gradient-end": active.appBackgroundGradientEnd ?? active.backgroundColor,
+    "--theme-card-radius": uiProfile.cardRadius,
+    "--theme-panel-radius": uiProfile.panelRadius,
+    "--theme-icon-radius": uiProfile.iconRadius,
+    "--theme-hover-lift": uiProfile.hoverLift,
+    "--theme-glass-blur": uiProfile.glassBlur,
+    "--theme-border-style": uiProfile.borderStyle,
+    "--theme-border-width": uiProfile.borderWidth,
+    "--theme-card-shadow": uiProfile.cardShadow,
+    "--theme-icon-stroke": iconProfile.stroke,
+    "--theme-icon-opacity": iconProfile.iconOpacity
   };
   if (active.backgroundImageUrl) {
     vars["backgroundImage"] = `url(${active.backgroundImageUrl})`;
@@ -1895,7 +2067,7 @@ const Sidebar = memo(({
   const searchInputRef = useRef(null);
 
   useEffect(() => {
-    if (activePanel !== 'beacon') return;
+    if (activePanel !== 'inbox') return;
 
     const handleKeyDown = (e) => {
       // Focus search on "/"
@@ -1934,7 +2106,7 @@ const Sidebar = memo(({
           </div>
         </div>
         <div className="sidebar-actions">
-          {!collapsed && activePanel === 'beacon' && (
+          {!collapsed && activePanel === 'inbox' && (
             <>
               <button
                 onClick={() => setShowArchived(!showArchived)}
@@ -1966,13 +2138,13 @@ const Sidebar = memo(({
           <HomeIcon />
           <span>Home</span>
         </button>
-        {remoteSettings.beaconLauncherEnabled && (
+        {remoteSettings.inboxLauncherEnabled && (
           <button
-            className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
-            onClick={() => setActivePanel('beacon')}
+            className={`nav-item ${activePanel === 'inbox' ? 'active' : ''}`}
+            onClick={() => setActivePanel('inbox')}
             title="SoText"
             aria-label="SoText"
-            aria-current={activePanel === 'beacon' ? 'page' : undefined}
+            aria-current={activePanel === 'inbox' ? 'page' : undefined}
           >
             <img src={logo} alt="SoText" />
             <span>SoText</span>
@@ -2046,7 +2218,7 @@ const Sidebar = memo(({
           )}
         </button>
       </div>
-      {activePanel === 'beacon' && !collapsed ? (
+      {activePanel === 'inbox' && !collapsed ? (
         <>
           <div className="sidebar-search-container">
             <div className="sidebar-search-wrapper" onClick={() => searchInputRef.current?.focus()}>
@@ -2305,7 +2477,7 @@ function App() {
     autoUpdateContactInfo: true,
     timeFormat: 'AUTO',
     thirdPartyExtensionsEnabled: true,
-    beaconLauncherEnabled: true,
+    inboxLauncherEnabled: true,
     otpCleanupEnabled: false,
     emailFallbackEnabled: false,
     crashDetectionEnabled: false,
@@ -2352,7 +2524,7 @@ function App() {
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [activePanel, setActivePanel] = useState('beacon');
+  const [activePanel, setActivePanel] = useState('inbox');
 
   // Bolt: Reset contact list limit when search or panel changes
   useEffect(() => {
@@ -2577,7 +2749,10 @@ function App() {
   const mapHomeMarkerRef = useRef(null);
   const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const defaultMapCenter = useMemo(() => ({ lat: 39.5, lng: -98.35 }), []);
-  const themeVars = useMemo(() => buildThemeVars(themePrefs), [themePrefs]);
+  const normalizedThemePrefs = useMemo(() => normalizeTheme(themePrefs), [themePrefs]);
+  const themeVars = useMemo(() => buildThemeVars(normalizedThemePrefs), [normalizedThemePrefs]);
+  const uiStyleClass = useMemo(() => `style-${styleToken(normalizedThemePrefs.uiStyle)}`, [normalizedThemePrefs.uiStyle]);
+  const iconStyleClass = useMemo(() => `icons-${styleToken(normalizedThemePrefs.iconStyle)}`, [normalizedThemePrefs.iconStyle]);
 
   // Fix for undefined function causing crash/lint error
   // Removed duplicate declaration
@@ -2600,6 +2775,20 @@ function App() {
       .filter(({ searchString }) => searchString.includes(term))
       .map(({ theme }) => theme);
   }, [getThemeSearchIndex, themeSearch, publicThemes]);
+
+  const featuredThemeDocs = useMemo(() => {
+    if (filteredThemes.length > 0) return filteredThemes;
+    if (themeSearch.trim()) return [];
+    return themePresets.slice(0, 12).map((preset, idx) => ({
+      id: `preset_showcase_${idx}`,
+      name: preset.name,
+      authorName: "SoText Team",
+      authorHandle: "@sotext",
+      anonymous: false,
+      theme: normalizeTheme(preset.theme),
+      isPresetFallback: true
+    }));
+  }, [filteredThemes, themeSearch]);
   // Bolt: Pre-compute search strings for contacts to avoid expensive string operations on every keystroke
   const getContactSearchIndex = useLazySearchIndex(deviceContacts, contactMapper);
 
@@ -2678,7 +2867,7 @@ function App() {
         autoUpdateContactInfo: true,
         timeFormat: 'AUTO',
         thirdPartyExtensionsEnabled: true,
-        beaconLauncherEnabled: true,
+        inboxLauncherEnabled: true,
         otpCleanupEnabled: true,
         emailFallbackEnabled: true,
         crashDetectionEnabled: true,
@@ -2703,6 +2892,10 @@ function App() {
       }
       setTrustedContacts([{ id: 'contact_1', displayName: 'Mom', phoneNumber: '+15551112222', contactOrder: 0 }]);
       setDeviceContacts([{ id: 'dev_1', displayName: 'Alice', phoneNumber: '+15553334444' }]);
+      setPublicThemes([]);
+      setIsLoadingThemes(false);
+      setIsLoadingContacts(false);
+      setIsLoadingThreads(false);
 
       setProfile({
         ownerName: 'Test User',
@@ -2770,7 +2963,7 @@ function App() {
         autoUpdateContactInfo: data.autoUpdateContactInfo ?? true,
         timeFormat: data.timeFormat ?? 'AUTO',
         thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? true,
-        beaconLauncherEnabled: data.beaconLauncherEnabled ?? true,
+        inboxLauncherEnabled: data.inboxLauncherEnabled ?? true,
         otpCleanupEnabled: data.otpCleanupEnabled ?? false,
         emailFallbackEnabled: data.emailFallbackEnabled ?? false,
         crashDetectionEnabled: data.crashDetectionEnabled ?? false,
@@ -3653,7 +3846,7 @@ function App() {
         autoUpdateContactInfo: remoteSettings.autoUpdateContactInfo,
         timeFormat: remoteSettings.timeFormat,
         thirdPartyExtensionsEnabled: remoteSettings.thirdPartyExtensionsEnabled,
-        beaconLauncherEnabled: remoteSettings.beaconLauncherEnabled,
+        inboxLauncherEnabled: remoteSettings.inboxLauncherEnabled,
         otpCleanupEnabled: remoteSettings.otpCleanupEnabled,
         emailFallbackEnabled: remoteSettings.emailFallbackEnabled,
         crashDetectionEnabled: remoteSettings.crashDetectionEnabled,
@@ -3737,7 +3930,7 @@ function App() {
     const newSettings = { ...remoteSettings };
 
     if (isEssentials) {
-      newSettings.beaconLauncherEnabled = true;
+      newSettings.inboxLauncherEnabled = true;
       newSettings.firebaseMessagingEnabled = true;
       newSettings.emailFallbackEnabled = true;
       newSettings.otpCleanupEnabled = true;
@@ -3752,7 +3945,7 @@ function App() {
       newSettings.commandPaletteEnabled = false;
       newSettings.thirdPartyExtensionsEnabled = false; // Add this line
     } else if (isPower) {
-      newSettings.beaconLauncherEnabled = true;
+      newSettings.inboxLauncherEnabled = true;
       newSettings.firebaseMessagingEnabled = true;
       newSettings.emailFallbackEnabled = true;
       newSettings.otpCleanupEnabled = true;
@@ -3902,7 +4095,7 @@ function App() {
 
   // Bolt: Stable handler for new thread button
   const handleNewThread = useCallback(() => {
-    setActivePanel('beacon');
+    setActivePanel('inbox');
     setSelectedThread(null);
   }, []);
 
@@ -3945,13 +4138,13 @@ function App() {
     sendMessage: handleSendMessageFromPalette, // New action
     setStatus: setRemoteSettingsStatus, // New action for palette to display status
     setActivePanel: setActivePanel, // Allow palette to navigate panels
-    isPremium: isPremium, // Pass premium status
+    isPremium: isPremiumUser, // Pass premium status
     deviceContacts: deviceContacts, // Pass device contacts for resolution
     trustedContacts: trustedContacts, // Pass trusted contacts for resolution
     lines: lines, // Pass lines for explicit line selection
     activeLineId: activeLineId, // Pass active line for context
     lineInboxMode: lineInboxMode // Pass line inbox mode
-  }), [handleLogout, handleNewThread, handleSendMessageFromPalette, setRemoteSettingsStatus, setActivePanel, isPremium, deviceContacts, trustedContacts, lines, activeLineId, lineInboxMode]);
+  }), [handleLogout, handleNewThread, handleSendMessageFromPalette, setRemoteSettingsStatus, setActivePanel, isPremiumUser, deviceContacts, trustedContacts, lines, activeLineId, lineInboxMode]);
 
   // Bolt: Stable handler to prevent ghost content when switching threads
   const handleThreadSelect = useCallback((thread) => {
@@ -4044,7 +4237,7 @@ function App() {
 
   const isPremium = isPremiumUser;
   const tierLabel = isPremiumUser ? 'Premium' : (isProUser ? 'Pro' : 'Free');
-  const hasBeaconData = isPremiumUser || lines.length > 0 || legacyThreads.length > 0;
+  const hasInboxData = isPremiumUser || lines.length > 0 || legacyThreads.length > 0;
 
   const navLogo = useMemo(() => {
      // Removed remoteSettings.mergedExperienceEnabled as that feature is deprecated
@@ -4074,7 +4267,7 @@ function App() {
 
   if (!user) {
     return (
-      <div className={`app-shell ${themePrefs.useGlassEffect ? 'glass-mode' : ''} ${themePrefs.useHolographicGlow ? 'holographic-mode' : ''}`} style={themeVars}>
+      <div className={`app-shell ${themePrefs.useGlassEffect ? 'glass-mode' : ''} ${themePrefs.useHolographicGlow ? 'holographic-mode' : ''} ${uiStyleClass} ${iconStyleClass}`} style={themeVars}>
         <div className="noise-overlay" />
         <div className="scanline-overlay" />
         {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
@@ -4082,8 +4275,8 @@ function App() {
         <div className="container login-container" id="main-content">
           <div className="login-card neon-border">
             <img src={logo} alt="SoText" className="brand-logo" />
-            <h1>SoText Web</h1>
-            <p>Login to access your messages</p>
+            <h1>sotext.app</h1>
+            <p>Sign in to access your messages</p>
             <form
               className="login-form"
               onSubmit={(e) => {
@@ -4191,7 +4384,7 @@ function App() {
   }
 
   return (
-    <div className={`app-shell ${themePrefs.useGlassEffect ? 'glass-mode' : ''} ${themePrefs.useHolographicGlow ? 'holographic-mode' : ''}`} style={themeVars}>
+    <div className={`app-shell ${themePrefs.useGlassEffect ? 'glass-mode' : ''} ${themePrefs.useHolographicGlow ? 'holographic-mode' : ''} ${uiStyleClass} ${iconStyleClass}`} style={themeVars}>
       <div className="noise-overlay" />
       <div className="scanline-overlay" />
       {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
@@ -4266,9 +4459,9 @@ function App() {
                 </div>
               )}
               <div className="home-grid">
-                <button className="home-card holographic-card" onClick={() => setActivePanel('beacon')}>
-                  <div className="status-pill">{hasBeaconData ? 'Sync Active' : 'Setup Required'}</div>
-                  <div className="home-icon beacon pulse-slow">
+                <button className="home-card holographic-card" onClick={() => setActivePanel('inbox')}>
+                  <div className="status-pill">{hasInboxData ? 'Sync Active' : 'Setup Required'}</div>
+                  <div className="home-icon inbox pulse-slow">
                     <img src={logo} alt="SoText" />
                   </div>
                   <h3>SoText Inbox</h3>
@@ -4277,15 +4470,15 @@ function App() {
                 <button className="home-card holographic-card" onClick={() => setActivePanel('pulselink')}>
                   <div className="status-pill">{profile.ownerName ? 'Active' : 'Setup Profile'}</div>
                   <div className="home-icon pulselink">
-                    <img src={logo} alt="PulseLink" />
+                    <img src={pulselinkLogo} alt="PulseLink extension" />
                   </div>
-                  <h3>PulseLink</h3>
-                  <p>Update your profile and trusted contacts.</p>
+                  <h3>PulseLink Extension</h3>
+                  <p>Manage your profile and trusted contacts.</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('contacts')}>
                   <div className="status-pill">{deviceContacts.length > 0 ? `${deviceContacts.length} Contacts` : 'No Contacts'}</div>
                   <div className="home-icon pulselink">
-                    <img src={logo} alt="PulseLink contacts" />
+                    <ContactIcon />
                   </div>
                   <h3>Contacts</h3>
                   <p>Browse all device contacts synced from your phone.</p>
@@ -4293,7 +4486,7 @@ function App() {
                 <button className="home-card holographic-card" onClick={() => setActivePanel('map')}>
                   <div className="status-pill">{alertLocations.length > 0 ? `${alertLocations.length} Alerts` : 'Safe'}</div>
                   <div className="home-icon pulselink">
-                    <img src={logo} alt="SoText map" />
+                    <MapIcon />
                   </div>
                   <h3>Emergency Map</h3>
                   <p>Track shared locations from SoText alerts.</p>
@@ -4301,7 +4494,7 @@ function App() {
                 <button className="home-card holographic-card" onClick={() => setActivePanel('themes')}>
                   <div className="status-pill">Gallery</div>
                   <div className="home-icon pulselink">
-                    <img src={logo} alt="SoText themes" />
+                    <ThemeIcon />
                   </div>
                   <h3>Theme Gallery</h3>
                   <p>Browse, import, and publish custom themes.</p>
@@ -4314,7 +4507,7 @@ function App() {
                 >
                   <div className="status-pill">{remoteSettings.thirdPartyExtensionsEnabled ? 'Active' : 'Disabled'}</div>
                   <div className="home-icon pulselink">
-                    <img src={logo} alt="Features" />
+                    <ExtensionIcon />
                   </div>
                   <h3>Features</h3>
                   <p>{remoteSettings.thirdPartyExtensionsEnabled ? "Enhance your experience with powerful add-ons." : "Enable features to start."}</p>
@@ -4326,8 +4519,8 @@ function App() {
           {activePanel === 'pulselink' && (
             <div className="pulselink-panel">
               <div className="panel-header">
-                <h3>PulseLink</h3>
-                <p>Manage trusted contacts and your public profile.</p>
+                <h3>PulseLink Extension</h3>
+                <p>Manage trusted contacts and your public profile for the PulseLink extension.</p>
               </div>
               <div className="pulselink-grid">
                 <div className="settings-card">
@@ -4728,11 +4921,12 @@ function App() {
           {activePanel === 'themes' && (
             <div className="themes-panel">
               <div className="panel-header">
-                <h3>Theme Gallery</h3>
-                <p>Browse community themes or publish your own. Image-based themes require approval.</p>
+                <h3>Theme Showcase</h3>
+                <p>Pick complete looks that change colors, surface style, and icon personality. Tap a look to instantly apply it.</p>
               </div>
               <div className="themes-grid">
                 <div className="settings-card themes-card">
+                  <h4>Discover looks</h4>
                   <div className="settings-search-container" onClick={() => themeSearchRef.current?.focus()}>
                     <div style={{ opacity: 0.5, display: 'flex' }}><SearchIcon /></div>
                     <input
@@ -4775,14 +4969,14 @@ function App() {
                       Array.from({ length: 6 }).map((_, i) => <ThemeSkeleton key={i} />)
                     ) : (
                       <>
-                        {filteredThemes.map((themeDoc) => (
+                        {featuredThemeDocs.map((themeDoc) => (
                           <ThemeGalleryItem
                             key={themeDoc.id}
                             themeDoc={themeDoc}
                             onImport={handleImportPublicTheme}
                           />
                         ))}
-                        {filteredThemes.length === 0 && (
+                        {featuredThemeDocs.length === 0 && (
                           <EmptyState
                              icon={<ThemeIcon />}
                              title="No themes found"
@@ -4795,7 +4989,7 @@ function App() {
                   <Toast message={themeGalleryStatus} onDismiss={() => setThemeGalleryStatus('')} />
                 </div>
                 <div className="settings-card themes-card">
-                  <h4>Publish your theme</h4>
+                  <h4>Share your look</h4>
                   <label className="login-field">
                     Theme name<RequiredIndicator />
                     <input
@@ -4861,7 +5055,7 @@ function App() {
                   <Toast message={themePublishStatus} onDismiss={() => setThemePublishStatus('')} />
                 </div>
                 <div className="settings-card themes-card">
-                  <h4>Quick presets</h4>
+                  <h4>Build your look</h4>
                   <div className="theme-grid">
                     {themePresets.map((preset) => (
                       <ThemePresetItem
@@ -4897,6 +5091,30 @@ function App() {
                       value={themePrefs.bubbleIncoming}
                       onChange={(val) => setThemePrefs((prev) => ({ ...prev, bubbleIncoming: val }))}
                     />
+                    <label className="login-field">
+                      UI personality
+                      <select
+                        className="login-input"
+                        value={themePrefs.uiStyle}
+                        onChange={(e) => setThemePrefs((prev) => ({ ...prev, uiStyle: e.target.value }))}
+                      >
+                        {uiStyleOptions.map((option) => (
+                          <option key={option.value} value={option.value}>{option.value}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="login-field">
+                      Icon personality
+                      <select
+                        className="login-input"
+                        value={themePrefs.iconStyle}
+                        onChange={(e) => setThemePrefs((prev) => ({ ...prev, iconStyle: e.target.value }))}
+                      >
+                        {iconStyleOptions.map((option) => (
+                          <option key={option.value} value={option.value}>{option.value}</option>
+                        ))}
+                      </select>
+                    </label>
                     <label className="login-field theme-wide">
                       Background image URL
                       <input
@@ -4909,29 +5127,32 @@ function App() {
                       />
                     </label>
                   </div>
-                  <div className="theme-icon-grid">
-                    {iconOverrideKeys.map(({ key, label }) => (
-                      <label className="login-field" key={key}>
-                        {label} icon URL
-                        <input
-                          className="login-input"
-                          value={themePrefs.iconOverrides?.[key] ?? ''}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setThemePrefs((prev) => {
-                              const next = { ...(prev.iconOverrides ?? {}) };
-                              if (!value.trim()) {
-                                delete next[key];
-                              } else {
-                                next[key] = value.trim();
-                              }
-                              return { ...prev, iconOverrides: next };
-                            });
-                          }}
-                        />
-                      </label>
-                    ))}
-                  </div>
+                  <details className="theme-advanced">
+                    <summary>Advanced icon URLs (optional)</summary>
+                    <div className="theme-icon-grid">
+                      {iconOverrideKeys.map(({ key, label }) => (
+                        <label className="login-field" key={key}>
+                          {label} icon URL
+                          <input
+                            className="login-input"
+                            value={themePrefs.iconOverrides?.[key] ?? ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setThemePrefs((prev) => {
+                                const next = { ...(prev.iconOverrides ?? {}) };
+                                if (!value.trim()) {
+                                  delete next[key];
+                                } else {
+                                  next[key] = value.trim();
+                                }
+                                return { ...prev, iconOverrides: next };
+                              });
+                            }}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </details>
                   <button className="primary-btn" type="button" onClick={() => handleApplyPreset(themePrefs)}>
                     Save theme
                   </button>
@@ -4972,7 +5193,7 @@ function App() {
                 {
                   title: "Core",
                                     items: [
-                                      { id: 'beaconLauncherEnabled', name: 'SoText Inbox', desc: 'Separate launcher icon and sidebar tab for your SMS inbox.', icon: logo, isImg: true },
+                                      { id: 'inboxLauncherEnabled', name: 'SoText Inbox', desc: 'Separate launcher icon and sidebar tab for your SMS inbox.', icon: logo, isImg: true },
                                       { id: 'firebaseMessagingEnabled', name: 'Firebase Relay', desc: 'Faster messaging between SoText users.', icon: <CloudSyncIcon /> }
                                     ]
                                   },
@@ -5175,11 +5396,11 @@ function App() {
                       {show(['account', 'email', 'user id', 'password', 'reset', 'sign out', 'logout', 'profile']) && (
                         <div className="settings-card">
                           <h4>Account</h4>
-                          <div className="settings-row">
-                            <span className="settings-label">Signed in as</span>
+                          <div className="settings-kv-row">
+                            <span className="settings-label">Signed in</span>
                             <span className="settings-value">{user.email || 'Unknown'}</span>
                           </div>
-                          <div className="settings-row">
+                          <div className="settings-kv-row">
                             <span className="settings-label">User ID</span>
                             <span className="settings-value mono">
                               {user.uid}
@@ -5271,7 +5492,7 @@ function App() {
                               </>
                           ) : 'Save SoText settings'}
                           </button>
-                          <div className="settings-row">
+                          <div className="settings-kv-row">
                             <span className="settings-label">Web sync</span>
                             <span className="settings-value">
                               {syncDiagnostics
@@ -5284,7 +5505,7 @@ function App() {
                               Threads: {syncDiagnostics.threadCount ?? 0} · Messages: {syncDiagnostics.messageCount ?? 0} · READ_SMS: {syncDiagnostics.hasReadSms ? 'yes' : 'no'} · App: {syncDiagnostics.appVersion ?? 'unknown'}
                             </p>
                           )}
-                          <div className="settings-row">
+                          <div className="settings-kv-row">
                             <span className="settings-label">Relay status</span>
                             <span className="settings-value">
                               {relayDiagnostics
@@ -5348,9 +5569,9 @@ function App() {
             </div>
           )}
 
-          {activePanel === 'beacon' && (
-            hasBeaconData ? (
-              <div className="beacon-layout">
+          {activePanel === 'inbox' && (
+            hasInboxData ? (
+              <div className="inbox-layout">
       {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
         <div className="line-tabs line-tabs--main">
           <div className="line-tabs-header">
@@ -5457,3 +5678,4 @@ function App() {
 }
 
 export default App;
+

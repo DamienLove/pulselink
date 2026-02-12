@@ -1,9 +1,11 @@
 {
-  "id": "com.pulselink.extensions.clicker",
-  "name": "Pulse Clicker",
+  "id": "com.sotext.extensions.clicker",
+  "name": "SoText Clicker",
   "version": "1.0.0",
   "description": "A simple clicker game.",
-  "author": "PulseLink Dev",
+  "author": "SoText Dev",
   "entry_point": "index.html",
   "permissions": []
 }
+
+

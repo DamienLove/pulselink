@@ -124,7 +124,7 @@
     <string name="bug_report_success">Bug report portal opened. Finish submission on GitHub.</string>
     <string name="bug_report_portal_unavailable">Unable to open the bug portal. Install or enable a browser and try again.</string>
     <string name="bug_report_fields_required">Please fill in the summary and description fields</string>
-    <string name="bug_report_submission_hint">Submitting opens the PulseLink GitHub portal so you can review and file the issue.</string>
+    <string name="bug_report_submission_hint">Submitting opens the SoText GitHub portal so you can review and file the issue.</string>
     <string name="beta_tester_list_title">Beta Testers</string>
     <string name="beta_tester_status">Beta Tester Status</string>
     <string name="beta_tester_enabled">You are a beta tester</string>
@@ -252,8 +252,8 @@
 
     <string name="dnd_override_action_manage">Manage</string>
     <string name="audio_override_failed">Unable to override audio settings. Check Do Not Disturb permissions.</string>
-    <string name="audio_override_partial">Android limited the Do Not Disturb override. Verify PulseLink\'s notification channels can bypass DND.</string>
-    <string name="audio_override_permission_missing">PulseLink can\'t override Do Not Disturb without notification policy access. Grant the permission in system settings.</string>
+    <string name="audio_override_partial">Android limited the Do Not Disturb override. Verify SoText\'s notification channels can bypass DND.</string>
+    <string name="audio_override_permission_missing">SoText can\'t override Do Not Disturb without notification policy access. Grant the permission in system settings.</string>
     <string name="cancel_emergency_button">Cancel emergency</string>
     <string name="cancel_emergency_prompt_title">Verify it\'s you</string>
       <string name="cancel_emergency_prompt_subtitle">Use your fingerprint or device PIN to cancel the current alert.</string>
@@ -298,9 +298,9 @@
     <string name="beta_agreement_tester_default">SoText Tester</string>
     <string name="beta_agreement_agree_error">Unable to record your agreement. Check your connection and try again.</string>
     <string name="beta_agreement_agree_success">Thanks for accepting the SoText beta agreement.</string>
-    <string name="beta_agreement_full_text"><![CDATA[PULSELINK BETA TESTER AGREEMENT
+    <string name="beta_agreement_full_text"><![CDATA[SOTEXT BETA TESTER AGREEMENT
 
-This Beta Tester Agreement ("Agreement") governs your use of the pre-release, beta version of the PulseLink mobile application (the "App"). The App is published on the Google Play Store under the developer name "Damien Nichols." For legal purposes, the App is owned and operated by Holldasa LLC, a California limited liability company ("Developer").
+This Beta Tester Agreement ("Agreement") governs your use of the pre-release, beta version of the SoText mobile application (the "App"). The App is published on the Google Play Store under the developer name "Damien Nichols." For legal purposes, the App is owned and operated by Holldasa LLC, a California limited liability company ("Developer").
 
 By tapping "I Agree", installing, or using the App, you ("Tester") agree to be bound by this Agreement with Developer.
 
@@ -372,7 +372,7 @@ Entire Agreement; Changes
 This Agreement constitutes the entire agreement between Tester and Developer regarding the beta testing of the App and supersedes all prior or contemporaneous understandings on this subject. Developer may update this Agreement from time to time; material changes for existing users may be communicated through the App or by other reasonable means. If Tester continues to use the App after such changes become effective, Tester is deemed to accept the updated Agreement.
 
 BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE TO BE BOUND BY THIS AGREEMENT WITH HOLLDASA LLC.]]></string>
-    <string name="voice_command_prompt">Tell PulseLink what you need…</string>
+    <string name="voice_command_prompt">Tell SoText what you need…</string>
     <string name="voice_command_no_recognizer">Voice recognition isn\'t available on this device.</string>
     <string name="voice_command_emergency_cancelled">Emergency cancelled and contacts notified.</string>
     <string name="voice_command_cancel_failed">Couldn\'t cancel the alert.</string>
@@ -559,3 +559,4 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="extension_pulselink_desc">The original safety suite: Emergency Alerts, Check-ins, and trusted circle coordination.</string>
 
 </resources>
+

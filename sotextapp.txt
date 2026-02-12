@@ -83,3 +83,13 @@ Proposed Icon Prompt:
 
 == Important Note ==
 This file (`sotextapp.txt`) contains sensitive information (passwords, API keys) and is intended to be ignored by Git. DO NOT commit this file to the repository.
+
+== Session Notes (2026-02-07) ==
+- Android Studio module cleanup completed: removed deprecated :beaconApp from root settings.gradle.kts and cleaned stale IDE module/deployment references; verified with ./gradlew projects (active modules: androidApp, ringersong, shared, wearApp).
+- Session notes source confirmed: use sotextapp.txt for current stats/config context going forward.
+
+- 2026-02-07: Built Android debug APK via ./gradlew :androidApp:assembleSotextDebug (artifact: androidApp/build/outputs/apk/sotext/debug/androidApp-sotext-debug.apk).
+- 2026-02-07: Updated web login header copy to show 'sotext.app' (web/src/App.jsx), rebuilt web (npm --prefix web run build), and deployed Firebase Hosting to project sotextapp (https://sotextapp.web.app).
+- 2026-02-07: Synced web/dist deployment files to DirectAdmin host path /home/qthdunpa/domains/sotext.app/public_html via SFTP; verified https://sotext.app serves latest asset bundle (index-AgAv1T8m.js / index-8dUdjxNI.css).
+
+- 2026-02-07: Functions deploy attempt to Firebase project sotextapp blocked by GCP billing status. Error from Service Usage API when enabling artifactregistry.googleapis.com: 'Billing account for project 861460679274 is not open.' Local functions TypeScript build now passes after updating functions/tsconfig.json to compile runtime sources with Node types only and exclude *.test.ts/*.spec.ts.

@@ -1,9 +1,10 @@
 {
-  "id": "com.pulselink.extensions.helloworld",
+  "id": "com.sotext.extensions.helloworld",
   "name": "Hello World",
   "version": "1.0.0",
   "description": "A simple Hello World extension.",
-  "author": "PulseLink Dev",
+  "author": "SoText Dev",
   "entry_point": "index.html",
   "permissions": []
 }
+

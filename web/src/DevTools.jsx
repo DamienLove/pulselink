@@ -115,7 +115,7 @@ const DevTools = ({ isVisible, onClose }) => {
       }
       await msgBatch.commit();
 
-      setStatus('Success! Reload or check Beacon tab.');
+      setStatus('Success! Reload or check SoText Inbox.');
     } catch (e) {
       console.error('Failed to populate mock data:', e);
       setStatus('Error: ' + (e.code || 'Unknown') + ' - ' + e.message);
