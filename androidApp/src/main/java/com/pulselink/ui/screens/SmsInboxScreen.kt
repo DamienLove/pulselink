@@ -1289,6 +1289,13 @@ private fun ContactRecipientRow(
     }
 }
 
+/**
+ * Simplified filter tabs - show essential filters prominently, advanced filters in "More" menu.
+ * Design principles:
+ * - First-time users should immediately understand the interface
+ * - Most used actions (All, Unread) are always visible
+ * - Advanced filters are one tap away but don't clutter the UI
+ */
 @Composable
 fun TabsRow(
     filter: InboxFilter,
@@ -1299,13 +1306,22 @@ fun TabsRow(
 ) {
     val scrollState = rememberScrollState()
     val unreadBadge = unreadCount.takeIf { it > 0 }?.toString()
+    var showMoreFilters by remember { mutableStateOf(false) }
+    val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+
+    // Check if an advanced filter is active (to show indicator)
+    val advancedFilterActive = filter in listOf(
+        InboxFilter.OTP, InboxFilter.TRUSTED, InboxFilter.FAVORITES,
+        InboxFilter.PRIVATE, InboxFilter.CONTACTS, InboxFilter.READ
+    )
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .selectableGroup()
             .horizontalScroll(scrollState)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         val toggleFilter: (InboxFilter) -> Unit = { target ->
@@ -1315,28 +1331,10 @@ fun TabsRow(
                 onFilterChange(target)
             }
         }
+
+        // Primary filters - always visible
         TabText(label = "All", selected = filter == InboxFilter.ALL, theme = theme) {
             toggleFilter(InboxFilter.ALL)
-        }
-        if (isUnifiedMode) {
-            TabText(label = "2-step", selected = filter == InboxFilter.OTP, theme = theme) {
-                toggleFilter(InboxFilter.OTP)
-            }
-            TabText(label = "Trusted", selected = filter == InboxFilter.TRUSTED, theme = theme) {
-                toggleFilter(InboxFilter.TRUSTED)
-            }
-            TabText(label = "Favorites", selected = filter == InboxFilter.FAVORITES, theme = theme) {
-                toggleFilter(InboxFilter.FAVORITES)
-            }
-            TabText(label = "Private", selected = filter == InboxFilter.PRIVATE, theme = theme) {
-                toggleFilter(InboxFilter.PRIVATE)
-            }
-            TabText(label = "Contacts", selected = filter == InboxFilter.CONTACTS, theme = theme) {
-                toggleFilter(InboxFilter.CONTACTS)
-            }
-        }
-        TabText(label = "Read", selected = filter == InboxFilter.READ, theme = theme) {
-            toggleFilter(InboxFilter.READ)
         }
         TabText(label = "Unread", badge = unreadBadge, selected = filter == InboxFilter.UNREAD, theme = theme) {
             toggleFilter(InboxFilter.UNREAD)
@@ -1344,69 +1342,156 @@ fun TabsRow(
         TabText(label = "Archived", selected = filter == InboxFilter.ARCHIVED, theme = theme) {
             toggleFilter(InboxFilter.ARCHIVED)
         }
+
+        // "More" button for advanced filters
+        if (isUnifiedMode) {
+            Box {
+                TabText(
+                    label = if (advancedFilterActive) getFilterLabel(filter) else "More",
+                    selected = advancedFilterActive,
+                    theme = theme,
+                    showDropdownIndicator = true
+                ) {
+                    showMoreFilters = true
+                }
+                DropdownMenu(
+                    expanded = showMoreFilters,
+                    onDismissRequest = { showMoreFilters = false },
+                    modifier = Modifier.background(parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor))
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("2-step codes") },
+                        onClick = { showMoreFilters = false; toggleFilter(InboxFilter.OTP) },
+                        leadingIcon = if (filter == InboxFilter.OTP) {
+                            { Icon(Icons.Filled.PushPin, null, tint = primary, modifier = Modifier.size(18.dp)) }
+                        } else null
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Trusted") },
+                        onClick = { showMoreFilters = false; toggleFilter(InboxFilter.TRUSTED) },
+                        leadingIcon = if (filter == InboxFilter.TRUSTED) {
+                            { Icon(Icons.Filled.PushPin, null, tint = primary, modifier = Modifier.size(18.dp)) }
+                        } else null
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Favorites") },
+                        onClick = { showMoreFilters = false; toggleFilter(InboxFilter.FAVORITES) },
+                        leadingIcon = if (filter == InboxFilter.FAVORITES) {
+                            { Icon(Icons.Filled.PushPin, null, tint = primary, modifier = Modifier.size(18.dp)) }
+                        } else null
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Private") },
+                        onClick = { showMoreFilters = false; toggleFilter(InboxFilter.PRIVATE) },
+                        leadingIcon = if (filter == InboxFilter.PRIVATE) {
+                            { Icon(Icons.Filled.PushPin, null, tint = primary, modifier = Modifier.size(18.dp)) }
+                        } else null
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Contacts") },
+                        onClick = { showMoreFilters = false; toggleFilter(InboxFilter.CONTACTS) },
+                        leadingIcon = if (filter == InboxFilter.CONTACTS) {
+                            { Icon(Icons.Filled.PushPin, null, tint = primary, modifier = Modifier.size(18.dp)) }
+                        } else null
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Read") },
+                        onClick = { showMoreFilters = false; toggleFilter(InboxFilter.READ) },
+                        leadingIcon = if (filter == InboxFilter.READ) {
+                            { Icon(Icons.Filled.PushPin, null, tint = primary, modifier = Modifier.size(18.dp)) }
+                        } else null
+                    )
+                }
+            }
+        } else {
+            // Non-unified mode - just show Read tab
+            TabText(label = "Read", selected = filter == InboxFilter.READ, theme = theme) {
+                toggleFilter(InboxFilter.READ)
+            }
+        }
     }
 }
 
+private fun getFilterLabel(filter: InboxFilter): String = when (filter) {
+    InboxFilter.OTP -> "2-step"
+    InboxFilter.TRUSTED -> "Trusted"
+    InboxFilter.FAVORITES -> "Favorites"
+    InboxFilter.PRIVATE -> "Private"
+    InboxFilter.CONTACTS -> "Contacts"
+    InboxFilter.READ -> "Read"
+    else -> "More"
+}
+
+/**
+ * Clean, touchable filter tab with optional badge and dropdown indicator.
+ */
 @Composable
 fun TabText(
     label: String,
     badge: String? = null,
     selected: Boolean,
     theme: ThemePreferences,
+    showDropdownIndicator: Boolean = false,
     onClick: () -> Unit
 ) {
     val selectedColor = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
     val containerColor = if (selected) {
-        selectedColor.copy(alpha = 0.16f)
+        selectedColor.copy(alpha = 0.14f)
     } else {
-        parseColorOr(MaterialTheme.colorScheme.surfaceVariant, theme.backgroundColor).copy(alpha = 0.4f)
+        parseColorOr(MaterialTheme.colorScheme.surfaceVariant, theme.backgroundColor).copy(alpha = 0.35f)
     }
     val borderColor = if (selected) {
-        selectedColor.copy(alpha = 0.4f)
+        selectedColor.copy(alpha = 0.35f)
     } else {
-        parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.2f)
+        parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.15f)
     }
     val contentColor = if (selected) {
         parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground)
     } else {
-        parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f)
+        parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.75f)
     }
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.selectable(
-            selected = selected,
-            role = Role.Tab,
-            onClick = onClick
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(999.dp))
-                .background(containerColor)
-                .border(BorderStroke(1.dp, borderColor), RoundedCornerShape(999.dp))
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                color = contentColor
+
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(containerColor)
+            .border(BorderStroke(1.dp, borderColor), RoundedCornerShape(20.dp))
+            .selectable(
+                selected = selected,
+                role = Role.Tab,
+                onClick = onClick
             )
-            if (badge != null) {
-                Surface(
-                    color = selectedColor.copy(alpha = 0.18f),
-                    shape = RoundedCornerShape(999.dp)
-                ) {
-                    Text(
-                        text = badge,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = selectedColor,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            color = contentColor
+        )
+        if (badge != null) {
+            Surface(
+                color = selectedColor,
+                shape = RoundedCornerShape(999.dp)
+            ) {
+                Text(
+                    text = badge,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
             }
+        }
+        if (showDropdownIndicator) {
+            Icon(
+                imageVector = Icons.Filled.KeyboardArrowDown,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(16.dp)
+            )
         }
     }
 }

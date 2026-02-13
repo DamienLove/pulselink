@@ -94,6 +94,7 @@ private val DEFAULT_SEND_LINE_ID = stringPreferencesKey("default_send_line_id")
 private val LINE_SEND_PREFERENCE = stringPreferencesKey("line_send_preference")
 private val THREAD_LINE_OVERRIDES = stringPreferencesKey("thread_line_overrides")
 private val DEVICE_PHONE_NUMBER = stringPreferencesKey("device_phone_number")
+private val CONTACT_FREQUENCY_BYPASS_ENABLED = booleanPreferencesKey("contact_frequency_bypass_enabled")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -417,6 +418,12 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun setContactFrequencyBypassEnabled(enabled: Boolean) {
+        editOnIo { prefs ->
+            prefs[CONTACT_FREQUENCY_BYPASS_ENABLED] = enabled
+        }
+    }
+
     override suspend fun setProUnlocked(enabled: Boolean) {
         editOnIo { prefs ->
             prefs[PRO_UNLOCKED] = enabled
@@ -703,6 +710,7 @@ class SettingsRepositoryImpl @Inject constructor(
             unifiedDisplayName = prefs[UNIFIED_DISPLAY_NAME],
             thirdPartyExtensionsEnabled = prefs[THIRD_PARTY_EXTENSIONS_ENABLED] ?: PulseLinkSettings().thirdPartyExtensionsEnabled,
             truecallerEnabled = prefs[TRUECALLER_ENABLED] ?: PulseLinkSettings().truecallerEnabled,
+            contactFrequencyBypassEnabled = prefs[CONTACT_FREQUENCY_BYPASS_ENABLED] ?: PulseLinkSettings().contactFrequencyBypassEnabled,
             messagingChannelPriority = decodeJsonOrNull(prefs[MESSAGING_CHANNEL_PRIORITY]) {
                 json.decodeFromString<List<MessageChannel>>(it)
             } ?: PulseLinkSettings().messagingChannelPriority,

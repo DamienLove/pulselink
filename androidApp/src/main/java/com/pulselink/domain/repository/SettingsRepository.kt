@@ -60,4 +60,5 @@ interface SettingsRepository {
     suspend fun setDevicePhoneNumber(phone: String?)
     suspend fun setCustomVibrationPattern(name: String, pattern: List<Long>)
     suspend fun clearCustomVibrationPattern()
+    suspend fun setContactFrequencyBypassEnabled(enabled: Boolean)
 }

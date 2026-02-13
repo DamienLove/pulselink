@@ -60,6 +60,16 @@ class ThemeViewModel(app: Application) : AndroidViewModel(app) {
         persist(address, base.copy(bubbleRadius = radius.coerceIn(4f, 28f)))
     }
 
+    fun applyUiStyle(style: String, address: String?) {
+        val base = themeState.forAddress(address)
+        persist(address, base.copy(uiStyle = style))
+    }
+
+    fun applyIconStyle(style: String, address: String?) {
+        val base = themeState.forAddress(address)
+        persist(address, base.copy(iconStyle = style))
+    }
+
     fun applyPreset(preset: ThemePalette, address: String?) {
         persist(address, preset)
     }

@@ -23,6 +23,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Shield
@@ -79,7 +81,9 @@ fun CustomizationScreen(
     onRadiusChange: (Float) -> Unit,
     onPreset: (ThemePalette) -> Unit,
     onResetContact: () -> Unit,
-    onIconVariant: (InboxIconVariant) -> Unit
+    onIconVariant: (InboxIconVariant) -> Unit,
+    onUiStyleChange: (String) -> Unit,
+    onIconStyleChange: (String) -> Unit
 ) {
     val scopeLabel = address?.takeIf { it.isNotBlank() } ?: "All new chats"
     val currentTheme = themeState.forAddress(address)
@@ -143,7 +147,53 @@ fun CustomizationScreen(
 
             RadiusSlider(currentTheme.bubbleRadius, onRadiusChange, iconTint)
 
+            UiStyleRow(currentTheme.uiStyle, onUiStyleChange, iconTint)
+
+            IconStyleRow(currentTheme.iconStyle, onIconStyleChange, iconTint)
+
             IconRow(currentTheme.iconVariant, onIconVariant, iconTint)
+        }
+    }
+}
+
+@Composable
+private fun UiStyleRow(current: String, onStyleChange: (String) -> Unit, iconTint: Color) {
+    val styles = listOf("Neon Glass", "Soft Layers", "Retro Terminal", "Playful Pop", "Clean Minimal")
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Palette, contentDescription = null, tint = iconTint)
+            Spacer(modifier = Modifier.width(6.dp))
+            Text("UI personality")
+        }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(styles) { style ->
+                FilterChip(
+                    selected = current == style,
+                    onClick = { onStyleChange(style) },
+                    label = { Text(style) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun IconStyleRow(current: String, onStyleChange: (String) -> Unit, iconTint: Color) {
+    val styles = listOf("Outline", "Duotone", "Rounded", "Sharp")
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Category, contentDescription = null, tint = iconTint)
+            Spacer(modifier = Modifier.width(6.dp))
+            Text("Icon personality")
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            styles.forEach { style ->
+                FilterChip(
+                    selected = current == style,
+                    onClick = { onStyleChange(style) },
+                    label = { Text(style) }
+                )
+            }
         }
     }
 }
@@ -401,7 +451,9 @@ private fun ThemesRow(onPreset: (ThemePalette) -> Unit) {
                 threadBackground = Color(0xFFF5F8FF).toArgb().toLong(),
                 inboxBackground = Color(0xFFFFFFFF).toArgb().toLong(),
                 font = ThemeFont.System,
-                iconVariant = InboxIconVariant.Beacon
+                iconVariant = InboxIconVariant.Beacon,
+                uiStyle = "Clean Minimal",
+                iconStyle = "Outline"
             )
         ),
         ThemePreset(
@@ -415,7 +467,9 @@ private fun ThemesRow(onPreset: (ThemePalette) -> Unit) {
                 inboxBackground = Color(0xFF050505).toArgb().toLong(),
                 font = ThemeFont.Mono,
                 bubbleRadius = 16f,
-                iconVariant = InboxIconVariant.Shield
+                iconVariant = InboxIconVariant.Shield,
+                uiStyle = "Neon Glass",
+                iconStyle = "Outline"
             )
         ),
         ThemePreset(
@@ -429,7 +483,9 @@ private fun ThemesRow(onPreset: (ThemePalette) -> Unit) {
                 inboxBackground = Color(0xFFFFF7ED).toArgb().toLong(),
                 font = ThemeFont.Rounded,
                 bubbleRadius = 20f,
-                iconVariant = InboxIconVariant.Bubble
+                iconVariant = InboxIconVariant.Bubble,
+                uiStyle = "Soft Layers",
+                iconStyle = "Rounded"
             )
         ),
         ThemePreset(
@@ -443,7 +499,9 @@ private fun ThemesRow(onPreset: (ThemePalette) -> Unit) {
                 inboxBackground = Color(0xFFF0FDF4).toArgb().toLong(),
                 font = ThemeFont.Serif,
                 bubbleRadius = 18f,
-                iconVariant = InboxIconVariant.Beacon
+                iconVariant = InboxIconVariant.Beacon,
+                uiStyle = "Soft Layers",
+                iconStyle = "Outline"
             )
         ),
         ThemePreset(
@@ -457,7 +515,9 @@ private fun ThemesRow(onPreset: (ThemePalette) -> Unit) {
                 inboxBackground = Color(0xFFF8FAFF).toArgb().toLong(),
                 font = ThemeFont.Rounded,
                 bubbleRadius = 22f,
-                iconVariant = InboxIconVariant.Shield
+                iconVariant = InboxIconVariant.Shield,
+                uiStyle = "Soft Layers",
+                iconStyle = "Rounded"
             )
         ),
         ThemePreset(
@@ -471,7 +531,9 @@ private fun ThemesRow(onPreset: (ThemePalette) -> Unit) {
                 inboxBackground = Color(0xFFFFFFFF).toArgb().toLong(),
                 font = ThemeFont.System,
                 bubbleRadius = 16f,
-                iconVariant = InboxIconVariant.Minimal
+                iconVariant = InboxIconVariant.Minimal,
+                uiStyle = "Playful Pop",
+                iconStyle = "Rounded"
             )
         ),
         ThemePreset(
@@ -485,7 +547,9 @@ private fun ThemesRow(onPreset: (ThemePalette) -> Unit) {
                 inboxBackground = Color(0xFFFFFBF5).toArgb().toLong(),
                 font = ThemeFont.Serif,
                 bubbleRadius = 18f,
-                iconVariant = InboxIconVariant.Bubble
+                iconVariant = InboxIconVariant.Bubble,
+                uiStyle = "Soft Layers",
+                iconStyle = "Outline"
             )
         ),
         ThemePreset(
@@ -499,7 +563,9 @@ private fun ThemesRow(onPreset: (ThemePalette) -> Unit) {
                 inboxBackground = Color(0xFFF1F5F9).toArgb().toLong(),
                 font = ThemeFont.Mono,
                 bubbleRadius = 12f,
-                iconVariant = InboxIconVariant.Minimal
+                iconVariant = InboxIconVariant.Minimal,
+                uiStyle = "Clean Minimal",
+                iconStyle = "Sharp"
             )
         ),
         ThemePreset(
@@ -513,7 +579,9 @@ private fun ThemesRow(onPreset: (ThemePalette) -> Unit) {
                 inboxBackground = Color(0xFF2E1065).toArgb().toLong(),
                 font = ThemeFont.Mono,
                 bubbleRadius = 18f,
-                iconVariant = InboxIconVariant.Shield
+                iconVariant = InboxIconVariant.Shield,
+                uiStyle = "Neon Glass",
+                iconStyle = "Outline"
             )
         ),
         ThemePreset(
@@ -527,7 +595,9 @@ private fun ThemesRow(onPreset: (ThemePalette) -> Unit) {
                 inboxBackground = Color(0xFF1E3A8A).toArgb().toLong(),
                 font = ThemeFont.System,
                 bubbleRadius = 24f,
-                iconVariant = InboxIconVariant.Beacon
+                iconVariant = InboxIconVariant.Beacon,
+                uiStyle = "Neon Glass",
+                iconStyle = "Outline"
             )
         )
     )

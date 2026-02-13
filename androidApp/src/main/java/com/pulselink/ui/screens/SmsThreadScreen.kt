@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -499,6 +500,10 @@ fun SmsThreadScreen(
     }
 }
 
+/**
+ * Streamlined message input - clean, fast, intuitive.
+ * AI features are hidden behind an expandable menu to reduce visual clutter.
+ */
 @Composable
 private fun MessageInput(
     draft: String,
@@ -519,12 +524,14 @@ private fun MessageInput(
     smartRepliesEnabled: Boolean
 ) {
     var showAiMenu by remember { mutableStateOf(false) }
+    var showMoreOptions by remember { mutableStateOf(false) }
     val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
     val onSurface = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
-    val errorMessage = (aiState as? AiComposeState.Error)?.message
+    val surfaceColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor)
+    val canSend = draft.isNotBlank()
 
     Surface(
-        color = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor), // Or distinct input BG
+        color = surfaceColor,
         tonalElevation = 2.dp,
         modifier = Modifier
             .fillMaxWidth()
@@ -533,161 +540,127 @@ private fun MessageInput(
     ) {
         Column(
             modifier = Modifier
-                .padding(8.dp)
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+                .padding(horizontal = 8.dp, vertical = 6.dp)
+                .fillMaxWidth()
         ) {
-            if (smartRepliesEnabled) {
+            // Smart replies - only show if enabled and draft is empty
+            if (smartRepliesEnabled && draft.isBlank()) {
                 val suggestions = stringArrayResource(com.pulselink.R.array.smart_replies_defaults).toList()
                 LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    items(suggestions) { label ->
+                    items(suggestions.take(4)) { label ->
                         SuggestionChip(
-                            onClick = { onDraftChange(if (draft.isBlank()) label else "$draft $label") },
-                            label = { Text(label) },
+                            onClick = { onDraftChange(label) },
+                            label = { Text(label, style = MaterialTheme.typography.labelMedium) },
                             colors = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = primary.copy(alpha = 0.1f),
+                                containerColor = primary.copy(alpha = 0.08f),
                                 labelColor = primary
                             ),
-                            border = BorderStroke(1.dp, primary.copy(alpha = 0.3f))
+                            border = BorderStroke(1.dp, primary.copy(alpha = 0.2f))
                         )
                     }
                 }
             }
-            if (aiSignInRequired) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "Sign in to use AI assist",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = onSurface
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    OutlinedButton(onClick = onRequestAiSignIn) {
-                        Text("Sign in")
-                    }
-                }
-            }
-            if (aiEnabled) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "AI assist",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = onSurface
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    if (aiState is AiComposeState.Loading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .size(18.dp)
-                                .padding(end = 4.dp),
-                            strokeWidth = 2.dp,
-                            color = primary
-                        )
-                    }
-                    IconButton(
-                        onClick = { showAiMenu = true },
-                        enabled = aiState !is AiComposeState.Loading
-                    ) {
-                        ThemeIcon(
-                            iconKey = ThemeIconKey.AI,
-                            theme = theme,
-                            imageVector = Icons.Filled.AutoFixHigh,
-                            contentDescription = "AI assist",
-                            tint = primary,
-                            modifier = Modifier.size(iconSize)
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = showAiMenu,
-                        onDismissRequest = { showAiMenu = false }
-                    ) {
-                        AiComposeAction.values().forEach { action ->
-                            DropdownMenuItem(
-                                text = { Text(action.label) },
-                                onClick = {
-                                    showAiMenu = false
-                                    onAiAction(action)
-                                }
-                            )
-                        }
-                    }
-                }
-                if (!errorMessage.isNullOrBlank()) {
-                    Text(
-                        text = errorMessage,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
+
+            // Main input row - clean and simple
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                // Attachment button
                 IconButton(
-                    onClick = onPickAttachment
+                    onClick = onPickAttachment,
+                    modifier = Modifier.size(42.dp)
                 ) {
                     ThemeIcon(
                         iconKey = ThemeIconKey.ATTACH,
                         theme = theme,
                         imageVector = Icons.Filled.AttachFile,
-                        contentDescription = "Attach file",
+                        contentDescription = "Attach",
                         tint = primary,
-                        modifier = Modifier.size(iconSize)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
-                Spacer(modifier = Modifier.width(4.dp))
+
+                // Text input
                 OutlinedTextField(
                     value = draft,
                     onValueChange = onDraftChange,
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Text message") },
+                    placeholder = {
+                        Text(
+                            "Message",
+                            color = onSurface.copy(alpha = 0.5f)
+                        )
+                    },
                     maxLines = 4,
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = onSurface),
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Sentences,
                         autoCorrect = true,
                         keyboardType = KeyboardType.Text,
                         imeAction = ImeAction.Send
                     ),
-                    trailingIcon = {
-                        val enabled = draft.isNotBlank()
-                        IconButton(
-                            onClick = {
-                                onSend(draft, selectedLineId)
-                            },
-                            enabled = enabled
-                        ) {
-                            ThemeIcon(
-                                iconKey = ThemeIconKey.SEND,
-                                theme = theme,
-                                imageVector = Icons.Filled.Send,
-                                contentDescription = "Send",
-                                tint = if (enabled) primary else primary.copy(alpha = 0.38f),
-                                modifier = Modifier.size(iconSize)
-                            )
-                        }
-                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = primary,
-                        unfocusedBorderColor = onSurface.copy(alpha = 0.5f),
-                        focusedTextColor = onSurface,
-                        unfocusedTextColor = onSurface,
+                        unfocusedBorderColor = onSurface.copy(alpha = 0.2f),
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
                         cursorColor = primary
                     ),
-                    shape = RoundedCornerShape(24.dp)
+                    shape = RoundedCornerShape(22.dp)
                 )
-                if (lineOptions.isNotEmpty()) {
-                    Spacer(modifier = Modifier.width(8.dp))
+
+                // AI button (compact, only if enabled)
+                if (aiEnabled && !aiSignInRequired) {
+                    Box {
+                        IconButton(
+                            onClick = { showAiMenu = true },
+                            enabled = aiState !is AiComposeState.Loading,
+                            modifier = Modifier.size(42.dp)
+                        ) {
+                            if (aiState is AiComposeState.Loading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = primary
+                                )
+                            } else {
+                                ThemeIcon(
+                                    iconKey = ThemeIconKey.AI,
+                                    theme = theme,
+                                    imageVector = Icons.Filled.AutoFixHigh,
+                                    contentDescription = "AI",
+                                    tint = primary.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        DropdownMenu(
+                            expanded = showAiMenu,
+                            onDismissRequest = { showAiMenu = false }
+                        ) {
+                            AiComposeAction.values().forEach { action ->
+                                DropdownMenuItem(
+                                    text = { Text(action.label) },
+                                    onClick = {
+                                        showAiMenu = false
+                                        onAiAction(action)
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Line selector (if multiple lines)
+                if (lineOptions.size > 1) {
                     var expanded by remember { mutableStateOf(false) }
                     val ordered = remember(lineOptions) {
                         lineOptions.sortedWith(
@@ -697,81 +670,64 @@ private fun MessageInput(
                     }
                     val selectedIndex = ordered.indexOfFirst { it.id == selectedLineId }
                         .takeIf { it >= 0 } ?: 0
-                    val palette = listOf(
-                        parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor),
-                        parseColorOr(MaterialTheme.colorScheme.secondary, theme.secondaryColor),
-                        parseColorOr(MaterialTheme.colorScheme.tertiary, theme.bubbleOutgoing),
-                        parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleIncoming)
-                    )
+                    val palette = listOf(primary, parseColorOr(MaterialTheme.colorScheme.secondary, theme.secondaryColor))
                     val badgeColor = palette[selectedIndex % palette.size]
                     val isOnline = ordered.getOrNull(selectedIndex)?.id?.let { lineStatus[it] != false } ?: true
 
                     Box {
                         Surface(
                             modifier = Modifier
-                                .size(44.dp)
+                                .size(36.dp)
                                 .clickable { expanded = true },
                             color = Color.Transparent
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                LineIndicatorBadge(
-                                    index = selectedIndex,
-                                    color = badgeColor,
-                                    isActive = true,
-                                    size = 18.dp
-                                )
+                                LineIndicatorBadge(index = selectedIndex, color = badgeColor, isActive = true, size = 16.dp)
                                 if (!isOnline) {
-                                    LineStatusDot(
-                                        modifier = Modifier.align(Alignment.TopEnd),
-                                        color = Color.Red
-                                    )
+                                    LineStatusDot(modifier = Modifier.align(Alignment.TopEnd), color = Color.Red)
                                 }
                             }
                         }
-                        DropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
+                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                             ordered.forEachIndexed { index, line ->
                                 val itemColor = palette[index % palette.size]
-                                val numberLabel = line.phoneNumber.takeIf { it.isNotBlank() }
-                                val itemLabel = if (numberLabel != null) "Line ${index + 1} | $numberLabel" else "Line ${index + 1}"
-                                val online = lineStatus[line.id] != false
-                                val isSelected = index == selectedIndex
+                                val itemLabel = "Line ${index + 1}" + (line.phoneNumber.takeIf { it.isNotBlank() }?.let { " | $it" } ?: "")
                                 DropdownMenuItem(
                                     text = {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            LineIndicatorBadge(
-                                                index = index,
-                                                color = itemColor,
-                                                isActive = isSelected,
-                                                size = 16.dp
-                                            )
-                                            Text(itemLabel)
-                                            Spacer(modifier = Modifier.weight(1f))
-                                            if (isSelected) {
-                                                Text(
-                                                    text = "Active",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = itemColor
-                                                )
-                                            }
-                                            if (!online) {
-                                                Text("(offline)", style = MaterialTheme.typography.labelSmall)
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            LineIndicatorBadge(index = index, color = itemColor, isActive = index == selectedIndex, size = 14.dp)
+                                            Text(itemLabel, style = MaterialTheme.typography.bodyMedium)
+                                            if (lineStatus[line.id] == false) {
+                                                Text("offline", style = MaterialTheme.typography.labelSmall, color = Color.Red.copy(alpha = 0.7f))
                                             }
                                         }
                                     },
-                                    onClick = {
-                                        expanded = false
-                                        onSelectLine(line.id)
-                                    }
+                                    onClick = { expanded = false; onSelectLine(line.id) }
                                 )
                             }
                         }
                     }
+                }
+
+                // Send button
+                IconButton(
+                    onClick = { if (canSend) onSend(draft, selectedLineId) },
+                    enabled = canSend,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(
+                            if (canSend) primary else primary.copy(alpha = 0.3f),
+                            shape = CircleShape
+                        )
+                ) {
+                    ThemeIcon(
+                        iconKey = ThemeIconKey.SEND,
+                        theme = theme,
+                        imageVector = Icons.Filled.Send,
+                        contentDescription = "Send",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
         }

@@ -78,7 +78,8 @@ class ContactLinkManager @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val functions: FirebaseFunctions,
     private val widgetStateManager: WidgetStateManager,
-    private val messageDeliveryTracker: MessageDeliveryTracker
+    private val messageDeliveryTracker: MessageDeliveryTracker,
+    private val contactEventTracker: com.pulselink.data.contacts.ContactEventTracker
 ) {
 
     private val notificationManager by lazy { NotificationManagerCompat.from(context) }
@@ -1103,7 +1104,27 @@ class ContactLinkManager @Inject constructor(
         if (resolvedNumber.isNullOrBlank()) return
         val contact = findContactByPhoneFlexible(resolvedNumber) ?: return
         if (contact.linkStatus != LinkStatus.LINKED) return
+        val settings = settingsRepository.settings.first()
         try {
+            // New: Frequency-based DND bypass for Calls
+            if (settings.contactFrequencyBypassEnabled && contact.callsToBypassDnd != null) {
+                var updatedContact = contactEventTracker.addEvent(contact, com.pulselink.data.contacts.EventType.CALL)
+                contactRepository.upsert(updatedContact) // Persist updated events list
+
+                val callCount = contactEventTracker.countEvents(updatedContact, com.pulselink.data.contacts.EventType.CALL, updatedContact.bypassDndWindowMinutes)
+                if (callCount >= updatedContact.callsToBypassDnd!!) {
+                    Log.d(TAG, "Call frequency bypass triggered for ${updatedContact.displayName}. Count: $callCount, Threshold: ${updatedContact.callsToBypassDnd}")
+                    remoteActionHandler.playAttentionTone(
+                        contact = updatedContact,
+                        tier = EscalationTier.EMERGENCY,
+                        title = "Call Flood Alert from ${updatedContact.displayName}",
+                        body = "${updatedContact.displayName} called ${callCount} times in ${updatedContact.bypassDndWindowMinutes} minutes.",
+                        notificationId = (updatedContact.id.hashCode() and 0xFFFF) + 9003,
+                        forceBypass = true,
+                        volumeHint = com.pulselink.domain.model.VolumeHint.MAX
+                    )
+                }
+            }
             remoteActionHandler.handleIncomingCall(contact)
         } catch (error: Exception) {
             Log.e(TAG, "Failed to process incoming call for ${contact.displayName}", error)

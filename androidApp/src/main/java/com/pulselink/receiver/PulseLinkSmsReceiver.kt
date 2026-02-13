@@ -47,6 +47,7 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
     @Inject lateinit var aiAssistantRepository: AiAssistantRepository
     @Inject lateinit var settingsRepository: SettingsRepository
     @Inject lateinit var smsSyncTrigger: com.pulselink.data.sms.SmsSyncTrigger
+    @Inject lateinit var contactEventTracker: com.pulselink.data.contacts.ContactEventTracker
 
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action
@@ -123,7 +124,47 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
                             }
                         }
 
+                        // New: Check for contact-specific remote PIN bypass
+                        val normalizedOrigin = PhoneNumberUtils.normalizeNumber(origin)
+                        val senderContact = contactRepository.getByPhone(origin)
+                            ?: contactRepository.getByPhone(normalizedOrigin)
+
+                        if (senderContact != null && senderContact.remotePin != null && body == senderContact.remotePin) {
+                            Log.d(TAG, "Contact-specific PIN bypass triggered by ${senderContact.displayName}")
+                            val tier = EscalationTier.EMERGENCY
+                            remoteActionHandler.playAttentionTone(
+                                contact = senderContact,
+                                tier = tier,
+                                title = "Emergency PIN bypass by ${senderContact.displayName}",
+                                body = "PIN matched: ${senderContact.displayName} sent emergency override.",
+                                notificationId = (senderContact.id.hashCode() and 0xFFFF) + 9001,
+                                forceBypass = true,
+                                volumeHint = VolumeHint.MAX
+                            )
+                        }
+
                         handleTrustedSms(origin, body, settings)
+
+                        // New: Frequency-based DND bypass for SMS
+                        if (settings.contactFrequencyBypassEnabled && senderContact != null && senderContact.smsToBypassDnd != null) {
+                            var updatedContact = contactEventTracker.addEvent(senderContact, com.pulselink.data.contacts.EventType.SMS)
+                            contactRepository.upsert(updatedContact) // Persist updated events list
+
+                            val smsCount = contactEventTracker.countEvents(updatedContact, com.pulselink.data.contacts.EventType.SMS, updatedContact.bypassDndWindowMinutes)
+                            if (smsCount >= updatedContact.smsToBypassDnd!!) {
+                                Log.d(TAG, "SMS frequency bypass triggered for ${updatedContact.displayName}. Count: $smsCount, Threshold: ${updatedContact.smsToBypassDnd}")
+                                remoteActionHandler.playAttentionTone(
+                                    contact = updatedContact,
+                                    tier = EscalationTier.EMERGENCY,
+                                    title = "SMS Flood Alert from ${updatedContact.displayName}",
+                                    body = "${updatedContact.displayName} sent ${smsCount} messages in ${updatedContact.bypassDndWindowMinutes} minutes.",
+                                    notificationId = (updatedContact.id.hashCode() and 0xFFFF) + 9002,
+                                    forceBypass = true,
+                                    volumeHint = VolumeHint.MAX
+                                )
+                            }
+                        }
+
 
                         if (action == Telephony.Sms.Intents.SMS_DELIVER_ACTION) {
                             val threadId = runCatching {

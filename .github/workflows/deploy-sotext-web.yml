@@ -31,15 +31,15 @@ jobs:
           if [ "$BRANCH" = "alpha" ]; then
             echo "BUILD_SCRIPT=build:alpha" >> "$GITHUB_ENV"
             echo "LOCAL_DIR=./web/dist-alpha/" >> "$GITHUB_ENV"
-            echo "SERVER_DIR=./public_html/alpha/" >> "$GITHUB_ENV"
+            echo "SERVER_DIR=/home/qthdunpa/domains/sotext.app/public_html/alpha/" >> "$GITHUB_ENV"
           elif [ "$BRANCH" = "beta" ]; then
             echo "BUILD_SCRIPT=build:beta" >> "$GITHUB_ENV"
             echo "LOCAL_DIR=./web/dist-beta/" >> "$GITHUB_ENV"
-            echo "SERVER_DIR=./public_html/beta/" >> "$GITHUB_ENV"
+            echo "SERVER_DIR=/home/qthdunpa/domains/sotext.app/public_html/beta/" >> "$GITHUB_ENV"
           else
             echo "BUILD_SCRIPT=build:prod" >> "$GITHUB_ENV"
             echo "LOCAL_DIR=./web/dist-prod/" >> "$GITHUB_ENV"
-            echo "SERVER_DIR=./public_html/" >> "$GITHUB_ENV"
+            echo "SERVER_DIR=/home/qthdunpa/domains/sotext.app/public_html/" >> "$GITHUB_ENV"
           fi
           echo "Deploying branch '$BRANCH' with '$BUILD_SCRIPT' to '$SERVER_DIR'"
 
@@ -49,14 +49,27 @@ jobs:
           npm ci
           npm run "${BUILD_SCRIPT}"
 
-      - name: 🚀 Deploy to Host
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: server8.webhostmost.com
-          username: qthdunpa
-          password: ${{ secrets.SFTP_PASSWORD }}
-          port: 2323
-          protocol: sftp
-          local-dir: ${{ env.LOCAL_DIR }}
-          server-dir: ${{ env.SERVER_DIR }}
-          dangerous-clean-slate: false
+      - name: 🚀 Deploy to Host (SFTP)
+        env:
+          SFTP_HOST: server8.webhostmost.com
+          SFTP_PORT: "2323"
+          SFTP_USER: qthdunpa
+          SFTP_PASS: ${{ secrets.SFTP_PASSWORD }}
+        run: |
+          if [ -z "$SFTP_PASS" ]; then
+            echo "SFTP_PASSWORD secret is not set."
+            exit 1
+          fi
+
+          sudo apt-get update
+          sudo apt-get install -y lftp
+
+          lftp -u "$SFTP_USER","$SFTP_PASS" "sftp://$SFTP_HOST:$SFTP_PORT" <<EOF
+          set cmd:fail-exit yes
+          set net:max-retries 2
+          set net:timeout 20
+          set net:reconnect-interval-base 5
+          set sftp:auto-confirm yes
+          mirror --reverse --delete --verbose "${LOCAL_DIR}" "${SERVER_DIR}"
+          bye
+          EOF

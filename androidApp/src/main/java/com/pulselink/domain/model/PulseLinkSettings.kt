@@ -77,7 +77,8 @@ data class PulseLinkSettings(
     // Extensions
     val privateSafeEnabled: Boolean = false,
     val smartRepliesEnabled: Boolean = false,
-    val truecallerEnabled: Boolean = false
+    val truecallerEnabled: Boolean = false,
+    val contactFrequencyBypassEnabled: Boolean = false
 ) {
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)
         .map { it.trim().lowercase() }
@@ -117,5 +118,7 @@ data class ThemePreferences(
     val iconOverrides: Map<String, String> = emptyMap(),
     val useGlassEffect: Boolean = false,
     val useHolographicGlow: Boolean = false,
-    val uiDensity: String = "Comfortable"
+    val uiDensity: String = "Comfortable",
+    val uiStyle: String = "Clean Minimal",
+    val iconStyle: String = "Outline"
 )

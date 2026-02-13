@@ -37,7 +37,11 @@ data class Contact(
     val themeOverride: ThemePreferences? = null,
     val avatarUrl: String? = null,
     val remoteDisplayName: String? = null,
-    val remotePin: String? = null
+    val remotePin: String? = null,
+    val callsToBypassDnd: Int? = null,
+    val smsToBypassDnd: Int? = null,
+    val bypassDndWindowMinutes: Int = 5, // Default to 5 minutes
+    val lastContactEvents: String = "[]" // JSON string of timestamps
 )
 
 @Serializable

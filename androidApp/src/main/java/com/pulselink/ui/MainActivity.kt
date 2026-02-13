@@ -83,7 +83,6 @@ import com.pulselink.domain.model.LineSendPreference
 import com.pulselink.R
 import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.screens.BetaTesterListScreen
-import com.pulselink.ui.screens.HomeScreen
 import com.pulselink.ui.screens.AlertHistoryScreen
 import com.pulselink.ui.screens.EmergencyMapScreen
 import com.pulselink.ui.screens.AlertTonePickerScreen
@@ -236,9 +235,9 @@ class MainActivity : AppCompatActivity() {
             )
         )
         setContent {
-            PulseLinkTheme {
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            PulseLinkTheme(theme = state.settings.themePreferences) {
                 val context = LocalContext.current
-                val state by viewModel.uiState.collectAsStateWithLifecycle()
                 val linesViewModel: SmsLinesViewModel = hiltViewModel()
                 val lines by linesViewModel.lines.collectAsStateWithLifecycle()
                 val lineDevices by linesViewModel.devices.collectAsStateWithLifecycle()
@@ -881,43 +880,20 @@ class MainActivity : AppCompatActivity() {
                         BuildConfig.PREMIUM_FEATURES ||
                         state.isProUser
                     val proLikeUser = BuildConfig.PRO_FEATURES || state.settings.proUnlocked || state.settings.premiumUnlocked
-                    composable("splash") {
-                        val brandName = pulseBrandName(
-                            isPremium = premiumBranding,
-                            isPro = proLikeUser
-                        )
-                        val badgeText = when {
-                            premiumBranding -> "Premium"
-                            proLikeUser -> "Pro"
-                            else -> null
+                    val openProUpgrade: () -> Unit = {
+                        val playStoreIntent = Intent(Intent.ACTION_VIEW).apply {
+                            data = Uri.parse("market://details?id=com.pulselink.pro")
+                            setPackage("com.android.vending")
                         }
-                        SplashScreen(
-                            usePremiumBranding = premiumBranding || proLikeUser,
-                            brandName = brandName,
-                            badgeText = badgeText,
-                            isUnifiedMode = unifiedModeActive
-                        )
-                        LaunchedEffect(authState, state.onboardingComplete) {
-                            if (authState is AuthState.Loading) return@LaunchedEffect
-                            delay(1200)
-                            val destination = when (val auth = authState) {
-                                is AuthState.Authenticated -> {
-                                    val user = auth.user
-                                    if (state.onboardingComplete) {
-                                        if (unifiedModeActive) "unified_inbox" else "home"
-                                    } else {
-                                        "onboarding_intro"
-                                    }
-                                }
-                                else -> "login"
-                            }
-                            navController.navigate(destination) {
-                                popUpTo(0) { inclusive = true }
-                                launchSingleTop = true
-                            }
+                        try {
+                            startActivity(playStoreIntent)
+                        } catch (_: ActivityNotFoundException) {
+                            playStoreIntent.data = Uri.parse("https://play.google.com/store/apps/details?id=com.pulselink.pro")
+                            playStoreIntent.setPackage(null)
+                            startActivity(playStoreIntent)
                         }
                     }
-                    composable("unified_inbox") {
+                    val renderBeaconRemakeHome: @Composable () -> Unit = {
                         val contactsByNumber = remember(state.contacts) {
                             val map = mutableMapOf<String, Contact>()
                             state.contacts.forEach { contact ->
@@ -928,7 +904,7 @@ class MainActivity : AppCompatActivity() {
                             }
                             map.toMap()
                         }
-                        
+
                         val isSmsOnlyUser = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true
                         UnifiedHomeScreen(
                             state = state,
@@ -974,19 +950,7 @@ class MainActivity : AppCompatActivity() {
                                     navController.navigate("account_settings")
                                 }
                             },
-                            onUpgradeClick = {
-                                val playStoreIntent = Intent(Intent.ACTION_VIEW).apply {
-                                    data = Uri.parse("market://details?id=com.pulselink.pro")
-                                    setPackage("com.android.vending")
-                                }
-                                try {
-                                    startActivity(playStoreIntent)
-                                } catch (_: ActivityNotFoundException) {
-                                    playStoreIntent.data = Uri.parse("https://play.google.com/store/apps/details?id=com.pulselink.pro")
-                                    playStoreIntent.setPackage(null)
-                                    startActivity(playStoreIntent)
-                                }
-                            },
+                            onUpgradeClick = openProUpgrade,
                             brandName = pulseDisplayName,
                             isPremium = isPremium,
                             isPro = isPro,
@@ -1015,6 +979,43 @@ class MainActivity : AppCompatActivity() {
                             }
                         )
                     }
+                    composable("splash") {
+                        val brandName = pulseBrandName(
+                            isPremium = premiumBranding,
+                            isPro = proLikeUser
+                        )
+                        val badgeText = when {
+                            premiumBranding -> "Premium"
+                            proLikeUser -> "Pro"
+                            else -> null
+                        }
+                        SplashScreen(
+                            usePremiumBranding = premiumBranding || proLikeUser,
+                            brandName = brandName,
+                            badgeText = badgeText,
+                            isUnifiedMode = unifiedModeActive
+                        )
+                        LaunchedEffect(authState, state.onboardingComplete) {
+                            if (authState is AuthState.Loading) return@LaunchedEffect
+                            delay(1200)
+                            val destination = when (val auth = authState) {
+                                is AuthState.Authenticated -> {
+                                    val user = auth.user
+                                    if (state.onboardingComplete) {
+                                        if (unifiedModeActive) "unified_inbox" else "home"
+                                    } else {
+                                        "onboarding_intro"
+                                    }
+                                }
+                                else -> "login"
+                            }
+                            navController.navigate(destination) {
+                                popUpTo(0) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+                    composable("unified_inbox") { renderBeaconRemakeHome() }
                     composable("login") {
                         val loginViewModel: LoginViewModel = hiltViewModel()
                         val loginUiState by loginViewModel.uiState.collectAsStateWithLifecycle()
@@ -1295,82 +1296,7 @@ class MainActivity : AppCompatActivity() {
                             }
                         )
                     }
-                    composable("home") {
-                        val isSmsOnlyUser = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true
-                        HomeScreen(
-                            state = state,
-                            onDismissAssistantShortcuts = viewModel::dismissAssistantHint,
-                            onTriggerEmergency = viewModel::triggerEmergency,
-                            onSendCheckIn = viewModel::sendCheckIn,
-                            onSettingsClick = { navController.navigate("settings") { launchSingleTop = true } },
-                            onFaqClick = { navController.navigate("faq") { launchSingleTop = true } },
-                            onReportBugClick = { navController.navigate("bug_report") },
-                            onBeaconClick = launchBeaconInbox,
-                            onOpenContacts = {
-                                navController.navigate("sms/inbox?filter=contacts") {
-                                    launchSingleTop = true
-                                }
-                            },
-                            showBeaconIcon = state.settings.beaconLauncherEnabled,
-                            showBeaconHint = !state.settings.beaconHintDismissed,
-                            onBeaconHintDismiss = { viewModel.setBeaconHintDismissed(true) },
-                            onBeaconHintDisable = {
-                                viewModel.setBeaconHintDismissed(true)
-                                viewModel.setBeaconLauncherEnabled(false)
-                            },
-                            onBeaconHintUse = {
-                                viewModel.setBeaconHintDismissed(true)
-                                requestDefaultSms()
-                            },
-                            showWebAccessHint = !state.settings.webAccessHintDismissed && isPremium,
-                            onWebAccessHintDismiss = { viewModel.setWebAccessHintDismissed(true) },
-                            onWebAccessHintAction = {
-                                viewModel.setWebAccessHintDismissed(true)
-                                if (isPremium) {
-                                    // Navigate to Beacon settings
-                                    launchBeaconInbox()
-                                } else {
-                                    // Navigate to upgrade screen
-                                    navController.navigate("account_settings")
-                                }
-                            },
-                            onAddContact = viewModel::saveContact,
-                            onContactSelected = { contactId -> navController.navigate("contact/$contactId") },
-                            onContactSettings = { contactId -> navController.navigate("contact/$contactId/settings") },
-                            onSendLink = { contactId ->
-                                state.contacts.firstOrNull { it.id == contactId }?.let { sendLinkOrInvite(it) }
-                            },
-                            onApproveLink = viewModel::approveLink,
-                            onCallContact = callContactHandler,
-                            onReorderContacts = viewModel::reorderContacts,
-                            onRequestCancelEmergency = cancelEmergencyHandler,
-                            onViewEmergencyMap = { navController.navigate("emergency_map") },
-                            isCancelingEmergency = isCancelingEmergency,
-                            onAlertsClick = { navController.navigate("alerts_history") { launchSingleTop = true } },
-                            showAddLoginPrompt = isSmsOnlyUser,
-                            onAddLoginClick = {
-                                navController.navigate("login") {
-                                    launchSingleTop = true
-                                }
-                            },
-                            onUpgradeClick = {
-                                val playStoreIntent = Intent(Intent.ACTION_VIEW).apply {
-                                    data = Uri.parse("market://details?id=com.pulselink.pro")
-                                    setPackage("com.android.vending")
-                                }
-                                try {
-                                    startActivity(playStoreIntent)
-                                } catch (e: ActivityNotFoundException) {
-                                    // Fallback to a browser if the Play Store app is not installed
-                                    playStoreIntent.data = Uri.parse("https://play.google.com/store/apps/details?id=com.pulselink.pro")
-                                    playStoreIntent.setPackage(null)
-                                    startActivity(playStoreIntent)
-                                }
-                            },
-                            onOpenThemes = { navController.navigate("visual_settings") { launchSingleTop = true } },
-                            onOpenNotifications = { navController.navigate("notifications/message_sound") { launchSingleTop = true } }
-                        )
-                    }
+                    composable("home") { renderBeaconRemakeHome() }
                     composable("alerts_history") {
                         AlertHistoryScreen(
                             state = state,

@@ -164,7 +164,7 @@ interface PinnedThreadDao {
 
 @Database(
     entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class, ArchivedThread::class, PinnedThread::class],
-    version = 18,
+    version = 19,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -232,6 +232,12 @@ abstract class PulseLinkDatabase : RoomDatabase() {
 
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(database: SupportSQLiteDatabase) {
+                // No schema changes; version bump only.
+            }
+        }
+
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS archived_threads (
@@ -240,12 +246,6 @@ abstract class PulseLinkDatabase : RoomDatabase() {
                     )
                     """.trimIndent()
                 )
-            }
-        }
-
-        val MIGRATION_10_11 = object : Migration(10, 11) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // No schema changes; version bump only.
             }
         }
 
@@ -379,6 +379,15 @@ abstract class PulseLinkDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_18_19 = object : Migration(18, 19) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                addColumnIfMissing(database, "contacts", "callsToBypassDnd", "INTEGER")
+                addColumnIfMissing(database, "contacts", "smsToBypassDnd", "INTEGER")
+                addColumnIfMissing(database, "contacts", "bypassDndWindowMinutes", "INTEGER NOT NULL DEFAULT 5")
+                addColumnIfMissing(database, "contacts", "lastContactEvents", "TEXT NOT NULL DEFAULT '[]'")
+            }
+        }
+
         val ALL_MIGRATIONS = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -396,7 +405,8 @@ abstract class PulseLinkDatabase : RoomDatabase() {
             MIGRATION_14_15,
             MIGRATION_15_16,
             MIGRATION_16_17,
-            MIGRATION_17_18
+            MIGRATION_17_18,
+            MIGRATION_18_19
         )
 
         private fun ensureBaseSchema(database: SupportSQLiteDatabase) {
@@ -482,22 +492,12 @@ abstract class PulseLinkDatabase : RoomDatabase() {
                     """
                     CREATE TABLE IF NOT EXISTS blocked_contacts (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                        phoneNumber TEXT,
-                        linkCode TEXT,
-                        remoteDeviceId TEXT,
-                        displayName TEXT NOT NULL,
+                        phoneNumber TEXT NOT NULL,
                         blockedAt INTEGER NOT NULL
                     )
                     """.trimIndent()
                 )
-                return
             }
-
-            addColumnIfMissing(database, "blocked_contacts", "phoneNumber", "TEXT")
-            addColumnIfMissing(database, "blocked_contacts", "linkCode", "TEXT")
-            addColumnIfMissing(database, "blocked_contacts", "remoteDeviceId", "TEXT")
-            addColumnIfMissing(database, "blocked_contacts", "displayName", "TEXT NOT NULL DEFAULT ''")
-            addColumnIfMissing(database, "blocked_contacts", "blockedAt", "INTEGER NOT NULL DEFAULT 0")
         }
 
         private fun ensureContactMessagesTable(database: SupportSQLiteDatabase) {
@@ -565,3 +565,4 @@ abstract class PulseLinkDatabase : RoomDatabase() {
 
     }
 }
+

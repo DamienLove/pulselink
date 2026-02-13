@@ -57,7 +57,8 @@
       "mcp__plugin_firebase_firebase__firebase_create_android_sha",
       "Bash(firebase apps:list:*)",
       "mcp__plugin_firebase_firebase__firebase_get_sdk_config",
-      "Bash(python upload_play.py:*)"
+      "Bash(python upload_play.py:*)",
+      "Bash(cd:*)"
     ]
   },
   "mcpServers": {

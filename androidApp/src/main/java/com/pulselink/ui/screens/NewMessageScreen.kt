@@ -20,10 +20,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -51,6 +61,14 @@ import com.pulselink.domain.model.ThemePreferences
 import com.pulselink.ui.model.MessageRecipient
 import com.pulselink.util.parseColorOr
 
+/**
+ * Clean, intuitive new message screen.
+ * Design principles:
+ * - Search/recipient input is the focal point
+ * - Selected contacts are clearly visible
+ * - One-tap to start messaging
+ * - Attachment option is always accessible
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun NewMessageScreen(
@@ -75,7 +93,7 @@ fun NewMessageScreen(
             if (numbers.isNotEmpty()) {
                 onSendAttachment(numbers, uri)
             } else {
-                Toast.makeText(context, "Select at least one contact first", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Select a recipient first", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -90,15 +108,27 @@ fun NewMessageScreen(
 
     val primaryColor = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
     val onPrimaryColor = parseColorOr(MaterialTheme.colorScheme.onPrimary, theme.onBubbleOutgoing)
+    val textColor = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+    val placeholderColor = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.6f)
 
     Scaffold(
         containerColor = parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor),
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("New Message", color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)) },
+                title = {
+                    Text(
+                        "New message",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -106,14 +136,47 @@ fun NewMessageScreen(
                 )
             )
         },
-        floatingActionButton = {
+        bottomBar = {
+            // Action bar at bottom - always visible when recipients selected
             if (selectedContacts.isNotEmpty()) {
-                FloatingActionButton(
-                    onClick = { onCreateConversation(selectedContacts.map { it.phoneNumber }) },
-                    containerColor = primaryColor,
-                    contentColor = onPrimaryColor
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor),
+                    tonalElevation = 3.dp
                 ) {
-                    Icon(Icons.Filled.Check, contentDescription = "Create")
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Attachment button
+                        OutlinedButton(
+                            onClick = { attachmentPicker.launch("*/*") },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                Icons.Filled.AttachFile,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Attach")
+                        }
+
+                        // Start conversation button
+                        Button(
+                            onClick = { onCreateConversation(selectedContacts.map { it.phoneNumber }) },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = primaryColor,
+                                contentColor = onPrimaryColor
+                            )
+                        ) {
+                            Text("Message", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
                 }
             }
         }
@@ -123,142 +186,206 @@ fun NewMessageScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Selected Contacts Chips
-            if (selectedContacts.isNotEmpty()) {
-                FlowRow(
+            // To: field with selected contacts
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor),
+                tonalElevation = 1.dp
+            ) {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
-                    selectedContacts.forEach { contact ->
-                        InputChip(
-                            selected = true,
-                            onClick = {
-                                selectedContacts = selectedContacts - contact
-                            },
-                            label = { Text(contact.displayName) },
-                            trailingIcon = {
-                                Icon(Icons.Filled.Close, contentDescription = "Remove", modifier = Modifier.size(16.dp))
-                            },
-                            colors = InputChipDefaults.inputChipColors(
-                                selectedContainerColor = primaryColor.copy(alpha = 0.2f),
-                                selectedLabelColor = primaryColor
+                    // Selected contacts as chips
+                    if (selectedContacts.isNotEmpty()) {
+                        FlowRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            selectedContacts.forEach { contact ->
+                                InputChip(
+                                    selected = true,
+                                    onClick = { selectedContacts = selectedContacts - contact },
+                                    label = {
+                                        Text(
+                                            contact.displayName,
+                                            style = MaterialTheme.typography.labelLarge
+                                        )
+                                    },
+                                    trailingIcon = {
+                                        Icon(
+                                            Icons.Filled.Close,
+                                            contentDescription = "Remove",
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    },
+                                    colors = InputChipDefaults.inputChipColors(
+                                        selectedContainerColor = primaryColor.copy(alpha = 0.12f),
+                                        selectedLabelColor = primaryColor
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    // Search input
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = {
+                            Text(
+                                if (selectedContacts.isEmpty()) "To: Name or phone number"
+                                else "Add more recipients",
+                                color = placeholderColor
                             )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Filled.Search,
+                                contentDescription = null,
+                                tint = primaryColor
+                            )
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(Icons.Filled.Close, contentDescription = "Clear")
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = textColor,
+                            unfocusedTextColor = textColor,
+                            cursorColor = primaryColor,
+                            focusedBorderColor = primaryColor,
+                            unfocusedBorderColor = placeholderColor.copy(alpha = 0.3f),
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent
                         )
+                    )
+                }
+            }
+
+            // Permission prompt
+            if (!hasContactsPermission) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = primaryColor.copy(alpha = 0.08f)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Enable contacts",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = textColor
+                            )
+                            Text(
+                                text = "See your contacts here for faster messaging",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = textColor.copy(alpha = 0.7f)
+                            )
+                        }
+                        Button(
+                            onClick = onRequestContactsPermission,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = primaryColor,
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text("Allow")
+                        }
                     }
                 }
+            }
 
-                OutlinedButton(
-                    onClick = { attachmentPicker.launch("*/*") },
-                    enabled = selectedContacts.isNotEmpty(),
+            // Quick send to number option
+            if (searchQuery.isNotBlank() && searchQuery.any { it.isDigit() }) {
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .clickable { onManualInput(searchQuery) },
+                    shape = RoundedCornerShape(12.dp),
+                    color = primaryColor.copy(alpha = 0.1f)
                 ) {
-                    Icon(Icons.Filled.AttachFile, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
-                    Text("Add attachment")
-                }
-            }
-
-            if (!hasContactsPermission) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Allow contacts for full search",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Send,
+                            contentDescription = null,
+                            tint = primaryColor,
+                            modifier = Modifier.size(20.dp)
                         )
-                        Text(
-                            text = "Grant access to show all phone contacts here.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f)
-                        )
-                    }
-                    OutlinedButton(onClick = onRequestContactsPermission) {
-                        Text("Allow")
-                    }
-                }
-            }
-
-            // Search Input
-            val textColor = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
-            val placeholderColor = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.6f)
-
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("To: Name or number", color = placeholderColor) },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Filled.Close, contentDescription = "Clear")
+                        Column {
+                            Text(
+                                "Send to $searchQuery",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium,
+                                color = textColor
+                            )
+                            Text(
+                                "Tap to start messaging",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = textColor.copy(alpha = 0.6f)
+                            )
                         }
                     }
-                },
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = textColor,
-                    unfocusedTextColor = textColor,
-                    cursorColor = primaryColor,
-                    focusedLabelColor = primaryColor,
-                    unfocusedLabelColor = placeholderColor,
-                    focusedBorderColor = primaryColor,
-                    unfocusedBorderColor = placeholderColor,
-                    focusedLeadingIconColor = primaryColor,
-                    unfocusedLeadingIconColor = placeholderColor,
-                    focusedTrailingIconColor = primaryColor,
-                    unfocusedTrailingIconColor = placeholderColor,
-                )
-            )
-
-            // Manual Entry Option if search is numeric
-            if (searchQuery.isNotBlank() && searchQuery.any { it.isDigit() }) {
-                 Row(
-                     modifier = Modifier
-                         .fillMaxWidth()
-                         .clickable {
-                             // If manual input, we treat it as a direct navigation for now
-                             // Or we could create a temp Contact.
-                             // For simplicity/safety per user request, just navigate directly.
-                             onManualInput(searchQuery)
-                         }
-                         .padding(16.dp),
-                     verticalAlignment = Alignment.CenterVertically
-                 ) {
-                     Icon(
-                         Icons.Filled.Search,
-                         contentDescription = null,
-                         modifier = Modifier.padding(end = 16.dp),
-                         tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
-                     )
-                     Text(
-                         "Send to $searchQuery",
-                         style = MaterialTheme.typography.bodyLarge,
-                         color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
-                     )
-                 }
+                }
             }
 
+            // Contact list
             LazyColumn(
-                contentPadding = PaddingValues(bottom = 80.dp), // Space for FAB
+                contentPadding = PaddingValues(
+                    start = 8.dp,
+                    end = 8.dp,
+                    top = 8.dp,
+                    bottom = if (selectedContacts.isNotEmpty()) 80.dp else 24.dp
+                ),
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(filteredContacts) { contact ->
                     ContactRow(contact, theme) {
-                        // Add to selection
                         selectedContacts = selectedContacts + contact
-                        searchQuery = "" // Reset search
+                        searchQuery = ""
+                    }
+                }
+
+                if (filteredContacts.isEmpty() && searchQuery.isBlank() && hasContactsPermission) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "Start typing to find contacts",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = textColor.copy(alpha = 0.5f)
+                            )
+                        }
                     }
                 }
             }
@@ -266,48 +393,73 @@ fun NewMessageScreen(
     }
 }
 
+/**
+ * Clean contact row with avatar circle.
+ */
 @Composable
 private fun ContactRow(contact: MessageRecipient, theme: ThemePreferences, onClick: () -> Unit) {
-    Row(
+    val primaryColor = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+    val textColor = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = Color.Transparent
     ) {
-        // Avatar placeholder
-        Box(
+        Row(
             modifier = Modifier
-                .padding(4.dp)
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // We can reuse AvatarCircle from Inbox if we make it public or duplicate logic
-            Text(
-                text = contact.displayName.firstOrNull()?.toString() ?: "#",
-                style = MaterialTheme.typography.titleLarge,
-                color = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
-            )
-        }
-
-        Column {
-            Text(
-                text = contact.displayName,
-                style = MaterialTheme.typography.bodyLarge,
-                color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
-            )
-            if (contact.phoneNumber.isNotBlank()) {
-                Text(
-                    text = contact.phoneNumber,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f)
-                )
+            // Avatar circle
+            Surface(
+                modifier = Modifier.size(44.dp),
+                shape = CircleShape,
+                color = primaryColor.copy(alpha = 0.12f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = contact.displayName.firstOrNull()?.uppercaseChar()?.toString() ?: "#",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = primaryColor
+                    )
+                }
             }
-            if (contact.isTrusted) {
+
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Trusted",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+                    text = contact.displayName,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = textColor
                 )
+                if (contact.phoneNumber.isNotBlank()) {
+                    Text(
+                        text = contact.phoneNumber,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = textColor.copy(alpha = 0.6f)
+                    )
+                }
+            }
+
+            if (contact.isTrusted) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = primaryColor.copy(alpha = 0.1f)
+                ) {
+                    Text(
+                        text = "Trusted",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = primaryColor,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
             }
         }
     }

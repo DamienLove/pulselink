@@ -26,7 +26,11 @@ object BeaconIconManager {
         "neon_noir" to "com.pulselink.BeaconInboxThemeNeonNoir",
         "paperback" to "com.pulselink.BeaconInboxThemePaperback",
         "mint_breeze" to "com.pulselink.BeaconInboxThemeMintBreeze",
-        "amethyst_night" to "com.pulselink.BeaconInboxThemeAmethystNight"
+        "amethyst_night" to "com.pulselink.BeaconInboxThemeAmethystNight",
+        "shield" to "com.pulselink.BeaconInboxThemeMidnightOled",
+        "bubble" to "com.pulselink.BeaconInboxThemeDefaultLight",
+        "minimal" to "com.pulselink.BeaconInboxThemeSlateMono",
+        "sotext" to "com.pulselink.BeaconInboxThemeAurora"
     )
 
     private fun normalizeVariant(raw: String): String {

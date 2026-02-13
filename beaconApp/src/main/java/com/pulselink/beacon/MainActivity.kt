@@ -453,7 +453,9 @@ private fun BeaconNav(
                     onRadiusChange = { themeVm.applyRadius(it, addressArg) },
                     onPreset = { preset -> themeVm.applyPreset(preset, addressArg) },
                     onResetContact = { addressArg?.let { themeVm.resetContact(it) } },
-                    onIconVariant = { variant -> themeVm.updateIconVariant(variant) }
+                    onIconVariant = { variant -> themeVm.updateIconVariant(variant) },
+                    onUiStyleChange = { style -> themeVm.applyUiStyle(style, addressArg) },
+                    onIconStyleChange = { style -> themeVm.applyIconStyle(style, addressArg) }
                 )
             }
         }
