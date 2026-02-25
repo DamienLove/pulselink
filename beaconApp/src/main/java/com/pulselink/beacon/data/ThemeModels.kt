@@ -46,7 +46,9 @@ data class ThemePalette(
     val inboxBackground: Long,
     val bubbleRadius: Float,
     val font: ThemeFont,
-    val iconVariant: InboxIconVariant
+    val iconVariant: InboxIconVariant,
+    val uiStyle: String = "Clean Minimal",
+    val iconStyle: String = "Outline"
 ) {
     val incomingColor: Color get() = incoming.asColor()
     val outgoingColor: Color get() = outgoing.asColor()
@@ -73,7 +75,9 @@ data class ThemePalette(
         inboxBackground,
         bubbleRadius,
         font.name,
-        iconVariant.name
+        iconVariant.name,
+        uiStyle,
+        iconStyle
     ).joinToString("|")
 
     companion object {
@@ -87,7 +91,9 @@ data class ThemePalette(
             inboxBackground = 0xFF000000,  // Pitch Black
             bubbleRadius = 22f,
             font = ThemeFont.System,
-            iconVariant = InboxIconVariant.Beacon
+            iconVariant = InboxIconVariant.Beacon,
+            uiStyle = "Neon Glass",
+            iconStyle = "Outline"
         )
 
         fun decode(raw: String?): ThemePalette {
@@ -103,7 +109,9 @@ data class ThemePalette(
                     inboxBackground = parts.getOrNull(5)?.toLong() ?: default().inboxBackground,
                     bubbleRadius = parts.getOrNull(6)?.toFloat() ?: default().bubbleRadius,
                     font = ThemeFont.fromName(parts.getOrNull(7)),
-                    iconVariant = InboxIconVariant.fromName(parts.getOrNull(8))
+                    iconVariant = InboxIconVariant.fromName(parts.getOrNull(8)),
+                    uiStyle = parts.getOrNull(9) ?: default().uiStyle,
+                    iconStyle = parts.getOrNull(10) ?: default().iconStyle
                 )
             } catch (_: Exception) {
                 default()

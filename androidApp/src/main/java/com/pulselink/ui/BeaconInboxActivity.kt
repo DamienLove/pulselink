@@ -122,11 +122,11 @@ class BeaconInboxActivity : ComponentActivity() {
         notificationTarget.value = readNotificationTarget(intent)
         enableEdgeToEdge()
         setContent {
-            PulseLinkTheme {
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            PulseLinkTheme(theme = state.settings.themePreferences) {
                 val navController = rememberNavController()
                 val context = LocalContext.current
                 val scope = rememberCoroutineScope()
-                val state by viewModel.uiState.collectAsStateWithLifecycle()
                 val linesViewModel: SmsLinesViewModel = hiltViewModel()
                 val lines by linesViewModel.lines.collectAsStateWithLifecycle()
                 val lineDevices by linesViewModel.devices.collectAsStateWithLifecycle()

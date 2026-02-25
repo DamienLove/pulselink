@@ -1315,7 +1315,9 @@ class MainViewModel @Inject constructor(
             fontScale = (map["fontScale"] as? Number)?.toFloat() ?: defaults.fontScale,
             useGlassEffect = map["useGlassEffect"] as? Boolean ?: defaults.useGlassEffect,
             useHolographicGlow = map["useHolographicGlow"] as? Boolean ?: defaults.useHolographicGlow,
-            uiDensity = map["uiDensity"] as? String ?: defaults.uiDensity
+            uiDensity = map["uiDensity"] as? String ?: defaults.uiDensity,
+            uiStyle = map["uiStyle"] as? String ?: defaults.uiStyle,
+            iconStyle = map["iconStyle"] as? String ?: defaults.iconStyle
         )
     }
 
@@ -1338,7 +1340,9 @@ class MainViewModel @Inject constructor(
             "fontScale" to theme.fontScale,
             "useGlassEffect" to theme.useGlassEffect,
             "useHolographicGlow" to theme.useHolographicGlow,
-            "uiDensity" to theme.uiDensity
+            "uiDensity" to theme.uiDensity,
+            "uiStyle" to theme.uiStyle,
+            "iconStyle" to theme.iconStyle
         )
         theme.bubbleCornerRadiusTopStart?.let { payload["bubbleCornerRadiusTopStart"] = it }
         theme.bubbleCornerRadiusTopEnd?.let { payload["bubbleCornerRadiusTopEnd"] = it }

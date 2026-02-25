@@ -1269,6 +1269,41 @@ textarea:focus-visible,
 /*  Theme Gallery & Editor                                                    */
 /* -------------------------------------------------------------------------- */
 
+.themes-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.themes-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.themes-card.discover-card {
+  width: 100%;
+}
+
+/* Floating Share Card */
+.floating-share-card {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  width: 380px;
+  z-index: 1000;
+  animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 40px var(--accent-glow);
+  border-color: var(--accent);
+}
+
+.floating-share-card h4 {
+  background: linear-gradient(90deg, var(--accent), transparent);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+}
+
 /* Theme Chip Styles */
 .theme-chip {
   background: rgba(255, 255, 255, 0.03);
@@ -1598,14 +1633,33 @@ textarea:focus-visible,
 }
 
 /* Showcase style personalities */
+.theme-showcase.ui-neon-glass .showcase-shell {
+  background: rgba(2, 6, 14, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 30px rgba(0, 255, 255, 0.1);
+}
+
+.theme-showcase.ui-neon-glass .showcase-sidebar {
+  background: rgba(255, 255, 255, 0.05);
+}
+
 .theme-showcase.ui-retro-terminal .showcase-shell {
   border-style: dashed;
   border-width: 2px;
+  background: #000;
 }
 
 .theme-showcase.ui-retro-terminal .showcase-mini-card,
 .theme-showcase.ui-retro-terminal .theme-bubble {
   border-radius: 4px;
+  font-family: var(--font-mono);
+}
+
+.theme-showcase.ui-playful-pop .showcase-shell {
+  border-radius: 32px;
+  border-width: 3px;
 }
 
 .theme-showcase.ui-playful-pop .showcase-mini-card,
@@ -1615,8 +1669,17 @@ textarea:focus-visible,
 }
 
 .theme-showcase.ui-clean-minimal .showcase-shell {
-  background: rgba(8, 10, 14, 0.95);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.98);
+  border-color: #eee;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.theme-showcase.ui-clean-minimal .showcase-mini-card,
+.theme-showcase.ui-clean-minimal .showcase-icon,
+.theme-showcase.ui-clean-minimal .theme-bubble {
+  background: #f5f5f5;
+  color: #333;
+  border-color: #ddd;
 }
 
 .theme-showcase.icons-sharp .showcase-icon {
@@ -2212,7 +2275,7 @@ textarea:focus-visible,
     rgba(0, 255, 255, 0.15) 50%,
     transparent 55%
   );
-  animation: hologram-shine 6s infinite linear;
+  animation: hologram-shine 12s infinite linear;
   pointer-events: none;
 }
 

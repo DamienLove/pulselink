@@ -77,6 +77,78 @@ const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
   timeStyle: 'short'
 });
 
+const REMOTE_SETTINGS_DEFAULTS = Object.freeze({
+  remoteWebAccessEnabled: false,
+  autoUpdateContactInfo: true,
+  timeFormat: 'AUTO',
+  thirdPartyExtensionsEnabled: true,
+  inboxLauncherEnabled: true,
+  otpCleanupEnabled: false,
+  emailFallbackEnabled: false,
+  crashDetectionEnabled: false,
+  aiSummariesEnabled: false,
+  firebaseMessagingEnabled: true,
+  mergedExperienceEnabled: false,
+  privateSafeEnabled: false,
+  smartRepliesEnabled: true,
+  truecallerEnabled: false,
+  ringerSongEnabled: true,
+  mapEnabled: true,
+  contactsEnabled: true,
+  themesEnabled: true,
+  commandPaletteEnabled: true
+});
+
+const boolOrDefault = (value, fallback) => (typeof value === 'boolean' ? value : fallback);
+
+const normalizeRemoteSettings = (settings = {}) => ({
+  ...REMOTE_SETTINGS_DEFAULTS,
+  remoteWebAccessEnabled: boolOrDefault(settings.remoteWebAccessEnabled, REMOTE_SETTINGS_DEFAULTS.remoteWebAccessEnabled),
+  autoUpdateContactInfo: boolOrDefault(settings.autoUpdateContactInfo, REMOTE_SETTINGS_DEFAULTS.autoUpdateContactInfo),
+  timeFormat: typeof settings.timeFormat === 'string' && settings.timeFormat.trim().length > 0
+    ? settings.timeFormat
+    : REMOTE_SETTINGS_DEFAULTS.timeFormat,
+  thirdPartyExtensionsEnabled: boolOrDefault(settings.thirdPartyExtensionsEnabled, REMOTE_SETTINGS_DEFAULTS.thirdPartyExtensionsEnabled),
+  inboxLauncherEnabled: boolOrDefault(settings.inboxLauncherEnabled, REMOTE_SETTINGS_DEFAULTS.inboxLauncherEnabled),
+  otpCleanupEnabled: boolOrDefault(settings.otpCleanupEnabled, REMOTE_SETTINGS_DEFAULTS.otpCleanupEnabled),
+  emailFallbackEnabled: boolOrDefault(settings.emailFallbackEnabled, REMOTE_SETTINGS_DEFAULTS.emailFallbackEnabled),
+  crashDetectionEnabled: boolOrDefault(settings.crashDetectionEnabled, REMOTE_SETTINGS_DEFAULTS.crashDetectionEnabled),
+  aiSummariesEnabled: boolOrDefault(settings.aiSummariesEnabled, REMOTE_SETTINGS_DEFAULTS.aiSummariesEnabled),
+  firebaseMessagingEnabled: boolOrDefault(settings.firebaseMessagingEnabled, REMOTE_SETTINGS_DEFAULTS.firebaseMessagingEnabled),
+  mergedExperienceEnabled: boolOrDefault(settings.mergedExperienceEnabled, REMOTE_SETTINGS_DEFAULTS.mergedExperienceEnabled),
+  privateSafeEnabled: boolOrDefault(settings.privateSafeEnabled, REMOTE_SETTINGS_DEFAULTS.privateSafeEnabled),
+  smartRepliesEnabled: boolOrDefault(settings.smartRepliesEnabled, REMOTE_SETTINGS_DEFAULTS.smartRepliesEnabled),
+  truecallerEnabled: boolOrDefault(settings.truecallerEnabled, REMOTE_SETTINGS_DEFAULTS.truecallerEnabled),
+  ringerSongEnabled: boolOrDefault(settings.ringerSongEnabled, REMOTE_SETTINGS_DEFAULTS.ringerSongEnabled),
+  mapEnabled: boolOrDefault(settings.mapEnabled, REMOTE_SETTINGS_DEFAULTS.mapEnabled),
+  contactsEnabled: boolOrDefault(settings.contactsEnabled, REMOTE_SETTINGS_DEFAULTS.contactsEnabled),
+  themesEnabled: boolOrDefault(settings.themesEnabled, REMOTE_SETTINGS_DEFAULTS.themesEnabled),
+  commandPaletteEnabled: boolOrDefault(settings.commandPaletteEnabled, REMOTE_SETTINGS_DEFAULTS.commandPaletteEnabled)
+});
+
+const remoteSettingsFirestorePayload = (settings = {}) => {
+  const normalized = normalizeRemoteSettings(settings);
+  return {
+    remoteWebAccessEnabled: normalized.remoteWebAccessEnabled,
+    autoUpdateContactInfo: normalized.autoUpdateContactInfo,
+    timeFormat: normalized.timeFormat,
+    thirdPartyExtensionsEnabled: normalized.thirdPartyExtensionsEnabled,
+    inboxLauncherEnabled: normalized.inboxLauncherEnabled,
+    otpCleanupEnabled: normalized.otpCleanupEnabled,
+    emailFallbackEnabled: normalized.emailFallbackEnabled,
+    crashDetectionEnabled: normalized.crashDetectionEnabled,
+    aiSummariesEnabled: normalized.aiSummariesEnabled,
+    firebaseMessagingEnabled: normalized.firebaseMessagingEnabled,
+    privateSafeEnabled: normalized.privateSafeEnabled,
+    smartRepliesEnabled: normalized.smartRepliesEnabled,
+    truecallerEnabled: normalized.truecallerEnabled,
+    mapEnabled: normalized.mapEnabled,
+    contactsEnabled: normalized.contactsEnabled,
+    themesEnabled: normalized.themesEnabled,
+    commandPaletteEnabled: normalized.commandPaletteEnabled
+  };
+};
+
 // Icons
 const HomeIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
 const MapIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>;
@@ -640,7 +712,7 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
             </div>
             <div className="showcase-main">
               <div className="showcase-cards">
-                <div className="showcase-mini-card">Inbox</div>
+                <div className="showcase-mini-card" style={{ background: previewTheme.primaryColor + '20', borderColor: previewTheme.primaryColor }}>Inbox</div>
                 <div className="showcase-mini-card">Contacts</div>
                 <div className="showcase-mini-card">Themes</div>
               </div>
@@ -649,7 +721,8 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
                   className="theme-bubble incoming"
                   style={{
                     background: previewTheme.bubbleIncoming,
-                    color: previewTheme.onBubbleIncoming
+                    color: previewTheme.onBubbleIncoming,
+                    border: previewTheme.uiStyle === 'Retro Terminal' ? '1px dashed' : 'none'
                   }}
                 >
                   Theme feels fresh.
@@ -658,11 +731,35 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
                   className="theme-bubble outgoing"
                   style={{
                     background: previewTheme.bubbleOutgoing,
-                    color: previewTheme.onBubbleOutgoing
+                    color: previewTheme.onBubbleOutgoing,
+                    boxShadow: previewTheme.uiStyle === 'Neon Glass' ? `0 0 15px ${previewTheme.primaryColor}40` : 'none'
                   }}
                 >
                   Let&apos;s use this one.
                 </div>
+              </div>
+              {previewTheme.backgroundImageUrl && (
+                <div style={{
+                  marginTop: '8px',
+                  height: '30px',
+                  borderRadius: '6px',
+                  background: `url(${previewTheme.backgroundImageUrl}) center/cover`,
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.45rem',
+                  fontWeight: 'bold',
+                  color: '#fff',
+                  textShadow: '0 1px 4px #000'
+                }}>
+                  Custom Wallpaper
+                </div>
+              )}
+              <div className="showcase-footer" style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-around', padding: '6px', borderTop: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.2)' }}>
+                <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: previewTheme.primaryColor }} />
+                <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)' }} />
+                <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)' }} />
               </div>
             </div>
           </div>
@@ -1091,7 +1188,9 @@ const themePresets = [
       inboxIconVariant: "neon_noir",
       useGlassEffect: true,
       useHolographicGlow: true,
-      uiDensity: "Comfortable"
+      uiDensity: "Comfortable",
+      uiStyle: "Neon Glass",
+      iconStyle: "Duotone"
     }
   },
   {
@@ -1112,7 +1211,9 @@ const themePresets = [
       dividerColor: "#003B00",
       inboxIconVariant: "midnight_oled",
       useHolographicGlow: true,
-      uiDensity: "Compact"
+      uiDensity: "Compact",
+      uiStyle: "Retro Terminal",
+      iconStyle: "Sharp"
     }
   },
   {
@@ -1131,7 +1232,9 @@ const themePresets = [
       primaryColor: "#6750A4",
       secondaryColor: "#625B71",
       dividerColor: "#E5E7EB",
-      inboxIconVariant: "default_light"
+      inboxIconVariant: "default_light",
+      uiStyle: "Playful Pop",
+      iconStyle: "Rounded"
     }
   },
   {
@@ -1152,7 +1255,9 @@ const themePresets = [
       timestampColor: "#94A3B8",
       dividerColor: "#1F2937",
       inboxIconVariant: "midnight_oled",
-      backgroundImageUrl: midnightBg
+      backgroundImageUrl: midnightBg,
+      uiStyle: "Neon Glass",
+      iconStyle: "Outline"
     }
   },
   {
@@ -1171,7 +1276,9 @@ const themePresets = [
       primaryColor: "#38BDF8",
       secondaryColor: "#1D4ED8",
       dividerColor: "#334155",
-      inboxIconVariant: "ocean_deep"
+      inboxIconVariant: "ocean_deep",
+      uiStyle: "Soft Layers",
+      iconStyle: "Outline"
     }
   },
   {
@@ -1190,7 +1297,9 @@ const themePresets = [
       primaryColor: "#E11D48",
       secondaryColor: "#F43F5E",
       dividerColor: "#FBCFE8",
-      inboxIconVariant: "rose_petal"
+      inboxIconVariant: "rose_petal",
+      uiStyle: "Soft Layers",
+      iconStyle: "Rounded"
     }
   },
   {
@@ -1213,7 +1322,9 @@ const themePresets = [
       inboxIconVariant: "sunset_fade",
       bubbleCornerRadiusTopStart: 0,
       bubbleCornerRadiusBottomEnd: 0,
-      backgroundImageUrl: sunsetBg
+      backgroundImageUrl: sunsetBg,
+      uiStyle: "Neon Glass",
+      iconStyle: "Duotone"
     }
   },
   {
@@ -1232,7 +1343,9 @@ const themePresets = [
       primaryColor: "#65A30D",
       secondaryColor: "#84CC16",
       dividerColor: "#D9F99D",
-      inboxIconVariant: "citrus_pop"
+      inboxIconVariant: "citrus_pop",
+      uiStyle: "Playful Pop",
+      iconStyle: "Rounded"
     }
   },
   {
@@ -1252,7 +1365,9 @@ const themePresets = [
       secondaryColor: "#059669",
       dividerColor: "#A7F3D0",
       inboxIconVariant: "forest_trail",
-      backgroundImageUrl: forestBg
+      backgroundImageUrl: forestBg,
+      uiStyle: "Soft Layers",
+      iconStyle: "Outline"
     }
   },
   {
@@ -1272,7 +1387,9 @@ const themePresets = [
       secondaryColor: "#A78BFA",
       dividerColor: "#DDD6FE",
       inboxIconVariant: "lavender_haze",
-      iconSizeFactor: 1.1
+      iconSizeFactor: 1.1,
+      uiStyle: "Soft Layers",
+      iconStyle: "Rounded"
     }
   },
   {
@@ -1292,7 +1409,9 @@ const themePresets = [
       secondaryColor: "#94A3B8",
       dividerColor: "#CBD5E1",
       inboxIconVariant: "slate_mono",
-      iconSizeFactor: 0.95
+      iconSizeFactor: 0.95,
+      uiStyle: "Clean Minimal",
+      iconStyle: "Sharp"
     }
   },
   {
@@ -1314,7 +1433,9 @@ const themePresets = [
       dividerColor: "#5EEAD4",
       inboxIconVariant: "aurora",
       iconSizeFactor: 1.15,
-      backgroundImageUrl: auroraBg
+      backgroundImageUrl: auroraBg,
+      uiStyle: "Neon Glass",
+      iconStyle: "Rounded"
     }
   },
   {
@@ -1333,7 +1454,9 @@ const themePresets = [
       primaryColor: "#EA580C",
       secondaryColor: "#FDBA74",
       dividerColor: "#FED7AA",
-      inboxIconVariant: "sunset_fade"
+      inboxIconVariant: "sunset_fade",
+      uiStyle: "Playful Pop",
+      iconStyle: "Outline"
     }
   },
   {
@@ -1352,7 +1475,9 @@ const themePresets = [
       primaryColor: "#5E81AC",
       secondaryColor: "#88C0D0",
       dividerColor: "#D8DEE9",
-      inboxIconVariant: "default_light"
+      inboxIconVariant: "default_light",
+      uiStyle: "Clean Minimal",
+      iconStyle: "Outline"
     }
   },
   {
@@ -1372,7 +1497,9 @@ const themePresets = [
       secondaryColor: "#D946EF",
       dividerColor: "#1F2937",
       inboxIconVariant: "midnight_oled",
-      backgroundImageUrl: neonBg
+      backgroundImageUrl: neonBg,
+      uiStyle: "Neon Glass",
+      iconStyle: "Outline"
     }
   },
   {
@@ -1391,7 +1518,9 @@ const themePresets = [
       primaryColor: "#B45309",
       secondaryColor: "#D97706",
       dividerColor: "#FDE68A",
-      inboxIconVariant: "default_light"
+      inboxIconVariant: "default_light",
+      uiStyle: "Clean Minimal",
+      iconStyle: "Outline"
     }
   },
   {
@@ -1410,7 +1539,9 @@ const themePresets = [
       primaryColor: "#10B981",
       secondaryColor: "#34D399",
       dividerColor: "#A7F3D0",
-      inboxIconVariant: "forest_trail"
+      inboxIconVariant: "forest_trail",
+      uiStyle: "Playful Pop",
+      iconStyle: "Outline"
     }
   },
   {
@@ -1430,7 +1561,9 @@ const themePresets = [
       primaryColor: "#8B5CF6",
       secondaryColor: "#6366F1",
       dividerColor: "#312E81",
-      inboxIconVariant: "lavender_haze"
+      inboxIconVariant: "lavender_haze",
+      uiStyle: "Soft Layers",
+      iconStyle: "Outline"
     }
   },
   {
@@ -1450,7 +1583,9 @@ const themePresets = [
       secondaryColor: "#06b6d4",
       dividerColor: "#4c1d95",
       inboxIconVariant: "midnight_oled",
-      backgroundImageUrl: cyberMistBg
+      backgroundImageUrl: cyberMistBg,
+      uiStyle: "Neon Glass",
+      iconStyle: "Outline"
     }
   },
   {
@@ -1470,7 +1605,9 @@ const themePresets = [
       secondaryColor: "#38bdf8",
       dividerColor: "#1e3a8a",
       inboxIconVariant: "ocean_deep",
-      backgroundImageUrl: deepOceanBg
+      backgroundImageUrl: deepOceanBg,
+      uiStyle: "Neon Glass",
+      iconStyle: "Outline"
     }
   }
 ];
@@ -1496,7 +1633,9 @@ const specialThemePresets = [
       secondaryColor: "#DAA520",
       dividerColor: "#B8860B",
       inboxIconVariant: "shield",
-      backgroundImageUrl: goldBg
+      backgroundImageUrl: goldBg,
+      uiStyle: "Soft Layers",
+      iconStyle: "Duotone"
     }
   },
   {
@@ -1518,7 +1657,9 @@ const specialThemePresets = [
       secondaryColor: "#0097A7",
       dividerColor: "#B2EBF2",
       inboxIconVariant: "bubble",
-      backgroundImageUrl: diamondBg
+      backgroundImageUrl: diamondBg,
+      uiStyle: "Soft Layers",
+      iconStyle: "Rounded"
     }
   },
   // Pro Themes
@@ -1541,7 +1682,9 @@ const specialThemePresets = [
       secondaryColor: "#424242",
       dividerColor: "#333333",
       inboxIconVariant: "minimal",
-      backgroundImageUrl: obsidianBg
+      backgroundImageUrl: obsidianBg,
+      uiStyle: "Retro Terminal",
+      iconStyle: "Sharp"
     }
   },
   {
@@ -1563,7 +1706,9 @@ const specialThemePresets = [
       secondaryColor: "#7f8c8d",
       dividerColor: "#7f8c8d",
       inboxIconVariant: "shield",
-      backgroundImageUrl: titaniumBg
+      backgroundImageUrl: titaniumBg,
+      uiStyle: "Clean Minimal",
+      iconStyle: "Outline"
     }
   },
   // Beta Themes
@@ -1586,7 +1731,9 @@ const specialThemePresets = [
       secondaryColor: "#268bd2",
       dividerColor: "#586e75",
       inboxIconVariant: "sotext",
-      backgroundImageUrl: blueprintBg
+      backgroundImageUrl: blueprintBg,
+      uiStyle: "Retro Terminal",
+      iconStyle: "Sharp"
     }
   },
   {
@@ -1608,7 +1755,9 @@ const specialThemePresets = [
       secondaryColor: "#ff00ff",
       dividerColor: "#004400",
       inboxIconVariant: "minimal",
-      backgroundImageUrl: glitchBg
+      backgroundImageUrl: glitchBg,
+      uiStyle: "Retro Terminal",
+      iconStyle: "Sharp"
     }
   },
   // Loyalty Themes
@@ -1631,7 +1780,9 @@ const specialThemePresets = [
       secondaryColor: "#A1887F",
       dividerColor: "#5D4037",
       inboxIconVariant: "default_light",
-      backgroundImageUrl: oakBg
+      backgroundImageUrl: oakBg,
+      uiStyle: "Clean Minimal",
+      iconStyle: "Outline"
     }
   },
   {
@@ -1653,7 +1804,9 @@ const specialThemePresets = [
       secondaryColor: "#9370DB",
       dividerColor: "#191970",
       inboxIconVariant: "sotext",
-      backgroundImageUrl: eternalBg
+      backgroundImageUrl: eternalBg,
+      uiStyle: "Neon Glass",
+      iconStyle: "Outline"
     }
   }
 ];
@@ -2455,6 +2608,10 @@ function App() {
   const [isSavingContact, setIsSavingContact] = useState(false);
   const [profileStatus, setProfileStatus] = useState('');
   const [themePrefs, setThemePrefs] = useState(defaultTheme);
+  const [baselineTheme, setBaselineTheme] = useState(defaultTheme);
+  const isThemeDirty = useMemo(() => {
+    return JSON.stringify(themePrefs) !== JSON.stringify(baselineTheme);
+  }, [themePrefs, baselineTheme]);
   const [themeStatus, setThemeStatus] = useState('');
   const [publicThemes, setPublicThemes] = useState([]);
   const [themeGalleryStatus, setThemeGalleryStatus] = useState('');
@@ -2472,27 +2629,7 @@ function App() {
     if (typeof window === 'undefined') return true;
     return localStorage.getItem(webHintStorageKey) !== 'true';
   });
-  const [remoteSettings, setRemoteSettings] = useState({
-    remoteWebAccessEnabled: false,
-    autoUpdateContactInfo: true,
-    timeFormat: 'AUTO',
-    thirdPartyExtensionsEnabled: true,
-    inboxLauncherEnabled: true,
-    otpCleanupEnabled: false,
-    emailFallbackEnabled: false,
-    crashDetectionEnabled: false,
-    aiSummariesEnabled: false,
-    firebaseMessagingEnabled: true,
-    mergedExperienceEnabled: false,
-    privateSafeEnabled: false,
-    smartRepliesEnabled: true,
-    truecallerEnabled: false,
-    ringerSongEnabled: true,
-    mapEnabled: true,
-    contactsEnabled: true,
-    themesEnabled: true,
-    commandPaletteEnabled: true
-  });
+  const [remoteSettings, setRemoteSettings] = useState(() => normalizeRemoteSettings());
   const [devExtensions, setDevExtensions] = useState(() => {
     const saved = localStorage.getItem('sotext.devExtensions');
     if (saved) return JSON.parse(saved);
@@ -2862,7 +2999,7 @@ function App() {
         proUnlocked: isPremiumMock
       });
 
-      setRemoteSettings({
+      setRemoteSettings(normalizeRemoteSettings({
         remoteWebAccessEnabled: isPremiumMock,
         autoUpdateContactInfo: true,
         timeFormat: 'AUTO',
@@ -2881,7 +3018,7 @@ function App() {
         contactsEnabled: true,
         themesEnabled: true,
         commandPaletteEnabled: true
-      });
+      }));
 
       if (isPremiumMock) {
         setLines([{ id: 'line_1', label: 'My Pixel', phoneNumber: '+15551234567', primaryDeviceId: 'device_1' }]);
@@ -2921,11 +3058,7 @@ function App() {
     if (!user) {
       setProfile({ ownerName: '', avatarUrl: '', email: '', phoneNumber: '' });
       setThemePrefs(defaultTheme);
-      setRemoteSettings({
-        remoteWebAccessEnabled: false,
-        autoUpdateContactInfo: true,
-        timeFormat: 'AUTO'
-      });
+      setRemoteSettings(normalizeRemoteSettings());
       setLineInboxMode('COMBINED');
       setActiveLineId(null);
       setLines([]);
@@ -2954,11 +3087,14 @@ function App() {
         phoneNumber: data.phoneNumber ?? ''
       });
       if (data.themePreferences) {
-        setThemePrefs(normalizeTheme(data.themePreferences));
+        const normalized = normalizeTheme(data.themePreferences);
+        setThemePrefs(normalized);
+        setBaselineTheme(normalized);
       } else {
         setThemePrefs(defaultTheme);
+        setBaselineTheme(defaultTheme);
       }
-      setRemoteSettings({
+      setRemoteSettings(normalizeRemoteSettings({
         remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? isPro,
         autoUpdateContactInfo: data.autoUpdateContactInfo ?? true,
         timeFormat: data.timeFormat ?? 'AUTO',
@@ -2976,7 +3112,7 @@ function App() {
         contactsEnabled: data.contactsEnabled ?? true,
         themesEnabled: data.themesEnabled ?? true,
         commandPaletteEnabled: data.commandPaletteEnabled ?? true
-      });
+      }));
       if (data.lineInboxMode) setLineInboxMode(data.lineInboxMode);
       if (data.activeLineId) setActiveLineId(data.activeLineId);
 
@@ -3751,6 +3887,7 @@ function App() {
       }, { merge: true });
 
       setThemePrefs(normalized);
+      setBaselineTheme(normalized);
       setThemeStatus("Theme synced.");
     } catch (error) {
       console.error("Theme update failed", error);
@@ -3841,24 +3978,9 @@ function App() {
     setIsSavingSettings(true);
     setRemoteSettingsStatus("Saving settings...");
     try {
+      const settingsPayload = remoteSettingsFirestorePayload(remoteSettings);
       await setDoc(doc(db, "users", user.uid), {
-        remoteWebAccessEnabled: remoteSettings.remoteWebAccessEnabled,
-        autoUpdateContactInfo: remoteSettings.autoUpdateContactInfo,
-        timeFormat: remoteSettings.timeFormat,
-        thirdPartyExtensionsEnabled: remoteSettings.thirdPartyExtensionsEnabled,
-        inboxLauncherEnabled: remoteSettings.inboxLauncherEnabled,
-        otpCleanupEnabled: remoteSettings.otpCleanupEnabled,
-        emailFallbackEnabled: remoteSettings.emailFallbackEnabled,
-        crashDetectionEnabled: remoteSettings.crashDetectionEnabled,
-        aiSummariesEnabled: remoteSettings.aiSummariesEnabled,
-        firebaseMessagingEnabled: remoteSettings.firebaseMessagingEnabled,
-        privateSafeEnabled: remoteSettings.privateSafeEnabled,
-        smartRepliesEnabled: remoteSettings.smartRepliesEnabled,
-        truecallerEnabled: remoteSettings.truecallerEnabled,
-        mapEnabled: remoteSettings.mapEnabled,
-        contactsEnabled: remoteSettings.contactsEnabled,
-        themesEnabled: remoteSettings.themesEnabled,
-        commandPaletteEnabled: remoteSettings.commandPaletteEnabled,
+        ...settingsPayload,
         settingsUpdatedAt: serverTimestamp()
       }, { merge: true });
       setRemoteSettingsStatus("Settings updated.");
@@ -3927,7 +4049,7 @@ function App() {
     const isPower = mode === 'power';
 
     // Logic mirroring Android
-    const newSettings = { ...remoteSettings };
+    const newSettings = normalizeRemoteSettings({ ...remoteSettings });
 
     if (isEssentials) {
       newSettings.inboxLauncherEnabled = true;
@@ -3962,11 +4084,12 @@ function App() {
       newSettings.commandPaletteEnabled = true;
     }
 
-    setRemoteSettings(newSettings);
+    const normalizedSettings = normalizeRemoteSettings(newSettings);
+    setRemoteSettings(normalizedSettings);
     // Auto-save
     try {
       await setDoc(doc(db, "users", user.uid), {
-        ...newSettings,
+        ...remoteSettingsFirestorePayload(normalizedSettings),
         settingsUpdatedAt: serverTimestamp()
       }, { merge: true });
     } catch (e) {
@@ -4924,49 +5047,27 @@ function App() {
                 <h3>Theme Showcase</h3>
                 <p>Pick complete looks that change colors, surface style, and icon personality. Tap a look to instantly apply it.</p>
               </div>
+
               <div className="themes-grid">
-                <div className="settings-card themes-card">
-                  <h4>Discover looks</h4>
-                  <div className="settings-search-container" onClick={() => themeSearchRef.current?.focus()}>
-                    <div style={{ opacity: 0.5, display: 'flex' }}><SearchIcon /></div>
-                    <input
-                      ref={themeSearchRef}
-                      className="settings-search-input"
-                      value={themeSearch}
-                      onChange={(e) => setThemeSearch(e.target.value)}
-                      placeholder="Search by name or creator"
-                      aria-label="Search themes (/)"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') {
-                          e.preventDefault();
-                          if (themeSearch) {
-                            setThemeSearch('');
-                          } else {
-                            e.currentTarget.blur();
-                          }
-                        }
-                      }}
-                    />
-                    {!themeSearch && <span className="shortcut-hint" aria-hidden="true">/</span>}
-                    {themeSearch && (
-                      <button
-                        type="button"
-                        className="ghost-btn icon-only"
-                        onClick={() => {
-                          setThemeSearch('');
-                          themeSearchRef.current?.focus();
-                        }}
-                        aria-label="Clear search"
-                        title="Clear search"
-                        style={{ width: '28px', height: '28px' }}
-                      >
-                        <CloseIcon />
-                      </button>
-                    )}
+                <div className="settings-card themes-card discover-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                    <h4 style={{ border: 'none', margin: 0, padding: 0 }}>Discover looks</h4>
+                    <div className="settings-search-container" style={{ marginBottom: 0, width: '300px' }} onClick={() => themeSearchRef.current?.focus()}>
+                      <div style={{ opacity: 0.5, display: 'flex' }}><SearchIcon /></div>
+                      <input
+                        ref={themeSearchRef}
+                        className="settings-search-input"
+                        value={themeSearch}
+                        onChange={(e) => setThemeSearch(e.target.value)}
+                        placeholder="Search themes..."
+                        aria-label="Search themes (/)"
+                      />
+                    </div>
                   </div>
+
                   <div className="theme-gallery-grid">
                     {isLoadingThemes ? (
-                      Array.from({ length: 6 }).map((_, i) => <ThemeSkeleton key={i} />)
+                      Array.from({ length: 8 }).map((_, i) => <ThemeSkeleton key={i} />)
                     ) : (
                       <>
                         {featuredThemeDocs.map((themeDoc) => (
@@ -4987,149 +5088,72 @@ function App() {
                     )}
                   </div>
                   <Toast message={themeGalleryStatus} onDismiss={() => setThemeGalleryStatus('')} />
-                </div>
-                <div className="settings-card themes-card">
-                  <h4>Share your look</h4>
-                  <label className="login-field">
-                    Theme name<RequiredIndicator />
-                    <input
-                      className="login-input"
-                      value={themePublishForm.name}
-                      onChange={(e) => setThemePublishForm((prev) => ({ ...prev, name: e.target.value }))}
-                      placeholder="e.g., Aurora Drift"
-                      required
-                    />
-                  </label>
-                  <label className="login-field">
-                    Creator name (optional)
-                    <input
-                      className="login-input"
-                      value={themePublishForm.authorName}
-                      onChange={(e) => setThemePublishForm((prev) => ({ ...prev, authorName: e.target.value }))}
-                      placeholder="Leave blank for profile name"
-                    />
-                  </label>
-                  <label className="login-field">
-                    Creator handle (optional)
-                    <input
-                      className="login-input"
-                      value={themePublishForm.authorHandle}
-                      onChange={(e) => setThemePublishForm((prev) => ({ ...prev, authorHandle: e.target.value }))}
-                      placeholder="@sotextartist"
-                    />
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={themePublishForm.anonymous}
-                      onChange={(e) => setThemePublishForm((prev) => ({ ...prev, anonymous: e.target.checked }))}
-                    />
-                    Publish anonymously
-                  </label>
-                  <label className="login-field">
-                    Background image URL (optional)
-                    <input
-                      className="login-input"
-                      value={themePublishForm.backgroundImageUrl}
-                      onChange={(e) => setThemePublishForm((prev) => ({ ...prev, backgroundImageUrl: e.target.value }))}
-                      placeholder="https://..."
-                    />
-                  </label>
-                  <p className="settings-note">
-                    Suggested max: 1920x1080 and under 1.5MB. Image themes require approval.
-                  </p>
-                  <button
-                    className="primary-btn"
-                    type="button"
-                    onClick={handlePublishTheme}
-                    disabled={isPublishingTheme}
-                    aria-busy={isPublishingTheme}
-                  >
-                    {isPublishingTheme ? (
-                      <>
-                        <Spinner />
-                        Publishing...
-                      </>
-                    ) : 'Publish theme'}
-                  </button>
-                  <Toast message={themePublishStatus} onDismiss={() => setThemePublishStatus('')} />
-                </div>
-                <div className="settings-card themes-card">
-                  <h4>Build your look</h4>
-                  <div className="theme-grid">
-                    {themePresets.map((preset) => (
-                      <ThemePresetItem
-                        key={preset.name}
-                        preset={preset}
-                        onApply={handleApplyPreset}
+
+                  <details className="theme-advanced" style={{ marginTop: 32 }}>
+                    <summary>Advanced Customization & Tweak Mode</summary>
+                    <div className="theme-editor" style={{ background: 'transparent', border: 'none', padding: '20px 0' }}>
+                      <ColorInput
+                        label="Primary color"
+                        value={themePrefs.primaryColor}
+                        onChange={(val) => setThemePrefs((prev) => ({ ...prev, primaryColor: val }))}
                       />
-                    ))}
-                  </div>
-                  <div className="theme-editor">
-                    <ColorInput
-                      label="Primary color"
-                      value={themePrefs.primaryColor}
-                      onChange={(val) => setThemePrefs((prev) => ({ ...prev, primaryColor: val }))}
-                    />
-                    <ColorInput
-                      label="Background"
-                      value={themePrefs.backgroundColor}
-                      onChange={(val) => setThemePrefs((prev) => ({ ...prev, backgroundColor: val }))}
-                    />
-                    <ColorInput
-                      label="Top bar"
-                      value={themePrefs.topBarColor}
-                      onChange={(val) => setThemePrefs((prev) => ({ ...prev, topBarColor: val }))}
-                    />
-                    <ColorInput
-                      label="Bubble outgoing"
-                      value={themePrefs.bubbleOutgoing}
-                      onChange={(val) => setThemePrefs((prev) => ({ ...prev, bubbleOutgoing: val }))}
-                    />
-                    <ColorInput
-                      label="Bubble incoming"
-                      value={themePrefs.bubbleIncoming}
-                      onChange={(val) => setThemePrefs((prev) => ({ ...prev, bubbleIncoming: val }))}
-                    />
-                    <label className="login-field">
-                      UI personality
-                      <select
-                        className="login-input"
-                        value={themePrefs.uiStyle}
-                        onChange={(e) => setThemePrefs((prev) => ({ ...prev, uiStyle: e.target.value }))}
-                      >
-                        {uiStyleOptions.map((option) => (
-                          <option key={option.value} value={option.value}>{option.value}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="login-field">
-                      Icon personality
-                      <select
-                        className="login-input"
-                        value={themePrefs.iconStyle}
-                        onChange={(e) => setThemePrefs((prev) => ({ ...prev, iconStyle: e.target.value }))}
-                      >
-                        {iconStyleOptions.map((option) => (
-                          <option key={option.value} value={option.value}>{option.value}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="login-field theme-wide">
-                      Background image URL
-                      <input
-                        className="login-input"
-                        value={themePrefs.backgroundImageUrl ?? ''}
-                        onChange={(e) => setThemePrefs((prev) => ({
-                          ...prev,
-                          backgroundImageUrl: e.target.value
-                        }))}
+                      <ColorInput
+                        label="Background"
+                        value={themePrefs.backgroundColor}
+                        onChange={(val) => setThemePrefs((prev) => ({ ...prev, backgroundColor: val }))}
                       />
-                    </label>
-                  </div>
-                  <details className="theme-advanced">
-                    <summary>Advanced icon URLs (optional)</summary>
-                    <div className="theme-icon-grid">
+                      <ColorInput
+                        label="Top bar"
+                        value={themePrefs.topBarColor}
+                        onChange={(val) => setThemePrefs((prev) => ({ ...prev, topBarColor: val }))}
+                      />
+                      <ColorInput
+                        label="Bubble outgoing"
+                        value={themePrefs.bubbleOutgoing}
+                        onChange={(val) => setThemePrefs((prev) => ({ ...prev, bubbleOutgoing: val }))}
+                      />
+                      <ColorInput
+                        label="Bubble incoming"
+                        value={themePrefs.bubbleIncoming}
+                        onChange={(val) => setThemePrefs((prev) => ({ ...prev, bubbleIncoming: val }))}
+                      />
+                      <label className="login-field">
+                        UI personality
+                        <select
+                          className="login-input"
+                          value={themePrefs.uiStyle}
+                          onChange={(e) => setThemePrefs((prev) => ({ ...prev, uiStyle: e.target.value }))}
+                        >
+                          {uiStyleOptions.map((option) => (
+                            <option key={option.value} value={option.value}>{option.value}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="login-field">
+                        Icon personality
+                        <select
+                          className="login-input"
+                          value={themePrefs.iconStyle}
+                          onChange={(e) => setThemePrefs((prev) => ({ ...prev, iconStyle: e.target.value }))}
+                        >
+                          {iconStyleOptions.map((option) => (
+                            <option key={option.value} value={option.value}>{option.value}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="login-field theme-wide">
+                        Background image URL
+                        <input
+                          className="login-input"
+                          value={themePrefs.backgroundImageUrl ?? ''}
+                          onChange={(e) => setThemePrefs((prev) => ({
+                            ...prev,
+                            backgroundImageUrl: e.target.value
+                          }))}
+                        />
+                      </label>
+                    </div>
+                    <div className="theme-icon-grid" style={{ padding: '0 0 20px' }}>
                       {iconOverrideKeys.map(({ key, label }) => (
                         <label className="login-field" key={key}>
                           {label} icon URL
@@ -5152,12 +5176,81 @@ function App() {
                         </label>
                       ))}
                     </div>
+                    <button className="primary-btn" type="button" onClick={() => handleApplyPreset(themePrefs)}>
+                      Save changes
+                    </button>
+                    <Toast message={themeStatus} onDismiss={() => setThemeStatus('')} />
                   </details>
-                  <button className="primary-btn" type="button" onClick={() => handleApplyPreset(themePrefs)}>
-                    Save theme
-                  </button>
-                  <Toast message={themeStatus} onDismiss={() => setThemeStatus('')} />
                 </div>
+
+                {isThemeDirty && (
+                  <div className="settings-card floating-share-card">
+                    <h4 style={{ border: 'none' }}>Share your new look</h4>
+                    <p style={{ fontSize: '0.9em', color: 'var(--muted)', margin: '0 0 16px' }}>
+                      You&apos;ve customized your theme! Want to share it with the community?
+                    </p>
+                    <label className="login-field">
+                      Theme name<RequiredIndicator />
+                      <input
+                        className="login-input"
+                        value={themePublishForm.name}
+                        onChange={(e) => setThemePublishForm((prev) => ({ ...prev, name: e.target.value }))}
+                        placeholder="e.g., Aurora Drift"
+                        required
+                      />
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+                      <label className="login-field">
+                        Creator name
+                        <input
+                          className="login-input"
+                          value={themePublishForm.authorName}
+                          onChange={(e) => setThemePublishForm((prev) => ({ ...prev, authorName: e.target.value }))}
+                          placeholder="Your name"
+                        />
+                      </label>
+                      <label className="login-field">
+                        Handle
+                        <input
+                          className="login-input"
+                          value={themePublishForm.authorHandle}
+                          onChange={(e) => setThemePublishForm((prev) => ({ ...prev, authorHandle: e.target.value }))}
+                          placeholder="@handle"
+                        />
+                      </label>
+                    </div>
+                    <label className="settings-toggle" style={{ margin: '12px 0' }}>
+                      <input
+                        type="checkbox"
+                        checked={themePublishForm.anonymous}
+                        onChange={(e) => setThemePublishForm((prev) => ({ ...prev, anonymous: e.target.checked }))}
+                      />
+                      Publish anonymously
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+                      <button
+                        className="secondary-btn"
+                        type="button"
+                        onClick={() => {
+                          setThemePrefs(baselineTheme);
+                          setThemePublishStatus("Changes discarded.");
+                        }}
+                      >
+                        Discard
+                      </button>
+                      <button
+                        className="primary-btn"
+                        type="button"
+                        onClick={handlePublishTheme}
+                        disabled={isPublishingTheme}
+                        aria-busy={isPublishingTheme}
+                      >
+                        {isPublishingTheme ? <Spinner /> : 'Publish'}
+                      </button>
+                    </div>
+                    <Toast message={themePublishStatus} onDismiss={() => setThemePublishStatus('')} />
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -5263,10 +5356,10 @@ function App() {
                               aria-label={`${isEnabled ? "Remove" : "Install"} ${ext.name}`}
                               title={`${isEnabled ? "Remove" : "Install"} ${ext.name}`}
                               onClick={() => {
-                                setRemoteSettings(prev => ({ ...prev, [ext.id]: !prev[ext.id] }));
-                                const next = { ...remoteSettings, [ext.id]: !isEnabled };
+                                const next = normalizeRemoteSettings({ ...remoteSettings, [ext.id]: !isEnabled });
+                                setRemoteSettings(next);
                                 setDoc(doc(db, "users", user.uid), {
-                                  ...next,
+                                  ...remoteSettingsFirestorePayload(next),
                                   settingsUpdatedAt: serverTimestamp()
                                 }, { merge: true });
                               }}
@@ -5446,7 +5539,7 @@ function App() {
                             <input
                               type="checkbox"
                               checked={remoteSettings.remoteWebAccessEnabled}
-                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, remoteWebAccessEnabled: e.target.checked }))}
+                              onChange={(e) => setRemoteSettings((prev) => normalizeRemoteSettings({ ...prev, remoteWebAccessEnabled: e.target.checked }))}
                             />
                             Enable remote web access
                           </label>
@@ -5454,7 +5547,7 @@ function App() {
                             <input
                               type="checkbox"
                               checked={remoteSettings.autoUpdateContactInfo}
-                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, autoUpdateContactInfo: e.target.checked }))}
+                              onChange={(e) => setRemoteSettings((prev) => normalizeRemoteSettings({ ...prev, autoUpdateContactInfo: e.target.checked }))}
                             />
                             Auto-update contact info
                           </label>
@@ -5462,7 +5555,7 @@ function App() {
                             <input
                               type="checkbox"
                               checked={remoteSettings.thirdPartyExtensionsEnabled}
-                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, thirdPartyExtensionsEnabled: e.target.checked }))}
+                              onChange={(e) => setRemoteSettings((prev) => normalizeRemoteSettings({ ...prev, thirdPartyExtensionsEnabled: e.target.checked }))}
                             />
                             Enable 3rd-party extensions (beta)
                           </label>
@@ -5471,7 +5564,7 @@ function App() {
                             <select
                               className="login-input"
                               value={remoteSettings.timeFormat}
-                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, timeFormat: e.target.value }))}
+                              onChange={(e) => setRemoteSettings((prev) => normalizeRemoteSettings({ ...prev, timeFormat: e.target.value }))}
                             >
                               <option value="AUTO">Auto</option>
                               <option value="TWELVE_HOUR">12-hour</option>

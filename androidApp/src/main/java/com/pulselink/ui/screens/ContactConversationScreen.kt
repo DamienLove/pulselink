@@ -2,13 +2,20 @@ package com.pulselink.ui.screens
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,10 +40,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
@@ -97,7 +108,8 @@ fun ContactConversationScreen(
     onCallContact: suspend (Contact) -> Unit,
     onPing: suspend () -> Boolean,
     onVoiceCommand: suspend (String) -> VoiceCommandResult,
-    onUpgradeClick: () -> Unit
+    onUpgradeClick: () -> Unit,
+    onAttachment: ((Uri) -> Unit)? = null
 ) {
     val messages by viewModel.messages.collectAsStateWithLifecycle()
     LaunchedEffect(contact?.id) {
@@ -130,7 +142,8 @@ fun ContactConversationScreen(
                 onSendMessage = { body -> viewModel.sendMessage(body) },
                 onPing = onPing,
                 onVoiceCommand = onVoiceCommand,
-                onUpgradeClick = onUpgradeClick
+                onUpgradeClick = onUpgradeClick,
+                onAttachment = onAttachment
             )
         }
     }
@@ -163,7 +176,8 @@ private fun ConversationBody(
     onSendMessage: suspend (String) -> ManualMessageResult,
     onPing: suspend () -> Boolean,
     onVoiceCommand: suspend (String) -> VoiceCommandResult,
-    onUpgradeClick: () -> Unit
+    onUpgradeClick: () -> Unit,
+    onAttachment: ((Uri) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -367,11 +381,11 @@ private fun ConversationBody(
                     }
                 }
             },
-        onVoice = {
-            if (!isProUser) {
-                Toast.makeText(context, context.getString(R.string.voice_command_upgrade_required), Toast.LENGTH_SHORT).show()
-                onUpgradeClick()
-                return@ComposerRow
+            onVoice = {
+                if (!isProUser) {
+                    Toast.makeText(context, context.getString(R.string.voice_command_upgrade_required), Toast.LENGTH_SHORT).show()
+                    onUpgradeClick()
+                    return@ComposerRow
                 }
                 if (!SpeechRecognizer.isRecognitionAvailable(context)) {
                     Toast.makeText(context, context.getString(R.string.voice_command_no_recognizer), Toast.LENGTH_SHORT).show()
@@ -383,7 +397,8 @@ private fun ConversationBody(
                     putExtra(RecognizerIntent.EXTRA_PROMPT, prompt)
                 }
                 voiceLauncher.launch(intent)
-            }
+            },
+            onAttachment = onAttachment
         )
     }
 }
@@ -410,52 +425,210 @@ private fun StatusRow(contact: Contact) {
     }
 }
 
+/**
+ * Modern composer with attachment support - clean and intuitive.
+ */
 @Composable
 private fun ComposerRow(
     input: TextFieldValue,
     onInputChange: (TextFieldValue) -> Unit,
     onSend: () -> Unit,
-    onVoice: () -> Unit
+    onVoice: () -> Unit,
+    onAttachment: ((Uri) -> Unit)? = null
 ) {
-    val gradient = Brush.horizontalGradient(listOf(Color(0xFF1D4ED8), Color(0xFF3B82F6)))
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
-            .background(gradient)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        BasicTextField(
-            value = input,
-            onValueChange = onInputChange,
-            textStyle = TextStyle(color = Color.White, fontSize = 16.sp, fontFamily = FontFamily.Default),
-            modifier = Modifier
-                .weight(1f)
-                .padding(end = 12.dp),
-            cursorBrush = Brush.verticalGradient(listOf(Color.White, Color.White)),
-            decorationBox = { innerField ->
-                if (input.text.isEmpty()) {
-                    Text(
-                        text = "Type your message...",
-                        color = Color.White.copy(alpha = 0.6f),
-                        fontSize = 16.sp
+    var showAttachOptions by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val primaryColor = Color(0xFF3B82F6)
+    val canSend = input.text.isNotBlank()
+
+    // File/image picker
+    val filePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            onAttachment?.invoke(it)
+            Toast.makeText(context, "Attachment selected", Toast.LENGTH_SHORT).show()
+        }
+        showAttachOptions = false
+    }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Attachment options panel
+        AnimatedVisibility(
+            visible = showAttachOptions,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xFF1E293B)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    AttachmentOptionButton(
+                        icon = Icons.Filled.Image,
+                        label = "Gallery",
+                        color = Color(0xFF8B5CF6),
+                        onClick = { filePicker.launch("image/*") }
+                    )
+                    AttachmentOptionButton(
+                        icon = Icons.Filled.AttachFile,
+                        label = "File",
+                        color = Color(0xFF3B82F6),
+                        onClick = { filePicker.launch("*/*") }
                     )
                 }
-                innerField()
             }
+        }
+
+        // Main input row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // Add/attachment button
+            if (onAttachment != null) {
+                IconButton(
+                    onClick = { showAttachOptions = !showAttachOptions },
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (showAttachOptions) primaryColor.copy(alpha = 0.2f)
+                            else Color.Transparent
+                        )
+                ) {
+                    Icon(
+                        imageVector = if (showAttachOptions) Icons.Filled.Close else Icons.Filled.Add,
+                        contentDescription = if (showAttachOptions) "Close" else "Add",
+                        tint = primaryColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+
+            // Text input field
+            Surface(
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(24.dp),
+                color = Color(0xFF1E293B)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    BasicTextField(
+                        value = input,
+                        onValueChange = onInputChange,
+                        textStyle = TextStyle(
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontFamily = FontFamily.Default
+                        ),
+                        modifier = Modifier.weight(1f),
+                        cursorBrush = Brush.verticalGradient(listOf(primaryColor, primaryColor)),
+                        decorationBox = { innerField ->
+                            Box {
+                                if (input.text.isEmpty()) {
+                                    Text(
+                                        text = "Message",
+                                        color = Color.White.copy(alpha = 0.5f),
+                                        fontSize = 16.sp
+                                    )
+                                }
+                                innerField()
+                            }
+                        }
+                    )
+
+                    // Voice button - only show when empty
+                    if (input.text.isEmpty()) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Filled.Mic,
+                            contentDescription = "Voice",
+                            tint = Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clickable { onVoice() }
+                        )
+                    }
+                }
+            }
+
+            // Send button
+            IconButton(
+                onClick = {
+                    if (canSend) {
+                        onSend()
+                        showAttachOptions = false
+                    }
+                },
+                enabled = canSend,
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (canSend) primaryColor else primaryColor.copy(alpha = 0.3f)
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Send",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AttachmentOptionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    color: Color,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(12.dp)
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = color.copy(alpha = 0.15f),
+            modifier = Modifier.size(48.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = color,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.White.copy(alpha = 0.9f)
         )
-        IconButton(onClick = onVoice) {
-            Icon(Icons.Filled.Mic, contentDescription = "Voice message", tint = Color.White)
-        }
-        Spacer(modifier = Modifier.width(4.dp))
-        IconButton(onClick = onSend) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.Send,
-                contentDescription = "Send message",
-                tint = Color.White
-            )
-        }
     }
 }
 

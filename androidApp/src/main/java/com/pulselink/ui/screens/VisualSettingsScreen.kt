@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FlowRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -13,8 +15,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.sharp.ArrowBack
+import androidx.compose.material.icons.automirrored.twotone.ArrowBack
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.sharp.Lock
+import androidx.compose.material.icons.sharp.Settings
+import androidx.compose.material.icons.twotone.Lock
+import androidx.compose.material.icons.twotone.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -191,7 +205,14 @@ fun CustomizeTab(
                              horizontalArrangement = Arrangement.SpaceBetween,
                              verticalAlignment = Alignment.CenterVertically
                          ) {
-                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = parseColorOr(Color.Black, theme.onTopBarColor))
+                             val backIcon = when(theme.iconStyle) {
+                                 "Rounded" -> Icons.AutoMirrored.Rounded.ArrowBack
+                                 "Sharp" -> Icons.AutoMirrored.Sharp.ArrowBack
+                                 "Outlined" -> Icons.AutoMirrored.Outlined.ArrowBack
+                                 "TwoTone" -> Icons.AutoMirrored.TwoTone.ArrowBack
+                                 else -> Icons.AutoMirrored.Filled.ArrowBack
+                             }
+                             Icon(backIcon, contentDescription = null, tint = parseColorOr(Color.Black, theme.onTopBarColor))
                              Text(
                                  "Contact Name",
                                  color = parseColorOr(Color.Black, theme.onTopBarColor),
@@ -393,6 +414,30 @@ fun CustomizeTab(
             Switch(checked = theme.useHolographicGlow, onCheckedChange = { onUpdate(theme.copy(useHolographicGlow = it)) })
         }
 
+        Text("UI personality", style = MaterialTheme.typography.titleMedium)
+        val uiStyles = listOf("Neon Glass", "Soft Layers", "Retro Terminal", "Playful Pop", "Clean Minimal")
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            uiStyles.forEach { style ->
+                FilterChip(
+                    selected = theme.uiStyle == style,
+                    onClick = { onUpdate(theme.copy(uiStyle = style)) },
+                    label = { Text(style) }
+                )
+            }
+        }
+
+        Text("Icon personality", style = MaterialTheme.typography.titleMedium)
+        val iconStyles = listOf("Outline", "Duotone", "Rounded", "Sharp")
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            iconStyles.forEach { style ->
+                FilterChip(
+                    selected = theme.iconStyle == style,
+                    onClick = { onUpdate(theme.copy(iconStyle = style)) },
+                    label = { Text(style) }
+                )
+            }
+        }
+
         Text("Density", style = MaterialTheme.typography.labelLarge)
         val densities = listOf("Compact", "Comfortable", "Spacious")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -591,7 +636,9 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 inboxIconVariant = "neon_noir",
                 useGlassEffect = true,
                 useHolographicGlow = true,
-                uiDensity = "Comfortable"
+                uiDensity = "Comfortable",
+                uiStyle = "Neon Glass",
+                iconStyle = "Duotone"
             )
         ),
         ThemePreset(
@@ -612,7 +659,9 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 dividerColor = "#003B00",
                 inboxIconVariant = "midnight_oled",
                 useHolographicGlow = true,
-                uiDensity = "Compact"
+                uiDensity = "Compact",
+                uiStyle = "Retro Terminal",
+                iconStyle = "Sharp"
             )
         ),
         ThemePreset(
@@ -631,7 +680,9 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#6750A4",
                 secondaryColor = "#625B71",
                 dividerColor = "#E5E7EB",
-                inboxIconVariant = "default_light"
+                inboxIconVariant = "default_light",
+                uiStyle = "Playful Pop",
+                iconStyle = "Rounded"
             )
         ),
         ThemePreset(
@@ -651,7 +702,9 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 secondaryColor = "#22D3EE",
                 timestampColor = "#94A3B8",
                 dividerColor = "#1F2937",
-                inboxIconVariant = "midnight_oled"
+                inboxIconVariant = "midnight_oled",
+                uiStyle = "Neon Glass",
+                iconStyle = "Outline"
             )
         ),
         ThemePreset(
@@ -670,7 +723,9 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#38BDF8",
                 secondaryColor = "#1D4ED8",
                 dividerColor = "#334155",
-                inboxIconVariant = "ocean_deep"
+                inboxIconVariant = "ocean_deep",
+                uiStyle = "Soft Layers",
+                iconStyle = "Outline"
             )
         ),
         ThemePreset(
@@ -689,7 +744,9 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#E11D48",
                 secondaryColor = "#F43F5E",
                 dividerColor = "#FBCFE8",
-                inboxIconVariant = "rose_petal"
+                inboxIconVariant = "rose_petal",
+                uiStyle = "Soft Layers",
+                iconStyle = "Rounded"
             )
         ),
         ThemePreset(
@@ -711,7 +768,9 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 dividerColor = "#FED7AA",
                 inboxIconVariant = "sunset_fade",
                 bubbleCornerRadiusTopStart = 0,
-                bubbleCornerRadiusBottomEnd = 0
+                bubbleCornerRadiusBottomEnd = 0,
+                uiStyle = "Neon Glass",
+                iconStyle = "Duotone"
             )
         ),
         ThemePreset(
@@ -730,7 +789,9 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#65A30D",
                 secondaryColor = "#84CC16",
                 dividerColor = "#D9F99D",
-                inboxIconVariant = "citrus_pop"
+                inboxIconVariant = "citrus_pop",
+                uiStyle = "Playful Pop",
+                iconStyle = "Rounded"
             )
         ),
         ThemePreset(
@@ -749,7 +810,9 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#10B981",
                 secondaryColor = "#059669",
                 dividerColor = "#A7F3D0",
-                inboxIconVariant = "forest_trail"
+                inboxIconVariant = "forest_trail",
+                uiStyle = "Soft Layers",
+                iconStyle = "Outline"
             )
         ),
         ThemePreset(
@@ -769,7 +832,9 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 secondaryColor = "#A78BFA",
                 dividerColor = "#DDD6FE",
                 inboxIconVariant = "lavender_haze",
-                iconSizeFactor = 1.1f
+                iconSizeFactor = 1.1f,
+                uiStyle = "Soft Layers",
+                iconStyle = "Rounded"
             )
         ),
         ThemePreset(
@@ -789,7 +854,9 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 secondaryColor = "#94A3B8",
                 dividerColor = "#CBD5E1",
                 inboxIconVariant = "slate_mono",
-                iconSizeFactor = 0.95f
+                iconSizeFactor = 0.95f,
+                uiStyle = "Clean Minimal",
+                iconStyle = "Sharp"
             )
         ),
         ThemePreset(
@@ -810,7 +877,9 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 secondaryColor = "#6366F1",
                 dividerColor = "#5EEAD4",
                 inboxIconVariant = "aurora",
-                iconSizeFactor = 1.15f
+                iconSizeFactor = 1.15f,
+                uiStyle = "Neon Glass",
+                iconStyle = "Rounded"
             )
         ),
         ThemePreset(
@@ -829,7 +898,9 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#EA580C",
                 secondaryColor = "#FDBA74",
                 dividerColor = "#FED7AA",
-                inboxIconVariant = "desert_clay"
+                inboxIconVariant = "desert_clay",
+                uiStyle = "Playful Pop",
+                iconStyle = "Outline"
             )
         ),
         ThemePreset(
@@ -848,7 +919,9 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#5E81AC",
                 secondaryColor = "#88C0D0",
                 dividerColor = "#D8DEE9",
-                inboxIconVariant = "nord_frost"
+                inboxIconVariant = "nord_frost",
+                uiStyle = "Clean Minimal",
+                iconStyle = "Outline"
             )
         ),
         ThemePreset(
@@ -867,7 +940,9 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#22D3EE",
                 secondaryColor = "#F472B6",
                 dividerColor = "#1F2937",
-                inboxIconVariant = "neon_noir"
+                inboxIconVariant = "neon_noir",
+                uiStyle = "Neon Glass",
+                iconStyle = "Outline"
             )
         ),
         ThemePreset(
@@ -886,7 +961,9 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#B45309",
                 secondaryColor = "#D97706",
                 dividerColor = "#FDE68A",
-                inboxIconVariant = "paperback"
+                inboxIconVariant = "paperback",
+                uiStyle = "Clean Minimal",
+                iconStyle = "Outline"
             )
         ),
         ThemePreset(
@@ -905,7 +982,9 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#10B981",
                 secondaryColor = "#34D399",
                 dividerColor = "#A7F3D0",
-                inboxIconVariant = "mint_breeze"
+                inboxIconVariant = "mint_breeze",
+                uiStyle = "Playful Pop",
+                iconStyle = "Outline"
             )
         ),
         ThemePreset(
@@ -925,7 +1004,9 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#8B5CF6",
                 secondaryColor = "#6366F1",
                 dividerColor = "#312E81",
-                inboxIconVariant = "amethyst_night"
+                inboxIconVariant = "amethyst_night",
+                uiStyle = "Soft Layers",
+                iconStyle = "Outline"
             )
         ),
         ThemePreset(
@@ -944,7 +1025,9 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#d946ef",
                 secondaryColor = "#06b6d4",
                 dividerColor = "#4c1d95",
-                inboxIconVariant = "midnight_oled"
+                inboxIconVariant = "midnight_oled",
+                uiStyle = "Neon Glass",
+                iconStyle = "Outline"
             )
         ),
         ThemePreset(
@@ -963,7 +1046,177 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#0ea5e9",
                 secondaryColor = "#38bdf8",
                 dividerColor = "#1e3a8a",
-                inboxIconVariant = "ocean_deep"
+                inboxIconVariant = "ocean_deep",
+                uiStyle = "Neon Glass",
+                iconStyle = "Outline"
+            )
+        },
+        ThemePreset(
+            name = "Gold Standard",
+            theme = ThemePreferences(
+                fontStyle = "Serif",
+                bubbleCornerRadius = 16,
+                backgroundColor = "#332200",
+                onBackground = "#FFD700",
+                topBarColor = "#4B3621",
+                onTopBarColor = "#FFD700",
+                bubbleOutgoing = "#FFD700",
+                onBubbleOutgoing = "#332200",
+                bubbleIncoming = "#B8860B",
+                onBubbleIncoming = "#FFFFFF",
+                primaryColor = "#FFD700",
+                secondaryColor = "#DAA520",
+                dividerColor = "#B8860B",
+                inboxIconVariant = "shield",
+                uiStyle = "Soft Layers",
+                iconStyle = "Duotone"
+            )
+        ),
+        ThemePreset(
+            name = "Diamond Dust",
+            theme = ThemePreferences(
+                fontStyle = "Default",
+                bubbleCornerRadius = 20,
+                backgroundColor = "#F0F4F8",
+                onBackground = "#263238",
+                topBarColor = "#FFFFFF",
+                onTopBarColor = "#263238",
+                bubbleOutgoing = "#E0F7FA",
+                onBubbleOutgoing = "#006064",
+                bubbleIncoming = "#FFFFFF",
+                onBubbleIncoming = "#263238",
+                primaryColor = "#00BCD4",
+                secondaryColor = "#0097A7",
+                dividerColor = "#B2EBF2",
+                inboxIconVariant = "bubble",
+                uiStyle = "Soft Layers",
+                iconStyle = "Rounded"
+            )
+        ),
+        ThemePreset(
+            name = "Obsidian Pro",
+            theme = ThemePreferences(
+                fontStyle = "Monospace",
+                bubbleCornerRadius = 4,
+                backgroundColor = "#000000",
+                onBackground = "#E0E0E0",
+                topBarColor = "#121212",
+                onTopBarColor = "#FFFFFF",
+                bubbleOutgoing = "#212121",
+                onBubbleOutgoing = "#FFFFFF",
+                bubbleIncoming = "#121212",
+                onBubbleIncoming = "#BDBDBD",
+                primaryColor = "#616161",
+                secondaryColor = "#424242",
+                dividerColor = "#333333",
+                inboxIconVariant = "minimal",
+                uiStyle = "Retro Terminal",
+                iconStyle = "Sharp"
+            )
+        ),
+        ThemePreset(
+            name = "Titanium Flow",
+            theme = ThemePreferences(
+                fontStyle = "Default",
+                bubbleCornerRadius = 24,
+                backgroundColor = "#2c3e50",
+                onBackground = "#ecf0f1",
+                topBarColor = "#34495e",
+                onTopBarColor = "#ecf0f1",
+                bubbleOutgoing = "#95a5a6",
+                onBubbleOutgoing = "#2c3e50",
+                bubbleIncoming = "#34495e",
+                onBubbleIncoming = "#bdc3c7",
+                primaryColor = "#bdc3c7",
+                secondaryColor = "#7f8c8d",
+                dividerColor = "#7f8c8d",
+                inboxIconVariant = "shield",
+                uiStyle = "Clean Minimal",
+                iconStyle = "Outline"
+            )
+        ),
+        ThemePreset(
+            name = "Blueprint",
+            theme = ThemePreferences(
+                fontStyle = "Monospace",
+                bubbleCornerRadius = 0,
+                backgroundColor = "#002b36",
+                onBackground = "#839496",
+                topBarColor = "#073642",
+                onTopBarColor = "#93a1a1",
+                bubbleOutgoing = "#2aa198",
+                onBubbleOutgoing = "#002b36",
+                bubbleIncoming = "#073642",
+                onBubbleIncoming = "#2aa198",
+                primaryColor = "#2aa198",
+                secondaryColor = "#268bd2",
+                dividerColor = "#586e75",
+                inboxIconVariant = "sotext",
+                uiStyle = "Retro Terminal",
+                iconStyle = "Sharp"
+            )
+        ),
+        ThemePreset(
+            name = "Glitch Stream",
+            theme = ThemePreferences(
+                fontStyle = "Monospace",
+                bubbleCornerRadius = 8,
+                backgroundColor = "#0f0f0f",
+                onBackground = "#00ff00",
+                topBarColor = "#000000",
+                onTopBarColor = "#00ff00",
+                bubbleOutgoing = "#003300",
+                onBubbleOutgoing = "#00ff00",
+                bubbleIncoming = "#001100",
+                onBubbleIncoming = "#00cc00",
+                primaryColor = "#00ff00",
+                secondaryColor = "#ff00ff",
+                dividerColor = "#004400",
+                inboxIconVariant = "minimal",
+                uiStyle = "Retro Terminal",
+                iconStyle = "Sharp"
+            )
+        ),
+        ThemePreset(
+            name = "Legacy Oak",
+            theme = ThemePreferences(
+                fontStyle = "Serif",
+                bubbleCornerRadius = 12,
+                backgroundColor = "#3E2723",
+                onBackground = "#D7CCC8",
+                topBarColor = "#4E342E",
+                onTopBarColor = "#D7CCC8",
+                bubbleOutgoing = "#5D4037",
+                onBubbleOutgoing = "#EFEBE9",
+                bubbleIncoming = "#4E342E",
+                onBubbleIncoming = "#D7CCC8",
+                primaryColor = "#8D6E63",
+                secondaryColor = "#A1887F",
+                dividerColor = "#5D4037",
+                inboxIconVariant = "default_light",
+                uiStyle = "Clean Minimal",
+                iconStyle = "Outline"
+            )
+        ),
+        ThemePreset(
+            name = "Eternal Sky",
+            theme = ThemePreferences(
+                fontStyle = "Default",
+                bubbleCornerRadius = 28,
+                backgroundColor = "#000033",
+                onBackground = "#E0E0FF",
+                topBarColor = "#191970",
+                onTopBarColor = "#FFFFFF",
+                bubbleOutgoing = "#483D8B",
+                onBubbleOutgoing = "#FFFFFF",
+                bubbleIncoming = "#000080",
+                onBubbleIncoming = "#E0E0FF",
+                primaryColor = "#8A2BE2",
+                secondaryColor = "#9370DB",
+                dividerColor = "#191970",
+                inboxIconVariant = "sotext",
+                uiStyle = "Neon Glass",
+                iconStyle = "Outline"
             )
         )
     )
@@ -1007,19 +1260,28 @@ private fun ThemePreviewCard(
         Modifier.background(parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor))
     }
     val iconSize = (18f * theme.iconSizeFactor).coerceIn(14f, 24f).dp
+    val previewRadius = when(theme.uiStyle) {
+        "Neon Glass" -> 22.dp
+        "Soft Layers" -> 28.dp
+        "Retro Terminal" -> 8.dp
+        "Playful Pop" -> 30.dp
+        "Clean Minimal" -> 14.dp
+        else -> 14.dp
+    }
 
     Card(
         onClick = onSelect,
-        elevation = CardDefaults.cardElevation(4.dp)
+        elevation = CardDefaults.cardElevation(4.dp),
+        shape = RoundedCornerShape(previewRadius)
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(150.dp)
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(previewRadius - 4.dp))
                     .then(bgModifier)
-                    .border(1.dp, divider, RoundedCornerShape(14.dp))
+                    .border(1.dp, divider, RoundedCornerShape(previewRadius - 4.dp))
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Surface(color = topBarColor, modifier = Modifier.fillMaxWidth()) {
@@ -1028,8 +1290,15 @@ private fun ThemePreviewCard(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            val backIcon = when(theme.iconStyle) {
+                                "Rounded" -> Icons.AutoMirrored.Rounded.ArrowBack
+                                "Sharp" -> Icons.AutoMirrored.Sharp.ArrowBack
+                                "Outlined" -> Icons.AutoMirrored.Outlined.ArrowBack
+                                "TwoTone" -> Icons.AutoMirrored.TwoTone.ArrowBack
+                                else -> Icons.AutoMirrored.Filled.ArrowBack
+                            }
                             Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
+                                backIcon,
                                 contentDescription = null,
                                 tint = iconTint,
                                 modifier = Modifier.size(iconSize)
@@ -1040,14 +1309,28 @@ private fun ThemePreviewCard(
                                 color = onTopBar
                             )
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                val lockIcon = when(theme.iconStyle) {
+                                    "Rounded" -> Icons.Rounded.Lock
+                                    "Sharp" -> Icons.Sharp.Lock
+                                    "Outlined" -> Icons.Outlined.Lock
+                                    "TwoTone" -> Icons.TwoTone.Lock
+                                    else -> Icons.Filled.Lock
+                                }
+                                val settingsIcon = when(theme.iconStyle) {
+                                    "Rounded" -> Icons.Rounded.Settings
+                                    "Sharp" -> Icons.Sharp.Settings
+                                    "Outlined" -> Icons.Outlined.Settings
+                                    "TwoTone" -> Icons.TwoTone.Settings
+                                    else -> Icons.Filled.Settings
+                                }
                                 Icon(
-                                    Icons.Filled.Lock,
+                                    lockIcon,
                                     contentDescription = null,
                                     tint = iconTint,
                                     modifier = Modifier.size(iconSize)
                                 )
                                 Icon(
-                                    Icons.Filled.Settings,
+                                    settingsIcon,
                                     contentDescription = null,
                                     tint = iconTint,
                                     modifier = Modifier.size(iconSize)

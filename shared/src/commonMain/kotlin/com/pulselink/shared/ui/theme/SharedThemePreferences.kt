@@ -15,7 +15,9 @@ data class SharedThemePreferences(
     val onBubbleOutgoing: String = "#000000",
     val onBubbleIncoming: String = "#000000",
     val appBackgroundGradientStart: String? = null,
-    val appBackgroundGradientEnd: String? = null
+    val appBackgroundGradientEnd: String? = null,
+    val uiStyle: String = "Clean Minimal",
+    val iconStyle: String = "Outline"
 ) {
     fun toPalette(): ThemePalette {
         val defaults = ThemePalette.default()
@@ -28,7 +30,9 @@ data class SharedThemePreferences(
             inboxBackground = surfaceColor.toColorOr(defaults.inboxBackgroundColor).toThemeLong(),
             bubbleRadius = defaults.bubbleRadius,
             font = defaults.font,
-            iconVariant = defaults.iconVariant
+            iconVariant = defaults.iconVariant,
+            uiStyle = uiStyle,
+            iconStyle = iconStyle
         )
     }
 
@@ -50,7 +54,9 @@ data class SharedThemePreferences(
                 onBubbleOutgoing = map["onBubbleOutgoing"] as? String ?: "#000000",
                 onBubbleIncoming = map["onBubbleIncoming"] as? String ?: "#000000",
                 appBackgroundGradientStart = map["appBackgroundGradientStart"] as? String,
-                appBackgroundGradientEnd = map["appBackgroundGradientEnd"] as? String
+                appBackgroundGradientEnd = map["appBackgroundGradientEnd"] as? String,
+                uiStyle = map["uiStyle"] as? String ?: "Clean Minimal",
+                iconStyle = map["iconStyle"] as? String ?: "Outline"
             )
         }
     }
